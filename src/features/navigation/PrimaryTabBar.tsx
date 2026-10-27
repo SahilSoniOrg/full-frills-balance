@@ -1,10 +1,11 @@
 import { AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PRIMARY_TABS, primaryTabFromRouteName } from '@/src/navigation/primaryNavigation';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
+import { toast } from '@/src/utils/alerts';
 import { Tabs } from 'expo-router';
 import { type ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -56,15 +57,25 @@ export function PrimaryTabBar({
           });
           if (!selected && !event.defaultPrevented) navigateToTab(route.key);
         }}
-        onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
+        onLongPress={() => {
+          emitter.emit({ type: 'tabLongPress', target: route.key });
+          toast.info(AppConfig.strings.navigation.tabDescriptions[copy.tab], {
+            key: 'navigation-help',
+          });
+        }}
         accessibilityRole="tab"
         accessibilityState={{ selected }}
         accessibilityLabel={copy.label}
+        accessibilityHint={AppConfig.strings.navigation.tabDescriptions[copy.tab]}
         testID={`tab-${copy.tab}`}
         style={styles.tabItem}
         pressScale="subtle"
       >
-        <View style={[styles.tabIcon, selected && { backgroundColor: theme.primaryLight }]}>
+        <View
+          // Keep the rounded native surface when deselection removes its background.
+          collapsable={false}
+          style={[styles.tabIcon, selected && { backgroundColor: theme.primaryLight }]}
+        >
           <AppIcon
             name={copy.icon}
             size={Size.iconMd}
@@ -144,7 +155,8 @@ const styles = StyleSheet.create({
   tabIcon: {
     width: Size.xxl,
     height: Size.lg,
-    borderRadius: Shape.radius.full,
+    borderRadius: Size.lg / 2,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },

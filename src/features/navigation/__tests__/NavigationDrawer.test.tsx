@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
 import { NavigationDrawer } from '@/src/features/navigation';
+import { AppNavigation } from '@/src/utils/navigation';
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import type { ComponentProps } from 'react';
 import { BackHandler } from 'react-native';
@@ -114,6 +115,15 @@ describe('NavigationDrawer shell', () => {
   beforeEach(() => {
     mockSwitchError = null;
     jest.clearAllMocks();
+  });
+
+  it('distinguishes notification settings from insights', () => {
+    const { onClose } = renderDrawer();
+    fireEvent.press(screen.getByText('Notification settings'));
+    expect(AppNavigation.toAutomationSettings).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.toHub).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Insights')).toBeTruthy();
   });
 
   it('honours reduced motion and turns swiping off while the selector is open', () => {

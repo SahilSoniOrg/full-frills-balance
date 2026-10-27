@@ -4,6 +4,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, type ViewProps } from 'react-native';
 import type { ReactNode } from 'react';
 import type { PrimaryNavigationContextValue } from '@/src/navigation/primaryNavigation';
+import { toast } from '@/src/utils/alerts';
+
+jest.mock('@/src/utils/alerts', () => ({ toast: { info: jest.fn() } }));
 
 let mockBottomInset = 24;
 let mockKeyboardVisible = false;
@@ -162,6 +165,22 @@ describe('primary navigation', () => {
     renderTabs();
     const bar = screen.getByTestId('primary-tab-bar');
     expect(StyleSheet.flatten(bar.props.style as ViewProps['style'])?.paddingBottom).toBe(bottom);
+  });
+
+  it.each([
+    ['dashboard', 'Dashboard: your balance overview and recent activity.'],
+    ['accounts', 'Accounts: manage your accounts and categories.'],
+    ['commitments', 'Plans: manage budgets and scheduled payments.'],
+    ['activity', 'Activity: browse and search your transactions.'],
+  ])('explains %s on long press without navigating', (tab, description) => {
+    renderTabs();
+    fireEvent(screen.getByTestId(`tab-${tab}`), 'longPress');
+    expect(toast.info).toHaveBeenCalledWith(description, { key: 'navigation-help' });
+    expect(mockEmit).toHaveBeenCalledWith({
+      type: 'tabLongPress',
+      target: tab === 'dashboard' ? 'index' : tab,
+    });
+    expect(mockNavigateToTab).not.toHaveBeenCalled();
   });
 
   it('hides the custom tab bar while the keyboard is open', () => {

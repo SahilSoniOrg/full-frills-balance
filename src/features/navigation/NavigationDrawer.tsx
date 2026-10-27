@@ -93,7 +93,7 @@ const NAV_SECTIONS: {
       },
       {
         id: 'notifications',
-        label: settingsCopy.notifications.title,
+        label: copy.notificationSettings,
         icon: Icon.Notifications,
         onPress: AppNavigation.toAutomationSettings,
       },

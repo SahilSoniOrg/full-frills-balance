@@ -1388,6 +1388,13 @@ export const UI_STRINGS = {
     personalSection: 'Personal',
     deviceSection: 'This device',
     insights: 'Insights',
+    notificationSettings: 'Notification settings',
+    tabDescriptions: {
+      dashboard: 'Dashboard: your balance overview and recent activity.',
+      accounts: 'Accounts: manage your accounts and categories.',
+      commitments: 'Plans: manage budgets and scheduled payments.',
+      activity: 'Activity: browse and search your transactions.',
+    },
     yourDetails: 'Your details',
     manageWorkplace: 'Manage this workplace',
     allSettings: 'All settings',
