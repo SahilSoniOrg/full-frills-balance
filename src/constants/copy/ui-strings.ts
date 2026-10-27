@@ -1395,6 +1395,12 @@ export const UI_STRINGS = {
       commitments: 'Plans: manage budgets and scheduled payments.',
       activity: 'Activity: browse and search your transactions.',
     },
+    privacyDescription: (hidden: boolean, overridden: boolean) =>
+      `Balances are ${hidden ? 'hidden' : 'visible'} on this page. ${
+        overridden
+          ? 'This page differs from your privacy preference.'
+          : 'Using your privacy preference.'
+      } Tap to change visibility on this page only.`,
     yourDetails: 'Your details',
     manageWorkplace: 'Manage this workplace',
     allSettings: 'All settings',

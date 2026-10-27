@@ -2,6 +2,25 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useScreenPrivacyMode } from '@/src/contexts/PrivacyScope';
 
 describe('useScreenPrivacyMode', () => {
+  it.each([false, true])(
+    'marks only differences from the global preference (%s)',
+    globalPrivacyMode => {
+      const { result, rerender } = renderHook(
+        ({ global }: { global: boolean }) => useScreenPrivacyMode(global),
+        { initialProps: { global: globalPrivacyMode } },
+      );
+      expect(result.current.isPrivacyOverridden).toBe(false);
+      act(() => result.current.togglePrivacyMode());
+      expect(result.current.isPrivacyOverridden).toBe(true);
+      rerender({ global: !globalPrivacyMode });
+      expect(result.current.isPrivacyOverridden).toBe(false);
+      rerender({ global: globalPrivacyMode });
+      expect(result.current.isPrivacyOverridden).toBe(true);
+      act(() => result.current.togglePrivacyMode());
+      expect(result.current.isPrivacyOverridden).toBe(false);
+    },
+  );
+
   it('mirrors global privacy mode when there is no override', () => {
     const { result, rerender } = renderHook(
       ({ globalPrivacyMode }: { globalPrivacyMode: boolean }) =>

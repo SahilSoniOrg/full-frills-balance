@@ -10,6 +10,7 @@ import React, {
 
 export type PrivacyScopeValue = {
   isPrivacyMode: boolean;
+  isPrivacyOverridden: boolean;
   togglePrivacyMode: () => void;
 };
 
@@ -30,7 +31,9 @@ export function useScreenPrivacyMode(globalPrivacyMode: boolean) {
     setOverride(prev => !(prev ?? globalPrivacyMode));
   }, [globalPrivacyMode]);
 
-  return { isPrivacyMode, togglePrivacyMode };
+  const isPrivacyOverridden = override !== null && isPrivacyMode !== globalPrivacyMode;
+
+  return { isPrivacyMode, isPrivacyOverridden, togglePrivacyMode };
 }
 
 const PrivacyScopeContext = createContext<PrivacyScopeValue | null>(null);
@@ -44,11 +47,12 @@ const PrivacyScopeContext = createContext<PrivacyScopeValue | null>(null);
  */
 export function PrivacyScopeProvider({ children }: { children: React.ReactNode }) {
   const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
-  const { isPrivacyMode, togglePrivacyMode } = useScreenPrivacyMode(globalPrivacyMode);
+  const { isPrivacyMode, isPrivacyOverridden, togglePrivacyMode } =
+    useScreenPrivacyMode(globalPrivacyMode);
 
   const value = useMemo(
-    () => ({ isPrivacyMode, togglePrivacyMode }),
-    [isPrivacyMode, togglePrivacyMode],
+    () => ({ isPrivacyMode, isPrivacyOverridden, togglePrivacyMode }),
+    [isPrivacyMode, isPrivacyOverridden, togglePrivacyMode],
   );
 
   return <PrivacyScopeContext.Provider value={value}>{children}</PrivacyScopeContext.Provider>;
