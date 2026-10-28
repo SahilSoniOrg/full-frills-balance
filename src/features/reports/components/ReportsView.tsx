@@ -125,7 +125,16 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
               }}
             />
           )}
-          {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
+          {activeTab === 'WEALTH' && (
+            <ReportWealthSection
+              vm={wealth}
+              chartWidth={CHART_WIDTH}
+              explanationScope={{
+                periodLabel: filters.dateLabel,
+                accountScopeLabel: accountLabel,
+              }}
+            />
+          )}
         </ScrollView>
       </Box>
       <DateRangePicker

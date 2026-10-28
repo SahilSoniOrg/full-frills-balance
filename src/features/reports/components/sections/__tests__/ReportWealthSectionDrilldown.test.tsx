@@ -74,7 +74,13 @@ describe('legacy wealth chart period drill-down', () => {
       onViewTransactions,
     };
 
-    render(<ReportWealthSection vm={vm} chartWidth={320} />);
+    render(
+      <ReportWealthSection
+        vm={vm}
+        chartWidth={320}
+        explanationScope={{ periodLabel: 'Custom', accountScopeLabel: 'All accounts' }}
+      />,
+    );
     fireEvent.press(screen.getByTestId('select-wealth-period'));
     fireEvent.press(screen.getByTestId('view-wealth-period-transactions'));
 
