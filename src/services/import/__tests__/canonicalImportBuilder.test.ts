@@ -119,6 +119,53 @@ describe('CanonicalImportBuilder', () => {
       expect(enumIssues).toHaveLength(2);
     });
 
+    it('infers liability subtype from account name or defaults to OTHER instead of CREDIT_CARD (FUL-101)', () => {
+      const builder = new CanonicalImportBuilder('INR');
+
+      builder.addAccount({
+        id: 'acc-hdfc-loan',
+        name: 'HDFC Bank Loan A/c',
+        currencyCode: 'INR',
+        accountType: AccountType.LIABILITY,
+      });
+
+      builder.addAccount({
+        id: 'acc-mortgage',
+        name: 'Home Mortgage Account',
+        currencyCode: 'INR',
+        accountType: AccountType.LIABILITY,
+      });
+
+      builder.addAccount({
+        id: 'acc-creditors',
+        name: 'Sundry Creditors',
+        currencyCode: 'INR',
+        accountType: AccountType.LIABILITY,
+      });
+
+      builder.addAccount({
+        id: 'acc-general-liability',
+        name: 'Tax Provision',
+        currencyCode: 'INR',
+        accountType: AccountType.LIABILITY,
+      });
+
+      const { canonical, issues } = builder.build();
+      expect(issues).toHaveLength(0);
+
+      const loan = canonical.accounts.find(a => a.name === 'HDFC Bank Loan A/c');
+      expect(loan?.accountSubtype).toBe(AccountSubtype.LOAN);
+
+      const mortgage = canonical.accounts.find(a => a.name === 'Home Mortgage Account');
+      expect(mortgage?.accountSubtype).toBe(AccountSubtype.MORTGAGE);
+
+      const creditors = canonical.accounts.find(a => a.name === 'Sundry Creditors');
+      expect(creditors?.accountSubtype).toBe(AccountSubtype.PAYABLE);
+
+      const general = canonical.accounts.find(a => a.name === 'Tax Provision');
+      expect(general?.accountSubtype).toBe(AccountSubtype.OTHER);
+    });
+
     it('normalizes invalid account icons to the account-type fallback', () => {
       const builder = new CanonicalImportBuilder('USD');
 

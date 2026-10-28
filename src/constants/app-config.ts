@@ -178,8 +178,6 @@ export const AppConfig = {
       majorInflowThreshold: 200,
       edgeCaseBufferMs: 1 * 60 * 60 * 1000, // 1 hour
       financialEpsilon: 0.01,
-      loanHeuristicTermMonths: 120, // 10 years
-      loanHeuristicLabelSuffix: ' (Est. EMI)',
     },
     maxTooltipDetails: 6,
     notifications: {

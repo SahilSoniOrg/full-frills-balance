@@ -249,37 +249,41 @@ export class LiabilityFlowGenerator {
         }
       }
     } else {
-      // Non-CC liability (EMI)
-      const deductionDay =
-        metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
-      let currDDate = getNextDueDate(startOfToday, deductionDay);
-
+      // Non-CC liability, or CC without statement cycle.
       let remainingBalance = currentBalance;
       for (const f of spendingFlows) {
         remainingBalance += f.amount;
       }
 
-      // 3-state EMI Logic:
-      // 1. Known EMI (explicit field or overloaded minimumPaymentAmount) -> use it
-      // 2. Unknown EMI -> heuristic estimate (mortgage/loan)
-      // 3. Fallback -> full balance (safety)
       const rawEmiAmount =
         metadata?.emiAmount ??
-        (isLoanSubtype(acc.accountSubtype) ? metadata?.minimumPaymentAmount : undefined);
+        (isLoanSubtype(acc.accountSubtype)
+          ? metadata?.minimumPaymentAmount
+          : metadata?.minimumPaymentAmount);
 
-      let emiAmount: number;
-      let labelSuffix = '';
+      let emiAmount: number | undefined;
 
       if (rawEmiAmount !== undefined && rawEmiAmount > 0) {
         emiAmount = context.convert(rawEmiAmount, acc.currencyCode || context.resultCurrency);
-      } else if (isLoanSubtype(acc.accountSubtype)) {
-        // Conservative heuristic: 10-year amort
-        emiAmount = currentBalance / AppConfig.defaults.simulation.loanHeuristicTermMonths;
-        labelSuffix = AppConfig.defaults.simulation.loanHeuristicLabelSuffix;
-      } else {
-        // Non-loan, non-EMI: treat as "full balance due now" for safety (legacy-ish)
+      } else if (
+        acc.accountSubtype === AccountSubtype.CREDIT_CARD &&
+        metadata?.dueDay !== undefined
+      ) {
+        // Revolving credit card with explicit due date configured, but no statement cycle:
+        // treat remaining balance as due on the specified due day.
         emiAmount = remainingBalance;
       }
+
+      // Loan balances, unconfigured liabilities, or credit cards without explicit schedule
+      // must NOT be treated as upcoming payments.
+      if (emiAmount === undefined || emiAmount <= 0) {
+        return obligations;
+      }
+
+      const deductionDay =
+        metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
+      let currDDate = getNextDueDate(startOfToday, deductionDay);
+      const labelSuffix = '';
 
       let remainingSettled = settledSinceStatement;
 

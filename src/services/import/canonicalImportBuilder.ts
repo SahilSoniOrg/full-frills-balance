@@ -221,8 +221,7 @@ export class CanonicalImportBuilder {
     return this;
   }
 
-  // --- Pipeline Phases ---
-
+  // --- Pipeline Phases ---\n
   private parseAccountTypeWithIssue(
     val?: AccountType | string,
     sourceId?: string,
@@ -248,12 +247,38 @@ export class CanonicalImportBuilder {
     val?: AccountSubtype | string,
     sourceId?: string,
     issues: ImportIssue[] = [],
+    name?: string,
   ): AccountSubtype {
-    if (!val) return getDefaultSubtypeForType(type);
-    const upper = String(val).toUpperCase();
-    if (isAccountSubtype(upper) && isSubtypeAllowedForType(type, upper as AccountSubtype)) {
-      return upper as AccountSubtype;
+    if (val) {
+      const upper = String(val).toUpperCase().trim();
+      if (isAccountSubtype(upper) && isSubtypeAllowedForType(type, upper as AccountSubtype)) {
+        return upper as AccountSubtype;
+      }
+      // Common plurals or aliases
+      if (type === AccountType.LIABILITY) {
+        if (/loan/i.test(upper)) return AccountSubtype.LOAN;
+        if (/mortgage/i.test(upper)) return AccountSubtype.MORTGAGE;
+        if (/card/i.test(upper)) return AccountSubtype.CREDIT_CARD;
+        if (/payable/i.test(upper)) return AccountSubtype.PAYABLE;
+      } else if (type === AccountType.ASSET) {
+        if (/checking/i.test(upper)) return AccountSubtype.BANK_CHECKING;
+        if (/savings/i.test(upper)) return AccountSubtype.BANK_SAVINGS;
+        if (/cash/i.test(upper)) return AccountSubtype.CASH;
+      }
     }
+
+    // Infer from name if subtype wasn't provided or recognized
+    if (name && type === AccountType.LIABILITY) {
+      if (/loan|borrow|debt|lending|advance/i.test(name)) return AccountSubtype.LOAN;
+      if (/mortgage/i.test(name)) return AccountSubtype.MORTGAGE;
+      if (/credit\s*card|\bcc\b/i.test(name)) return AccountSubtype.CREDIT_CARD;
+      if (/payable|creditor/i.test(name)) return AccountSubtype.PAYABLE;
+    }
+
+    if (!val) {
+      return type === AccountType.LIABILITY ? AccountSubtype.OTHER : getDefaultSubtypeForType(type);
+    }
+
     issues.push({
       severity: 'warning',
       entity: 'account',
@@ -261,7 +286,7 @@ export class CanonicalImportBuilder {
       code: 'INVALID_ENUM',
       message: `Invalid or disallowed accountSubtype '${val}' for type '${type}'. Fallback to default '${getDefaultSubtypeForType(type)}'.`,
     });
-    return getDefaultSubtypeForType(type);
+    return type === AccountType.LIABILITY ? AccountSubtype.OTHER : getDefaultSubtypeForType(type);
   }
 
   private parseIconWithIssue(
@@ -339,7 +364,13 @@ export class CanonicalImportBuilder {
       accountCurrencyMap.set(raw.id, raw.currencyCode || this.defaultCurrency);
 
       const type = this.parseAccountTypeWithIssue(raw.accountType, raw.id, issues);
-      const subtype = this.parseAccountSubtypeWithIssue(type, raw.accountSubtype, raw.id, issues);
+      const subtype = this.parseAccountSubtypeWithIssue(
+        type,
+        raw.accountSubtype,
+        raw.id,
+        issues,
+        raw.name,
+      );
       const icon = this.parseIconWithIssue(
         raw.icon,
         getAccountFallbackIcon(type),

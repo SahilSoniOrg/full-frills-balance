@@ -130,11 +130,11 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       );
 
       expect(obligations).toHaveLength(2);
-      expect(obligations[0].amount).toBe(500);
-      expect(obligations[1].amount).toBe(100);
+      expect(obligations[0]).toMatchObject({ amount: 500, dueDayOffset: 4 });
+      expect(obligations[1]).toMatchObject({ amount: 100, dueDayOffset: 34 });
     });
 
-    it('treats the entire balance as due if emiAmount is missing (legacy behavior)', () => {
+    it('does not generate obligations if emiAmount is missing for loans (FUL-101)', () => {
       const loanNoEmi = mockAcc('loan-2', AccountSubtype.LOAN, 'Large Loan');
       const obligations = (LiabilityFlowGenerator as any).generateObligations(
         loanNoEmi,
@@ -148,12 +148,25 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         mockContext,
       );
 
-      // Should project heuristic EMIs if emiAmount is missing for a loam
-      expect(obligations).toHaveLength(2); // Two months @ 200/mo (24000/120)
-      expect(obligations[0]).toMatchObject({
-        amount: 200,
-        label: 'Unsettled: Large Loan (Est. EMI)',
-      });
+      // Loan balances must NOT be treated as upcoming payments when no EMI is defined
+      expect(obligations).toHaveLength(0);
+    });
+
+    it('does not generate obligations for general liabilities if emiAmount is missing (FUL-101)', () => {
+      const otherLiability = mockAcc('other-1', AccountSubtype.OTHER, 'Vendor Payable');
+      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+        otherLiability,
+        5000000,
+        {},
+        0,
+        0,
+        startOfToday,
+        simulationDays,
+        [],
+        mockContext,
+      );
+
+      expect(obligations).toHaveLength(0);
     });
 
     it('reduces obligations by settledSinceStatement', () => {
@@ -212,7 +225,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
 
       expect(obligations[0]).toMatchObject({
         amount: 750,
-        label: 'Unsettled: Loan with Min', // Should NOT have (Est. EMI)
+        label: 'Unsettled: Loan with Min',
       });
     });
 
