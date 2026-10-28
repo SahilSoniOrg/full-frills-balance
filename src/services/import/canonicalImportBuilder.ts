@@ -47,6 +47,9 @@ export interface ImportAccountInput {
 export interface ImportCategoryInput {
   id: string;
   name: string;
+  parentCategoryId?: string;
+  orderNum?: number;
+  archivedAt?: number;
   defaultType?: AccountType.EXPENSE | AccountType.INCOME;
   description?: string;
   icon?: string;
@@ -125,7 +128,8 @@ export interface ImportIssue {
     | 'MISSING_EXCHANGE_RATE'
     | 'INVALID_EXCHANGE_RATE'
     | 'INVALID_ENUM'
-    | 'INVALID_ICON';
+    | 'INVALID_ICON'
+    | 'EMPTY_BUDGET_SCOPE';
   message: string;
   details?: Record<string, unknown>;
 }
@@ -221,7 +225,7 @@ export class CanonicalImportBuilder {
     return this;
   }
 
-  // --- Pipeline Phases ---\n
+  // --- Pipeline Phases ---
   private parseAccountTypeWithIssue(
     val?: AccountType | string,
     sourceId?: string,
@@ -397,7 +401,85 @@ export class CanonicalImportBuilder {
     return canonicalAccounts;
   }
 
-  private scanCategoryUsage(): Map<string, CategoryUsageStat> {
+  private prepareCategoryAwareInputs(): {
+    categories: Map<string, ImportCategoryInput>;
+    transactions: ImportTransactionInput[];
+    plannedPayments: ImportPlannedPaymentInput[];
+  } {
+    const categories = new Map(this.rawCategories);
+    const parentCategoryIds = new Set(
+      [...categories.values()]
+        .map(category => category.parentCategoryId)
+        .filter((parentId): parentId is string => !!parentId && categories.has(parentId)),
+    );
+    const directPostingCategoryIds = new Set<string>();
+    this.rawTransactions.forEach(transaction => {
+      if (
+        transaction.type !== 'TRANSFER' &&
+        !transaction.isOpeningBalance &&
+        !transaction.isBalanceCorrection &&
+        transaction.categoryId
+      ) {
+        directPostingCategoryIds.add(transaction.categoryId);
+      }
+    });
+    this.rawPlannedPayments.forEach(payment => {
+      if (payment.type !== 'TRANSFER' && payment.toAccountId) {
+        directPostingCategoryIds.add(payment.toAccountId);
+      }
+    });
+    const directPostingCategoryMap = new Map<string, string>();
+
+    for (const parentId of parentCategoryIds) {
+      if (!directPostingCategoryIds.has(parentId)) continue;
+      const parent = categories.get(parentId);
+      if (!parent) continue;
+
+      const baseId = `__ffb_direct_postings__${parentId}`;
+      let syntheticId = baseId;
+      let suffix = 2;
+      while (categories.has(syntheticId)) syntheticId = `${baseId}:${suffix++}`;
+
+      const siblingOrders = [...categories.values()]
+        .filter(category => category.parentCategoryId === parentId)
+        .flatMap(category => (category.orderNum === undefined ? [] : [category.orderNum]));
+      categories.set(syntheticId, {
+        id: syntheticId,
+        name: 'Other',
+        parentCategoryId: parentId,
+        orderNum: siblingOrders.length > 0 ? Math.max(...siblingOrders) + 1 : undefined,
+        defaultType: parent.defaultType,
+        description: `Direct postings imported from ${parent.name}`,
+        icon: parent.icon,
+        color: parent.color,
+        archivedAt: parent.archivedAt,
+      });
+      directPostingCategoryMap.set(parentId, syntheticId);
+    }
+
+    return {
+      categories,
+      transactions: this.rawTransactions.map(transaction => {
+        if (transaction.type === 'TRANSFER') return transaction;
+        const categoryId = transaction.categoryId
+          ? directPostingCategoryMap.get(transaction.categoryId)
+          : undefined;
+        return categoryId ? { ...transaction, categoryId } : transaction;
+      }),
+      plannedPayments: this.rawPlannedPayments.map(payment => {
+        if (payment.type === 'TRANSFER') return payment;
+        const toAccountId = payment.toAccountId
+          ? directPostingCategoryMap.get(payment.toAccountId)
+          : undefined;
+        return toAccountId ? { ...payment, toAccountId } : payment;
+      }),
+    };
+  }
+
+  private scanCategoryUsage(
+    rawTransactions: ImportTransactionInput[],
+    rawPlannedPayments: ImportPlannedPaymentInput[],
+  ): Map<string, CategoryUsageStat> {
     const categoryStats = new Map<string, CategoryUsageStat>();
 
     const getOrInitStat = (catId: string): CategoryUsageStat => {
@@ -410,7 +492,7 @@ export class CanonicalImportBuilder {
     };
 
     // Scan transactions
-    for (const tx of this.rawTransactions) {
+    for (const tx of rawTransactions) {
       if (tx.type === 'TRANSFER' || !tx.categoryId) continue;
       const currency = tx.currencyCode || this.defaultCurrency;
       const stat = getOrInitStat(tx.categoryId);
@@ -423,7 +505,7 @@ export class CanonicalImportBuilder {
     }
 
     // Scan planned payments
-    for (const p of this.rawPlannedPayments) {
+    for (const p of rawPlannedPayments) {
       if (p.type === 'TRANSFER' || !p.toAccountId) continue;
       const currency = p.currencyCode || this.defaultCurrency;
       const stat = getOrInitStat(p.toAccountId);
@@ -453,13 +535,58 @@ export class CanonicalImportBuilder {
     categoryAccountMap: Map<string, AccountId>,
     accountCountOffset: number,
     issues: ImportIssue[],
+    rawCategories: Map<string, ImportCategoryInput>,
   ): CanonicalAccount[] {
     const categoryAccounts: CanonicalAccount[] = [];
+    const categoryCurrencies = new Map<string, Set<string>>();
 
-    for (const [catId, catInfo] of this.rawCategories.entries()) {
+    // Usage currencies roll up to parents. Unused categories inherit their parent's
+    // currencies so every imported parent-child link has a matching currency.
+    for (const [catId, stat] of categoryStats.entries()) {
+      for (const currency of stat.currencies) {
+        const visited = new Set<string>();
+        let currentId: string | undefined = catId;
+        while (currentId && !visited.has(currentId)) {
+          visited.add(currentId);
+          const currencies = categoryCurrencies.get(currentId) ?? new Set<string>();
+          currencies.add(currency);
+          categoryCurrencies.set(currentId, currencies);
+          currentId = rawCategories.get(currentId)?.parentCategoryId;
+        }
+      }
+    }
+
+    const resolving = new Set<string>();
+    const resolveCurrencies = (catId: string): Set<string> => {
+      const existing = categoryCurrencies.get(catId);
+      if (existing && existing.size > 0) return existing;
+      if (resolving.has(catId)) return new Set([this.defaultCurrency]);
+
+      resolving.add(catId);
+      const parentId = rawCategories.get(catId)?.parentCategoryId;
+      const parentCurrencies =
+        parentId && rawCategories.has(parentId)
+          ? resolveCurrencies(parentId)
+          : new Set([this.defaultCurrency]);
+      const currencies = new Set(parentCurrencies);
+      categoryCurrencies.set(catId, currencies);
+      resolving.delete(catId);
+      return currencies;
+    };
+
+    for (const catId of rawCategories.keys()) resolveCurrencies(catId);
+
+    // Allocate all IDs before building accounts so parent references do not depend
+    // on the row order in the source database.
+    for (const catId of rawCategories.keys()) {
+      for (const currency of categoryCurrencies.get(catId) ?? [this.defaultCurrency]) {
+        categoryAccountMap.set(`${catId}:::${currency}`, generator() as AccountId);
+      }
+    }
+
+    for (const [catId, catInfo] of rawCategories.entries()) {
+      const currencies = Array.from(categoryCurrencies.get(catId) ?? [this.defaultCurrency]);
       const stat = categoryStats.get(catId);
-      const currencies =
-        stat && stat.currencies.size > 0 ? Array.from(stat.currencies) : [this.defaultCurrency];
 
       const primaryType =
         catInfo.defaultType ??
@@ -474,22 +601,24 @@ export class CanonicalImportBuilder {
 
       for (const currency of currencies) {
         const catKey = `${catId}:::${currency}`;
-        if (!categoryAccountMap.has(catKey)) {
-          const internalCatId = generator() as AccountId;
-          categoryAccountMap.set(catKey, internalCatId);
+        const internalCatId = categoryAccountMap.get(catKey)!;
+        const parentAccountId = catInfo.parentCategoryId
+          ? categoryAccountMap.get(`${catInfo.parentCategoryId}:::${currency}`)
+          : undefined;
 
-          categoryAccounts.push({
-            id: internalCatId,
-            name: `${catInfo.name} (${currency})`,
-            accountType: primaryType,
-            accountSubtype: getDefaultSubtypeForType(primaryType),
-            currencyCode: currency,
-            description: catInfo.description,
-            icon,
-            color: catInfo.color,
-            orderNum: accountCountOffset + categoryAccounts.length + 1,
-          });
-        }
+        categoryAccounts.push({
+          id: internalCatId,
+          name: `${catInfo.name} (${currency})`,
+          accountType: primaryType,
+          accountSubtype: getDefaultSubtypeForType(primaryType),
+          currencyCode: currency,
+          parentAccountId,
+          description: catInfo.description,
+          icon,
+          color: catInfo.color,
+          orderNum: accountCountOffset + (catInfo.orderNum ?? categoryAccounts.length) + 1,
+          archivedAt: catInfo.archivedAt,
+        });
       }
     }
 
@@ -561,9 +690,10 @@ export class CanonicalImportBuilder {
     categoryAccountMap: Map<string, AccountId>,
     canonicalAccounts: CanonicalAccount[],
     issues: ImportIssue[],
+    rawTransactions: ImportTransactionInput[],
   ): { journals: CanonicalJournal[]; transactions: CanonicalTransaction[] } {
     return synthesizeTransactionPhase({
-      rawTransactions: this.rawTransactions,
+      rawTransactions,
       defaultCurrency: this.defaultCurrency,
       accountMap,
       accountCurrencyMap,
@@ -580,10 +710,11 @@ export class CanonicalImportBuilder {
     categoryAccountMap: Map<string, AccountId>,
     canonicalAccounts: CanonicalAccount[],
     issues: ImportIssue[],
+    rawPlannedPayments: ImportPlannedPaymentInput[],
   ): CanonicalPlannedPayment[] {
     const plannedPayments: CanonicalPlannedPayment[] = [];
 
-    for (const p of this.rawPlannedPayments) {
+    for (const p of rawPlannedPayments) {
       if (!Number.isFinite(p.amount) || p.amount <= 0) {
         issues.push({
           severity: 'error',
@@ -700,28 +831,16 @@ export class CanonicalImportBuilder {
       }
 
       const budgetId = (b.id || generator()) as BudgetId;
-      budgets.push({
-        id: budgetId,
-        name: b.name,
-        amount: Math.abs(b.amount),
-        currencyCode: b.currencyCode || this.defaultCurrency,
-        startMonth: b.startMonth,
-        active: b.active ?? true,
-        intervalType: b.intervalType,
-        intervalN: b.intervalN,
-        startDate: b.startDate,
-        recurrenceDay: b.recurrenceDay,
-        recurrenceMonth: b.recurrenceMonth,
-      });
+      const budgetScopes: CanonicalBudgetScope[] = [];
 
-      // Map category scopes
+      // Category scopes only — funding wallets belong on CanonicalBudget.assetAccountIds.
       if (b.categoryIds) {
         for (const catId of b.categoryIds) {
           let matched = false;
           for (const [key, accId] of categoryAccountMap.entries()) {
             if (key.startsWith(`${catId}:::`)) {
               matched = true;
-              scopes.push({
+              budgetScopes.push({
                 id: generator(),
                 budgetId,
                 accountId: accId,
@@ -740,16 +859,12 @@ export class CanonicalImportBuilder {
         }
       }
 
-      // Map asset account scopes
+      const fundingAccountIds: string[] = [];
       if (b.assetAccountIds) {
         for (const extAccId of b.assetAccountIds) {
           const internalAccId = accountMap.get(extAccId);
           if (internalAccId) {
-            scopes.push({
-              id: generator(),
-              budgetId,
-              accountId: internalAccId,
-            });
+            fundingAccountIds.push(internalAccId);
           } else {
             issues.push({
               severity: 'warning',
@@ -761,6 +876,35 @@ export class CanonicalImportBuilder {
           }
         }
       }
+
+      // FFB spend resolution only counts leaf EXPENSE category scopes. A budget
+      // with none (empty Cashew category_fks, or unresolved refs) is inert.
+      if (budgetScopes.length === 0) {
+        issues.push({
+          severity: 'warning',
+          entity: 'budget',
+          sourceId: b.id,
+          code: 'EMPTY_BUDGET_SCOPE',
+          message: `Budget '${b.name}' has no category scopes and was skipped.`,
+        });
+        continue;
+      }
+
+      budgets.push({
+        id: budgetId,
+        name: b.name,
+        amount: Math.abs(b.amount),
+        currencyCode: b.currencyCode || this.defaultCurrency,
+        startMonth: b.startMonth,
+        active: b.active ?? true,
+        intervalType: b.intervalType,
+        intervalN: b.intervalN,
+        startDate: b.startDate,
+        recurrenceDay: b.recurrenceDay,
+        recurrenceMonth: b.recurrenceMonth,
+        assetAccountIds: fundingAccountIds.length > 0 ? fundingAccountIds.join(',') : undefined,
+      });
+      scopes.push(...budgetScopes);
     }
 
     return { budgets, scopes };
@@ -768,6 +912,7 @@ export class CanonicalImportBuilder {
 
   public build(): CanonicalImportBuildResult {
     const buildIssues: ImportIssue[] = [];
+    const categoryAwareInputs = this.prepareCategoryAwareInputs();
 
     // Maps: externalId -> internalId / currency
     const accountMap = new Map<string, AccountId>();
@@ -778,7 +923,10 @@ export class CanonicalImportBuilder {
     const canonicalAccounts = this.materializeAccounts(accountMap, accountCurrencyMap, buildIssues);
 
     // 2. Scan Category Usage & Currency
-    const categoryStats = this.scanCategoryUsage();
+    const categoryStats = this.scanCategoryUsage(
+      categoryAwareInputs.transactions,
+      categoryAwareInputs.plannedPayments,
+    );
 
     // 3. Materialize Category Accounts
     const categoryAccounts = this.materializeCategoryAccounts(
@@ -786,6 +934,7 @@ export class CanonicalImportBuilder {
       categoryAccountMap,
       canonicalAccounts.length,
       buildIssues,
+      categoryAwareInputs.categories,
     );
     canonicalAccounts.push(...categoryAccounts);
 
@@ -796,6 +945,7 @@ export class CanonicalImportBuilder {
       categoryAccountMap,
       canonicalAccounts,
       buildIssues,
+      categoryAwareInputs.transactions,
     );
 
     // 5. Synthesize Planned Payments
@@ -804,6 +954,7 @@ export class CanonicalImportBuilder {
       categoryAccountMap,
       canonicalAccounts,
       buildIssues,
+      categoryAwareInputs.plannedPayments,
     );
 
     // 6. Synthesize Budgets & Scopes

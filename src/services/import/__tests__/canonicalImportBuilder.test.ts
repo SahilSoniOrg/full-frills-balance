@@ -9,6 +9,8 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
+import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
+import type { AccountId } from '@/src/types/ids';
 
 jest.mock('@/src/data/database/idGenerator', () => {
   let counter = 0;
@@ -330,6 +332,88 @@ describe('CanonicalImportBuilder', () => {
       expect(diningAccounts.map(a => a.currencyCode).sort()).toEqual(['EUR', 'JPY', 'USD']);
     });
 
+    it('moves postings on parent categories to a leaf included by parent budget scopes', () => {
+      const builder = new CanonicalImportBuilder('USD');
+      builder.addAccount({ id: 'acc-main', name: 'Main', currencyCode: 'USD' });
+      builder.registerCategory({
+        id: 'cat-food',
+        name: 'Food',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.registerCategory({
+        id: 'cat-groceries',
+        name: 'Groceries',
+        parentCategoryId: 'cat-food',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.addTransaction({
+        id: 'tx-direct-parent',
+        amount: 20,
+        currencyCode: 'USD',
+        type: 'EXPENSE',
+        sourceAccountId: 'acc-main',
+        categoryId: 'cat-food',
+      });
+      builder.addBudget({
+        id: 'budget-food',
+        name: 'Food',
+        amount: 100,
+        currencyCode: 'USD',
+        startMonth: '2026-10',
+        categoryIds: ['cat-food'],
+      });
+
+      const { canonical } = builder.build();
+      const parent = canonical.accounts.find(account => account.name === 'Food (USD)')!;
+      const other = canonical.accounts.find(
+        account => account.name === 'Other (USD)' && account.parentAccountId === parent.id,
+      )!;
+      const journal = canonical.journals.find(item => item.description === 'Expense')!;
+      const parentPosting = canonical.transactions.find(
+        transaction => transaction.journalId === journal.id && transaction.accountId === other.id,
+      );
+      const leafIds = resolveLeafAccountIds([parent.id], canonical.accounts);
+
+      expect(parentPosting).toBeDefined();
+      expect(leafIds.has(other.id as AccountId)).toBe(true);
+      expect(canonical.budgetScopes).toEqual(
+        expect.arrayContaining([expect.objectContaining({ accountId: parent.id })]),
+      );
+    });
+
+    it('inherits an ancestor currency for unused child categories', () => {
+      const builder = new CanonicalImportBuilder('USD');
+      builder.addAccount({ id: 'acc-eur', name: 'Euro Account', currencyCode: 'EUR' });
+      builder.registerCategory({
+        id: 'cat-parent',
+        name: 'Parent',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.registerCategory({
+        id: 'cat-unused-child',
+        name: 'Unused Child',
+        parentCategoryId: 'cat-parent',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.addTransaction({
+        amount: 10,
+        currencyCode: 'EUR',
+        type: 'EXPENSE',
+        sourceAccountId: 'acc-eur',
+        categoryId: 'cat-parent',
+      });
+
+      const { canonical } = builder.build();
+      const parent = canonical.accounts.find(account => account.name === 'Parent (EUR)')!;
+      const child = canonical.accounts.find(account => account.name === 'Unused Child (EUR)');
+
+      expect(child).toMatchObject({
+        currencyCode: 'EUR',
+        parentAccountId: parent.id,
+      });
+      expect(canonical.accounts.some(account => account.name === 'Unused Child (USD)')).toBe(false);
+    });
+
     it('ensures explicit defaultType takes precedence over transaction count inference', () => {
       const builder = new CanonicalImportBuilder('USD');
       builder.addAccount({ id: 'acc-main', name: 'Main', currencyCode: 'USD' });
@@ -632,6 +716,52 @@ describe('CanonicalImportBuilder', () => {
       expect(pp.recurrenceDay).toBe(1);
     });
 
+    it('keeps transfer destinations as account IDs when they overlap parent category IDs', () => {
+      const builder = new CanonicalImportBuilder('USD');
+      builder.addAccount({ id: 'wallet-source', name: 'Source', currencyCode: 'USD' });
+      builder.addAccount({ id: 'shared-id', name: 'Destination', currencyCode: 'USD' });
+      builder.registerCategory({
+        id: 'shared-id',
+        name: 'Parent Category',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.registerCategory({
+        id: 'child-category',
+        name: 'Child Category',
+        parentCategoryId: 'shared-id',
+        defaultType: AccountType.EXPENSE,
+      });
+      builder.addTransaction({
+        amount: 10,
+        currencyCode: 'USD',
+        type: 'EXPENSE',
+        sourceAccountId: 'wallet-source',
+        categoryId: 'shared-id',
+      });
+      builder.addPlannedPayment({
+        id: 'pp-transfer',
+        name: 'Wallet Transfer',
+        amount: 25,
+        currencyCode: 'USD',
+        fromAccountId: 'wallet-source',
+        toAccountId: 'shared-id',
+        type: 'TRANSFER',
+        startDate: 1700000000000,
+      });
+
+      const { canonical, issues } = builder.build();
+      const source = canonical.accounts.find(account => account.name === 'Source')!;
+      const destination = canonical.accounts.find(account => account.name === 'Destination')!;
+      const payment = canonical.plannedPayments![0];
+
+      expect(canonical.plannedPayments).toHaveLength(1);
+      expect(payment).toMatchObject({
+        fromAccountId: source.id,
+        toAccountId: destination.id,
+      });
+      expect(issues.some(issue => issue.code === 'INVALID_TRANSFER_DESTINATION')).toBe(false);
+    });
+
     it('rejects broken planned transfers and non-finite amounts', () => {
       const builder = new CanonicalImportBuilder('USD');
       builder.addAccount({ id: 'acc-checking', name: 'Checking', currencyCode: 'USD' });
@@ -684,7 +814,7 @@ describe('CanonicalImportBuilder', () => {
   });
 
   describe('5. Budget & Scope Level', () => {
-    it('materializes budgets and links category & asset account scopes', () => {
+    it('materializes budgets with category scopes and funding assetAccountIds', () => {
       const builder = new CanonicalImportBuilder('USD');
       builder.addAccount({ id: 'acc-checking', name: 'Checking', currencyCode: 'USD' });
       builder.registerCategory({ id: 'cat-groceries', name: 'Groceries' });
@@ -703,7 +833,7 @@ describe('CanonicalImportBuilder', () => {
       const { canonical, issues } = builder.build();
       expect(issues).toHaveLength(0);
       expect(canonical.budgets).toHaveLength(1);
-      expect(canonical.budgetScopes).toHaveLength(3); // 2 category accounts + 1 asset account
+      expect(canonical.budgetScopes).toHaveLength(2); // category accounts only
 
       const budget = canonical.budgets![0];
       expect(budget.name).toBe('Monthly Living');
@@ -714,9 +844,30 @@ describe('CanonicalImportBuilder', () => {
       const internalGroceries = canonical.accounts.find(a => a.name === 'Groceries (USD)')!.id;
       const internalUtilities = canonical.accounts.find(a => a.name === 'Utilities (USD)')!.id;
 
-      expect(linkedAccountIds).toContain(internalChecking);
+      expect(linkedAccountIds).not.toContain(internalChecking);
       expect(linkedAccountIds).toContain(internalGroceries);
       expect(linkedAccountIds).toContain(internalUtilities);
+      expect(budget.assetAccountIds).toBe(internalChecking);
+    });
+
+    it('skips budgets with no category scopes and reports EMPTY_BUDGET_SCOPE', () => {
+      const builder = new CanonicalImportBuilder('USD');
+      builder.addAccount({ id: 'acc-checking', name: 'Checking', currencyCode: 'USD' });
+
+      builder.addBudget({
+        id: 'b-empty',
+        name: 'Unscoped Budget',
+        amount: 500,
+        currencyCode: 'USD',
+        startMonth: '2024-01',
+        categoryIds: [],
+        assetAccountIds: ['acc-checking'],
+      });
+
+      const { canonical, issues } = builder.build();
+      expect(canonical.budgets).toHaveLength(0);
+      expect(canonical.budgetScopes).toHaveLength(0);
+      expect(issues.some(i => i.code === 'EMPTY_BUDGET_SCOPE')).toBe(true);
     });
 
     it('reports warning issues on unresolved budget category and asset account references', () => {
@@ -733,11 +884,13 @@ describe('CanonicalImportBuilder', () => {
       });
 
       const { canonical, issues } = builder.build();
-      expect(canonical.budgets).toHaveLength(1);
+      // Unresolved category refs yield no scopes → budget is skipped.
+      expect(canonical.budgets).toHaveLength(0);
       expect(canonical.budgetScopes).toHaveLength(0);
 
       expect(issues.some(i => i.code === 'CATEGORY_NOT_FOUND')).toBe(true);
       expect(issues.some(i => i.code === 'ACCOUNT_NOT_FOUND')).toBe(true);
+      expect(issues.some(i => i.code === 'EMPTY_BUDGET_SCOPE')).toBe(true);
     });
   });
 

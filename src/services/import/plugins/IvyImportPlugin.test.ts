@@ -299,6 +299,35 @@ describe('IvyImportPlugin', () => {
       expect(lastBatch.budgetScopes[0].accountId).toBe(rawAcc.id);
     });
 
+    it('skips budgets with empty categoryIdsSerialized (EMPTY_BUDGET_SCOPE)', async () => {
+      const dataWithEmptyBudget = {
+        ...validIvyData,
+        budgets: [
+          {
+            id: 'ivy-b-empty',
+            name: 'Unscoped Ivy Budget',
+            amount: 100,
+            categoryIdsSerialized: '[]',
+            isDeleted: false,
+          },
+        ],
+      };
+
+      const context = { json: dataWithEmptyBudget } as ImportFileContext;
+      const parsed = await ivyPlugin.parse(context, { defaultCurrency: 'USD' });
+
+      expect(parsed.canonical!.budgets).toHaveLength(0);
+      expect(parsed.canonical!.budgetScopes).toHaveLength(0);
+      expect(parsed.stats.skippedItems).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'ivy-b-empty',
+            reason: expect.stringContaining('no category scopes'),
+          }),
+        ]),
+      );
+    });
+
     it('handles system opening balance accounts correctly', async () => {
       const dataWithOpeningBalance = {
         ...validIvyData,
