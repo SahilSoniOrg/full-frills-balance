@@ -195,4 +195,16 @@ describe('useJournalList', () => {
     const latestCoreCall = coreCalls[coreCalls.length - 1];
     expect(latestCoreCall?.[2]).toEqual(mockDateRange);
   });
+
+  it('forwards enabled=false so offscreen primary pages pause journal reads', () => {
+    renderHook(() =>
+      useJournalList(
+        { enabled: false, emptyState: { title: 'Empty', subtitle: 'None' } },
+        'test-wp' as WorkplaceId,
+      ),
+    );
+
+    const latestCall = useJournalsMock.mock.calls[useJournalsMock.mock.calls.length - 1];
+    expect(latestCall?.[6]).toEqual(expect.objectContaining({ enabled: false }));
+  });
 });

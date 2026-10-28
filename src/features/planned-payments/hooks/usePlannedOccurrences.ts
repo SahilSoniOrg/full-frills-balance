@@ -10,6 +10,7 @@ import { JournalStatus } from '@/src/types/enums';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { useMemo } from 'react';
+import { EMPTY } from 'rxjs';
 import {
   mapLiabilityFlowsToPlannedOccurrences,
   mergePlannedOccurrences,
@@ -21,6 +22,7 @@ const PLANNED_STATUS = [JournalStatus.PLANNED];
 
 export interface UsePlannedOccurrencesParams {
   workplaceId: WorkplaceId;
+  enabled?: boolean;
   /** STS liability flows to merge as simulated occurrences. */
   allFlows?: Flow[];
   accountMap?: Map<string, AccountFields>;
@@ -40,6 +42,7 @@ export interface PlannedOccurrencesResult {
  */
 export function usePlannedOccurrences({
   workplaceId,
+  enabled = true,
   allFlows,
   accountMap,
   currencyCode,
@@ -51,13 +54,15 @@ export function usePlannedOccurrences({
     undefined,
     undefined,
     PLANNED_STATUS,
+    undefined,
+    { enabled },
   );
 
   const plannedJournals = plannedJournalsOverride ?? fetchedPlannedJournals;
 
   const { data: activePlannedPayments } = useObservable<PlainPlannedPayment[]>(
-    () => plannedPaymentReadService.observeActive(workplaceId),
-    [workplaceId],
+    () => (enabled ? plannedPaymentReadService.observeActive(workplaceId) : EMPTY),
+    [enabled, workplaceId],
     [],
   );
 

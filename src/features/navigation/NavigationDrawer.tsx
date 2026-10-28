@@ -14,6 +14,8 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { usePrimaryNavigation } from '@/src/navigation/primaryNavigation';
+import { primaryPageFromRouteName } from '@/src/navigation/primaryPages';
+import type { LegacyPanGesture } from 'react-native-gesture-handler';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -125,6 +127,8 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     closeDrawer: closePrimaryDrawer,
     selectionModeActive,
     userName,
+    activeRouteName,
+    pageGesture,
   } = primaryNav;
   const { data: workplaceRows = [] } = useObservable(
     () => workplaceService.observeAllWorkplaces(),
@@ -144,6 +148,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
   const isSwitching = workplace.isSwitchingWorkplace;
   const error = workplace.workplaceSwitchError;
   const canOpen = !selectionModeActive && !isSwitching;
+  const isDashboard = primaryPageFromRouteName(activeRouteName ?? 'index')?.id === 'dashboard';
   const router = useRouter();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -489,6 +494,21 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
       }}
       drawerType="front"
       swipeEnabled={(drawerVisible || canOpen) && !selectorOpen && !isSwitching}
+      // Edge-only when closed so the primary pager owns page swipes. Full-width
+      // Dashboard hitSlop made RNGH hold the touch until the drawer pan failed,
+      // so UIScrollView paging never started. Keep directional activation; only
+      // block a real pageGesture when present (native pager no longer exposes one).
+      swipeEdgeWidth={drawerVisible ? width : 32}
+      configureGestureHandler={gesture => {
+        const legacyPan = gesture as unknown as LegacyPanGesture;
+        const configured = drawerVisible
+          ? legacyPan.activeOffsetX(-20).failOffsetX(20)
+          : legacyPan.activeOffsetX(20).failOffsetX(-20);
+        if (pageGesture && (drawerVisible || !isDashboard)) {
+          configured.blocksExternalGesture(pageGesture);
+        }
+        return configured as unknown as typeof gesture;
+      }}
       reduceMotion={reduceMotion}
       drawerStyle={[styles.drawer, { width: drawerWidth, backgroundColor: theme.surface }]}
       overlayStyle={{ backgroundColor: theme.overlay }}

@@ -1,16 +1,16 @@
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
-import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { SafeAreaScope } from '@/src/design-system/SafeArea';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import {
   NavigationDrawer,
-  PrimaryTabBar,
+  PrimaryPager,
   type ContextualAddAction,
 } from '@/src/features/navigation';
 import { AppNavigation } from '@/src/utils/navigation';
-import { Tabs } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { PRIMARY_PAGES } from '@/src/navigation/primaryPages';
+import type { GestureType } from 'react-native-gesture-handler';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function TabsLayout() {
@@ -18,6 +18,8 @@ export function TabsLayout() {
   const { userName } = useProfilePrefs();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectionModeActive, setSelectionModeActive] = useState(false);
+  const [activeRouteName, setActiveRouteName] = useState('index');
+  const [pageGesture, setPageGesture] = useState<GestureType | null>(null);
   const displayName = userName || 'User';
 
   const closeDrawer = () => setDrawerVisible(false);
@@ -29,6 +31,13 @@ export function TabsLayout() {
     if (selectionModeActive || workplace.isSwitchingWorkplace) return;
     setDrawerVisible(true);
   };
+  const reportActiveRoute = useCallback((routeName: string) => {
+    setActiveRouteName(routeName);
+    setSelectionModeActive(false);
+  }, []);
+  const reportPageGesture = useCallback((gesture: GestureType | null) => {
+    setPageGesture(previous => (previous === gesture ? previous : gesture));
+  }, []);
 
   const onAddAction = (action: ContextualAddAction) => {
     const workplaceId = workplace.workplaceId;
@@ -63,41 +72,23 @@ export function TabsLayout() {
           openDrawer,
           closeDrawer,
           userName: displayName,
+          activeRouteName,
+          reportActiveRoute,
+          pageGesture,
+          reportPageGesture,
         }}
       >
         <NavigationDrawer>
           <View style={styles.shell}>
-            <Tabs
-              tabBar={props => (
-                <PrimaryTabBar
-                  {...props}
-                  isSwitching={workplace.isSwitchingWorkplace}
-                  onAddAction={onAddAction}
+            <PrimaryPager onAddAction={onAddAction} backBehavior="none">
+              {PRIMARY_PAGES.map(page => (
+                <PrimaryPager.Screen
+                  key={page.routeName}
+                  name={page.routeName}
+                  options={{ title: page.title }}
                 />
-              )}
-              screenOptions={{
-                headerShown: false,
-                // Custom tabBar owns chrome; keep the navigator wrapper from clipping
-                // the raised Add shadow at the bar’s top edge.
-                tabBarStyle: {
-                  backgroundColor: 'transparent',
-                  borderTopWidth: 0,
-                  elevation: 0,
-                  overflow: 'visible',
-                },
-              }}
-              screenListeners={{
-                focus: () => setSelectionModeActive(false),
-              }}
-              screenLayout={({ children }: { children: ReactNode }) => (
-                <RemountOnWorkplace>{children}</RemountOnWorkplace>
-              )}
-            >
-              <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
-              <Tabs.Screen name="accounts" options={{ title: 'Accounts' }} />
-              <Tabs.Screen name="commitments" options={{ title: 'Plans' }} />
-              <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
-            </Tabs>
+              ))}
+            </PrimaryPager>
           </View>
         </NavigationDrawer>
       </PrimaryNavigationProvider>

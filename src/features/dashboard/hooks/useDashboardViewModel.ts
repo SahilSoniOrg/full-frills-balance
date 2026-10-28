@@ -24,6 +24,7 @@ import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsFocused } from 'expo-router';
 import { EMPTY } from 'rxjs';
 
 export interface RecentJournalEntries {
@@ -65,6 +66,7 @@ type DashboardExplanationSection = 'assets' | 'income' | 'committed' | 'debts';
 type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 
 export function useDashboardViewModel(): DashboardViewModel {
+  const isFocused = useIsFocused();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { isInitialized, isAppReady } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
@@ -78,8 +80,9 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: safeToSpendData } = useObservable<
     SafeToSpendDashboard | SafeToSpendPaintSnapshot | null
   >(
-    () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
-    [workplaceId, isAppReady],
+    () =>
+      isAppReady && isFocused ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY,
+    [workplaceId, isAppReady, isFocused],
     () => {
       const cached = snapshotService.getCustomSnapshotWithMetadata<
         SafeToSpendPaintSnapshot | SafeToSpendDashboard
@@ -150,6 +153,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const journalListCore = useJournalEntryList({
     workplaceId,
+    enabled: isFocused,
     pageSize: AppConfig.pagination.dashboardPageSize,
     initialItems: () => {
       const snapshot = snapshotService.getDashboardSnapshot<DashboardData>(workplaceId);
@@ -202,6 +206,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       : null;
   const plannedOccurrences = usePlannedOccurrences({
     workplaceId,
+    enabled: isFocused,
     allFlows: currentReadyDashboard?.report.allFlows,
     accountMap: currentReadyDashboard?.accountMap,
     currencyCode: visibleSafeToSpendData?.currencyCode,

@@ -6,6 +6,7 @@ import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
+import { primaryPageFromRouteName } from '@/src/navigation/primaryPages';
 import { saveJournalSearchScope } from './journalSearchScope';
 import {
   type AccountCreationReturnTarget,
@@ -81,7 +82,13 @@ export const AppNavigation = {
    * Navigate to the Dashboard (Home tab).
    */
   toDashboard: () => {
-    router.replace('/');
+    router.replace('/(tabs)/index');
+  },
+
+  /** Select a canonical primary page without adding an outer Stack destination. */
+  toPrimaryPage: (routeName: string) => {
+    if (!primaryPageFromRouteName(routeName)) return;
+    router.replace(`/(tabs)/${routeName}` as Href);
   },
 
   toWorkplaceCreation: () => {
@@ -103,7 +110,7 @@ export const AppNavigation = {
    * Navigate to the Accounts List tab.
    */
   toAccounts: () => {
-    router.replace('/(tabs)/accounts');
+    AppNavigation.toPrimaryPage('accounts');
   },
 
   /** Return after removal, preserving valid history and discarding pages for the removed account. */

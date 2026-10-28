@@ -13,11 +13,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 export interface TabOption<T extends string | number = string> {
   id: T;
   label: string;
   badge?: string | number;
+  /** Primary-page index used to track an underline during a native page drag. */
+  pageIndex?: number;
 }
 
 interface AppTabsProps<T extends string | number> {
@@ -25,9 +28,83 @@ interface AppTabsProps<T extends string | number> {
   value: T;
   onChange: (id: T) => void;
   testID?: string;
+  pageProgress?: SharedValue<number>;
 }
 
 type TabLayout = { x: number; width: number };
+
+type PageIndicatorEndpoints = {
+  firstIndex: number;
+  secondIndex: number;
+  firstX: number;
+  firstWidth: number;
+  secondX: number;
+  secondWidth: number;
+};
+
+/** Underline driven by pager SharedValue — only shareable numbers enter the worklet. */
+function PageProgressIndicator({
+  pageProgress,
+  endpoints,
+  color,
+  testID,
+}: {
+  pageProgress: SharedValue<number>;
+  endpoints: PageIndicatorEndpoints | null;
+  color: string;
+  testID?: string;
+}) {
+  const firstIndex = endpoints?.firstIndex ?? 0;
+  const secondIndex = endpoints?.secondIndex ?? 0;
+  const firstX = endpoints?.firstX ?? 0;
+  const firstWidth = endpoints?.firstWidth ?? 0;
+  const secondX = endpoints?.secondX ?? 0;
+  const secondWidth = endpoints?.secondWidth ?? 0;
+  const ready = endpoints !== null;
+
+  const pageIndicatorStyle = useAnimatedStyle(() => {
+    if (!ready) return { width: 0 };
+    const progress = Math.max(firstIndex, Math.min(pageProgress.value, secondIndex));
+    const fraction =
+      secondIndex === firstIndex ? 0 : (progress - firstIndex) / (secondIndex - firstIndex);
+    return {
+      width: firstWidth + (secondWidth - firstWidth) * fraction,
+      transform: [{ translateX: firstX + (secondX - firstX) * fraction }],
+    };
+  }, [ready, firstIndex, secondIndex, firstX, firstWidth, secondX, secondWidth, pageProgress]);
+
+  return (
+    <Reanimated.View
+      pointerEvents="none"
+      style={[styles.indicator, { backgroundColor: color }, pageIndicatorStyle]}
+      testID={testID}
+    />
+  );
+}
+
+function pageIndicatorEndpoints(
+  options: readonly TabOption<string | number>[],
+  layouts: Partial<Record<string, TabLayout>>,
+): PageIndicatorEndpoints | null {
+  const pages = options
+    .filter(option => option.pageIndex !== undefined)
+    .slice()
+    .sort((a, b) => (a.pageIndex ?? 0) - (b.pageIndex ?? 0));
+  if (pages.length < 2) return null;
+  const first = pages[0];
+  const second = pages[pages.length - 1];
+  const firstLayout = layouts[String(first.id)];
+  const secondLayout = layouts[String(second.id)];
+  if (!firstLayout || !secondLayout) return null;
+  return {
+    firstIndex: first.pageIndex ?? 0,
+    secondIndex: second.pageIndex ?? first.pageIndex ?? 0,
+    firstX: firstLayout.x,
+    firstWidth: firstLayout.width,
+    secondX: secondLayout.x,
+    secondWidth: secondLayout.width,
+  };
+}
 
 /**
  * Shared header tabs with a springing underline.
@@ -40,6 +117,7 @@ function AppTabsComponent<T extends string | number>({
   value,
   onChange,
   testID,
+  pageProgress,
 }: AppTabsProps<T>) {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
@@ -52,7 +130,7 @@ function AppTabsComponent<T extends string | number>({
 
   const selectedKey = String(value);
   const selectedLayout = layouts[selectedKey];
-
+  const progressEndpoints = pageProgress ? pageIndicatorEndpoints(options, layouts) : null;
   useEffect(() => {
     if (!selectedLayout || selectedLayout.width <= 0) return;
 
@@ -165,7 +243,14 @@ function AppTabsComponent<T extends string | number>({
               </TouchableOpacity>
             );
           })}
-          {selectedLayout ? (
+          {pageProgress ? (
+            <PageProgressIndicator
+              pageProgress={pageProgress}
+              endpoints={progressEndpoints}
+              color={theme.primary}
+              testID={testID ? `${testID}-indicator` : 'tab-indicator'}
+            />
+          ) : selectedLayout ? (
             <Animated.View
               pointerEvents="none"
               style={[

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
-import { NavigationDrawer } from '@/src/features/navigation';
+import { NavigationDrawer } from '@/src/features/navigation/NavigationDrawer';
 import { AppNavigation } from '@/src/utils/navigation';
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import type { ComponentProps } from 'react';
@@ -143,6 +143,78 @@ describe('NavigationDrawer shell', () => {
 
     renderDrawer({ visible: false, canOpen: false });
     expect(mockDrawerProps?.swipeEnabled).toBe(false);
+  });
+
+  it('keeps closed-drawer hitSlop edge-only on Dashboard so the pager can swipe', () => {
+    const pageGesture = { tag: 'page' };
+    const blocksExternalGesture = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const activeOffsetX = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const failOffsetX = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const pan = { activeOffsetX, failOffsetX, blocksExternalGesture };
+
+    render(
+      <PrimaryNavigationProvider
+        value={{
+          reportSelectionMode: jest.fn(),
+          selectionModeActive: false,
+          drawerVisible: false,
+          openDrawer: jest.fn(),
+          closeDrawer: jest.fn(),
+          userName: 'Test User',
+          activeRouteName: 'index',
+          pageGesture: pageGesture as never,
+        }}
+      >
+        <NavigationDrawer>{null}</NavigationDrawer>
+      </PrimaryNavigationProvider>,
+    );
+
+    expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
+    mockDrawerProps?.configureGestureHandler?.(pan as never);
+    expect(activeOffsetX).toHaveBeenCalledWith(20);
+    expect(failOffsetX).toHaveBeenCalledWith(-20);
+    expect(blocksExternalGesture).not.toHaveBeenCalled();
+  });
+
+  it('blocks the pager for edge pans on non-Dashboard pages', () => {
+    const pageGesture = { tag: 'page' };
+    const blocksExternalGesture = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const activeOffsetX = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const failOffsetX = jest.fn(function (this: { config: object }) {
+      return this;
+    });
+    const pan = { activeOffsetX, failOffsetX, blocksExternalGesture };
+
+    render(
+      <PrimaryNavigationProvider
+        value={{
+          reportSelectionMode: jest.fn(),
+          selectionModeActive: false,
+          drawerVisible: false,
+          openDrawer: jest.fn(),
+          closeDrawer: jest.fn(),
+          userName: 'Test User',
+          activeRouteName: 'accounts',
+          pageGesture: pageGesture as never,
+        }}
+      >
+        <NavigationDrawer>{null}</NavigationDrawer>
+      </PrimaryNavigationProvider>,
+    );
+
+    expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
+    mockDrawerProps?.configureGestureHandler?.(pan as never);
+    expect(blocksExternalGesture).toHaveBeenCalledWith(pageGesture);
   });
 
   it('closes the selector, then the drawer, on the Android back button', () => {

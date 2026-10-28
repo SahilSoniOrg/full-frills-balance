@@ -4,10 +4,9 @@ import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PRIMARY_TABS, primaryTabFromRouteName } from '@/src/navigation/primaryNavigation';
+import { primaryRouteForGroup } from '@/src/navigation/primaryPages';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { toast } from '@/src/utils/alerts';
-import { Tabs } from 'expo-router';
-import { type ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ContextualAddMenu, type ContextualAddAction } from './ContextualAddMenu';
 
@@ -16,25 +15,31 @@ const TAB_BAR_ROW_HEIGHT = Size.fab;
 const ADD_RAISE = Spacing.sm;
 const ADD_SLOT_SIZE = Size.buttonLg + Spacing.xs;
 
-type TabsBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
-
-export type PrimaryTabBarProps = TabsBarProps & {
+export type PrimaryTabBarProps = {
+  routes: readonly { key: string; name: string }[];
+  activeRouteName: string;
+  emitTabPress: (routeKey: string) => boolean;
+  emitTabLongPress: (routeKey: string) => void;
+  onNavigateToPage: (routeName: string) => void;
   isSwitching: boolean;
+  isTransitioning: boolean;
   onAddAction: (action: ContextualAddAction) => void;
 };
 
 export function PrimaryTabBar({
-  state,
-  emitter,
-  navigateToTab,
+  routes,
+  activeRouteName,
+  emitTabPress,
+  emitTabLongPress,
+  onNavigateToPage,
   isSwitching,
+  isTransitioning,
   onAddAction,
 }: PrimaryTabBarProps) {
   const { theme } = useTheme();
   const { isKeyboardVisible } = useKeyboard();
   const { insets } = useWindowSafeAreaLayout();
-  const primaryTabs = state.routes.filter(route => primaryTabFromRouteName(route.name));
-  const activeTab = primaryTabFromRouteName(state.routes[state.index]?.name) ?? 'dashboard';
+  const activeTab = primaryTabFromRouteName(activeRouteName) ?? 'dashboard';
   const barColor = theme.background;
   const selectedLabelColor = getReadableColor(theme.primary, barColor);
   const inactiveLabelColor = getReadableColor(theme.textSecondary, barColor);
@@ -42,29 +47,27 @@ export function PrimaryTabBar({
 
   if (isKeyboardVisible) return null;
 
-  const renderTab = (route: (typeof primaryTabs)[number]) => {
-    const copy = PRIMARY_TABS.find(item => item.routeName === route.name);
-    if (!copy) return null;
-    const selected = state.routes[state.index]?.key === route.key;
+  const renderTab = (copy: (typeof PRIMARY_TABS)[number]) => {
+    const targetRouteName = primaryRouteForGroup(copy.tab);
+    const targetRoute = routes.find(route => route.name === targetRouteName);
+    const selected = activeTab === copy.tab;
     return (
       <PressScaleTouchable
-        key={route.key}
+        key={copy.tab}
+        disabled={isSwitching || isTransitioning || !targetRoute}
         onPress={() => {
-          const event = emitter.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!selected && !event.defaultPrevented) navigateToTab(route.key);
+          if (!targetRoute) return;
+          const prevented = emitTabPress(targetRoute.key);
+          if (!selected && !prevented) onNavigateToPage(targetRouteName);
         }}
         onLongPress={() => {
-          emitter.emit({ type: 'tabLongPress', target: route.key });
+          if (targetRoute) emitTabLongPress(targetRoute.key);
           toast.info(AppConfig.strings.navigation.tabDescriptions[copy.tab], {
             key: 'navigation-help',
           });
         }}
         accessibilityRole="tab"
-        accessibilityState={{ selected }}
+        accessibilityState={{ selected, disabled: isSwitching || isTransitioning || !targetRoute }}
         accessibilityLabel={copy.label}
         accessibilityHint={AppConfig.strings.navigation.tabDescriptions[copy.tab]}
         testID={`tab-${copy.tab}`}
@@ -114,17 +117,17 @@ export function PrimaryTabBar({
       accessibilityRole="tablist"
     >
       <View style={styles.tabRow}>
-        {primaryTabs.slice(0, 2).map(renderTab)}
+        {PRIMARY_TABS.slice(0, 2).map(renderTab)}
         <View style={styles.addItem}>
           <View style={[styles.addHalo, { backgroundColor: barColor }]} />
           <ContextualAddMenu
             primaryTab={activeTab}
-            disabled={isSwitching}
+            disabled={isSwitching || isTransitioning}
             bottomOffset={(TAB_BAR_ROW_HEIGHT - ADD_SLOT_SIZE) / 2 + ADD_RAISE}
             onAction={onAddAction}
           />
         </View>
-        {primaryTabs.slice(2).map(renderTab)}
+        {PRIMARY_TABS.slice(2).map(renderTab)}
       </View>
     </View>
   );

@@ -2,13 +2,18 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { smsService } from '@/src/services/sms-service';
 import { WorkplaceId } from '@/src/types/ids';
 import { Platform } from 'react-native';
-import { of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 
 /** Unprocessed SMS count (Android only; 0 elsewhere). */
-export function useUnreadSmsCount(workplaceId: WorkplaceId) {
+export function useUnreadSmsCount(workplaceId: WorkplaceId, enabled = true) {
   return useObservable(
-    () => (Platform.OS === 'android' ? smsService.observeUnprocessedCount(workplaceId) : of(0)),
-    [workplaceId],
+    () =>
+      !enabled
+        ? EMPTY
+        : Platform.OS === 'android'
+          ? smsService.observeUnprocessedCount(workplaceId)
+          : of(0),
+    [enabled, workplaceId],
     0,
   );
 }

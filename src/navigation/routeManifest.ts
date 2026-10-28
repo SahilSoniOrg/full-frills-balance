@@ -1,8 +1,11 @@
+import { PRIMARY_PAGES, type PrimaryPageId } from '@/src/navigation/primaryPages';
+
 export type RoutePresentation = 'tab' | 'composer' | 'detail' | 'internal';
 
 /** Where a workplace-scoped record route returns after a workplace switch. */
 export type WorkplaceSwitchFallback = {
   readonly name: string;
+  readonly resolveName?: (params?: object) => string;
   readonly params?: (params?: object) => Record<string, string>;
 };
 
@@ -15,48 +18,34 @@ export interface RouteManifestEntry {
   readonly switchFallback?: WorkplaceSwitchFallback;
 }
 
+const primaryRouteMetadata: Record<PrimaryPageId, { screenType: string; flowContext: string }> = {
+  dashboard: { screenType: 'dashboard', flowContext: 'dashboard_overview' },
+  accounts: { screenType: 'account', flowContext: 'account_management' },
+  categories: { screenType: 'account', flowContext: 'account_management' },
+  budgets: { screenType: 'commitments', flowContext: 'cash_flow_planning' },
+  'planned-payments': { screenType: 'commitments', flowContext: 'cash_flow_planning' },
+  activity: { screenType: 'journal', flowContext: 'transaction_history' },
+};
+
 const tabRoutes = [
-  {
-    name: 'index',
-    presentation: 'tab',
-    isModal: false,
-    screenType: 'dashboard',
-    flowContext: 'dashboard_overview',
-  },
+  ...PRIMARY_PAGES.flatMap(page => {
+    const metadata = primaryRouteMetadata[page.id];
+    const entry = {
+      presentation: 'tab' as const,
+      isModal: false,
+      ...metadata,
+    };
+    return [
+      { name: page.routeName, ...entry },
+      { name: `(tabs)/${page.routeName}`, ...entry },
+    ];
+  }),
   {
     name: '(tabs)',
     presentation: 'tab',
     isModal: false,
     screenType: 'dashboard',
     flowContext: 'dashboard_overview',
-  },
-  {
-    name: '(tabs)/index',
-    presentation: 'tab',
-    isModal: false,
-    screenType: 'dashboard',
-    flowContext: 'dashboard_overview',
-  },
-  {
-    name: '(tabs)/accounts',
-    presentation: 'tab',
-    isModal: false,
-    screenType: 'account',
-    flowContext: 'account_management',
-  },
-  {
-    name: '(tabs)/activity',
-    presentation: 'tab',
-    isModal: false,
-    screenType: 'journal',
-    flowContext: 'transaction_history',
-  },
-  {
-    name: '(tabs)/commitments',
-    presentation: 'tab',
-    isModal: false,
-    screenType: 'commitments',
-    flowContext: 'cash_flow_planning',
   },
 ] as const satisfies readonly RouteManifestEntry[];
 
@@ -86,12 +75,10 @@ const detailRoutes = [
     true,
     {
       name: 'accounts',
-      params: params => ({
-        tab:
-          params && 'filterMode' in params && params.filterMode === 'categories'
-            ? 'categories'
-            : 'accounts',
-      }),
+      resolveName: params =>
+        params && 'filterMode' in params && params.filterMode === 'categories'
+          ? 'categories'
+          : 'accounts',
     },
   ],
   ['settings', 'settings', 'preferences_hub', false],
@@ -102,15 +89,9 @@ const detailRoutes = [
     'commitments',
     'commitment_review',
     false,
-    { name: 'commitments', params: () => ({ tab: 'planned' }) },
+    { name: 'planned-payments' },
   ],
-  [
-    'budget-details',
-    'budget',
-    'budget_review',
-    false,
-    { name: 'commitments', params: () => ({ tab: 'budgets' }) },
-  ],
+  ['budget-details', 'budget', 'budget_review', false, { name: 'commitments' }],
   ['insight-details', 'hub', 'insight_inspection', true, { name: 'hub' }],
   ['journal-balance-review', 'journal', 'balance_review', false, { name: 'activity' }],
   ['hub', 'hub', 'intelligence_hub', false],

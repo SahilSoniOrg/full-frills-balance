@@ -29,13 +29,15 @@ import {
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
 import { useTheme } from '@/src/hooks/use-theme';
+import { primaryPageIndex } from '@/src/navigation/primaryPages';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import type { SharedValue } from 'react-native-reanimated';
 
 const TAB_OPTIONS = [
-  { id: 'accounts' as const, label: 'Accounts' },
-  { id: 'categories' as const, label: 'Categories' },
+  { id: 'accounts' as const, label: 'Accounts', pageIndex: primaryPageIndex('accounts') },
+  { id: 'categories' as const, label: 'Categories', pageIndex: primaryPageIndex('categories') },
 ] as const;
 
 export function AccountsListView({
@@ -68,7 +70,8 @@ export function AccountsListView({
   activeTab,
   setActiveTab,
   chrome,
-}: AccountsListViewModel & { chrome: TabScreenChrome }) {
+  pageProgress,
+}: AccountsListViewModel & { chrome: TabScreenChrome; pageProgress?: SharedValue<number> }) {
   const { theme } = useTheme();
 
   const rows = useMemo(() => buildAccountListRows(sections), [sections]);
@@ -237,7 +240,12 @@ export function AccountsListView({
     <ScreenWithChrome chrome={chrome} scrollable={false} testID="accounts-screen">
       <View style={styles.container}>
         <View style={styles.tabContainer}>
-          <AppTabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
+          <AppTabs
+            options={TAB_OPTIONS}
+            value={activeTab}
+            onChange={setActiveTab}
+            pageProgress={pageProgress}
+          />
         </View>
 
         <FlashList

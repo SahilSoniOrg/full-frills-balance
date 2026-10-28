@@ -57,3 +57,33 @@ test('extracts direct and tuple manifest route names', () => {
     'reports-v2',
   ]);
 });
+
+test('includes primaryPages.ts leaf routes as (tabs) names', () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'route-primary-'));
+  const temporaryManifest = path.join(temporaryDirectory, 'routeManifest.ts');
+  fs.writeFileSync(temporaryManifest, `const direct = { name: '(tabs)', presentation: 'tab' };`);
+  fs.writeFileSync(
+    path.join(temporaryDirectory, 'primaryPages.ts'),
+    `
+      export const PRIMARY_PAGES = [
+        { routeName: 'index' },
+        { routeName: 'accounts' },
+        { routeName: 'categories' },
+        { routeName: 'commitments' },
+        { routeName: 'planned-payments' },
+        { routeName: 'activity' },
+      ];
+    `,
+  );
+
+  assert.deepEqual(getManifestRouteNames(temporaryManifest), [
+    '(tabs)',
+    '(tabs)/accounts',
+    '(tabs)/activity',
+    '(tabs)/categories',
+    '(tabs)/commitments',
+    '(tabs)/index',
+    '(tabs)/planned-payments',
+    'index',
+  ]);
+});

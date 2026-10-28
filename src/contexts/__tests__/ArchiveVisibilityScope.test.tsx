@@ -90,4 +90,24 @@ describe('ArchiveVisibilityScope', () => {
     });
     expect(result.current.showArchived).toBe(true);
   });
+
+  it('resets showArchived when active becomes false', () => {
+    const activeRef = { current: true };
+    const { result, rerender } = renderHook(() => useArchiveVisibility(), {
+      wrapper: ({ children }) => (
+        <ArchiveVisibilityScopeProvider active={activeRef.current}>
+          {children}
+        </ArchiveVisibilityScopeProvider>
+      ),
+    });
+
+    act(() => {
+      result.current.setShowArchived(true);
+    });
+    expect(result.current.showArchived).toBe(true);
+
+    activeRef.current = false;
+    rerender({});
+    expect(result.current.showArchived).toBe(false);
+  });
 });

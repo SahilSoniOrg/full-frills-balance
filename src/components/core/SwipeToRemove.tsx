@@ -4,6 +4,7 @@ import { Size, Spacing, type RadiusKey } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { usePrimaryPageGesture } from '@/src/navigation/primaryPageNavigation';
 import { Icon } from '@/src/types/domainIcons';
 import { type ReactNode } from 'react';
 import { StyleSheet, type LayoutChangeEvent } from 'react-native';
@@ -30,6 +31,7 @@ export function SwipeToRemove({
   readonly borderRadius?: RadiusKey | number;
 }) {
   const { theme } = useTheme();
+  const pageGesture = usePrimaryPageGesture();
   const reduceMotion = useReducedMotion();
   const translateX = useSharedValue(0);
   const reveal = useSharedValue(0);
@@ -80,6 +82,7 @@ export function SwipeToRemove({
       if (success && shouldRemove) remove();
     })
     .onFinalize(reset);
+  if (pageGesture) gesture.blocksExternalGesture(pageGesture);
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));

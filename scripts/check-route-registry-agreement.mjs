@@ -18,7 +18,10 @@ function collectRouteFiles(appDirectory) {
         return;
       }
       if (!/\.(?:tsx?|jsx?)$/.test(entry.name)) return;
-      const routePath = relativePath.replace(/\.(?:tsx?|jsx?)$/, '').split(path.sep).join('/');
+      const routePath = relativePath
+        .replace(/\.(?:tsx?|jsx?)$/, '')
+        .split(path.sep)
+        .join('/');
       if (routePath === '_layout' || routePath.endsWith('/_layout')) return;
       routes.push(routePath);
     },
@@ -37,14 +40,23 @@ export function getManifestRouteNames(manifestPath) {
 
   // Object route entries always declare presentation; nested switchFallback
   // destinations use name without presentation and must not count as routes.
-  for (const match of source.matchAll(
-    /\bname:\s*['"]([^'"]+)['"](?=[^}]*\bpresentation\s*:)/gs,
-  )) {
+  for (const match of source.matchAll(/\bname:\s*['"]([^'"]+)['"](?=[^}]*\bpresentation\s*:)/gs)) {
     names.add(match[1]);
   }
   // Tuple route entries may span lines when they carry a switchFallback object.
   for (const match of source.matchAll(/\[\s*['"]([^'"]+)['"]\s*,/g)) {
     names.add(match[1]);
+  }
+
+  // Primary leaf routes are generated from the same page registry used by
+  // the navigator, so include its bare and group-qualified route names.
+  const primaryPagesPath = path.join(path.dirname(manifestPath), 'primaryPages.ts');
+  if (fs.existsSync(primaryPagesPath)) {
+    const primaryPagesSource = fs.readFileSync(primaryPagesPath, 'utf8');
+    for (const match of primaryPagesSource.matchAll(/routeName:\s*['"]([^'"]+)['"]/g)) {
+      names.add(`(tabs)/${match[1]}`);
+      if (match[1] === 'index') names.add(match[1]);
+    }
   }
 
   return [...names].sort();

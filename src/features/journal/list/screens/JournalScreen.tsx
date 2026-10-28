@@ -2,7 +2,6 @@ import { applySelectionChrome } from '@/src/components/layout/applySelectionChro
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { journalCsvExportHeaderAction } from '@/src/components/journal/JournalCsvExportButton';
 import { AppConfig, Size } from '@/src/constants';
-import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
 import { Icon } from '@/src/types/domainIcons';
@@ -10,13 +9,18 @@ import { JournalListView } from '@/src/features/journal/components/JournalListVi
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import { useIsFocused } from 'expo-router';
+import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
+  const isFocused = useIsFocused();
+  const pageNavigation = usePrimaryPageNavigation();
 
   const journalList = useJournalList(
     {
+      enabled: isFocused,
       pageSize: AppConfig.pagination.dashboardPageSize,
       emptyState: {
         title: AppConfig.strings.journal.emptyTitle,
@@ -26,6 +30,13 @@ function JournalScreen() {
     },
     workplaceId,
   );
+  const isBlockingOverlayOpen =
+    journalList.datePicker.visible || journalList.modals.activeModal !== null;
+  useEffect(() => {
+    const lockId = 'activity-overlay';
+    pageNavigation?.setPageSwipeLock(lockId, isBlockingOverlayOpen);
+    return () => pageNavigation?.setPageSwipeLock(lockId, false);
+  }, [isBlockingOverlayOpen, pageNavigation?.setPageSwipeLock]);
 
   const csvExport = journalList.list.csvExport;
 
@@ -70,4 +81,4 @@ function JournalScreen() {
   );
 }
 
-export default withPrivacyScope(JournalScreen);
+export default JournalScreen;

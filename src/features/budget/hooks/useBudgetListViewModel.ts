@@ -2,7 +2,7 @@ import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { combineLatest, of } from 'rxjs';
+import { combineLatest, EMPTY, of } from 'rxjs';
 import { map, startWith, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
 import { sortBudgetItems, summarizeBudgetList } from '../helpers/budgetListPresentation';
@@ -11,9 +11,14 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { useCallback, useMemo } from 'react';
 
-export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: string) {
+export function useBudgetListViewModel(
+  workplaceId: WorkplaceId,
+  currencyCode?: string,
+  enabled = true,
+) {
   const today = useCalendarDay();
   const budgetsObservable = useMemo(() => {
+    if (!enabled) return EMPTY;
     // Re-value when rates arrive (e.g. after "Fetch missing rates" in the FX sheet).
     const items$ = combineLatest([
       budgetReadService.observeAllActive(workplaceId),
@@ -42,14 +47,14 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: 
         }));
       }),
     );
-  }, [workplaceId, today]);
+  }, [enabled, workplaceId, today]);
 
   const {
     data: items = [],
     isLoading,
     error,
     retry,
-  } = useObservable<BudgetItem[]>(() => budgetsObservable, [workplaceId, today], []);
+  } = useObservable<BudgetItem[]>(() => budgetsObservable, [workplaceId, today, enabled], []);
 
   const onItemPress = useCallback((item: BudgetItem) => {
     AppNavigation.toBudgetDetail(item.budget.id);

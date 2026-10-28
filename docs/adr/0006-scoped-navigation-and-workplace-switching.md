@@ -4,13 +4,17 @@
 
 ## Context
 
-The primary navigator has four daily destinations and a contextual creation action. Workplace switching is available from every primary root, while Settings shortcuts must return to the route that opened them. Financial data, filters, selections, and drafts belong to a specific workplace.
+The primary navigator has four visible daily groups, six ordered page routes, and a contextual creation action. Workplace switching is available from every primary root, while Settings shortcuts must return to the exact page that opened them. Financial data, filters, selections, privacy overrides, and drafts belong to a specific workplace.
 
 Changing the device's active workplace pointer alone does not make a switch safe: the destination snapshot may still be loading or may fail, and route-scoped state may still refer to records from the previous workplace.
 
 ## Decisions
 
-- The bottom bar contains Dashboard, Accounts, Add, Plans, and Activity in that order. Add is an action whose options follow the selected primary tab.
+- The fixed bottom bar contains Dashboard, Accounts, Add, Plans, and Activity in that order. Add is an action whose options follow the committed primary page's group.
+- The native primary page order is Dashboard (`index`), Accounts (`accounts`), Categories (`categories`), Budgets (`commitments`), Planned Payments (`planned-payments`), and Activity (`activity`). Accounts/Categories share the Accounts group; Budgets/Planned Payments share the Plans group. A group tap returns to that group's last committed page, defaulting to Accounts or Budgets on first visit. Pages are real routes under `(tabs)`; the pager and router share one selected-route owner. Web retains the same route model and controls without touch paging.
+- Native horizontal paging is limited to primary roots. A Dashboard rightward body gesture opens the full-width drawer and a leftward gesture advances to Accounts; elsewhere the drawer remains edge-triggered. The open drawer owns its close gesture. Chart and row-removal child gestures explicitly block the page recognizer. Native Android/iOS arbitration and release performance remain device acceptance gates.
+- Legacy `accounts?tab=accounts|categories` and `commitments?tab=budgets|planned` links normalize to canonical leaf routes through replacement, with unrelated route parameters preserved.
+- An in-app Back from a non-Dashboard primary page returns to Dashboard without pushing pager swipes onto the outer Stack. The drawer consumes Back before the primary-page policy. Details, Settings, and creation flows return to the exact leaf page that opened them. Dashboard delegates to surrounding navigation/system behavior.
 - The active workplace stays visible in the navigation drawer. Switching workplaces leaves the drawer open so the selected workplace is immediately clear.
 - A shared User/workplace header opens a workplace-first drawer. Its workplace, personal, device, and All settings sections reuse existing destinations and ownership boundaries.
 - Settings and drawer shortcuts are pushed over the current route. Restore exits dismiss back to Settings rather than pushing it over the finished journey. Settings is not a primary tab.

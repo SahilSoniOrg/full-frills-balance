@@ -51,6 +51,7 @@ export function useJournals(
   status?: JournalStatus[],
   plannedPaymentId?: string,
   options?: {
+    enabled?: boolean;
     minAmount?: number;
     maxAmount?: number;
     displayType?: string;
@@ -69,6 +70,7 @@ export function useJournals(
     journalIds,
     initialItems,
     timelineRowOptions,
+    enabled = true,
   } = options || {};
 
   const statusKey = useMemo(() => status?.join('|') ?? 'none', [status]);
@@ -140,6 +142,7 @@ export function useJournals(
 
   const observe = useCallback(
     (limit: number, range?: JournalFilterRange, query?: string) => {
+      if (!enabled) return of([]);
       if (range?.accountIds?.length === 0 || range?.journalIds?.length === 0) {
         return of([]);
       }
@@ -168,7 +171,7 @@ export function useJournals(
         effectiveOptions,
       );
     },
-    [stableStatus, workplaceId, timelineRowOptions],
+    [enabled, stableStatus, workplaceId, timelineRowOptions],
   );
 
   const paginatedInitialItems = useMemo(() => {

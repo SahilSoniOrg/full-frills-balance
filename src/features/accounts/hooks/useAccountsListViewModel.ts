@@ -1,6 +1,10 @@
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
+  useAccountsGroupData,
+  useAccountsGroupPreferences,
+} from '@/src/features/accounts/AccountsGroupProvider';
+import {
   AccountsListInflowPeriod,
   aggregateLeafPeriodIncomeExpense,
   AccountsListTab,
@@ -25,15 +29,14 @@ import {
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
-import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EMPTY, of } from 'rxjs';
 
 export type {
   AccountSectionViewModel,
@@ -42,31 +45,54 @@ export type {
   AccountsListViewModel,
 };
 
-export function useAccountsListViewModel(): AccountsListViewModel {
+export function useAccountsListViewModel(
+  activeTab: AccountsListTab = 'accounts',
+): AccountsListViewModel {
   const isFocused = useIsFocused();
-  const { tab: routeTab } = useLocalSearchParams<{ tab?: string }>();
   const { theme, onContrast } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
-  const activeTab: AccountsListTab = routeTab === 'categories' ? 'categories' : 'accounts';
+  const { data: dashboardData, isLoading, error, retry, version } = useAccountsGroupData();
+  const {
+    collapsedSections,
+    setCollapsedSections,
+    expandedAccountIds,
+    setExpandedAccountIds,
+    searchQuery,
+    setSearchQuery,
+    isSearching,
+    setIsSearching,
+    inflowPeriod,
+    setInflowPeriod: setInflowPeriodState,
+    rollingPeriodTotals,
+    setRollingPeriodTotals,
+    isPeriodLoading,
+    setIsPeriodLoading,
+  } = useAccountsGroupPreferences();
+  const pageNavigation = usePrimaryPageNavigation();
 
   const [activeModal, setActiveModal] = useState<AccountsListActiveModal>(null);
   const selection = useSelection<AccountId>();
-  const setActiveTab = useCallback((tab: AccountsListTab) => router.setParams({ tab }), []);
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
-    () => new Set(['Equity']),
+  useEffect(() => {
+    const lockId = `accounts-modal:${activeTab}`;
+    pageNavigation?.setPageSwipeLock(lockId, activeModal !== null);
+    return () => pageNavigation?.setPageSwipeLock(lockId, false);
+  }, [activeModal, activeTab, pageNavigation?.setPageSwipeLock]);
+  const setActiveTab = useCallback(
+    (tab: AccountsListTab) => {
+      selection.exitSelectionMode();
+      if (pageNavigation) pageNavigation.navigateToPage(tab);
+      else AppNavigation.toPrimaryPage(tab);
+    },
+    [pageNavigation, selection.exitSelectionMode],
   );
-  const [expandedAccountIds, setExpandedAccountIds] = useState<Set<AccountId>>(() => new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [inflowPeriod, setInflowPeriodState] = useState<AccountsListInflowPeriod>('overall');
-  const [rollingPeriodTotals, setRollingPeriodTotals] = useState<{
-    income: number;
-    expense: number;
-    hasUnvaluedEntries?: boolean;
-  } | null>(null);
-  const [isPeriodLoading, setIsPeriodLoading] = useState(false);
   const focusStartVersion = useRef<number | null>(null);
+  const wasFocused = useRef(isFocused);
+
+  useEffect(() => {
+    if (wasFocused.current && !isFocused) selection.exitSelectionMode();
+    wasFocused.current = isFocused;
+  }, [isFocused, selection.exitSelectionMode]);
 
   const onToggleSection = useCallback((title: string) => {
     setCollapsedSections(previous => {
@@ -95,48 +121,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       setRollingPeriodTotals(null);
     }
   }, []);
-
-  const targetCurrency = workplaceCurrency;
-
-  const {
-    data: dashboardData,
-    isLoading,
-    error,
-    retry,
-    version,
-  } = useObservable(
-    () => {
-      if (!isFocused) return EMPTY;
-      return workplaceId
-        ? reactiveDataService.observeOptimizedAccountList(targetCurrency, workplaceId)
-        : of({
-            accounts: [],
-            balances: [],
-            wealthSummary: {
-              netWorth: 0,
-              totalAssets: 0,
-              totalLiabilities: 0,
-              totalEquity: 0,
-              totalIncome: 0,
-              totalExpense: 0,
-            },
-          });
-    },
-    [isFocused, targetCurrency, workplaceId],
-    () =>
-      (workplaceId ? reactiveDataService.getAccountsListSnapshot(workplaceId) : null) ?? {
-        accounts: [],
-        balances: [],
-        wealthSummary: {
-          netWorth: 0,
-          totalAssets: 0,
-          totalLiabilities: 0,
-          totalEquity: 0,
-          totalIncome: 0,
-          totalExpense: 0,
-        },
-      },
-  );
 
   const accounts = dashboardData.accounts;
 
@@ -327,14 +311,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     applyArchiveChanges,
   });
 
-  const handleTabChange = useCallback(
-    (tab: 'accounts' | 'categories') => {
-      selection.exitSelectionMode();
-      setActiveTab(tab);
-    },
-    [selection, setActiveTab],
-  );
-
   const modals: AccountsListModalsProps = useMemo(
     () => ({
       activeModal,
@@ -406,7 +382,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     onSearchChange: setSearchQuery,
     setIsSearching,
     activeTab,
-    setActiveTab: handleTabChange,
+    setActiveTab,
     accountsForArchiveToggle,
   };
 }

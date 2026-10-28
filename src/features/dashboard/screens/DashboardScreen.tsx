@@ -1,7 +1,6 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppConfig } from '@/src/constants';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -13,9 +12,10 @@ import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
+import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
 import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useScrollToTop } from 'expo-router';
+import { useScrollToTop, useIsFocused } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 
@@ -39,15 +39,24 @@ function trackDashboardFirstPaint() {
 }
 
 function DashboardScreen() {
+  const isFocused = useIsFocused();
+  const pageNavigation = usePrimaryPageNavigation();
   const vm = useDashboardViewModel();
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
   const { isAppReady } = useAppReady();
   const { isAutomaticSmsImportEnabled } = useSmsPrefs();
-  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
-  const supplementalInsights = useSupplementalInsights(workplaceId);
-  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
+  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady && isFocused });
+  const supplementalInsights = useSupplementalInsights(workplaceId, false, isFocused);
+  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId, isFocused);
   const listRef = useRef<JournalEntryListRef>(null);
+  const isBlockingSheetOpen =
+    vm.explanationModalState.visible || vm.legendModalState.selectedItem !== null;
+  useEffect(() => {
+    const lockId = 'dashboard-sheet';
+    pageNavigation?.setPageSwipeLock(lockId, isBlockingSheetOpen);
+    return () => pageNavigation?.setPageSwipeLock(lockId, false);
+  }, [isBlockingSheetOpen, pageNavigation?.setPageSwipeLock]);
 
   const notificationCount = (insights?.length || 0) + supplementalInsights.length;
 
@@ -57,8 +66,8 @@ function DashboardScreen() {
       : undefined;
 
   useEffect(() => {
-    trackDashboardFirstPaint();
-  }, []);
+    if (isFocused) trackDashboardFirstPaint();
+  }, [isFocused]);
 
   useScrollToTop(listRef);
 
@@ -94,4 +103,4 @@ function DashboardScreen() {
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;
 }
 
-export default withPrivacyScope(DashboardScreen);
+export default DashboardScreen;

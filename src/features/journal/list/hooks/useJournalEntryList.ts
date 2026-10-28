@@ -29,6 +29,7 @@ export type JournalEntryListPaginationPolicy = 'default' | 'always';
 
 export interface UseJournalEntryListParams {
   workplaceId: WorkplaceId;
+  enabled?: boolean;
   pageSize?: number;
   dateRange?: { startDate: number; endDate: number };
   searchQuery?: string;
@@ -75,6 +76,7 @@ export interface JournalEntryListCore {
  */
 export function useJournalEntryList({
   workplaceId,
+  enabled = true,
   pageSize = AppConfig.defaults.journalPageSize,
   dateRange,
   searchQuery = '',
@@ -105,8 +107,9 @@ export function useJournalEntryList({
       ...queryOptions,
       initialItems: initialItems ?? queryOptions?.initialItems,
       timelineRowOptions,
+      enabled,
     }),
-    [queryOptions, initialItems, timelineRowOptions],
+    [enabled, queryOptions, initialItems, timelineRowOptions],
   );
 
   const { journals, timelineRows, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(

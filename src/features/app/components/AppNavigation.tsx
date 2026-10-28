@@ -26,7 +26,7 @@ export function AppContent() {
 export function NavigationStack() {
   const reduceMotion = useReducedMotion();
   const stackRoutes = ROUTE_MANIFEST.filter(
-    route => route.name === '(tabs)' || (!route.name.includes('/') && route.name !== 'index'),
+    route => route.name === '(tabs)' || (route.presentation !== 'tab' && !route.name.includes('/')),
   );
 
   return (

@@ -9,6 +9,7 @@ import {
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
+import { EMPTY } from 'rxjs';
 import {
   buildPlannedPaymentListPresentation,
   withPlannedJournals,
@@ -21,7 +22,7 @@ const PLANNED_STATUS = [JournalStatus.PLANNED];
 
 const EMPTY_LIST_DATA: PlannedPaymentListData = { items: [], savedOccurrences: [] };
 
-export function usePlannedPayments(workplaceId: WorkplaceId) {
+export function usePlannedPayments(workplaceId: WorkplaceId, enabled = true) {
   const { defaultCurrencyCode } = useWorkplace();
   const now = useCalendarDay();
   const {
@@ -30,10 +31,9 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     error,
     retry,
   } = useObservable<PlannedPaymentListData | null>(
-    () => plannedPaymentReadService.observeListData(workplaceId),
-    [workplaceId, now],
+    () => (enabled ? plannedPaymentReadService.observeListData(workplaceId) : EMPTY),
+    [enabled, workplaceId, now],
     null,
-    { keepPreviousData: false },
   );
   const { journals: plannedJournals } = useJournals(
     workplaceId,
@@ -41,6 +41,8 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     undefined,
     undefined,
     PLANNED_STATUS,
+    undefined,
+    { enabled },
   );
   const data = useMemo(
     () => withPlannedJournals(snapshot ?? EMPTY_LIST_DATA, plannedJournals),

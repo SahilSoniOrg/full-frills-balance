@@ -8,17 +8,23 @@ const EMPTY_INSIGHTS: never[] = [];
 const subscribeToUpdates = (listener: () => void) => updateInsightService.subscribe(listener);
 const subscribeToJournalBalance = (listener: () => void) =>
   journalBalanceInsightService.subscribe(listener);
+const subscribeToNothing = () => () => undefined;
 
-export function useSupplementalInsights(workplaceId: WorkplaceId, dismissed = false): Insight[] {
+export function useSupplementalInsights(
+  workplaceId: WorkplaceId,
+  dismissed = false,
+  enabled = true,
+): Insight[] {
   const updates = useSyncExternalStore(
-    subscribeToUpdates,
-    () => updateInsightService.observe(workplaceId, dismissed),
+    enabled ? subscribeToUpdates : subscribeToNothing,
+    () => (enabled ? updateInsightService.observe(workplaceId, dismissed) : EMPTY_INSIGHTS),
     () => EMPTY_INSIGHTS,
   );
   // Unbalanced-journal notifications cannot be dismissed, so they never appear in that list.
   const journalBalance = useSyncExternalStore(
-    subscribeToJournalBalance,
-    () => (dismissed ? EMPTY_INSIGHTS : journalBalanceInsightService.observe(workplaceId)),
+    enabled ? subscribeToJournalBalance : subscribeToNothing,
+    () =>
+      enabled && !dismissed ? journalBalanceInsightService.observe(workplaceId) : EMPTY_INSIGHTS,
     () => EMPTY_INSIGHTS,
   );
   return useMemo(() => [...journalBalance, ...updates], [journalBalance, updates]);

@@ -12,17 +12,24 @@ type ArchiveAccountRef = { id: string; archivedAt?: Date | number | null };
 const ArchiveVisibilityScopeContext = createContext<ArchiveVisibilityValue | null>(null);
 
 /**
- * Ephemeral archive visibility for a screen or modal.
- * Resets when the provider unmounts (screen leave / modal close).
+ * Ephemeral archive visibility for a screen, modal, or accounts-group owner.
+ * Resets when the provider unmounts (screen leave / modal close), or when
+ * `active` becomes false (e.g. leaving the Accounts navbar group).
  */
 export function ArchiveVisibilityScopeProvider({
   children,
   initialShowArchived = false,
+  active = true,
 }: {
   children: React.ReactNode;
   initialShowArchived?: boolean;
+  active?: boolean;
 }) {
   const [showArchived, setShowArchived] = useState(initialShowArchived);
+  // Adjust during render when the group deactivates (avoids effect setState).
+  if (!active && showArchived !== initialShowArchived) {
+    setShowArchived(initialShowArchived);
+  }
   const value = useMemo(() => ({ showArchived, setShowArchived }), [showArchived]);
 
   return (

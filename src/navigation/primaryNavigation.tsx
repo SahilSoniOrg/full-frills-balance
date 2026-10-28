@@ -1,8 +1,14 @@
 import { PERSON_AVATAR_SIZE } from '@/src/components/core/PersonAvatar';
 import { Icon, type IconName } from '@/src/types/domainIcons';
+import {
+  PRIMARY_GROUP_DEFAULT_ROUTE,
+  primaryPageFromRouteName,
+  type PrimaryPageGroup,
+} from '@/src/navigation/primaryPages';
+import type { GestureType } from 'react-native-gesture-handler';
 import { createContext, useContext } from 'react';
 
-export type PrimaryTab = 'dashboard' | 'accounts' | 'commitments' | 'activity';
+export type PrimaryTab = PrimaryPageGroup;
 
 export const PRIMARY_TABS: readonly {
   tab: PrimaryTab;
@@ -10,14 +16,34 @@ export const PRIMARY_TABS: readonly {
   label: string;
   icon: IconName;
 }[] = [
-  { tab: 'dashboard', routeName: 'index', label: 'Dashboard', icon: Icon.Home },
-  { tab: 'accounts', routeName: 'accounts', label: 'Accounts', icon: Icon.Wallet },
-  { tab: 'commitments', routeName: 'commitments', label: 'Plans', icon: Icon.Calendar },
-  { tab: 'activity', routeName: 'activity', label: 'Activity', icon: Icon.Activity },
+  {
+    tab: 'dashboard',
+    routeName: PRIMARY_GROUP_DEFAULT_ROUTE.dashboard,
+    label: 'Dashboard',
+    icon: Icon.Home,
+  },
+  {
+    tab: 'accounts',
+    routeName: PRIMARY_GROUP_DEFAULT_ROUTE.accounts,
+    label: 'Accounts',
+    icon: Icon.Wallet,
+  },
+  {
+    tab: 'commitments',
+    routeName: PRIMARY_GROUP_DEFAULT_ROUTE.commitments,
+    label: 'Plans',
+    icon: Icon.Calendar,
+  },
+  {
+    tab: 'activity',
+    routeName: PRIMARY_GROUP_DEFAULT_ROUTE.activity,
+    label: 'Activity',
+    icon: Icon.Activity,
+  },
 ];
 
 export function primaryTabFromRouteName(name?: string): PrimaryTab | undefined {
-  return PRIMARY_TABS.find(item => item.routeName === name)?.tab;
+  return primaryPageFromRouteName(name)?.group;
 }
 
 /** Hit target / chrome slot for the primary nav avatar trigger. */
@@ -30,6 +56,10 @@ export type PrimaryNavigationContextValue = {
   openDrawer: () => void;
   closeDrawer: () => void;
   userName: string;
+  activeRouteName?: string;
+  reportActiveRoute?: (routeName: string) => void;
+  pageGesture?: GestureType | null;
+  reportPageGesture?: (gesture: GestureType | null) => void;
 };
 
 const PrimaryNavigationContext = createContext<PrimaryNavigationContextValue | undefined>(

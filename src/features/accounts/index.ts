@@ -6,3 +6,4 @@ export { default as AccountCreationScreen } from './screens/AccountCreationScree
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
 export { default as AccountManagementScreen } from './screens/AccountManagementScreen';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';
+export { AccountsGroupProvider } from './AccountsGroupProvider';

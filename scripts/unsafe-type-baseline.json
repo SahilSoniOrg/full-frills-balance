@@ -13,6 +13,7 @@
     "src/features/accounts/": "accounts UI",
     "src/features/journal/": "journal UI",
     "src/features/dashboard/": "dashboard UI",
+    "src/features/navigation/NavigationDrawer.tsx": "drawer pager gesture API bridge",
     "src/features/settings/": "settings UI",
     "src/design-system/": "design-system",
     "src/components/": "shared UI",

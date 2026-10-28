@@ -21,6 +21,7 @@ export type JournalListEmptyState = {
 };
 
 export type UseJournalListParams = {
+  enabled?: boolean;
   pageSize?: number;
   emptyState: JournalListEmptyState;
   loadingMoreText?: string;
@@ -46,6 +47,7 @@ export type JournalListModel = {
 export function useJournalList(
   {
     pageSize = AppConfig.defaults.journalPageSize,
+    enabled = true,
     emptyState,
     loadingMoreText = AppConfig.strings.common.loading,
     initialDateRange,
@@ -70,6 +72,7 @@ export function useJournalList(
 
   const core = useJournalEntryList({
     workplaceId,
+    enabled,
     pageSize,
     dateRange: dateRange || undefined,
     initialItems,

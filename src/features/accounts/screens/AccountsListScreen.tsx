@@ -1,14 +1,18 @@
 import { AccountsListHeaderActions } from '@/src/features/accounts/components/AccountsListHeaderActions';
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { withArchiveVisibilityScope } from '@/src/contexts/ArchiveVisibilityScope';
-import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
+import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
 import { AccountsListView } from '@/src/features/accounts/components/AccountsListView';
 import { useAccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import { useMemo } from 'react';
 
-function AccountsScreen() {
-  const vm = useAccountsListViewModel();
+export function AccountsListScreen({
+  activeTab = 'accounts',
+}: {
+  activeTab?: 'accounts' | 'categories';
+}) {
+  const vm = useAccountsListViewModel(activeTab);
+  const pageNavigation = usePrimaryPageNavigation();
 
   const chrome = useMemo<TabScreenChrome>(() => {
     const baseChrome: TabScreenChrome = {
@@ -42,7 +46,7 @@ function AccountsScreen() {
     vm.setIsSearching,
   ]);
 
-  return <AccountsListView {...vm} chrome={chrome} />;
+  return <AccountsListView {...vm} chrome={chrome} pageProgress={pageNavigation?.pageProgress} />;
 }
 
-export default withPrivacyScope(withArchiveVisibilityScope(AccountsScreen));
+export default AccountsListScreen;

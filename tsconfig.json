@@ -4,6 +4,7 @@
     "strict": true,
     "jsx": "react-jsx",
     "customConditions": ["react-native", "react-native-legacy-deep-imports"],
+    "moduleSuffixes": [".native", ""],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
     "useDefineForClassFields": false,

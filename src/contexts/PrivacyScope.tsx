@@ -37,18 +37,54 @@ export function useScreenPrivacyMode(globalPrivacyMode: boolean) {
 }
 
 const PrivacyScopeContext = createContext<PrivacyScopeValue | null>(null);
+type PrivacyOverrideStore = {
+  overrides: Record<string, boolean | null>;
+  setOverride: (key: string, value: boolean | null) => void;
+};
+const PrivacyOverrideStoreContext = createContext<PrivacyOverrideStore | null>(null);
+
+/** Session-local overrides shared by primary pages in the same group. */
+export function PrimaryPrivacyScopeStoreProvider({ children }: { children: React.ReactNode }) {
+  const [overrides, setOverrides] = useState<Record<string, boolean | null>>({});
+  const setOverride = useCallback((key: string, value: boolean | null) => {
+    setOverrides(previous => ({ ...previous, [key]: value }));
+  }, []);
+  const value = useMemo(() => ({ overrides, setOverride }), [overrides, setOverride]);
+  return (
+    <PrivacyOverrideStoreContext.Provider value={value}>
+      {children}
+    </PrivacyOverrideStoreContext.Provider>
+  );
+}
 
 /**
- * Screen-local privacy scope.
+ * Screen-local or group-shared privacy scope.
  *
- * Composes global privacy prefs with a screen override (`useScreenPrivacyMode`).
- * Once the user toggles on this screen, the override sticks until they toggle
- * again ("charting lock") — global pref changes do not clear it.
+ * Composes global privacy prefs with an override. With `scopeKey` under
+ * `PrimaryPrivacyScopeStoreProvider`, pages in the same group share the
+ * override. Otherwise the override is local to this provider instance.
+ * Once toggled, the override sticks until the user toggles again
+ * ("charting lock") — global pref changes do not clear it.
  */
-export function PrivacyScopeProvider({ children }: { children: React.ReactNode }) {
+export function PrivacyScopeProvider({
+  children,
+  scopeKey,
+}: {
+  children: React.ReactNode;
+  scopeKey?: string;
+}) {
   const { isPrivacyMode: globalPrivacyMode } = usePrivacyPrefs();
-  const { isPrivacyMode, isPrivacyOverridden, togglePrivacyMode } =
-    useScreenPrivacyMode(globalPrivacyMode);
+  const store = useContext(PrivacyOverrideStoreContext);
+  const [localOverride, setLocalOverride] = useState<boolean | null>(null);
+  const isSharedScope = !!scopeKey && store !== null;
+  const override = isSharedScope ? (store.overrides[scopeKey] ?? null) : localOverride;
+  const isPrivacyMode = override ?? globalPrivacyMode;
+  const togglePrivacyMode = useCallback(() => {
+    const next = !(override ?? globalPrivacyMode);
+    if (isSharedScope && scopeKey) store?.setOverride(scopeKey, next);
+    else setLocalOverride(next);
+  }, [globalPrivacyMode, isSharedScope, override, scopeKey, store]);
+  const isPrivacyOverridden = override !== null && isPrivacyMode !== globalPrivacyMode;
 
   const value = useMemo(
     () => ({ isPrivacyMode, isPrivacyOverridden, togglePrivacyMode }),

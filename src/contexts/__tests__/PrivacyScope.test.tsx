@@ -1,7 +1,9 @@
 import { preferences } from '@/src/services/preferences';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
 import React from 'react';
+import { Pressable, Text } from 'react-native';
 import {
+  PrimaryPrivacyScopeStoreProvider,
   PrivacyScopeProvider,
   useEffectivePrivacyMode,
   usePrivacyScope,
@@ -103,5 +105,56 @@ describe('withPrivacyScope', () => {
       result.current.togglePrivacyMode();
     });
     expect(result.current.isPrivacyMode).toBe(true);
+  });
+});
+
+describe('PrimaryPrivacyScopeStoreProvider', () => {
+  beforeEach(() => {
+    preferences.privacy.setIsPrivacyMode(false);
+  });
+
+  function ScopedProbe({ id, scopeKey }: { id: string; scopeKey: string }) {
+    return (
+      <PrivacyScopeProvider scopeKey={scopeKey}>
+        <ScopedProbeInner id={id} />
+      </PrivacyScopeProvider>
+    );
+  }
+
+  function ScopedProbeInner({ id }: { id: string }) {
+    const scope = usePrivacyScope();
+    return (
+      <>
+        <Text testID={`${id}-mode`}>{String(scope.isPrivacyMode)}</Text>
+        <Pressable testID={`${id}-toggle`} onPress={scope.togglePrivacyMode} />
+      </>
+    );
+  }
+
+  it('shares overrides across providers with the same scopeKey', () => {
+    render(
+      <PrimaryPrivacyScopeStoreProvider>
+        <ScopedProbe id="accounts-a" scopeKey="accounts" />
+        <ScopedProbe id="accounts-b" scopeKey="accounts" />
+      </PrimaryPrivacyScopeStoreProvider>,
+    );
+
+    expect(screen.getByTestId('accounts-a-mode').props.children).toBe('false');
+    fireEvent.press(screen.getByTestId('accounts-a-toggle'));
+    expect(screen.getByTestId('accounts-a-mode').props.children).toBe('true');
+    expect(screen.getByTestId('accounts-b-mode').props.children).toBe('true');
+  });
+
+  it('keeps distinct scopeKeys independent', () => {
+    render(
+      <PrimaryPrivacyScopeStoreProvider>
+        <ScopedProbe id="accounts" scopeKey="accounts" />
+        <ScopedProbe id="commitments" scopeKey="commitments" />
+      </PrimaryPrivacyScopeStoreProvider>,
+    );
+
+    fireEvent.press(screen.getByTestId('accounts-toggle'));
+    expect(screen.getByTestId('accounts-mode').props.children).toBe('true');
+    expect(screen.getByTestId('commitments-mode').props.children).toBe('false');
   });
 });
