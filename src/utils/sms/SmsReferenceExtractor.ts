@@ -48,19 +48,26 @@ const REFERENCE_PATTERNS: ReferencePattern[] = [
   },
   {
     kind: 'generic',
+    confidence: 0.95,
+    regex: /^([a-z0-9]{8,14})\s+(?:confirmed|imethibitishwa)\b/i,
+  },
+  {
+    kind: 'generic',
     confidence: 0.72,
     regex:
-      /\b(?:txn(?:\s+id)?|tx(?:\s+id)?|trx(?:\s+id)?|ref(?:erence)?(?:\s+(?:no|id|#))?|transaction\s+id|cheque(?:\s+no)?|order\s+id|trace(?:\s+id)?|tid)\s*[:#\-.]?\s*([a-z0-9]{6,30})\b/i,
+      /\b(?:txn(?:\s+id)?|tx(?:\s+id)?|trx(?:\s+id)?|ref\.?(?:erence)?(?:\s+(?:no\.?|id|#))?|transaction\s+id|cheque(?:\s+no)?|order\s+id|trace(?:\s+id)?|tid)\s*[:#\-.]?\s*([a-z0-9]{6,30})\b/i,
   },
 ];
 
 const ACCOUNT_OR_CARD_SPAN =
-  /(?:a\/c|acct|account|card(?:\s+ending)?|card\s+xx|debit\s+card|credit\s+card)[^a-z0-9]{0,6}[x*•·]{0,6}\s?-?\s?\d{0,6}/gi;
+  /(?:a\/c|acct|account|conta|akaunti|rek|rekening|card(?:\s+ending)?|card\s+xx|cartao|debit\s+card|credit\s+card)[^a-z0-9]{0,6}[x*•·]{0,6}\s?-?\s?\d{0,6}/gi;
 
-const CARD_ENDING_SPAN = /(?:card|account)\s+ending\s+\d{3,6}/gi;
+const CARD_ENDING_SPAN = /(?:card|account|conta|akaunti)\s+ending\s+\d{3,6}/gi;
 
+// Keep this span narrower than SMS amount extraction: over-matching here rejects
+// leading M-Pesa-style reference codes during exclusion.
 const AMOUNT_SPAN =
-  /(?:amt|amount|inr|rs\.?|usd|eur|gbp|aed|₹|\$|€|£)\s*[:\-]?\s*[\d,.]+(?:\.\d+)?/gi;
+  /(?:amt|amount|inr|rs\.?|usd|eur|gbp|aed|sar|kes|ksh|ngn|ghs|zar|ugx|tzs|egp|php|idr|myr|thb|vnd|pkr|bdt|brl|mxn|cad|aud|sgd|cny|jpy|₹|\$|€|£|¥|₦|GH₵|₱|฿|₫|৳|R\$)\s*[:\-]?\s*[\d,.]+(?:[\.,]\d+)?/gi;
 
 const CHANNEL_RULES: { channel: SmsPaymentChannel; pattern: RegExp }[] = [
   { channel: 'upi', pattern: /\b(upi|vpa|@[a-z]{2,}|gpay|phonepe|bhim|paytm upi)\b/i },

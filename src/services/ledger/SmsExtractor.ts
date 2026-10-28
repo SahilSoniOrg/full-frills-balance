@@ -1,5 +1,6 @@
 import { ExtractedInfo, RawTransactionInput, TransactionExtractor } from './TransactionExtractor';
 import { extractSmsReference } from '@/src/utils/sms/SmsReferenceExtractor';
+import { SMS_CURRENCY_SYMBOLS_PATTERN } from '@/src/utils/sms/smsCurrencyPattern';
 
 export class SmsExtractor implements TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean {
@@ -28,16 +29,34 @@ export class SmsExtractor implements TransactionExtractor {
   }
 
   private classifyDirection(text: string): 'debit' | 'credit' | 'unknown' {
-    const isDebit = ['debited', 'spent', 'paid', 'purchase', 'withdrawn', 'txn'].some(keyword =>
-      text.includes(keyword),
-    );
-    const isCredit = ['credited', 'received', 'deposited', 'refund', 'reversed'].some(keyword =>
-      text.includes(keyword),
-    );
+    // Mask "credit card" to prevent treating the card type as a credit transaction
+    const sanitized = text.replace(/credit\s*card/gi, 'cc_token');
+
+    // Debit keywords across English, Spanish/Portuguese, Swahili, Indonesian, etc.
+    const isDebit =
+      /\b(?:debit(?:ed)?|dr|spent|paid|purchase|withdrawn|withdrawal|charge[ds]?|sent|transfer(?:red)?|payment|paybill|buy\s+goods|cashed\s+out|enviado|compra|saque|pagaste|debitado|umelipa|umetuma|imetolewa|qris|berhasil|bayar)\b/i.test(
+        sanitized,
+      ) || text.includes('txn');
+
+    // Credit keywords across English, Spanish/Portuguese, Swahili, Indonesian, etc.
+    const isCredit =
+      /\b(?:credit(?:ed)?|cr|received|deposited|refund(?:ed)?|reversed|reversal|inward|cashback|salary|recebido|recebeu|recibida|creditado|umepokea|imepokea|dikredit)\b/i.test(
+        sanitized,
+      );
 
     if (isDebit && !isCredit) return 'debit';
     if (isCredit && !isDebit) return 'credit';
-    if (isDebit) return 'debit';
+    if (isCredit && isDebit) {
+      // In mixed messages, explicit credit indicators like "received" or "refund" take precedence
+      if (
+        /\b(?:received|refund|reversed|reversal|cashback|salary|recebido|umepokea)\b/i.test(
+          sanitized,
+        )
+      ) {
+        return 'credit';
+      }
+      return 'debit';
+    }
     return 'unknown';
   }
 
@@ -46,19 +65,20 @@ export class SmsExtractor implements TransactionExtractor {
   ): { amount: number; currencyCode: string | null } | null {
     const patterns: { regex: RegExp; currencyGroup?: number; amountGroup: number }[] = [
       {
-        regex:
-          /(?:amt|amount|txn(?: of)?|debited(?: by)?|credited(?: with)?|spent|paid|received|deposited)[^\dA-Z₹$€£¥]*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥)?)\s*([\d,.]+(?:\.\d+)?)/i,
+        regex: new RegExp(
+          `(?:amt|amount|txn(?: of)?|debited(?: by)?|credited(?: with)?|spent|paid|received|deposited|transferred|transfer(?: of)?|charge[ds]?|purchase(?: of)?|sent|payment(?: of| made for)?|withdrawn|withdrawal(?: of)?|enviado|recebido|compra(?: de)?|saque(?: de)?|umelipa|umetuma|umepokea|imetolewa|sebesar)[^\\dA-Z₹$€£¥₦GH₵₱฿₫Đ৳E£]*(${SMS_CURRENCY_SYMBOLS_PATTERN})?\\s*([\\d,.]+(?:[\\.,]\\d+)?)\\b`,
+          'i',
+        ),
         currencyGroup: 1,
         amountGroup: 2,
       },
       {
-        regex:
-          /((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥))\s*([\d,.]+(?:\.\d+)?)/i,
+        regex: new RegExp(`(${SMS_CURRENCY_SYMBOLS_PATTERN})\\s*([\\d,.]+(?:[\\.,]\\d+)?)\\b`, 'i'),
         currencyGroup: 1,
         amountGroup: 2,
       },
       {
-        regex: /([\d,.]+(?:\.\d+)?)\s*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY))/i,
+        regex: new RegExp(`([\\d,.]+(?:[\\.,]\\d+)?)\\s*(${SMS_CURRENCY_SYMBOLS_PATTERN})\\b`, 'i'),
         currencyGroup: 2,
         amountGroup: 1,
       },
@@ -67,11 +87,10 @@ export class SmsExtractor implements TransactionExtractor {
     for (const pattern of patterns) {
       const match = body.match(pattern.regex);
       if (!match) continue;
-      const amount = this.normalizeAmount(match[pattern.amountGroup]);
+      const currencyRaw = pattern.currencyGroup ? match[pattern.currencyGroup] : undefined;
+      const amount = this.normalizeAmount(match[pattern.amountGroup], currencyRaw);
       if (!amount || amount <= 0) continue;
-      const currencyCode = this.normalizeCurrencyCode(
-        pattern.currencyGroup ? match[pattern.currencyGroup] : undefined,
-      );
+      const currencyCode = this.normalizeCurrencyCode(currencyRaw);
       return { amount, currencyCode };
     }
 
@@ -82,15 +101,27 @@ export class SmsExtractor implements TransactionExtractor {
     body: string,
     direction: 'debit' | 'credit' | 'unknown',
   ): string | undefined {
+    // Specific location/merchant prepositions take precedence over ambiguous prepositions like "to"
     const patterns =
       direction === 'credit'
-        ? [/(?:from|by)\s+([a-zA-Z0-9.\s@&-]+?)(?:\s+(?:on|ref|utr|txn|bal)|[,.]|$)/i]
-        : [/(?:to|at|vpa|info[:]?)\s+([a-zA-Z0-9.\s@&-]+?)(?:\s+(?:on|ref|utr|by|bal)|[,.]|$)/i];
+        ? [
+            /(?:from|by|kutoka|de|dari)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|txn|bal|no\.?|date|avbl)|$)/i,
+          ]
+        : [
+            // Venue / Merchant location keywords (at, @, vpa, di)
+            /(?:at|@|vpa|di)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+            // Generic recipient keywords (to, kwa, para, ke)
+            /(?:to|info[:]?|kwa|para|ke)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+          ];
 
     for (const regex of patterns) {
       const match = body.match(regex);
       const value = match?.[1]?.trim();
       if (value && value.length > 1) {
+        // Discard matches that are actually account/card references
+        if (/^(?:card|account|a\/c|acc)\b/i.test(value)) {
+          continue;
+        }
         return value.replace(/\s+/g, ' ');
       }
     }
@@ -99,22 +130,44 @@ export class SmsExtractor implements TransactionExtractor {
   }
 
   private extractAccountSource(body: string): string | undefined {
+    // Matches prefixes like "a/c", "card ending", "conta ****1234", "akaunti 0150****123"
     const sourceRegex =
-      /(?:a\/c|acct|acc|card)\s*[:\-]?\s*[*xX.-]*(\d{3,6})|by\s+(UPI)|([xX*.]{2,}[\s\-]?\d{3,6})/i;
+      /(?:a\/c|acct|acc|account|conta|akaunti|rek|rekening|card|cartao)\s*(?:no\.?|ending|final)?\s*[:\-]?\s*(?:(?:\d*[*xX.-]+)(\d{3,6})|(\d{3,6}))|by\s+(UPI)|([xX*.]{2,}[\s\-]?\d{3,6})/i;
     const match = body.match(sourceRegex);
     if (!match) return undefined;
-    if (match[1]) {
-      const prefixMatch = body.match(/card/i);
-      return `${prefixMatch ? 'Card' : 'A/c'} ${match[1]}`;
+
+    const matchedDigits = match[1] || match[2];
+    if (matchedDigits) {
+      const isCard = /card|cartao/i.test(match[0]);
+      return `${isCard ? 'Card' : 'A/c'} ${matchedDigits}`;
     }
-    if (match[2]) return 'UPI';
-    if (match[3]) return `A/c ${match[3].replace(/[^0-9]/g, '')}`;
+    if (match[3]) return 'UPI';
+    if (match[4]) return `A/c ${match[4].replace(/[^0-9]/g, '')}`;
     return undefined;
   }
 
-  private normalizeAmount(raw: string): number | null {
-    const normalized = raw.replace(/,/g, '');
-    const amount = parseFloat(normalized);
+  private normalizeAmount(raw: string, currencyRaw?: string): number | null {
+    let clean = raw.trim().replace(/\.+$/, '');
+    const isZeroDecimalCurrency =
+      currencyRaw && /^(?:IDR|RP|VND|₫|Đ|JPY|¥|KRW|₩)\b/i.test(currencyRaw.trim());
+
+    // Format: 1.234,56 (thousands dot, decimal comma)
+    if (/^\d{1,3}(?:\.\d{3})+,\d{1,2}$/.test(clean)) {
+      clean = clean.replace(/\./g, '').replace(',', '.');
+    }
+    // Format: 150,00 or 89,90 (single comma decimal with 1 or 2 digits)
+    else if (/^\d+,\d{1,2}$/.test(clean)) {
+      clean = clean.replace(',', '.');
+    }
+    // Format: 75.000 or 1.500.000 for zero-decimal currencies like IDR / VND
+    else if (isZeroDecimalCurrency && /^\d{1,3}(?:\.\d{3})+$/.test(clean)) {
+      clean = clean.replace(/\./g, '');
+    }
+    // Standard format: 1,234.56 or 1250 or 20.60
+    else {
+      clean = clean.replace(/,/g, '');
+    }
+    const amount = parseFloat(clean);
     return Number.isFinite(amount) ? amount : null;
   }
 
@@ -122,16 +175,97 @@ export class SmsExtractor implements TransactionExtractor {
     if (!raw) return null;
     const normalized = raw.trim().toUpperCase();
     const symbolMap: Record<string, string> = {
+      // Africa
+      KSH: 'KES',
+      KSHS: 'KES',
+      '₦': 'NGN',
+      NGN: 'NGN',
+      'GH₵': 'GHS',
+      GHC: 'GHS',
+      GHS: 'GHS',
+      R: 'ZAR',
+      ZAR: 'ZAR',
+      USH: 'UGX',
+      USHS: 'UGX',
+      UGX: 'UGX',
+      TSH: 'TZS',
+      TSHS: 'TZS',
+      TZS: 'TZS',
+      EGP: 'EGP',
+      LE: 'EGP',
+      'L.E.': 'EGP',
+      'E£': 'EGP',
+      MAD: 'MAD',
+
+      // Asia-Pacific
       '₹': 'INR',
       RS: 'INR',
       'RS.': 'INR',
+      INR: 'INR',
+      PKR: 'PKR',
+      BDT: 'BDT',
+      TK: 'BDT',
+      'TK.': 'BDT',
+      '৳': 'BDT',
+      LKR: 'LKR',
+      NPR: 'NPR',
+      '₱': 'PHP',
+      PHP: 'PHP',
+      'PHP.': 'PHP',
+      RP: 'IDR',
+      'RP.': 'IDR',
+      IDR: 'IDR',
+      RM: 'MYR',
+      MYR: 'MYR',
+      THB: 'THB',
+      '฿': 'THB',
+      VND: 'VND',
+      '₫': 'VND',
+      Đ: 'VND',
+      S$: 'SGD',
+      SGD: 'SGD',
+      '¥': 'JPY',
+      JPY: 'JPY',
+      CNY: 'CNY',
+      HKD: 'HKD',
+      HK$: 'HKD',
+      NZ$: 'NZD',
+      NZD: 'NZD',
+      A$: 'AUD',
+      AUD: 'AUD',
+
+      // Middle East
+      AED: 'AED',
+      DHS: 'AED',
+      'DHS.': 'AED',
+      DH: 'AED',
+      SAR: 'SAR',
+      SR: 'SAR',
+      QAR: 'QAR',
+      QR: 'QAR',
+      KWD: 'KWD',
+      KD: 'KWD',
+      BHD: 'BHD',
+      OMR: 'OMR',
+      JOD: 'JOD',
+
+      // Americas & Europe
       $: 'USD',
       US$: 'USD',
-      A$: 'AUD',
+      USD: 'USD',
       C$: 'CAD',
+      CAD: 'CAD',
       '€': 'EUR',
+      EUR: 'EUR',
       '£': 'GBP',
-      '¥': 'JPY',
+      GBP: 'GBP',
+      CHF: 'CHF',
+      BRL: 'BRL',
+      R$: 'BRL',
+      MXN: 'MXN',
+      MEX$: 'MXN',
+      COP: 'COP',
+      COL$: 'COP',
     };
 
     return symbolMap[normalized] || normalized.replace(/\./g, '');
