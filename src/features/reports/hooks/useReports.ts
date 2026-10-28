@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { Animation } from '@/src/constants';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
   observeWorkplaceActiveTransactionCount,
@@ -14,10 +15,14 @@ import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
 import { getPreviousEquivalentReportRange } from '@/src/services/reports/reportPeriods';
 import { wealthService } from '@/src/services/wealth-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import {
+  rangeEndingOnLatestActivity,
+  shouldShiftInitialReportRange,
+} from '@/src/services/reports/initialReportRange';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
 
 import { colorizeBreakdownItems } from './reportBreakdownColors';
@@ -34,7 +39,41 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   const [dateRange, setDateRange] = useState<DateRange>(
     getLastNRange(AppConfig.defaults.reportDays, 'days'),
   );
+  const initialDateRange = useRef(dateRange);
+  const rangeSelectionVersion = useRef(0);
   const [accountIds, setAccountIds] = useState<AccountId[]>([]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const selectionVersion = rangeSelectionVersion.current;
+
+    void journalQueryRepository
+      .findRecentActive(workplaceId, 1)
+      .then(([latestJournal]) => {
+        if (
+          !isCurrent ||
+          rangeSelectionVersion.current !== selectionVersion ||
+          !latestJournal ||
+          !shouldShiftInitialReportRange(initialDateRange.current, latestJournal.journalDate)
+        ) {
+          return;
+        }
+
+        const shiftedRange = rangeEndingOnLatestActivity(latestJournal.journalDate);
+
+        setDateRange(shiftedRange);
+        setPeriodFilter({
+          type: 'CUSTOM',
+          startDate: shiftedRange.startDate,
+          endDate: shiftedRange.endDate,
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [workplaceId]);
 
   const comparisonRange = useMemo(
     () => getPreviousEquivalentReportRange(dateRange, periodFilter),
@@ -163,7 +202,13 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   }, [data.incomeCategoryBreakdown, theme]);
 
   const updateFilter = useCallback(
-    (range: DateRange, filter: PeriodFilter, accounts?: AccountId[]) => {
+    (
+      range: DateRange,
+      filter: PeriodFilter,
+      accounts?: AccountId[],
+      options?: { explicitPeriodSelection?: boolean },
+    ) => {
+      if (options?.explicitPeriodSelection) rangeSelectionVersion.current += 1;
       if (__DEV__) {
         logger.debug('[DEBUG_REPORT] updateFilter called', {
           rangeStart: new Date(range.startDate).toISOString(),

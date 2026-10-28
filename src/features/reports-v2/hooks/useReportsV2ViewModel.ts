@@ -15,8 +15,13 @@ import type {
   ReportsV2ViewModel,
 } from '@/src/features/reports-v2/types';
 import { AppConfig } from '@/src/constants';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
+import {
+  rangeEndingOnLatestActivity,
+  shouldShiftInitialReportRange,
+} from '@/src/services/reports/initialReportRange';
 import { confirm, toast } from '@/src/utils/alerts';
 
 const EMPTY_ACCOUNT_IDS: readonly string[] = [];
@@ -80,11 +85,43 @@ export function useReportsV2ViewModel({
   const runSequence = useRef(0);
   const hasLoaded = useRef(false);
   const scheduledRun = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialPeriodRange = useRef(periodRange);
+  const rangeSelectionVersion = useRef(0);
   const initialAccountIdsKey = initialAccountIds.join('\u001f');
   const [selectedAccountIds, setSelectedAccountIds] = useState<readonly AccountId[]>(() =>
     initialAccountIdsKey ? initialAccountIdsKey.split('\u001f').map(asAccountId) : [],
   );
   const [includeArchivedAccounts, setIncludeArchivedAccounts] = useState(true);
+
+  useEffect(() => {
+    if (initialPeriodPreset === 'all-time' || initialPeriodPreset === 'custom') return;
+
+    let isCurrent = true;
+    const selectionVersion = rangeSelectionVersion.current;
+    const workplace = asWorkplaceId(workplaceId);
+
+    void journalQueryRepository
+      .findRecentActive(workplace, 1)
+      .then(([latestJournal]) => {
+        if (
+          !isCurrent ||
+          rangeSelectionVersion.current !== selectionVersion ||
+          !latestJournal ||
+          !shouldShiftInitialReportRange(initialPeriodRange.current, latestJournal.journalDate)
+        ) {
+          return;
+        }
+
+        const shiftedRange = rangeEndingOnLatestActivity(latestJournal.journalDate);
+        setPeriodPreset('custom');
+        setPeriodRange(shiftedRange);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [initialPeriodPreset, workplaceId]);
 
   const query = useMemo<ReportsV2Query>(
     () => ({
@@ -182,6 +219,7 @@ export function useReportsV2ViewModel({
         onRequestCustomRange?.();
         return;
       }
+      rangeSelectionVersion.current += 1;
       setPeriodPreset(nextPreset);
       if (nextPreset === 'all-time') setComparison('NONE');
       setPeriodRange(periodRangeForPreset(nextPreset));
@@ -189,6 +227,7 @@ export function useReportsV2ViewModel({
     [onRequestCustomRange],
   );
   const setCustomRange = useCallback((startDate: number, endDate: number) => {
+    rangeSelectionVersion.current += 1;
     setPeriodPreset('custom');
     setPeriodRange({ startDate, endDate });
   }, []);

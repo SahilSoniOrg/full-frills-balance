@@ -1,4 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { AppConfig } from '@/src/constants/app-config';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import { confirm, toast } from '@/src/utils/alerts';
 import { useReportsV2ViewModel } from '../useReportsV2ViewModel';
@@ -11,6 +13,11 @@ jest.mock('@/src/utils/alerts', () => ({
 jest.mock('@/src/services/reports-v2/missingExchangeRateFetch', () => ({
   fetchMissingHistoricalRates: jest.fn(async () => ({ attempted: 1, fetched: 1, failed: 0 })),
 }));
+jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
+  journalQueryRepository: { findRecentActive: jest.fn(async () => []) },
+}));
+
+const journals = journalQueryRepository as jest.Mocked<typeof journalQueryRepository>;
 
 function engineMock(): jest.Mocked<ReportsV2QueryEngine> {
   return {
@@ -30,6 +37,11 @@ function engineMock(): jest.Mocked<ReportsV2QueryEngine> {
 }
 
 describe('useReportsV2ViewModel load lifecycle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    journals.findRecentActive.mockResolvedValue([]);
+  });
+
   it('keeps the previous section visible while a section refresh fails', async () => {
     const engine = engineMock();
     engine.run
@@ -114,6 +126,72 @@ describe('useReportsV2ViewModel load lifecycle', () => {
 
     await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(2));
     expect(engine.run.mock.calls[1][0].accountIds).toEqual(['account-1']);
+  });
+
+  it('shifts the initial period onto the latest journal when the book is historical', async () => {
+    const latestJournalDate = new Date();
+    latestJournalDate.setDate(latestJournalDate.getDate() - 90);
+    latestJournalDate.setHours(14, 30, 0, 0);
+    journals.findRecentActive.mockResolvedValueOnce([
+      { journalDate: latestJournalDate.getTime() } as never,
+    ] as never);
+
+    const engine = engineMock();
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'USD',
+      }),
+    );
+
+    await waitFor(() => expect(result.current.filters.periodPreset).toBe('custom'));
+
+    const expectedStart = new Date(latestJournalDate);
+    expectedStart.setDate(expectedStart.getDate() - AppConfig.defaults.reportDays);
+    expectedStart.setHours(0, 0, 0, 0);
+    const expectedEnd = new Date(latestJournalDate);
+    expectedEnd.setHours(23, 59, 59, 999);
+
+    await waitFor(() =>
+      expect(engine.run.mock.calls.at(-1)?.[0].period).toEqual({
+        startDate: expectedStart.getTime(),
+        endDate: expectedEnd.getTime(),
+        timeZone: expect.any(String),
+      }),
+    );
+  });
+
+  it('does not overwrite a custom range selected before the latest journal lookup resolves', async () => {
+    let resolveLookup!: (journals: never[]) => void;
+    journals.findRecentActive.mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveLookup = resolve as (journals: never[]) => void;
+      }) as never,
+    );
+
+    const engine = engineMock();
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'USD',
+      }),
+    );
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalled());
+    act(() => result.current.setCustomRange(123, 456));
+
+    await act(async () => {
+      resolveLookup([{ journalDate: Date.now() - 90 * 24 * 60 * 60 * 1000 }] as never[]);
+    });
+
+    expect(result.current.filters.periodPreset).toBe('custom');
+    await waitFor(() =>
+      expect(engine.run.mock.calls.at(-1)?.[0].period).toEqual(
+        expect.objectContaining({ startDate: 123, endDate: 456 }),
+      ),
+    );
   });
 
   it('includes archived accounts by default and supports an active-only scope', async () => {

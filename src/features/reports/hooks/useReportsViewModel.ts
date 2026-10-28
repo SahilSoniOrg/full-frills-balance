@@ -142,7 +142,12 @@ function useReportFilters({
   dateRange: DateRange;
   periodFilter: PeriodFilter;
   accountIds: AccountId[];
-  updateFilter: (range: DateRange, filter: PeriodFilter, accounts?: AccountId[]) => void;
+  updateFilter: (
+    range: DateRange,
+    filter: PeriodFilter,
+    accounts?: AccountId[],
+    options?: { explicitPeriodSelection?: boolean },
+  ) => void;
   onResetSelections: () => void;
 }) {
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -163,7 +168,7 @@ function useReportFilters({
       }
 
       if (finalRange) {
-        updateFilter(finalRange, filter, accountIds);
+        updateFilter(finalRange, filter, accountIds, { explicitPeriodSelection: true });
       }
       setShowDatePicker(false);
       onResetSelections();

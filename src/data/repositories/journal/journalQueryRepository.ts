@@ -67,6 +67,15 @@ export class JournalQueryRepository {
     ).fetch();
   }
 
+  async findRecentActive(workplaceId: WorkplaceId, limit: number): Promise<Journal[]> {
+    return this.nonDeletedQuery(
+      workplaceId,
+      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+      Q.sortBy('journal_date', Q.desc),
+      Q.take(limit),
+    ).fetch();
+  }
+
   async findPostedPage(
     workplaceId: WorkplaceId,
     afterJournalId: string,
