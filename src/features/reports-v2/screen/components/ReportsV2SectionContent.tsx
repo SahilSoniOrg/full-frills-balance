@@ -6,13 +6,18 @@ import { StyleSheet, View } from 'react-native';
 import { ReportsV2Breakdown } from './ReportsV2Breakdown';
 import { ReportsV2MetricGrid } from './ReportsV2MetricGrid';
 import { ReportsV2TrendCard } from './ReportsV2TrendCard';
+import type { ReportsV2ExplanationContext } from './reportExplanations';
 
 export function ReportsV2SectionContent({
   section,
+  explanationContext,
+  dataNotes,
   onDrilldown,
   interactive = true,
 }: {
   section: ReportSection;
+  explanationContext: ReportsV2ExplanationContext;
+  dataNotes: readonly string[];
   onDrilldown: (input: {
     label: string;
     accountIds?: readonly string[];
@@ -28,12 +33,24 @@ export function ReportsV2SectionContent({
         </AppText>
         <AppText variant="xl">{section.title}</AppText>
       </View>
-      <ReportsV2MetricGrid section={section} />
+      <ReportsV2MetricGrid section={section} context={explanationContext} dataNotes={dataNotes} />
       {(section.visualizations ?? []).map((visualization, index) => (
-        <ReportsV2TrendCard key={`${section.id}-visual-${index}`} visualization={visualization} />
+        <ReportsV2TrendCard
+          key={`${section.id}-visual-${index}`}
+          sectionId={section.id}
+          visualization={visualization}
+          context={explanationContext}
+          dataNotes={dataNotes}
+        />
       ))}
       {section.rows ? (
-        <ReportsV2Breakdown section={section} onDrilldown={onDrilldown} interactive={interactive} />
+        <ReportsV2Breakdown
+          section={section}
+          context={explanationContext}
+          dataNotes={dataNotes}
+          onDrilldown={onDrilldown}
+          interactive={interactive}
+        />
       ) : null}
     </Stack>
   );

@@ -1,10 +1,16 @@
 import { AppCard, AppText, type AppTextProps } from '@/src/components/core';
+import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportMeasure } from '@/src/services/reports-v2/types/measure';
 import type { ReportSection } from '@/src/services/reports-v2/types/result';
 import { Spacing } from '@/src/constants/design-tokens';
 import { View, StyleSheet } from 'react-native';
+import {
+  explanationContextItems,
+  explanationForMetric,
+  type ReportsV2ExplanationContext,
+} from './reportExplanations';
 
 type NonMoneyMeasure = Exclude<ReportMeasure, { kind: 'MONEY' }>;
 
@@ -31,11 +37,32 @@ function metricTone(measure: ReportMeasure): 'income' | 'expense' | 'default' {
   return measure.amount < 0 ? 'expense' : 'income';
 }
 
-export function ReportsV2MetricGrid({ section }: { section: ReportSection }) {
+function unitForMeasure(measure: ReportMeasure): string {
+  if (measure.kind === 'MONEY') return measure.currencyCode;
+  if (measure.kind === 'PERCENTAGE') return 'Percent';
+  if (measure.kind === 'COUNT') return 'Count';
+  return 'Ratio';
+}
+
+function resolveUnit(unit: string | undefined, currencyCode: string): string {
+  const resolved = unit?.replaceAll('Report currency', currencyCode) ?? currencyCode;
+  return resolved.startsWith('Percent') ? `${resolved} (${currencyCode} amounts)` : resolved;
+}
+
+export function ReportsV2MetricGrid({
+  section,
+  context,
+  dataNotes,
+}: {
+  section: ReportSection;
+  context: ReportsV2ExplanationContext;
+  dataNotes: readonly string[];
+}) {
   const { theme } = useTheme();
   return (
     <View style={styles.metricGrid}>
       {(section.metrics ?? []).map(item => {
+        const explanation = explanationForMetric(section.id, item.id);
         const tone = metricTone(item.value);
         const color =
           tone === 'income' ? theme.success : tone === 'expense' ? theme.error : theme.text;
@@ -47,9 +74,30 @@ export function ReportsV2MetricGrid({ section }: { section: ReportSection }) {
             paddingSize="sm"
             style={[styles.metricCard, { borderTopColor: color }]}
           >
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {item.label}
-            </AppText>
+            <View style={styles.metricLabel}>
+              <AppText
+                variant="caption"
+                color="secondary"
+                numberOfLines={1}
+                style={styles.labelText}
+              >
+                {item.label}
+              </AppText>
+              {explanation ? (
+                <ContextualExplanation
+                  title={explanation.title}
+                  meaning={explanation.meaning}
+                  interpretation={explanation.interpretation}
+                  unit={resolveUnit(
+                    explanation.unit ?? unitForMeasure(item.value),
+                    context.currencyCode,
+                  )}
+                  context={explanationContextItems(context, explanation.basisNote)}
+                  dataNotes={dataNotes}
+                  testID={`reports-v2-explain-${item.id}`}
+                />
+              ) : null}
+            </View>
             <MeasureText
               measure={item.value}
               variant="subheading"
@@ -76,4 +124,6 @@ export function ReportsV2MetricGrid({ section }: { section: ReportSection }) {
 const styles = StyleSheet.create({
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   metricCard: { flexGrow: 1, flexBasis: '30%', minWidth: 112, borderTopWidth: 2 },
+  metricLabel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minHeight: 32 },
+  labelText: { flex: 1 },
 });

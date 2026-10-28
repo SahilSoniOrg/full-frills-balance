@@ -115,7 +115,15 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
             <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
           )}
           {activeTab === 'SPENDING' && (
-            <ReportSpendingSection vm={spending} chartWidth={CHART_WIDTH} />
+            <ReportSpendingSection
+              vm={spending}
+              chartWidth={CHART_WIDTH}
+              explanationScope={{
+                periodLabel: filters.dateLabel,
+                accountScopeLabel: accountLabel,
+                hasUnvaluedEntries,
+              }}
+            />
           )}
           {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
         </ScrollView>

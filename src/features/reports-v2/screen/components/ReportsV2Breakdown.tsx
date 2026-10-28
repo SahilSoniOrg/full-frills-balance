@@ -1,11 +1,17 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppButton, AppCard, AppIcon, AppText, EmptyStateView, Icon } from '@/src/components/core';
+import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportSection } from '@/src/services/reports-v2/types/result';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MeasureText } from './ReportsV2MetricGrid';
+import {
+  explanationContextItems,
+  explanationForBudgetUtilization,
+  type ReportsV2ExplanationContext,
+} from './reportExplanations';
 
 function measureNumber(measure: NonNullable<ReportSection['rows']>[number]['value']): number {
   return measure.kind === 'MONEY' ? measure.amount : (measure.value ?? 0);
@@ -13,10 +19,14 @@ function measureNumber(measure: NonNullable<ReportSection['rows']>[number]['valu
 
 export function ReportsV2Breakdown({
   section,
+  context,
+  dataNotes,
   onDrilldown,
   interactive = true,
 }: {
   section: ReportSection;
+  context: ReportsV2ExplanationContext;
+  dataNotes: readonly string[];
   onDrilldown: (input: {
     label: string;
     accountIds?: readonly string[];
@@ -34,13 +44,28 @@ export function ReportsV2Breakdown({
       />
     );
   const maximum = Math.max(1, ...section.rows.map(item => Math.abs(measureNumber(item.value))));
+  const budgetUtilization =
+    section.id === 'budgets' ? explanationForBudgetUtilization() : undefined;
   return (
     <AppCard paddingSize="none">
       <View style={styles.breakdownHeader}>
-        <View>
-          <AppText variant="heading" weight="semibold">
-            Details
-          </AppText>
+        <View style={styles.headerCopy}>
+          <View style={styles.headingRow}>
+            <AppText variant="heading" weight="semibold">
+              Details
+            </AppText>
+            {budgetUtilization ? (
+              <ContextualExplanation
+                title={budgetUtilization.title}
+                meaning={budgetUtilization.meaning}
+                interpretation={budgetUtilization.interpretation}
+                unit={budgetUtilization.unit ?? 'Percent of budget'}
+                context={explanationContextItems(context)}
+                dataNotes={dataNotes}
+                testID="reports-v2-explain-budget-utilization"
+              />
+            ) : null}
+          </View>
           <AppText variant="caption" color="secondary">
             {interactive
               ? 'Tap a row to inspect its journals'
@@ -131,6 +156,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
+  headerCopy: { flex: 1, gap: Spacing.xs },
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   breakdownRow: {
     minHeight: 78,
     paddingHorizontal: Spacing.lg,

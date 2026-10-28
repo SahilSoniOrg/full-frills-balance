@@ -1,4 +1,5 @@
 import { AppText } from '@/src/components/core';
+import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { BarChart, type BarChartDataPoint } from '@/src/components/charts/BarChart';
 import { LineChart, type DataPoint } from '@/src/components/charts/LineChart';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
@@ -9,18 +10,34 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportVisualization } from '@/src/services/reports-v2/types/result';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import {
+  explanationContextItems,
+  explanationForVisualization,
+  type ReportsV2ExplanationContext,
+} from './reportExplanations';
 
 function chartLabel(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function ReportsV2TrendCard({ visualization }: { visualization: ReportVisualization }) {
+export function ReportsV2TrendCard({
+  sectionId,
+  visualization,
+  context,
+  dataNotes,
+}: {
+  sectionId: string;
+  visualization: ReportVisualization;
+  context: ReportsV2ExplanationContext;
+  dataNotes: readonly string[];
+}) {
   const privateMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
   const waterfall = visualization.kind === 'WATERFALL' ? visualization : null;
   const reportSeries = visualization.kind === 'WATERFALL' ? null : visualization.series;
   const series = useMemo(() => reportSeries ?? [], [reportSeries]);
+  const explanation = explanationForVisualization(sectionId, visualization);
   const chartSeries = useMemo(
     () =>
       waterfall
@@ -111,19 +128,38 @@ export function ReportsV2TrendCard({ visualization }: { visualization: ReportVis
 
   return (
     <ReportChartCard
-      title="Trend"
+      title={explanation?.title ?? 'Trend'}
       headerContent={
-        <View style={styles.chartLegend} accessibilityLabel="Trend series">
-          {(chartSeries ?? series).map(item => (
-            <AppText key={item.id} variant="caption" color="secondary">
-              ● {item.label}
-            </AppText>
-          ))}
+        <View style={styles.chartHeader}>
+          <View style={styles.chartLegend} accessibilityLabel="Trend series">
+            {(chartSeries ?? series).map(item => (
+              <AppText key={item.id} variant="caption" color="secondary">
+                ● {item.label}
+              </AppText>
+            ))}
+          </View>
+          {explanation ? (
+            <ContextualExplanation
+              title={explanation.title}
+              meaning={explanation.meaning}
+              interpretation={explanation.interpretation}
+              unit={
+                explanation.unit?.replaceAll('Report currency', context.currencyCode) ??
+                context.currencyCode
+              }
+              context={explanationContextItems(context, explanation.basisNote)}
+              dataNotes={dataNotes}
+              testID={`reports-v2-explain-chart-${sectionId}`}
+            />
+          ) : null}
         </View>
       }
-      testID="reports-v2-trend"
+      testID={`reports-v2-chart-${sectionId}`}
     >
-      <View accessibilityRole="image" accessibilityLabel="Report trend chart">
+      <View
+        accessibilityRole="image"
+        accessibilityLabel={explanation?.title ?? 'Report trend chart'}
+      >
         {chart}
       </View>
       <AppText variant="caption" color="secondary">
@@ -134,6 +170,7 @@ export function ReportsV2TrendCard({ visualization }: { visualization: ReportVis
 }
 
 const styles = StyleSheet.create({
+  chartHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   chartLegend: {
     flexDirection: 'row',
     gap: Spacing.md,

@@ -28,6 +28,10 @@ import { ReportsV2Filters } from './components/ReportsV2Filters';
 import { ReportsV2QualityBanner } from './components/ReportsV2QualityBanner';
 import { ReportsV2SectionContent } from './components/ReportsV2SectionContent';
 import { ReportsV2StatusNotice } from './components/ReportsV2StatusNotice';
+import {
+  explanationContextFromFilters,
+  reportExplanationDataNotes,
+} from './components/reportExplanations';
 
 interface ReportsV2ViewProps {
   engine: ReportsV2QueryEngine;
@@ -106,7 +110,9 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
     () => REPORTS_V2_SECTIONS.map(item => ({ id: item.id, label: item.shortLabel })),
     [],
   );
-  const warnings = vm.result?.warnings ?? [];
+  const warnings = useMemo(() => vm.result?.warnings ?? [], [vm.result?.warnings]);
+  const explanationContext = useMemo(() => explanationContextFromFilters(vm.filters), [vm.filters]);
+  const explanationDataNotes = useMemo(() => reportExplanationDataNotes(warnings), [warnings]);
 
   return (
     <>
@@ -165,6 +171,8 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
             {vm.renderedSection ? (
               <ReportsV2SectionContent
                 section={vm.renderedSection}
+                explanationContext={explanationContext}
+                dataNotes={explanationDataNotes}
                 onDrilldown={vm.onDrilldown}
                 interactive={vm.state !== 'refreshing' && vm.state !== 'error'}
               />
