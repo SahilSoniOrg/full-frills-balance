@@ -166,6 +166,40 @@ describe('useBulkJournalEditor', () => {
     });
   });
 
+  it('keeps manually selected accounts when applying a batch suggestion', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => {
+      result.current.rowActions.setTransactionType(rowId, 'expense');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.applySuggestion(rowId, {
+        key: 'lunch:cash-food',
+        description: 'Lunch',
+        route: {
+          sources: [{ id: 'acc1' as AccountId, name: 'Cash', type: AccountType.ASSET }],
+          destinations: [{ id: 'acc2' as AccountId, name: 'Food', type: AccountType.EXPENSE }],
+        },
+        history: { count: 3, lastUsedAt: 1 },
+      });
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      description: 'Lunch',
+      sourceId: 'acc3',
+      destinationId: 'acc2',
+      sourceAccountManuallySelected: true,
+      destinationAccountManuallySelected: false,
+    });
+  });
+
   it('adds a row and auto-fills fields from the previous row', () => {
     const { result } = renderHook(() =>
       useBulkJournalEditor({

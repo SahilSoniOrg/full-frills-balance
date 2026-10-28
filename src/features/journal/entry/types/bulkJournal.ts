@@ -5,7 +5,7 @@ import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { FxFetchedRates, FxOverride, FxPair } from '@/src/domain/accounting/fxPair';
 
-/** User-authored values and rate inputs kept by the batch editor. */
+/** Editable values and selection provenance kept by the batch editor. */
 export interface BulkJournalDraft {
   id: string;
   description: string;
@@ -14,6 +14,10 @@ export interface BulkJournalDraft {
   amount: string;
   sourceId: AccountId;
   destinationId: AccountId;
+  /** Tracks picker choices separately from copied defaults and suggestion fills. */
+  sourceAccountManuallySelected?: boolean;
+  destinationAccountManuallySelected?: boolean;
+  suggestionNotice?: string;
   journalDate: number;
   validationError?: string;
   fxRates?: FxFetchedRates | null;

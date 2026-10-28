@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { TransactionType } from '@/src/types/enums';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import {
@@ -25,7 +26,10 @@ import { analytics } from '@/src/services/analytics';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
-import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
+import {
+  isAccountAllowedOnGuidedLeg,
+  resolveGuidedAccountsAfterTabChange,
+} from '@/src/services/journal/guidedJournalAccountEligibility';
 import {
   DUPLICATE_ACCOUNT_ERROR,
   buildBulkJournalEntries,
@@ -152,6 +156,8 @@ export function useBulkJournalEditor({
         amount: prevRow.amount,
         sourceId: prevRow.sourceId,
         destinationId: prevRow.destinationId,
+        sourceAccountManuallySelected: false,
+        destinationAccountManuallySelected: false,
         journalDate: prevRow.journalDate,
         validationError: undefined,
         fxRates: prevRow.fxRates,
@@ -167,6 +173,8 @@ export function useBulkJournalEditor({
       amount: '',
       sourceId: EMPTY_ACCOUNT_ID,
       destinationId: EMPTY_ACCOUNT_ID,
+      sourceAccountManuallySelected: false,
+      destinationAccountManuallySelected: false,
       journalDate: Date.now(),
       validationError: undefined,
     };
@@ -346,14 +354,24 @@ export function useBulkJournalEditor({
 
   const setSourceAccount = useCallback(
     (rowId: string, value: AccountId) => {
-      updateAndRefreshRates(rowId, row => ({ ...row, sourceId: value }));
+      updateAndRefreshRates(rowId, row => ({
+        ...row,
+        sourceId: value,
+        sourceAccountManuallySelected: Boolean(value && value !== EMPTY_ACCOUNT_ID),
+        suggestionNotice: undefined,
+      }));
     },
     [updateAndRefreshRates],
   );
 
   const setDestinationAccount = useCallback(
     (rowId: string, value: AccountId) => {
-      updateAndRefreshRates(rowId, row => ({ ...row, destinationId: value }));
+      updateAndRefreshRates(rowId, row => ({
+        ...row,
+        destinationId: value,
+        destinationAccountManuallySelected: Boolean(value && value !== EMPTY_ACCOUNT_ID),
+        suggestionNotice: undefined,
+      }));
     },
     [updateAndRefreshRates],
   );
@@ -367,12 +385,22 @@ export function useBulkJournalEditor({
         mode: 'batch',
       });
       setDescription(rowId, suggestion.description);
+      updateRow(rowId, current => ({ ...current, suggestionNotice: undefined }));
 
       const row = latestRowsRef.current.find(item => item.id === rowId);
       if (!row) return;
 
+      if (suggestion.route.sources.length > 1 || suggestion.route.destinations.length > 1) {
+        updateRow(rowId, current => ({
+          ...current,
+          suggestionNotice:
+            'This suggestion uses multiple accounts. Batch entries support one source and one destination, so only the description was applied.',
+        }));
+        return;
+      }
       if (suggestion.route.sources.length !== 1 || suggestion.route.destinations.length !== 1)
         return;
+
       const sourceAccountId = suggestion.route.sources[0].id;
       const destinationAccountId = suggestion.route.destinations[0].id;
       const sourceAccount = sourceAccountId
@@ -381,12 +409,30 @@ export function useBulkJournalEditor({
       const destinationAccount = destinationAccountId
         ? accounts.find(account => account.id === destinationAccountId)
         : undefined;
-      if (sourceAccount && destinationAccount) {
-        setSourceAccount(rowId, sourceAccount.id);
-        setDestinationAccount(rowId, destinationAccount.id);
+
+      const nextSourceId =
+        !row.sourceAccountManuallySelected &&
+        sourceAccount &&
+        isAccountAllowedOnGuidedLeg(sourceAccount, row.transactionType, TransactionType.CREDIT)
+          ? sourceAccount.id
+          : row.sourceId;
+      const nextDestinationId =
+        !row.destinationAccountManuallySelected &&
+        destinationAccount &&
+        isAccountAllowedOnGuidedLeg(destinationAccount, row.transactionType, TransactionType.DEBIT)
+          ? destinationAccount.id
+          : row.destinationId;
+
+      if (nextSourceId !== row.sourceId || nextDestinationId !== row.destinationId) {
+        updateAndRefreshRates(rowId, current => ({
+          ...current,
+          sourceId: nextSourceId,
+          destinationId: nextDestinationId,
+          suggestionNotice: undefined,
+        }));
       }
     },
-    [accounts, setDescription, setDestinationAccount, setSourceAccount],
+    [accounts, setDescription, updateAndRefreshRates, updateRow],
   );
 
   const setTransactionType = useCallback(
@@ -403,6 +449,16 @@ export function useBulkJournalEditor({
           transactionType: value,
           sourceId: nextAccounts.sourceAccountId,
           destinationId: nextAccounts.destinationAccountId,
+          sourceAccountManuallySelected:
+            (nextAccounts.sourceAccountId === row.sourceId && row.sourceAccountManuallySelected) ||
+            (nextAccounts.sourceAccountId === row.destinationId &&
+              row.destinationAccountManuallySelected),
+          destinationAccountManuallySelected:
+            (nextAccounts.destinationAccountId === row.destinationId &&
+              row.destinationAccountManuallySelected) ||
+            (nextAccounts.destinationAccountId === row.sourceId &&
+              row.sourceAccountManuallySelected),
+          suggestionNotice: undefined,
         };
       });
     },
@@ -444,6 +500,9 @@ export function useBulkJournalEditor({
         ...row,
         sourceId: row.destinationId,
         destinationId: row.sourceId,
+        sourceAccountManuallySelected: row.destinationAccountManuallySelected,
+        destinationAccountManuallySelected: row.sourceAccountManuallySelected,
+        suggestionNotice: undefined,
       }));
     },
     [updateAndRefreshRates],

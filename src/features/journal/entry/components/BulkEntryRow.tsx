@@ -180,6 +180,15 @@ export const BulkEntryRow = React.memo(
           accountSectionsContainerStyle={styles.accountSelector}
         />
 
+        {row.suggestionNotice ? (
+          <NoticeBanner
+            message={row.suggestionNotice}
+            tone="warning"
+            style={{ marginTop: Spacing.sm }}
+            testID={`bulk-suggestion-notice-${row.id}`}
+          />
+        ) : null}
+
         {row.journalDate > Date.now() ? (
           <View style={styles.plannedRow}>
             <AppSegmentedControl
