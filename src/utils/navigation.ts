@@ -621,6 +621,12 @@ export const AppNavigation = {
     minAmount?: number;
     maxAmount?: number;
     displayType?: string;
+    reportScope?: {
+      label: string;
+      baseStartDate: number;
+      baseEndDate: number;
+      baseAccountIds: string[];
+    };
   }) => {
     const journalScope =
       params?.journalIds && params.journalIds.length > MAX_INLINE_JOURNAL_IDS
@@ -641,6 +647,10 @@ export const AppNavigation = {
         minAmount: params?.minAmount,
         maxAmount: params?.maxAmount,
         displayType: params?.displayType,
+        reportScopeLabel: params?.reportScope?.label,
+        reportScopeStartDate: params?.reportScope?.baseStartDate,
+        reportScopeEndDate: params?.reportScope?.baseEndDate,
+        reportScopeAccountIds: params?.reportScope?.baseAccountIds.join(','),
       }),
     );
   },

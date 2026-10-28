@@ -5,7 +5,7 @@ import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
-import { ReportLegendRow } from '@/src/features/reports/hooks/reportTabTypes';
+import { ReportDrillDownKind, ReportLegendRow } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { StyleSheet, View } from 'react-native';
@@ -17,7 +17,8 @@ interface BreakdownDonutCardProps {
   showExpansionButton: boolean;
   expanded: boolean;
   onToggleExpansion: () => void;
-  onLegendRowPress: (accountIds: AccountId[]) => void;
+  onLegendRowPress: (accountIds: AccountId[], label?: string, kind?: ReportDrillDownKind) => void;
+  drillDownKind: ReportDrillDownKind;
   currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
@@ -34,6 +35,7 @@ export function BreakdownDonutCard({
   expanded,
   onToggleExpansion,
   onLegendRowPress,
+  drillDownKind,
   currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
@@ -48,7 +50,7 @@ export function BreakdownDonutCard({
           <PressScaleTouchable
             key={row.id}
             style={styles.legendItem}
-            onPress={() => onLegendRowPress(row.accountIds)}
+            onPress={() => onLegendRowPress(row.accountIds, row.accountName, drillDownKind)}
             activeOpacity={REPORT_CHART_LAYOUT.donutLegendRowActiveOpacity}
           >
             <ColoredDot color={resolveThemeColor(theme, row.color) || theme.border} />

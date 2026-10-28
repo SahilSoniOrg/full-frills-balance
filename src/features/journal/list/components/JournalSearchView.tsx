@@ -16,7 +16,7 @@ import type { ScreenNavChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 type JournalSearchViewProps = JournalSearchViewModel & {
@@ -29,6 +29,24 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
   const filterHeader = useMemo(
     () => (
       <View style={styles.filterContainer}>
+        {vm.reportScopeLabel ? (
+          <View style={styles.reportScopeRow}>
+            <AppText variant="caption" weight="semibold" style={styles.reportScopeLabel}>
+              Report drill-down · {vm.reportScopeLabel}
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear report drill-down scope"
+              testID="journal-search-clear-report-scope"
+              onPress={vm.clearReportScope}
+              hitSlop={8}
+            >
+              <AppText variant="caption" color="primary" weight="semibold">
+                Clear scope
+              </AppText>
+            </Pressable>
+          </View>
+        ) : null}
         <AppInput
           placeholder="Search description or notes..."
           value={vm.searchQuery}
@@ -104,7 +122,8 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             vm.dateRange ||
             vm.minAmount ||
             vm.maxAmount ||
-            vm.displayType) && (
+            vm.displayType ||
+            vm.reportScopeLabel) && (
             <IconButton
               name={Icon.Close}
               size={Size.iconXs}
@@ -169,6 +188,17 @@ const styles = StyleSheet.create({
   filterContainer: {
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
+  },
+  reportScopeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  reportScopeLabel: {
+    flex: 1,
   },
   chipContainer: {
     gap: Spacing.xs,

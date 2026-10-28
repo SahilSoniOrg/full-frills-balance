@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, JournalId } from '@/src/types/ids';
 
 jest.mock('../useReports');
 
@@ -137,6 +137,12 @@ describe('useReportsViewModel', () => {
       accountIds: ['a1'],
       startDate: 1704067200000,
       endDate: 1706745599999,
+      reportScope: {
+        label: 'Income',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: [],
+      },
     });
 
     act(() => {
@@ -147,6 +153,12 @@ describe('useReportsViewModel', () => {
       accountIds: ['a1', 'food-1', 'travel-1'],
       startDate: 1704067200000,
       endDate: 1706745599999,
+      reportScope: {
+        label: 'Net flow',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: [],
+      },
     });
   });
 
@@ -192,13 +204,19 @@ describe('useReportsViewModel', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
     act(() => {
-      result.current.spending.onLegendRowPress(['account-123' as AccountId]);
+      result.current.spending.onLegendRowPress(['account-123' as AccountId], 'Checking', 'account');
     });
 
     expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
       accountIds: ['account-123'],
       startDate: 1704067200000,
       endDate: 1706745599999,
+      reportScope: {
+        label: 'Account: Checking',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: [],
+      },
     });
   });
 
@@ -213,13 +231,23 @@ describe('useReportsViewModel', () => {
     const { result } = renderHook(() => useReportsViewModel());
 
     act(() => {
-      result.current.spending.onLegendRowPress(['food-1' as AccountId, 'food-2' as AccountId]);
+      result.current.spending.onLegendRowPress(
+        ['food-1' as AccountId, 'food-2' as AccountId],
+        'Food',
+        'category',
+      );
     });
 
     expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
       accountIds: ['food-1', 'food-2'],
       startDate: 1704067200000,
       endDate: 1706745599999,
+      reportScope: {
+        label: 'Category: Food',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: [],
+      },
     });
   });
 
@@ -247,5 +275,117 @@ describe('useReportsViewModel', () => {
     });
 
     expect(AppNavigation.toJournalSearch).not.toHaveBeenCalled();
+  });
+
+  it('keeps selected report accounts and tab when opening a category drill-down', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      accountIds: ['food-1'],
+    });
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => {
+      result.current.setActiveTab('SPENDING');
+      result.current.spending.onLegendRowPress(
+        ['food-1' as AccountId, 'food-2' as AccountId],
+        'Food',
+        'category',
+      );
+    });
+
+    expect(result.current.activeTab).toBe('SPENDING');
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['food-1'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+      reportScope: {
+        label: 'Category: Food',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: ['food-1'],
+      },
+    });
+  });
+
+  it('opens heatmap cell transactions with the report date and account filters', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      accountIds: ['cash-1'],
+    });
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => {
+      result.current.spending.onHeatmapCellPress({
+        x: 0,
+        y: 9,
+        value: 120,
+        journalIds: ['journal-1' as JournalId],
+      });
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['cash-1'],
+      startDate: 1704067200000,
+      endDate: 1706745599999,
+      journalIds: ['journal-1'],
+      reportScope: {
+        label: 'Spending heatmap: Monday at 09:00',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1706745599999,
+        baseAccountIds: ['cash-1'],
+      },
+    });
+  });
+
+  it('opens chart periods with account filters and a clearable report scope', () => {
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      accountIds: ['cash-1'],
+      dateRange: { startDate: 1704067200000, endDate: 1709251199999 },
+    });
+    const { result } = renderHook(() => useReportsViewModel());
+    const start = 1706745600000;
+    const end = 1709251199999;
+
+    act(() => {
+      result.current.wealth.onViewTransactions(start, end, 'Period: Feb');
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      accountIds: ['cash-1'],
+      startDate: Math.max(new Date(start).setHours(0, 0, 0, 0), 1704067200000),
+      endDate: Math.min(new Date(end).setHours(23, 59, 59, 999), 1709251199999),
+      reportScope: {
+        label: 'Period: Feb',
+        baseStartDate: 1704067200000,
+        baseEndDate: 1709251199999,
+        baseAccountIds: ['cash-1'],
+      },
+    });
+  });
+
+  it('opens a selected day with the current report account filter', () => {
+    const date = 1704412800000;
+    mockUseReports.mockReturnValue({
+      ...mockReportsData,
+      accountIds: ['expense-1'],
+      dailyIncomeVsExpense: [{ date, income: 0, expense: 250 }],
+    });
+    const { result } = renderHook(() => useReportsViewModel());
+
+    act(() => result.current.overview.summary.onViewHighestSpendingDayTransactions());
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountIds: ['expense-1'],
+        startDate: new Date(date).setHours(0, 0, 0, 0),
+        endDate: new Date(date).setHours(23, 59, 59, 999),
+        reportScope: expect.objectContaining({
+          baseStartDate: 1704067200000,
+          baseEndDate: 1706745599999,
+          baseAccountIds: ['expense-1'],
+        }),
+      }),
+    );
   });
 });

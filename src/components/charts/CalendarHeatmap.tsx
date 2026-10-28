@@ -64,7 +64,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
 
   const cellWidth = (PLOT_WIDTH - 6 * CELL_SPACING) / 7;
 
-  const maxValue = useMemo(() => Math.max(...data.map(p => p.value), 1), [data]);
+  const maxValue = useMemo(() => Math.max(...data.map(p => Math.abs(p.value)), 1), [data]);
 
   const pointMap = useMemo(() => {
     const map = new Map<string, HeatmapPoint>();
@@ -74,7 +74,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
 
   const getOpacity = (value: number) => {
     if (value === 0) return 0.04;
-    return 0.15 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.85;
+    return 0.15 + (Math.sqrt(Math.abs(value)) / Math.sqrt(maxValue)) * 0.85;
   };
 
   const { chartRef, gesture } = useChartInteraction({
@@ -274,9 +274,11 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                           : `Day ${selectedPoint.label}`}
                       </AppText>
 
-                      {onCellPress && (
+                      {onCellPress && selectedPoint.value !== 0 && selectedPoint.timestamp && (
                         <PressScaleTouchable
                           pressScale="none"
+                          accessibilityRole="button"
+                          accessibilityLabel={`View transactions for ${dayjs(selectedPoint.timestamp).format('MMM D, YYYY')}`}
                           style={[styles.viewButton, { backgroundColor: theme.primaryLight }]}
                           onPress={() => {
                             onCellPress(selectedPoint);

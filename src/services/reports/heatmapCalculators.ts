@@ -4,6 +4,7 @@ import { roundToPrecision } from '@/src/utils/money';
 
 import dayjs from 'dayjs';
 import { ConvertedReportTransaction } from './reportTypes';
+import { JournalId } from '@/src/types/ids';
 
 export interface HeatmapPoint {
   x: number; // Day of week (0-6)
@@ -12,10 +13,13 @@ export interface HeatmapPoint {
   label?: string; // Optional label (e.g. day of month)
   monthLabel?: string; // Optional month label (e.g. "Jan") for rows
   timestamp?: number; // Exact date/time for this point
+  periodEndTimestamp?: number; // Inclusive end for calendar buckets that span multiple days
+  journalIds?: JournalId[]; // Transactions represented by a spending heatmap cell
 }
 
 export interface IncomeVsExpenseHistoryPoint {
   startDate: number;
+  endDate?: number;
   expense: number;
 }
 
@@ -24,6 +28,7 @@ export function calculateSpendingHeatmapFromTransactions(
   precision: number = AppConfig.constants.precision,
 ): HeatmapPoint[] {
   const densityMap = new Map<string, number>();
+  const journalMap = new Map<string, Set<JournalId>>();
 
   for (const tx of transactions) {
     if (tx.transactionType !== TransactionType.DEBIT) continue;
@@ -32,13 +37,22 @@ export function calculateSpendingHeatmapFromTransactions(
     const mondayFirstDay = (dt.day() + 6) % 7;
     const key = `${mondayFirstDay}_${dt.hour()}`;
     densityMap.set(key, roundToPrecision((densityMap.get(key) || 0) + tx.amount, precision));
+    const journalIds = journalMap.get(key) ?? new Set<JournalId>();
+    journalIds.add(tx.journalId);
+    journalMap.set(key, journalIds);
   }
 
   const points: HeatmapPoint[] = [];
   for (let day = 0; day < 7; day++) {
     for (let hour = 0; hour < 24; hour++) {
       const value = densityMap.get(`${day}_${hour}`) || 0;
-      points.push({ x: day, y: hour, value });
+      const journalIds = journalMap.get(`${day}_${hour}`);
+      points.push({
+        x: day,
+        y: hour,
+        value,
+        ...(journalIds ? { journalIds: [...journalIds] } : {}),
+      });
     }
   }
   return points;
@@ -68,6 +82,7 @@ export function calculateCalendarHeatmapFromHistory(
       value: h.expense,
       label: date.format('D'),
       timestamp: h.startDate,
+      ...(h.endDate !== undefined ? { periodEndTimestamp: h.endDate } : {}),
       monthLabel,
     };
   });

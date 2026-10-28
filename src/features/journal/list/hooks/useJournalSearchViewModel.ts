@@ -43,6 +43,9 @@ export interface JournalSearchViewModel {
   displayType: string; // '', 'INCOME', 'EXPENSE', 'TRANSFER'
   setDisplayType: (val: string) => void;
 
+  reportScopeLabel?: string;
+  clearReportScope: () => void;
+
   clearFilters: () => void;
 
   hasMore: boolean;
@@ -83,6 +86,10 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     accountIds: params.accountIds as string,
     journalIds: params.journalIds as string,
     journalScope: params.journalScope as string,
+    reportScopeLabel: params.reportScopeLabel as string,
+    reportScopeStartDate: params.reportScopeStartDate as string,
+    reportScopeEndDate: params.reportScopeEndDate as string,
+    reportScopeAccountIds: params.reportScopeAccountIds as string,
     minAmount: params.minAmount as string,
     maxAmount: params.maxAmount as string,
     displayType: params.displayType as string,

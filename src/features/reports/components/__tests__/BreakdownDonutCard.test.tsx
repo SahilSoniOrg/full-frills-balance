@@ -18,6 +18,7 @@ describe('BreakdownDonutCard', () => {
     expanded: false,
     onToggleExpansion: jest.fn(),
     currencyCode: 'EUR',
+    drillDownKind: 'category' as const,
   };
 
   it('passes accountIds when a category legend row is pressed', () => {
@@ -42,7 +43,7 @@ describe('BreakdownDonutCard', () => {
 
     fireEvent.press(screen.getByText('FOOD'));
 
-    expect(onLegendRowPress).toHaveBeenCalledWith(['food-1', 'food-2']);
+    expect(onLegendRowPress).toHaveBeenCalledWith(['food-1', 'food-2'], 'FOOD', 'category');
   });
 
   it('passes a single account id when an account legend row is pressed', () => {
@@ -51,6 +52,7 @@ describe('BreakdownDonutCard', () => {
     render(
       <BreakdownDonutCard
         {...baseProps}
+        drillDownKind="account"
         donutData={[{ value: 250, color: 'red', label: 'Groceries' }]}
         legendRows={[
           {
@@ -68,6 +70,6 @@ describe('BreakdownDonutCard', () => {
 
     fireEvent.press(screen.getByText('Groceries'));
 
-    expect(onLegendRowPress).toHaveBeenCalledWith(['acc-1']);
+    expect(onLegendRowPress).toHaveBeenCalledWith(['acc-1'], 'Groceries', 'account');
   });
 });

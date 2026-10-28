@@ -4,6 +4,7 @@ import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
+import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
 import { ReportWealthTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useState } from 'react';
@@ -63,7 +64,9 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
           currencyCode={targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
-          onViewTransactions={() => onViewTransactions(data.startDate, data.endDate)}
+          onViewTransactions={() =>
+            onViewTransactions(data.startDate, data.endDate, `Period: ${data.label}`)
+          }
           incomeLabel={AppConfig.strings.reports.assets}
           expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
@@ -79,17 +82,21 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
         title={AppConfig.strings.reports.netWorthHistory}
         zIndex={selectedAreaIndex !== undefined ? 100 : 50}
       >
-        <View style={styles.chartContainer}>
-          <AreaChart
-            series={wealthAreaSeries}
-            height={WEALTH_CHART_HEIGHT}
-            colors={[theme.success, theme.error]}
-            width={chartWidth}
-            onPress={setSelectedAreaIndex}
-            selectedIndex={selectedAreaIndex}
-            renderTooltipContent={renderAreaTooltip}
-          />
-        </View>
+        {wealthAreaSeries.some(series => series.length > 0) ? (
+          <View style={styles.chartContainer}>
+            <AreaChart
+              series={wealthAreaSeries}
+              height={WEALTH_CHART_HEIGHT}
+              colors={[theme.success, theme.error]}
+              width={chartWidth}
+              onPress={setSelectedAreaIndex}
+              selectedIndex={selectedAreaIndex}
+              renderTooltipContent={renderAreaTooltip}
+            />
+          </View>
+        ) : (
+          <ReportNoData />
+        )}
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
             <ColoredDot color={theme.success} />

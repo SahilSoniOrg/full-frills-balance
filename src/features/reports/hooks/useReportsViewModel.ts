@@ -11,6 +11,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
 import { CategoryBreakdown, ExpenseCategory } from '@/src/services/reports/reportSnapshot';
 import { calculateReportSummary } from '@/src/services/reports/reportSummary';
+import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -25,6 +26,7 @@ import { Theme } from '@/src/constants/design-tokens';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ReportBreakdownViewState,
+  ReportDrillDownKind,
   ReportOverviewTabVm,
   ReportSpendingTabVm,
   ReportTab,
@@ -290,43 +292,113 @@ export function useReportsViewModel(): ReportsViewModel {
     onResetSelections: resetSelections,
   });
 
-  const onViewTransactions = useCallback((start: number, end?: number) => {
-    analytics.trackFeatureUsage('reports', 'drilldown_transactions');
-    const startDate = new Date(start).setHours(0, 0, 0, 0);
-    const endDate = end
-      ? new Date(end).setHours(23, 59, 59, 999)
-      : new Date(start).setHours(23, 59, 59, 999);
+  const reportScope = useCallback(
+    (label: string) => ({
+      label,
+      baseStartDate: dateRange.startDate,
+      baseEndDate: dateRange.endDate,
+      baseAccountIds: accountIds,
+    }),
+    [accountIds, dateRange.endDate, dateRange.startDate],
+  );
 
-    AppNavigation.toJournalSearch({ startDate, endDate });
-  }, []);
+  const scopedAccountIds = useCallback(
+    (requestedAccountIds: AccountId[]) => {
+      const uniqueRequested = [...new Set(requestedAccountIds)];
+      if (accountIds.length === 0) return uniqueRequested;
+      const selectedAccounts = new Set(accountIds);
+      return uniqueRequested.filter(id => selectedAccounts.has(id));
+    },
+    [accountIds],
+  );
+
+  const onViewTransactions = useCallback(
+    (start: number, end?: number, scopeLabel?: string) => {
+      analytics.trackFeatureUsage('reports', 'drilldown_transactions');
+      const startDate = Math.max(new Date(start).setHours(0, 0, 0, 0), dateRange.startDate);
+      const endDate = Math.min(
+        end ? new Date(end).setHours(23, 59, 59, 999) : new Date(start).setHours(23, 59, 59, 999),
+        dateRange.endDate,
+      );
+      const label = scopeLabel || `Day: ${formatDate(start)}`;
+
+      AppNavigation.toJournalSearch({
+        ...(accountIds.length > 0 ? { accountIds } : {}),
+        startDate,
+        endDate,
+        reportScope: reportScope(label),
+      });
+    },
+    [accountIds, dateRange.endDate, dateRange.startDate, reportScope],
+  );
 
   const onViewCurrentTransactions = useCallback(
-    (accountIds: AccountId[] = []) => {
+    (requestedAccountIds: AccountId[] = accountIds, label = 'Report totals') => {
       analytics.trackFeatureUsage('reports', 'drilldown_transactions');
+      const effectiveAccountIds = scopedAccountIds(requestedAccountIds);
+      AppNavigation.toJournalSearch({
+        ...(effectiveAccountIds.length > 0 ? { accountIds: effectiveAccountIds } : {}),
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        reportScope: reportScope(label),
+      });
+    },
+    [accountIds, dateRange.endDate, dateRange.startDate, reportScope, scopedAccountIds],
+  );
+
+  const onLegendRowPress = useCallback(
+    (
+      requestedAccountIds: AccountId[],
+      label = 'Category',
+      kind: ReportDrillDownKind = 'category',
+    ) => {
+      const effectiveAccountIds = scopedAccountIds(requestedAccountIds);
+      if (effectiveAccountIds.length === 0) return;
+
+      analytics.trackFeatureUsage(
+        'reports',
+        kind === 'category' ? 'drilldown_category' : 'drilldown_transactions',
+        {
+          account_count: effectiveAccountIds.length,
+        },
+      );
+
+      AppNavigation.toJournalSearch({
+        accountIds: effectiveAccountIds,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        reportScope: reportScope(`${kind === 'category' ? 'Category' : 'Account'}: ${label}`),
+      });
+    },
+    [dateRange.endDate, dateRange.startDate, reportScope, scopedAccountIds],
+  );
+
+  const onHeatmapCellPress = useCallback(
+    (point: (typeof spendingHeatmap)[number]) => {
+      const journalIds = point.journalIds ?? [];
+      if (journalIds.length === 0) return;
+      const weekdays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      const scopeLabel = `Spending heatmap: ${weekdays[point.x] ?? 'Day'} at ${String(point.y).padStart(2, '0')}:00`;
+      analytics.trackFeatureUsage('reports', 'drilldown_transactions', {
+        journal_count: journalIds.length,
+      });
       AppNavigation.toJournalSearch({
         ...(accountIds.length > 0 ? { accountIds } : {}),
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
+        journalIds,
+        reportScope: reportScope(scopeLabel),
       });
     },
-    [dateRange.endDate, dateRange.startDate],
-  );
-
-  const onLegendRowPress = useCallback(
-    (accountIds: AccountId[]) => {
-      if (accountIds.length === 0) return;
-
-      analytics.trackFeatureUsage('reports', 'drilldown_category', {
-        account_count: accountIds.length,
-      });
-
-      AppNavigation.toJournalSearch({
-        accountIds,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-      });
-    },
-    [dateRange.endDate, dateRange.startDate],
+    [accountIds, dateRange.endDate, dateRange.startDate, reportScope],
   );
 
   const actions = { onViewTransactions, onViewCurrentTransactions, onLegendRowPress };
@@ -348,11 +420,18 @@ export function useReportsViewModel(): ReportsViewModel {
   const overview: ReportOverviewTabVm = {
     summary: {
       ...summaryData,
-      onViewIncomeTransactions: () => actions.onViewCurrentTransactions(incomeAccountIds),
-      onViewExpenseTransactions: () => actions.onViewCurrentTransactions(expenseAccountIds),
-      onViewNetFlowTransactions: () => actions.onViewCurrentTransactions(flowAccountIds),
+      onViewIncomeTransactions: () => actions.onViewCurrentTransactions(incomeAccountIds, 'Income'),
+      onViewExpenseTransactions: () =>
+        actions.onViewCurrentTransactions(expenseAccountIds, 'Expense'),
+      onViewNetFlowTransactions: () =>
+        actions.onViewCurrentTransactions(flowAccountIds, 'Net flow'),
       onViewLargestCategoryTransactions: () =>
-        actions.onViewCurrentTransactions(summaryData.largestSpendingCategory?.accountIds ?? []),
+        actions.onViewCurrentTransactions(
+          summaryData.largestSpendingCategory?.accountIds ?? [],
+          summaryData.largestSpendingCategory
+            ? `Category: ${formatCategoryLabel(summaryData.largestSpendingCategory.category)}`
+            : 'Largest category',
+        ),
       onViewHighestSpendingDayTransactions: () =>
         summaryData.highestSpendingDay
           ? actions.onViewTransactions(summaryData.highestSpendingDay.date)
@@ -382,6 +461,8 @@ export function useReportsViewModel(): ReportsViewModel {
     spendingHeatmap: chartData.spendingHeatmap,
     calendarHeatmap: chartData.calendarHeatmap,
     onLegendRowPress: actions.onLegendRowPress,
+    onHeatmapCellPress,
+    onViewTransactions: actions.onViewTransactions,
     targetCurrency,
   };
 

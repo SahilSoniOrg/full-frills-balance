@@ -69,6 +69,7 @@ export async function convertReportTransactions(
       }
 
       converted[index] = {
+        journalId: transaction.journalId,
         accountId: transaction.accountId,
         accountType: account.accountType,
         transactionType: transaction.transactionType,

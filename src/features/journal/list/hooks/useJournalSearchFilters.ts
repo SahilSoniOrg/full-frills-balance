@@ -11,6 +11,10 @@ export interface JournalSearchFilterParams {
   accountIds?: string;
   journalIds?: string;
   journalScope?: string;
+  reportScopeLabel?: string;
+  reportScopeStartDate?: string;
+  reportScopeEndDate?: string;
+  reportScopeAccountIds?: string;
   minAmount?: string;
   maxAmount?: string;
   displayType?: string;
@@ -24,6 +28,10 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     accountIds: accountIdsParam,
     journalIds: journalIdsParam,
     journalScope: journalScopeParam,
+    reportScopeLabel: reportScopeLabelParam,
+    reportScopeStartDate: reportScopeStartDateParam,
+    reportScopeEndDate: reportScopeEndDateParam,
+    reportScopeAccountIds: reportScopeAccountIdsParam,
     minAmount: minAmountParam,
     maxAmount: maxAmountParam,
     displayType: displayTypeParam,
@@ -42,11 +50,12 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
   const [accountIds, setAccountIds] = useState<AccountId[]>(() =>
     accountIdsParam ? (accountIdsParam.split(',') as AccountId[]) : [],
   );
-  const [journalIds] = useState<JournalId[]>(() =>
+  const [journalIds, setJournalIds] = useState<JournalId[]>(() =>
     journalIdsParam
       ? (journalIdsParam.split(',') as JournalId[])
       : [...readJournalSearchScope(journalScopeParam)],
   );
+  const [reportScopeLabel, setReportScopeLabel] = useState(reportScopeLabelParam || undefined);
   const [minAmount, setMinAmount] = useState(minAmountParam || '');
   const [maxAmount, setMaxAmount] = useState(maxAmountParam || '');
   const [displayType, setDisplayType] = useState(displayTypeParam || '');
@@ -63,6 +72,7 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     const hasMeaningfulQuery =
       searchQuery.length >= 2 ||
       accountIds.length > 0 ||
+      journalIds.length > 0 ||
       minAmount !== '' ||
       maxAmount !== '' ||
       displayType !== '' ||
@@ -71,7 +81,7 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      const queryKey = `${searchQuery}:${accountIds.join(',')}:${minAmount}:${maxAmount}:${displayType}:${dateRange?.startDate}`;
+      const queryKey = `${searchQuery}:${accountIds.join(',')}:${journalIds.join(',')}:${minAmount}:${maxAmount}:${displayType}:${dateRange?.startDate}`;
       if (queryKey === lastTrackedQueryRef.current) return;
       lastTrackedQueryRef.current = queryKey;
       analytics.trackFeatureUsage('journal_search', 'query_details', {
@@ -88,16 +98,51 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [searchQuery, accountIds, minAmount, maxAmount, displayType, dateRange, periodFilter.type]);
+  }, [
+    searchQuery,
+    accountIds,
+    journalIds,
+    minAmount,
+    maxAmount,
+    displayType,
+    dateRange,
+    periodFilter.type,
+  ]);
+
+  const clearReportScope = useCallback(() => {
+    if (!reportScopeLabel) return;
+
+    const baseStartDate = Number.parseInt(reportScopeStartDateParam || '', 10);
+    const baseEndDate = Number.parseInt(reportScopeEndDateParam || '', 10);
+    const hasBaseRange = Number.isFinite(baseStartDate) && Number.isFinite(baseEndDate);
+    setDateRangeState(hasBaseRange ? { startDate: baseStartDate, endDate: baseEndDate } : null);
+    setPeriodFilter(
+      hasBaseRange
+        ? { type: 'CUSTOM', startDate: baseStartDate, endDate: baseEndDate }
+        : { type: 'ALL_TIME' },
+    );
+    setAccountIds(
+      reportScopeAccountIdsParam ? (reportScopeAccountIdsParam.split(',') as AccountId[]) : [],
+    );
+    setJournalIds([]);
+    setReportScopeLabel(undefined);
+  }, [
+    reportScopeAccountIdsParam,
+    reportScopeEndDateParam,
+    reportScopeLabel,
+    reportScopeStartDateParam,
+  ]);
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
     setDateRangeState(null);
     setPeriodFilter({ type: 'ALL_TIME' });
     setAccountIds([]);
+    setJournalIds([]);
     setMinAmount('');
     setMaxAmount('');
     setDisplayType('');
+    setReportScopeLabel(undefined);
   }, []);
 
   const queryDateRange = useMemo(
@@ -128,6 +173,8 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     maxAmount,
     setMaxAmount,
     displayType,
+    reportScopeLabel,
+    clearReportScope,
     setDisplayType,
     clearFilters,
     queryDateRange,

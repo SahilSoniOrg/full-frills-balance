@@ -73,6 +73,28 @@ describe('buildRoute', () => {
     );
   });
 
+  it('preserves a report drill-down label and its base filters for clear-scope behavior', () => {
+    router.push.mockClear();
+    AppNavigation.toJournalSearch({
+      startDate: 1000,
+      endDate: 2000,
+      accountIds: ['category-account'],
+      reportScope: {
+        label: 'Category: Food',
+        baseStartDate: 900,
+        baseEndDate: 2100,
+        baseAccountIds: ['report-account'],
+      },
+    });
+
+    const route = router.push.mock.calls[0][0] as string;
+    const query = new URL(route, 'https://reports.test').searchParams;
+    expect(query.get('reportScopeLabel')).toBe('Category: Food');
+    expect(query.get('reportScopeStartDate')).toBe('900');
+    expect(query.get('reportScopeEndDate')).toBe('2100');
+    expect(query.get('reportScopeAccountIds')).toBe('report-account');
+  });
+
   it('keeps large journal scopes out of the navigation URL', () => {
     const journalIds = Array.from({ length: 2138 }, (_, index) => `journal-${index}`);
 

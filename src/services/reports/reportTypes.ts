@@ -1,7 +1,8 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, JournalId } from '@/src/types/ids';
 
 export interface ConvertedReportTransaction {
+  journalId: JournalId;
   accountId: AccountId;
   accountType: AccountType;
   transactionType: TransactionType;

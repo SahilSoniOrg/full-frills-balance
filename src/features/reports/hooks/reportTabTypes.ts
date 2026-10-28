@@ -11,6 +11,7 @@ export interface ReportSummaryVm extends ReportSummary {
 }
 
 export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
+export type ReportDrillDownKind = 'account' | 'category';
 
 export type ReportDonutDatum = { value: number; color: string; label: string };
 
@@ -69,7 +70,7 @@ export interface ReportOverviewTabVm {
   expenseBarFlex: number;
   sankeyData: SankeyData;
   targetCurrency: string;
-  onViewTransactions: (start: number, end?: number) => void;
+  onViewTransactions: (start: number, end?: number, scopeLabel?: string) => void;
 }
 
 export interface ReportSpendingTabVm {
@@ -84,7 +85,9 @@ export interface ReportSpendingTabVm {
   toggleIncomeCategoryExpansion: () => void;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
-  onLegendRowPress: (accountIds: AccountId[]) => void;
+  onLegendRowPress: (accountIds: AccountId[], label?: string, kind?: ReportDrillDownKind) => void;
+  onHeatmapCellPress: (point: HeatmapPoint) => void;
+  onViewTransactions: (start: number, end?: number, scopeLabel?: string) => void;
   targetCurrency: string;
 }
 
@@ -93,5 +96,5 @@ export interface ReportWealthTabVm {
   barChartData: ReportBarChartDatum[];
   dailyData: ReportDailyPoint[];
   targetCurrency: string;
-  onViewTransactions: (start: number, end?: number) => void;
+  onViewTransactions: (start: number, end?: number, scopeLabel?: string) => void;
 }

@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppText } from '@/src/components/core';
+import { AppText, PressScaleTouchable } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -17,6 +17,7 @@ interface HeatmapChartProps {
   height?: number;
   width?: number;
   currency: string;
+  onCellPress?: (point: HeatmapPoint) => void;
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
   tooltipWidth?: number;
   tooltipHeight?: number;
@@ -27,6 +28,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   height = REPORT_CHART_LAYOUT.heatmapDefaultHeight,
   width: customWidth,
   currency,
+  onCellPress,
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
@@ -248,6 +250,26 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                       variant="heading"
                       style={{ color: theme.text, marginTop: 2 }}
                     />
+                    {onCellPress && (selectedPoint.journalIds?.length ?? 0) > 0 && (
+                      <PressScaleTouchable
+                        pressScale="none"
+                        accessibilityRole="button"
+                        accessibilityLabel={`View transactions for ${DAYS_SHORT[selectedPoint.x]} at ${String(selectedPoint.y).padStart(2, '0')}:00`}
+                        style={[styles.viewButton, { backgroundColor: theme.primaryLight }]}
+                        onPress={() => {
+                          onCellPress(selectedPoint);
+                          setSelectedPoint(null);
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          weight="semibold"
+                          style={{ color: theme.primary }}
+                        >
+                          VIEW TRANSACTIONS
+                        </AppText>
+                      </PressScaleTouchable>
+                    )}
                   </View>
                 )}
               </ChartTooltip>
@@ -265,5 +287,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 2,
+  },
+  viewButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 6,
   },
 });

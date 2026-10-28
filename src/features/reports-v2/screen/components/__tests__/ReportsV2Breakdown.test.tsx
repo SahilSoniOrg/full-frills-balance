@@ -1,5 +1,5 @@
 import { ReportsV2Breakdown } from '../ReportsV2Breakdown';
-import { render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
 const EXCHANGE_RATE_MESSAGE =
   'Some cross-currency activity was omitted because no historical rate was available.';
@@ -66,5 +66,41 @@ describe('ReportsV2Breakdown', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Explain Budget utilization' })).toBeTruthy();
+  });
+
+  it('forwards a row tap as a scoped journal drill-down', () => {
+    const onDrilldown = jest.fn();
+    render(
+      <ReportsV2Breakdown
+        section={{
+          id: 'spending',
+          title: 'Spending',
+          rows: [
+            {
+              id: 'food',
+              label: 'Food',
+              value: { kind: 'MONEY', amount: 120, currencyCode: 'INR' },
+              accountIds: ['food-1'],
+            },
+          ],
+        }}
+        context={{
+          periodLabel: 'This month',
+          accountScopeLabel: 'All accounts',
+          basisLabel: 'Actual',
+          comparisonLabel: 'None',
+          archivedAccountsLabel: 'Included',
+          currencyCode: 'INR',
+        }}
+        dataNotes={[]}
+        onDrilldown={onDrilldown}
+      />,
+    );
+
+    fireEvent.press(screen.getByText('Food'));
+    expect(onDrilldown).toHaveBeenCalledWith({
+      label: 'Food',
+      accountIds: ['food-1'],
+    });
   });
 });

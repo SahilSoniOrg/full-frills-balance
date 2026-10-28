@@ -7,6 +7,7 @@ import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownD
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
 import { ReportSpendingTabVm } from '@/src/features/reports/hooks/reportTabTypes';
+import { formatDate } from '@/src/utils/dateUtils';
 import { StyleSheet, View } from 'react-native';
 
 interface ReportSpendingSectionProps {
@@ -62,6 +63,7 @@ export function ReportSpendingSection({
             expanded={expandedExpenses}
             onToggleExpansion={toggleExpenseExpansion}
             onLegendRowPress={onLegendRowPress}
+            drillDownKind="account"
             currencyCode={targetCurrency}
           />
         ) : (
@@ -82,6 +84,7 @@ export function ReportSpendingSection({
             expanded={expandedExpenseCategories}
             onToggleExpansion={toggleExpenseCategoryExpansion}
             onLegendRowPress={onLegendRowPress}
+            drillDownKind="category"
             currencyCode={targetCurrency}
           />
         ) : (
@@ -102,6 +105,7 @@ export function ReportSpendingSection({
             expanded={expandedIncomeCategories}
             onToggleExpansion={toggleIncomeCategoryExpansion}
             onLegendRowPress={onLegendRowPress}
+            drillDownKind="category"
             currencyCode={targetCurrency}
           />
         ) : (
@@ -125,10 +129,21 @@ export function ReportSpendingSection({
           </View>
         }
       >
-        <HeatmapChart data={spendingHeatmap} width={chartWidth} currency={targetCurrency} />
-        <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
-          {AppConfig.strings.reports.heatmapSubtitle}
-        </AppText>
+        {spendingHeatmap.some(point => point.value > 0) ? (
+          <>
+            <HeatmapChart
+              data={spendingHeatmap}
+              width={chartWidth}
+              currency={targetCurrency}
+              onCellPress={vm.onHeatmapCellPress}
+            />
+            <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
+              {AppConfig.strings.reports.heatmapSubtitle}
+            </AppText>
+          </>
+        ) : (
+          <ReportNoData />
+        )}
       </ReportChartCard>
 
       <ReportChartCard
@@ -147,7 +162,26 @@ export function ReportSpendingSection({
           </View>
         }
       >
-        <CalendarHeatmap data={calendarHeatmap} width={chartWidth} currency={targetCurrency} />
+        {calendarHeatmap.some(point => point.value !== 0 && point.timestamp !== undefined) ? (
+          <CalendarHeatmap
+            data={calendarHeatmap}
+            width={chartWidth}
+            currency={targetCurrency}
+            onCellPress={point => {
+              if (point.timestamp !== undefined) {
+                const periodEnd = point.periodEndTimestamp;
+                const scopeLabel =
+                  periodEnd !== undefined &&
+                  new Date(point.timestamp).toDateString() !== new Date(periodEnd).toDateString()
+                    ? `Period: ${formatDate(point.timestamp)} – ${formatDate(periodEnd)}`
+                    : undefined;
+                vm.onViewTransactions(point.timestamp, periodEnd, scopeLabel);
+              }
+            }}
+          />
+        ) : (
+          <ReportNoData />
+        )}
       </ReportChartCard>
     </>
   );
