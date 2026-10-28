@@ -4,7 +4,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
-import { readReportLedger } from '../ledgerFactReader';
+import { readReportLedger, selectScopedLeafAccounts } from '../ledgerFactReader';
 import type { ReportQuery } from '../../types/query';
 
 jest.mock('@/src/data/repositories/account', () => ({
@@ -233,5 +233,29 @@ describe('readReportLedger', () => {
         ],
       }),
     ]);
+  });
+});
+
+describe('selectScopedLeafAccounts', () => {
+  it('includes archived accounts by default and filters them only when requested', () => {
+    const accounts = [
+      { id: 'active', name: 'Active', accountType: AccountType.ASSET },
+      {
+        id: 'archived',
+        name: 'Archived',
+        accountType: AccountType.ASSET,
+        archivedAt: Date.UTC(2026, 0, 1),
+      },
+    ] as never;
+
+    expect(selectScopedLeafAccounts(accounts, {}).map(account => account.id)).toEqual([
+      'active',
+      'archived',
+    ]);
+    expect(
+      selectScopedLeafAccounts(accounts, { includeArchivedAccounts: false }).map(
+        account => account.id,
+      ),
+    ).toEqual(['active']);
   });
 });

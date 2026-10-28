@@ -116,6 +116,25 @@ describe('useReportsV2ViewModel load lifecycle', () => {
     expect(engine.run.mock.calls[1][0].accountIds).toEqual(['account-1']);
   });
 
+  it('includes archived accounts by default and supports an active-only scope', async () => {
+    const engine = engineMock();
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'USD',
+      }),
+    );
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(1));
+    expect(engine.run.mock.calls[0][0].includeArchivedAccounts).toBe(true);
+
+    act(() => result.current.filters.onIncludeArchivedAccountsChange(false));
+
+    await waitFor(() => expect(engine.run).toHaveBeenCalledTimes(2));
+    expect(engine.run.mock.calls[1][0].includeArchivedAccounts).toBe(false);
+  });
+
   it('coalesces rapid filter changes while keeping the current report visible', async () => {
     const engine = engineMock();
     const { result } = renderHook(() =>

@@ -53,7 +53,7 @@ export function selectScopedLeafAccounts(
   );
   return accounts.filter(account => {
     if (account.deletedAt) return false;
-    if (!query.includeArchivedAccounts && account.archivedAt) return false;
+    if (query.includeArchivedAccounts === false && account.archivedAt) return false;
     if (parentIds.has(account.id)) return false;
 
     const accountPath = accountPathFor(account, accountById);

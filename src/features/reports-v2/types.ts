@@ -25,6 +25,8 @@ export interface ReportsV2FiltersViewModel {
   targetCurrency: string;
   accountIds: readonly string[];
   onAccountIdsChange: (accountIds: readonly string[]) => void;
+  includeArchivedAccounts: boolean;
+  onIncludeArchivedAccountsChange: (include: boolean) => void;
   accountScopeLabel: string;
   onPeriodPresetChange: (preset: ReportsV2PeriodPreset) => void;
   onBasisChange: (basis: ReportsV2Basis) => void;

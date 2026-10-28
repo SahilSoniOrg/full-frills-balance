@@ -27,8 +27,15 @@ export function ReportsV2Filters({
     { id: 'PREVIOUS_PERIOD', label: 'Prior period' },
     { id: 'PREVIOUS_YEAR', label: 'Last year' },
   ];
+  const archivedOptions: readonly SegmentedOption<string>[] = [
+    { id: 'include', label: 'Include' },
+    { id: 'active-only', label: 'Active only' },
+  ];
   const basisLabel = vm.filters.basis === 'ACTUAL_PLUS_PLANNED' ? 'Actual + planned' : 'Actual';
   const comparisonLabel = vm.filters.comparison === 'NONE' ? 'No comparison' : 'Compared';
+  const archivedLabel = vm.filters.includeArchivedAccounts
+    ? 'Archived included'
+    : 'Active accounts only';
   const groups = [
     {
       label: 'Period',
@@ -57,6 +64,12 @@ export function ReportsV2Filters({
         onPress: () => vm.filters.onRequestAccountScope?.(),
       },
     },
+    {
+      label: 'Archived accounts',
+      options: archivedOptions,
+      value: vm.filters.includeArchivedAccounts ? 'include' : 'active-only',
+      onChange: (value: string) => vm.filters.onIncludeArchivedAccountsChange(value === 'include'),
+    },
   ];
 
   return (
@@ -64,7 +77,7 @@ export function ReportsV2Filters({
       isExpanded={isExpanded}
       onToggle={onToggle}
       collapsedTitle={`${basisLabel} · ${comparisonLabel}`}
-      collapsedDetails={`${vm.filters.periodLabel} · ${vm.filters.accountScopeLabel}`}
+      collapsedDetails={`${vm.filters.periodLabel} · ${vm.filters.accountScopeLabel} · ${archivedLabel}`}
       groups={groups}
       testID="reports-v2-filters-toggle"
     />

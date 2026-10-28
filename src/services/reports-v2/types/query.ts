@@ -33,6 +33,7 @@ export interface ReportQuery {
   readonly sections?: readonly ReportSectionId[];
   readonly accountIds?: readonly AccountId[];
   readonly accountTypes?: readonly AccountType[];
+  /** Archived accounts are included by default; false explicitly excludes them. */
   readonly includeArchivedAccounts?: boolean;
 }
 

@@ -84,6 +84,7 @@ export function useReportsV2ViewModel({
   const [selectedAccountIds, setSelectedAccountIds] = useState<readonly AccountId[]>(() =>
     initialAccountIdsKey ? initialAccountIdsKey.split('\u001f').map(asAccountId) : [],
   );
+  const [includeArchivedAccounts, setIncludeArchivedAccounts] = useState(true);
 
   const query = useMemo<ReportsV2Query>(
     () => ({
@@ -94,12 +95,14 @@ export function useReportsV2ViewModel({
       comparison,
       granularity,
       sections: [activeSection],
+      includeArchivedAccounts,
       ...(selectedAccountIds.length > 0 ? { accountIds: selectedAccountIds } : {}),
     }),
     [
       basis,
       comparison,
       granularity,
+      includeArchivedAccounts,
       periodRange.endDate,
       periodRange.startDate,
       selectedAccountIds,
@@ -192,6 +195,9 @@ export function useReportsV2ViewModel({
   const onAccountIdsChange = useCallback((accountIds: readonly string[]) => {
     setSelectedAccountIds(accountIds.map(asAccountId));
   }, []);
+  const onIncludeArchivedAccountsChange = useCallback((include: boolean) => {
+    setIncludeArchivedAccounts(include);
+  }, []);
   const onDrilldown = useCallback(
     (input: ReportsV2DrilldownInput) => {
       const startDate = input.startDate ?? query.period.startDate;
@@ -242,6 +248,8 @@ export function useReportsV2ViewModel({
       targetCurrency,
       accountIds: selectedAccountIds,
       onAccountIdsChange,
+      includeArchivedAccounts,
+      onIncludeArchivedAccountsChange,
       accountScopeLabel:
         accountScopeLabel ??
         (selectedAccountIds.length
@@ -261,6 +269,7 @@ export function useReportsV2ViewModel({
       comparison,
       granularity,
       onAccountIdsChange,
+      onIncludeArchivedAccountsChange,
       onPeriodPresetChange,
       onRequestAccountScope,
       onRequestCurrency,
@@ -269,6 +278,7 @@ export function useReportsV2ViewModel({
       periodRange.endDate,
       periodRange.startDate,
       selectedAccountIds,
+      includeArchivedAccounts,
       targetCurrency,
     ],
   );
