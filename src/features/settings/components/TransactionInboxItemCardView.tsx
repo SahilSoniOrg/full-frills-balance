@@ -19,6 +19,7 @@ import { alert } from '@/src/utils/alerts';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { inboxProcessingStatusLabel } from './inboxProcessingStatusLabel';
 import { StyleSheet, View } from 'react-native';
 
 interface TransactionInboxItemCardViewProps {
@@ -189,7 +190,7 @@ export function TransactionInboxItemCardView({
           backgroundColor={withOpacity(theme.primary, Opacity.soft)}
           textColor={theme.primary}
         >
-          {item.processingStatus.replace(/_/g, ' ')}
+          {inboxProcessingStatusLabel(item.processingStatus)}
         </Badge>
         {item.duplicateCandidate && (
           <Badge

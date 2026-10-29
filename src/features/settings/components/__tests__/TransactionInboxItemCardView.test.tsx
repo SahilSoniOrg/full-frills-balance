@@ -2,6 +2,7 @@ import { fireEvent, render } from '@/src/utils/test-utils';
 import { TransactionInboxItemCardView } from '../TransactionInboxItemCardView';
 import { JournalId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { InboxProcessingStatus } from '@/src/types/enums';
 
 describe('TransactionInboxItemCardView', () => {
   const mockItem: TransactionInboxItem = {
@@ -90,5 +91,23 @@ describe('TransactionInboxItemCardView', () => {
 
     fireEvent.press(getByTestId('inbox-compare-duplicate-sms-card-1'));
     expect(defaultProps.onCompareDuplicate).toHaveBeenCalledWith(mockItem);
+  });
+
+  it('replaces the raw parse-failure status with a recoverable explanation', () => {
+    const { getByText, getByTestId, queryByText } = render(
+      <TransactionInboxItemCardView
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          processingStatus: InboxProcessingStatus.PARSE_FAILED,
+          duplicateCandidate: undefined,
+        }}
+      />,
+    );
+
+    expect(getByText("Couldn't read transaction details")).toBeTruthy();
+    expect(getByText('Edit & Re-parse')).toBeTruthy();
+    expect(getByTestId('inbox-edit-reparse-btn-sms-card-1')).toBeTruthy();
+    expect(queryByText('PARSE FAILED')).toBeNull();
   });
 });
