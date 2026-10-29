@@ -1,4 +1,5 @@
 import { LineChart } from '@/src/components/charts/LineChart';
+import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
@@ -53,6 +54,12 @@ export const SafeToSpendChart = ({
     ...historyPoints.map(p => ({ ...p, x: p.timestamp, y: p.value, isHistory: true })),
     ...projectionPoints.map(p => ({ ...p, x: p.timestamp, y: p.value, isHistory: false })),
   ];
+  const accessibilitySummary = buildLineChartAccessibilitySummary({
+    chartName: `${AppConfig.defaults.safeToSpendDays}-day Safe to Spend projection`,
+    data,
+    formatValue: value => formatSts(value, currencyCode),
+    formatDate: timestamp => dayjs(timestamp).format('MMM D'),
+  });
 
   const minX =
     data.length > 0 ? Math.min(...data.map(d => d.x)) : dayjs().subtract(7, 'day').valueOf();
@@ -157,6 +164,7 @@ export const SafeToSpendChart = ({
             data={data}
             width={chartWidth}
             currencyCode={currencyCode}
+            accessibilitySummary={accessibilitySummary}
             height={AppConfig.layout.safeToSpendChartHeight}
             color={isOverCommitted ? theme.error : theme.primary}
             xTicks={xTicks}

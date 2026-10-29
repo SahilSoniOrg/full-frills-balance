@@ -1,8 +1,10 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { ChartLegendItem } from '@/src/components/charts/ChartLegendItem';
 import { LineChart } from '@/src/components/charts/LineChart';
+import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
@@ -79,6 +81,7 @@ export function AccountActivitySection({
   onLayout,
 }: AccountActivitySectionProps) {
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
   const isPrivate = useEffectivePrivacyMode();
   const [chartWidth, setChartWidth] = useState(0);
   const [chartExpanded, setChartExpanded] = useState(initialChartExpanded);
@@ -228,6 +231,13 @@ export function AccountActivitySection({
                       data={chartData}
                       width={chartWidth}
                       height={160}
+                      accessibilitySummary={buildLineChartAccessibilitySummary({
+                        chartName: chartTitle,
+                        data: chartData,
+                        formatValue: value => formatMoney(value, currencyCode),
+                        formatDate: timestamp => dayjs(timestamp).format('MMM D, YYYY'),
+                        additionalSeries: rollingAverageData.length > 0 ? ['7-day average'] : [],
+                      })}
                       tooltipWidth={210}
                       color={chartColor}
                       showGradient={false}

@@ -1,5 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
+import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
@@ -36,7 +38,19 @@ export function NetWorthTrendWidget({
   onViewTransactions,
 }: NetWorthTrendWidgetProps) {
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
+  const accessibilitySummary = buildLineChartAccessibilitySummary({
+    chartName: 'Net worth trend',
+    data: series,
+    formatValue: value => formatMoney(value, currencyCode),
+    formatDate: timestamp =>
+      new Date(timestamp).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+  });
 
   const onPointSelect = useCallback(
     (index: number) => {
@@ -89,6 +103,7 @@ export function NetWorthTrendWidget({
         <LineChart
           data={series}
           currencyCode={currencyCode}
+          accessibilitySummary={accessibilitySummary}
           height={NET_WORTH_CHART_HEIGHT}
           color={theme.primary}
           width={chartWidth}

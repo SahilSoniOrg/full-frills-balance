@@ -1,6 +1,8 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { AppConfig } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Stack } from '@/src/design-system';
@@ -20,10 +22,17 @@ export function ClarityChart({
   readonly currency: string;
 }) {
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
   const [width, setWidth] = useState(0);
   if (points.length === 0) return null;
 
   const data = points.map(point => ({ x: point.x, y: point.y, events: point.events }));
+  const accessibilitySummary = buildLineChartAccessibilitySummary({
+    chartName: 'Safe to Spend setup projection',
+    data,
+    formatValue: value => formatMoney(value, currency),
+    formatDate: timestamp => dayjs(timestamp).format('MMM D'),
+  });
   const minX = data[0].x;
   const maxX = data[data.length - 1].x;
   const tickCount = AppConfig.defaults.chartTickCount;
@@ -48,6 +57,7 @@ export function ClarityChart({
           data={data}
           width={width}
           currencyCode={currency}
+          accessibilitySummary={accessibilitySummary}
           height={AppConfig.layout.safeToSpendChartHeight}
           color={overdrawn ? theme.error : theme.primary}
           xTicks={xTicks}

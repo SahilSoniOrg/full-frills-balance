@@ -2,8 +2,10 @@ import { AppText } from '@/src/components/core';
 import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { BarChart, type BarChartDataPoint } from '@/src/components/charts/BarChart';
 import { LineChart, type DataPoint } from '@/src/components/charts/LineChart';
+import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -33,6 +35,7 @@ export function ReportsV2TrendCard({
 }) {
   const privateMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
+  const formatMoney = useMoneyFormat();
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
   const waterfall = visualization.kind === 'WATERFALL' ? visualization : null;
   const reportSeries = visualization.kind === 'WATERFALL' ? null : visualization.series;
@@ -78,6 +81,14 @@ export function ReportsV2TrendCard({
     () => (series[1]?.points ?? []).map(point => ({ x: point.date, y: point.value.amount })),
     [series],
   );
+  const lineCurrencyCode = series[0]?.points[0]?.value.currencyCode ?? '';
+  const lineAccessibilitySummary = buildLineChartAccessibilitySummary({
+    chartName: explanation?.title ?? 'Trend',
+    data: lineData,
+    formatValue: value => formatMoney(value, lineCurrencyCode),
+    formatDate: chartLabel,
+    additionalSeries: series.slice(1).map(item => item.label),
+  });
   const tooltip = useCallback(
     (index: number) => {
       if (chartSeries) {
@@ -110,7 +121,8 @@ export function ReportsV2TrendCard({
     <LineChart
       data={lineData}
       secondaryData={secondaryLineData.length > 0 ? secondaryLineData : undefined}
-      currencyCode={series[0]?.points[0]?.value.currencyCode ?? ''}
+      currencyCode={lineCurrencyCode}
+      accessibilitySummary={lineAccessibilitySummary}
       selectedIndex={selectedIndex}
       onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
       renderTooltipContent={tooltip}

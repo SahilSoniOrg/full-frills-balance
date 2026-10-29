@@ -24,6 +24,7 @@ export type { DataPoint, HorizontalLine };
 export interface LineChartProps<T extends DataPoint = DataPoint> {
   data: T[];
   currencyCode: string;
+  accessibilitySummary: string;
   height?: number;
   color?: string;
   showGradient?: boolean;
@@ -67,6 +68,7 @@ export const LineChart = <T extends DataPoint>({
   tooltipWidth,
   tooltipHeight,
   currencyCode,
+  accessibilitySummary,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
@@ -178,6 +180,9 @@ export const LineChart = <T extends DataPoint>({
   if (data.length === 0) {
     return (
       <View
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={accessibilitySummary}
         style={[
           styles.container,
           {
@@ -196,6 +201,9 @@ export const LineChart = <T extends DataPoint>({
 
   return (
     <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={accessibilitySummary}
       style={{ height, width: chartWidth, overflow: 'visible' }}
       ref={chartRef}
       collapsable={false}
