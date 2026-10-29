@@ -1,14 +1,11 @@
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { useObservable } from '@/src/hooks/useObservable';
-import { budgetReadService } from '@/src/services/budget/budgetReadService';
-import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { combineLatest, EMPTY, of } from 'rxjs';
-import { map, startWith, switchMap } from 'rxjs/operators';
+import { observeBudgetList } from '@/src/services/budget/budgetListReadModel';
+import { EMPTY } from 'rxjs';
 import { BudgetItem } from '../types';
 import { sortBudgetItems, summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { useCallback, useMemo } from 'react';
 
 export function useBudgetListViewModel(
@@ -19,34 +16,7 @@ export function useBudgetListViewModel(
   const today = useCalendarDay();
   const budgetsObservable = useMemo(() => {
     if (!enabled) return EMPTY;
-    // Re-value when rates arrive (e.g. after "Fetch missing rates" in the FX sheet).
-    const items$ = combineLatest([
-      budgetReadService.observeAllActive(workplaceId),
-      exchangeRateService.observeSpotRateUpdates().pipe(startWith('')),
-    ]).pipe(
-      map(([budgets]) => budgets),
-      switchMap(budgets => {
-        if (budgets.length === 0) return of([]);
-
-        const itemObservables = budgets.map(budget =>
-          combineLatest([
-            budgetReadService.observeBudgetUsage(workplaceId, budget.id, today),
-            budgetReadService.observeScopes(workplaceId, budget.id),
-          ]).pipe(map(([usage, scopes]) => ({ budget, usage, scopes }))),
-        );
-        return combineLatest(itemObservables);
-      }),
-    );
-    return combineLatest([items$, accountQueries.observeAll(workplaceId)]).pipe(
-      map(([items, accounts]): BudgetItem[] => {
-        const accountsById = new Map(accounts.map(account => [String(account.id), account]));
-        return items.map(({ budget, usage, scopes }) => ({
-          budget,
-          usage,
-          scopeAccounts: scopes.map(scope => accountsById.get(scope.accountId)),
-        }));
-      }),
-    );
+    return observeBudgetList(workplaceId, today);
   }, [enabled, workplaceId, today]);
 
   const {

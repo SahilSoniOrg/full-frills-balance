@@ -36,24 +36,35 @@ export type ValuedBudgetLine = {
   transactionType: TransactionType;
 };
 
+// Owned by one list refresh: never reuse across database or rate emissions.
+type BudgetValuationContext = {
+  accountById: Map<AccountId, BudgetLineValuationAccount>;
+  journalById: Map<string, Journal>;
+  conversions: Map<string, ReturnType<typeof convertJournalLineAmount>>;
+};
+
 export async function valueBudgetLinesForCurrency(
   workplaceId: WorkplaceId,
   transactions: BudgetLineValuationTx[],
   accountById: Map<AccountId, BudgetLineValuationAccount>,
   targetCurrency: string,
   logTag: string,
+  context?: BudgetValuationContext,
 ): Promise<{
   lines: (ValuedBudgetLine | null)[];
   unvaluedEntries: boolean[];
   journalById: Map<string, Journal>;
   missingRateQuotes: MissingRateQuote[];
 }> {
-  const journals = await journalQueryRepository.findByIds(workplaceId, [
-    ...new Set(transactions.map(transaction => transaction.journalId)),
-  ]);
-  const journalById = new Map<string, Journal>(
-    journals.map(journal => [journal.id, journal] as const),
-  );
+  const journalById =
+    context?.journalById ??
+    new Map<string, Journal>(
+      (
+        await journalQueryRepository.findByIds(workplaceId, [
+          ...new Set(transactions.map(transaction => transaction.journalId)),
+        ])
+      ).map(journal => [journal.id, journal] as const),
+    );
   const lines: (ValuedBudgetLine | null)[] = new Array(transactions.length).fill(null);
   const unvaluedEntries = new Array(transactions.length).fill(false);
   const missing = new Map<string, MissingRateQuote>();
@@ -74,14 +85,20 @@ export async function valueBudgetLinesForCurrency(
         return;
       }
 
-      const converted = await convertJournalLineAmount({
-        amount: transaction.amount,
-        lineCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
-        journalCurrency: journal.currencyCode,
-        targetCurrency,
-        storedLineRate: transaction.exchangeRate,
-        journalDate: journal.journalDate,
-      });
+      const conversionKey = JSON.stringify([transaction.id, targetCurrency]);
+      let conversion = context?.conversions.get(conversionKey);
+      if (!conversion) {
+        conversion = convertJournalLineAmount({
+          amount: transaction.amount,
+          lineCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
+          journalCurrency: journal.currencyCode,
+          targetCurrency,
+          storedLineRate: transaction.exchangeRate,
+          journalDate: journal.journalDate,
+        });
+        context?.conversions.set(conversionKey, conversion);
+      }
+      const converted = await conversion;
       if (!converted.ok) {
         unvaluedEntries[index] = true;
         const { fromCurrency, toCurrency } = converted.missingRate;
@@ -147,15 +164,19 @@ export async function calculateBudgetSpendFromTransactions(
   transactions: Transaction[],
   budgetAmount: number,
   budgetCurrencyCode: string,
+  context?: BudgetValuationContext,
 ): Promise<BudgetUsage> {
   const precision = getCurrencyPrecision(budgetCurrencyCode);
   const roundedBudgetAmount = roundToPrecision(budgetAmount, precision);
-  const accounts = await accountQueryRepository.findAllByIds(workplaceId, [
-    ...new Set(transactions.map(transaction => transaction.accountId)),
-  ]);
-  const accountById = new Map<AccountId, BudgetLineValuationAccount>(
-    accounts.map(account => [account.id, account] as const),
-  );
+  const accountById =
+    context?.accountById ??
+    new Map<AccountId, BudgetLineValuationAccount>(
+      (
+        await accountQueryRepository.findAllByIds(workplaceId, [
+          ...new Set(transactions.map(transaction => transaction.accountId)),
+        ])
+      ).map(account => [account.id, account] as const),
+    );
   const { lines, unvaluedEntries, journalById, missingRateQuotes } =
     await valueBudgetLinesForCurrency(
       workplaceId,
@@ -163,6 +184,7 @@ export async function calculateBudgetSpendFromTransactions(
       accountById,
       budgetCurrencyCode,
       'BudgetReadService',
+      context,
     );
 
   let spentAmount = 0;
@@ -190,4 +212,46 @@ export async function calculateBudgetSpendFromTransactions(
         }
       : {}),
   };
+}
+
+/** Batch lookups and share valuations for overlapping budgets in this emission only. */
+export async function calculateBudgetListUsage(
+  workplaceId: WorkplaceId,
+  requests: { transactions: Transaction[]; amount: number; currencyCode: string }[],
+): Promise<BudgetUsage[]> {
+  const transactions = new Map(
+    requests.flatMap(request => request.transactions.map(tx => [tx.id, tx] as const)),
+  );
+  const uniqueTransactions = [...transactions.values()];
+  const [accounts, journals] =
+    uniqueTransactions.length === 0
+      ? [[], []]
+      : await Promise.all([
+          accountQueryRepository.findAllByIds(workplaceId, [
+            ...new Set(uniqueTransactions.map(tx => tx.accountId)),
+          ]),
+          journalQueryRepository.findByIds(workplaceId, [
+            ...new Set(uniqueTransactions.map(tx => tx.journalId)),
+          ]),
+        ]);
+  const context: BudgetValuationContext = {
+    accountById: new Map(accounts.map(account => [account.id, account])),
+    journalById: new Map(journals.map(journal => [journal.id, journal])),
+    conversions: new Map(),
+  };
+  const usages: BudgetUsage[] = [];
+  // Each budget already uses bounded line concurrency. Avoid multiplying that
+  // limit by the number of budgets; overlapping lines reuse the settled promise.
+  for (const request of requests) {
+    usages.push(
+      await calculateBudgetSpendFromTransactions(
+        workplaceId,
+        request.transactions,
+        request.amount,
+        request.currencyCode,
+        context,
+      ),
+    );
+  }
+  return usages;
 }

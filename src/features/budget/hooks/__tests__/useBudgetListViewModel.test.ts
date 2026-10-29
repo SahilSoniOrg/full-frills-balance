@@ -2,11 +2,22 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { BehaviorSubject, of } from 'rxjs';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { calculateBudgetListUsage } from '@/src/services/budget/budgetCalculationHelpers';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import { asAccountId, asBudgetId, asWorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
 import { useBudgetListViewModel } from '../useBudgetListViewModel';
 import { Icon } from '@/src/types/domainIcons';
+
+jest.mock('@/src/services/budget/budgetCalculationHelpers', () => ({
+  ...jest.requireActual('@/src/services/budget/budgetCalculationHelpers'),
+  calculateBudgetListUsage: jest.fn(),
+}));
+jest.mock('@/src/data/repositories/transaction', () => ({
+  transactionQueryRepository: { observeBudgetTransactionsByJournalDateRange: jest.fn() },
+}));
 
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeAll: jest.fn() },
@@ -51,31 +62,38 @@ describe('useBudgetListViewModel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(budgetReadService.observeAllActive).mockReturnValue(of([budget]));
-    jest.mocked(budgetReadService.observeBudgetUsage).mockReturnValue(of(usage));
+    jest.mocked(calculateBudgetListUsage).mockResolvedValue([usage]);
+    jest
+      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
+      .mockReturnValue(of([]));
     jest
       .mocked(budgetReadService.observeScopes)
       .mockReturnValue(of([{ budgetId: budget.id, accountId: categoryId }]));
     jest.mocked(accountQueries.observeAll).mockReturnValue(of(accounts));
   });
 
-  it('observes usage once per budget for the current calendar day', async () => {
+  it('observes transactions in the budget period for the current calendar day', async () => {
     const now = new Date(2026, 8, 20).getTime();
     jest.spyOn(Date, 'now').mockReturnValue(now);
     try {
       const { result } = renderHook(() => useBudgetListViewModel(workplaceId));
       await waitFor(() => expect(result.current.items).toHaveLength(1));
-      expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(1);
-      expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledWith(
+      const period = getBudgetCurrentPeriod(budget, now);
+      expect(
+        transactionQueryRepository.observeBudgetTransactionsByJournalDateRange,
+      ).toHaveBeenCalledWith(
         workplaceId,
-        budget.id,
-        now,
+        [categoryId],
+        period.startDate,
+        period.endDate,
+        expect.any(Array),
       );
     } finally {
       jest.restoreAllMocks();
     }
   });
 
-  it('updates category identity reactively without resubscribing to usage', async () => {
+  it('updates category identity from the shared accounts feed', async () => {
     const accountSource = new BehaviorSubject(accounts);
     jest.mocked(accountQueries.observeAll).mockReturnValue(accountSource);
     const { result } = renderHook(() => useBudgetListViewModel(workplaceId));
@@ -97,22 +115,26 @@ describe('useBudgetListViewModel', () => {
         icon: Icon.Wallet,
       }),
     );
-    expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(1);
+    expect(budgetReadService.observeScopes).toHaveBeenCalledTimes(1);
   });
 
   it('exposes missing rate quotes and re-values budgets when rates update', async () => {
     const quote = { fromCurrency: 'EUR', toCurrency: 'USD', rateDate: 1 };
     jest
-      .mocked(budgetReadService.observeBudgetUsage)
-      .mockReturnValue(of({ ...usage, hasUnvaluedEntries: true, missingRateQuotes: [quote] }));
+      .mocked(calculateBudgetListUsage)
+      .mockResolvedValue([{ ...usage, hasUnvaluedEntries: true, missingRateQuotes: [quote] }]);
     const { result } = renderHook(() => useBudgetListViewModel(workplaceId, 'USD'));
     await waitFor(() => expect(result.current.missingRateQuotes).toEqual([quote]));
-    const calls = jest.mocked(budgetReadService.observeBudgetUsage).mock.calls.length;
+    const calls = jest.mocked(calculateBudgetListUsage).mock.calls.length;
+    const queryCalls = jest.mocked(
+      transactionQueryRepository.observeBudgetTransactionsByJournalDateRange,
+    ).mock.calls.length;
     act(() => mockRateUpdates.next('EUR'));
     await waitFor(() =>
-      expect(jest.mocked(budgetReadService.observeBudgetUsage).mock.calls.length).toBeGreaterThan(
-        calls,
-      ),
+      expect(jest.mocked(calculateBudgetListUsage).mock.calls.length).toBeGreaterThan(calls),
     );
+    expect(
+      transactionQueryRepository.observeBudgetTransactionsByJournalDateRange,
+    ).toHaveBeenCalledTimes(queryCalls);
   });
 });
