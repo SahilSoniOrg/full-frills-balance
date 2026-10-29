@@ -125,7 +125,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
               {viewModel.hasUnvaluedEntries ? (
                 <IncompleteFxWarning
                   testID="safe-to-spend-incomplete-warning"
-                  message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
+                  message={AppConfig.strings.dashboard.safeToSpendUi.incompleteEstimateWarning}
                   onPress={() =>
                     showIncompleteFxDetails({
                       context: 'safe-to-spend',

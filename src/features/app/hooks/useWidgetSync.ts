@@ -176,7 +176,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
           subtitle: cachedShortfall
             ? AppConfig.strings.dashboard.shortfallSubtitle
             : cached.hasUnvaluedEntries
-              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
+              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteEstimateWarning
               : AppConfig.strings.dashboard.afterObligations,
           updatedAt: cached.generatedAt || stored.timestamp,
         };
@@ -196,7 +196,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
           subtitle: isShortfall
             ? AppConfig.strings.dashboard.shortfallSubtitle
             : hasUnvaluedEntries
-              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
+              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteEstimateWarning
               : AppConfig.strings.dashboard.afterObligations,
           updatedAt: headline?.generatedAt ?? 0,
         };

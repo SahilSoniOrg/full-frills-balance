@@ -230,7 +230,8 @@ export const UI_STRINGS = {
       waitingForIncome: 'Waiting on payday',
       calculationLedger: 'Calculation details',
       projectedLabel: 'Projected',
-      incompleteFxWarning: 'Some balances not converted.',
+      incompleteEstimateWarning:
+        'Some amounts could not be included. This estimate may be incomplete.',
     },
     safeToSpendProvenance: {
       basedOn: (date: string, days: number, updatedAt?: string) =>

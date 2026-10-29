@@ -84,7 +84,11 @@ describe('SafeToSpendCard availability', () => {
       />,
     );
     expect(screen.getByText(AppConfig.strings.dashboard.safeToSpendUi.forecastStale)).toBeTruthy();
-    expect(screen.getByTestId('safe-to-spend-incomplete-warning')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: /Some amounts could not be included\. This estimate may be incomplete\. Review details/,
+      }),
+    ).toBeTruthy();
     expect(screen.getByText(/Based on/)).toBeTruthy();
     expect(screen.getByTestId('safe-to-spend-breakdown-metrics')).toBeTruthy();
   });
