@@ -69,7 +69,7 @@ export type LaunchCoordinatorState =
   | { kind: 'error'; error: Error; retry: () => void }
   | Extract<LaunchResolution, { kind: 'setup' }>
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
-  | Extract<LaunchResolution, { kind: 'open' }>;
+  | (Extract<LaunchResolution, { kind: 'open' }> & { workplace: PlainWorkplace });
 
 const WORKPLACE_SCOPE_TIMEOUT_MS = 15_000;
 const WORKPLACE_SWITCH_TIMEOUT_MESSAGE = 'Switching workplace took too long. Try again.';
@@ -254,10 +254,11 @@ export function LaunchCoordinatorProvider({
       return { ...next, workplaces: discovery.workplaces };
     }
     if (next.kind !== 'open') return next;
-    if (!discovery.workplaces.some(item => item.id === next.workplaceId)) {
+    const workplace = discovery.workplaces.find(item => item.id === next.workplaceId);
+    if (!workplace) {
       return { kind: 'loading' as const, retry };
     }
-    return next;
+    return { ...next, workplace };
   }, [
     activeWorkplaceId,
     deviceClaimed,
@@ -757,6 +758,7 @@ export function LaunchCoordinatorContent({
       <View style={styles.workplaceContent}>
         <WorkplaceProvider
           targetWorkplaceId={state.workplaceId}
+          initialWorkplace={state.workplace}
           onSwitchWorkplace={switchWorkplace}
           onDeleteWorkplace={deleteWorkplace}
           onCommittedWorkplace={onCommittedWorkplace}

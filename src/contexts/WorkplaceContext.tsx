@@ -34,6 +34,7 @@ function isReadyWorkplace(
 
 export function WorkplaceProvider({
   targetWorkplaceId,
+  initialWorkplace,
   onSwitchWorkplace,
   onDeleteWorkplace,
   onCommittedWorkplace,
@@ -43,6 +44,8 @@ export function WorkplaceProvider({
 }: {
   /** Launch-coordinator target; may differ from committed books during a switch gap. */
   targetWorkplaceId: WorkplaceId;
+  /** Already observed by launch discovery; lets the books tree mount immediately. */
+  initialWorkplace?: PlainWorkplace;
   /** Coordinator-owned transition handler. */
   onSwitchWorkplace: (id: WorkplaceId) => Promise<void>;
   /** Coordinator-owned deletion handler. */
@@ -56,7 +59,7 @@ export function WorkplaceProvider({
   workplaceSwitchError?: string | null;
   children: React.ReactNode;
 }) {
-  const { data: workplace, error } = useWorkplaceSnapshot(targetWorkplaceId);
+  const { data: workplace, error, isLoading } = useWorkplaceSnapshot(targetWorkplaceId);
   const [lastCommitted, setLastCommitted] = useState<PlainWorkplace | null>(null);
 
   const matched = !error && isReadyWorkplace(workplace, targetWorkplaceId) ? workplace : null;
@@ -68,7 +71,9 @@ export function WorkplaceProvider({
   // mismatch as "unload" unmounts the nav tree and remounts on the dashboard.
   // Hold the last committed books across the gap (coordinator overlay covers it).
   const inSwitchGap = !!lastCommitted && lastCommitted.id !== targetWorkplaceId;
-  const activeWorkplace = matched ?? (inSwitchGap ? lastCommitted : null);
+  const canUseLaunchSeed = isLoading && isReadyWorkplace(initialWorkplace, targetWorkplaceId);
+  const activeWorkplace =
+    matched ?? (inSwitchGap ? lastCommitted : canUseLaunchSeed ? initialWorkplace : null);
 
   useEffect(() => {
     if (!matched) return;

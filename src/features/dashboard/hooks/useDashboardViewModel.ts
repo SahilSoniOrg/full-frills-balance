@@ -68,7 +68,7 @@ type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 export function useDashboardViewModel(): DashboardViewModel {
   const isActive = usePrimaryPageActive('dashboard');
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { isInitialized, isAppReady } = useAppReady();
+  const { isInitialized } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
   const { showSafeToSpendChart } = useDashboardPreferences();
 
@@ -80,8 +80,11 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: safeToSpendData } = useObservable<
     SafeToSpendDashboard | SafeToSpendPaintSnapshot | null
   >(
-    () => (isAppReady && isActive ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
-    [workplaceId, isAppReady, isActive],
+    // Start the first local read while fonts are still loading behind the
+    // native splash. Font readiness gates presentation, not data availability.
+    () =>
+      isInitialized && isActive ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY,
+    [workplaceId, isInitialized, isActive],
     () => {
       const cached = snapshotService.getCustomSnapshotWithMetadata<
         SafeToSpendPaintSnapshot | SafeToSpendDashboard

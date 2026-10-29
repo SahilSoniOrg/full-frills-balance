@@ -10,10 +10,12 @@ import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpend
 let mockWorkplace = { workplaceId: 'wp-a', defaultCurrencyCode: 'USD' };
 let mockObserved: SafeToSpendDashboard | null = null;
 let mockCached: unknown;
+let mockAppReady = { isInitialized: true, isAppReady: true };
+let mockObservableFactory: (() => unknown) | undefined;
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useWorkplace: () => mockWorkplace }));
 jest.mock('@/src/contexts/app-shell/appReady', () => ({
   ...jest.requireActual('@/src/contexts/app-shell/appReady'),
-  useAppReady: () => ({ isInitialized: true, isAppReady: true }),
+  useAppReady: () => mockAppReady,
 }));
 jest.mock('@/src/contexts/app-shell/AppOnboardingProvider', () => ({
   ...jest.requireActual('@/src/contexts/app-shell/AppOnboardingProvider'),
@@ -43,12 +45,16 @@ jest.mock('@/src/services/analytics', () => ({
   analytics: { trackFeatureUsage: jest.fn() },
 }));
 jest.mock('@/src/hooks/useObservable', () => ({
-  useObservable: (_factory: unknown, _deps: unknown, initial: unknown) => ({
-    data: mockObserved ?? (typeof initial === 'function' ? (initial as () => unknown)() : initial),
-  }),
+  useObservable: (factory: () => unknown, _deps: unknown, initial: unknown) => {
+    mockObservableFactory = factory;
+    return {
+      data:
+        mockObserved ?? (typeof initial === 'function' ? (initial as () => unknown)() : initial),
+    };
+  },
 }));
 jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
-  safeToSpendReadModel: { forWorkplace: () => ({ watch: () => ({}) }) },
+  safeToSpendReadModel: { forWorkplace: jest.fn(() => ({ watch: jest.fn(() => ({})) })) },
 }));
 jest.mock('@/src/utils/SnapshotService', () => ({
   snapshotService: { getCustomSnapshotWithMetadata: () => mockCached },
@@ -56,12 +62,18 @@ jest.mock('@/src/utils/SnapshotService', () => ({
 jest.mock('@/src/utils/logger', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
+jest.mock('@/src/navigation/primaryPageNavigation', () => ({
+  usePrimaryPageActive: () => true,
+}));
 
 describe('dashboard forecast ownership and snapshot provenance', () => {
   afterEach(() => {
+    jest.clearAllMocks();
     mockWorkplace = { workplaceId: 'wp-a', defaultCurrencyCode: 'USD' };
     mockObserved = null;
     mockCached = undefined;
+    mockAppReady = { isInitialized: true, isAppReady: true };
+    mockObservableFactory = undefined;
     jest.useRealTimers();
   });
 
@@ -101,12 +113,19 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
       ([feature, action]: [string, string]) => feature === 'safe_to_spend' && action === 'viewed',
     );
     expect(views).toEqual([
-      [
-        'safe_to_spend',
-        'viewed',
-        { quality: 'ready', isOverCommitted: true, has_unvalued: false },
-      ],
+      ['safe_to_spend', 'viewed', { quality: 'ready', isOverCommitted: true, has_unvalued: false }],
     ]);
+  });
+
+  it('starts the live dashboard read while fonts are still loading', () => {
+    mockAppReady = { isInitialized: true, isAppReady: false };
+    renderHook(() => useDashboardViewModel());
+
+    const { safeToSpendReadModel } = jest.requireMock(
+      '@/src/services/simulation/SafeToSpendReadModel',
+    );
+    mockObservableFactory?.();
+    expect(safeToSpendReadModel.forWorkplace).toHaveBeenCalledWith('wp-a');
   });
 
   it('restores a cached paint as stale, keeps its age, and renders the saved-age label', () => {

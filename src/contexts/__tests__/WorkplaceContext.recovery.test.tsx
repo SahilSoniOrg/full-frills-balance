@@ -79,6 +79,49 @@ describe('WorkplaceProvider books boundary', () => {
     expect(snapshotService.getCustomSnapshot).not.toHaveBeenCalled();
   });
 
+  it('mounts books from the launch-discovered row before the observer emits', () => {
+    mockUseWorkplaceSnapshot.mockReturnValue({ data: null, error: null, isLoading: true });
+
+    const { getByText, queryByText, rerender } = render(
+      <WorkplaceProvider
+        targetWorkplaceId={'target-wp' as WorkplaceId}
+        initialWorkplace={
+          {
+            id: 'target-wp',
+            defaultCurrencyCode: 'INR',
+          } as NonNullable<ReturnType<typeof useWorkplaceSnapshot>['data']>
+        }
+        {...transitionProps}
+      >
+        <ContextProbe />
+      </WorkplaceProvider>,
+    );
+
+    expect(getByText('target-wp:INR')).toBeTruthy();
+    expect(mockUseWorkplaceSnapshot).toHaveBeenCalledWith('target-wp');
+
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: null,
+      error: new Error('Workplace not found: target-wp'),
+      isLoading: false,
+    });
+    rerender(
+      <WorkplaceProvider
+        targetWorkplaceId={'target-wp' as WorkplaceId}
+        initialWorkplace={
+          {
+            id: 'target-wp',
+            defaultCurrencyCode: 'INR',
+          } as NonNullable<ReturnType<typeof useWorkplaceSnapshot>['data']>
+        }
+        {...transitionProps}
+      >
+        <ContextProbe />
+      </WorkplaceProvider>,
+    );
+    expect(queryByText('target-wp:INR')).toBeNull();
+  });
+
   it('keeps the nav tree mounted across a switch while the previous snapshot is still showing', () => {
     mockUseWorkplaceSnapshot.mockReturnValue({
       data: { id: 'from-wp', defaultCurrencyCode: 'INR' },
