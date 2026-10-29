@@ -11,18 +11,18 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMemo, useEffect } from 'react';
 import {
-  usePrimaryPageAlive,
+  usePrimaryPageActive,
   usePrimaryPageNavigation,
 } from '@/src/navigation/primaryPageNavigation';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
-  const isAlive = usePrimaryPageAlive('activity');
+  const isActive = usePrimaryPageActive('activity');
   const pageNavigation = usePrimaryPageNavigation();
 
   const journalList = useJournalList(
     {
-      enabled: isAlive,
+      enabled: isActive,
       pageSize: AppConfig.pagination.dashboardPageSize,
       emptyState: {
         title: AppConfig.strings.journal.emptyTitle,

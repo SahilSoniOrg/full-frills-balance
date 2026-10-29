@@ -24,7 +24,7 @@ import type { DashboardData } from '@/src/services/ReactiveDataService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { usePrimaryPageAlive } from '@/src/navigation/primaryPageNavigation';
+import { usePrimaryPageActive } from '@/src/navigation/primaryPageNavigation';
 import { EMPTY } from 'rxjs';
 
 export interface RecentJournalEntries {
@@ -66,7 +66,7 @@ type DashboardExplanationSection = 'assets' | 'income' | 'committed' | 'debts';
 type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const isAlive = usePrimaryPageAlive('dashboard');
+  const isActive = usePrimaryPageActive('dashboard');
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { isInitialized, isAppReady } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
@@ -80,8 +80,8 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: safeToSpendData } = useObservable<
     SafeToSpendDashboard | SafeToSpendPaintSnapshot | null
   >(
-    () => (isAppReady && isAlive ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
-    [workplaceId, isAppReady, isAlive],
+    () => (isAppReady && isActive ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
+    [workplaceId, isAppReady, isActive],
     () => {
       const cached = snapshotService.getCustomSnapshotWithMetadata<
         SafeToSpendPaintSnapshot | SafeToSpendDashboard
@@ -152,7 +152,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const journalListCore = useJournalEntryList({
     workplaceId,
-    enabled: isAlive,
+    enabled: isActive,
     pageSize: AppConfig.pagination.dashboardPageSize,
     initialItems: () => {
       const snapshot = snapshotService.getDashboardSnapshot<DashboardData>(workplaceId);
@@ -205,7 +205,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       : null;
   const plannedOccurrences = usePlannedOccurrences({
     workplaceId,
-    enabled: isAlive,
+    enabled: isActive,
     allFlows: currentReadyDashboard?.report.allFlows,
     accountMap: currentReadyDashboard?.accountMap,
     currencyCode: visibleSafeToSpendData?.currencyCode,

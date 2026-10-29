@@ -142,7 +142,6 @@ export function useJournals(
 
   const observe = useCallback(
     (limit: number, range?: JournalFilterRange, query?: string) => {
-      if (!enabled) return of([]);
       if (range?.accountIds?.length === 0 || range?.journalIds?.length === 0) {
         return of([]);
       }
@@ -171,7 +170,7 @@ export function useJournals(
         effectiveOptions,
       );
     },
-    [enabled, stableStatus, workplaceId, timelineRowOptions],
+    [stableStatus, workplaceId, timelineRowOptions],
   );
 
   const paginatedInitialItems = useMemo(() => {
@@ -184,6 +183,7 @@ export function useJournals(
     EnrichedJournal | JournalTimelineRow,
     JournalFilterRange
   >({
+    enabled,
     pageSize,
     filter: effectiveRange,
     searchQuery,

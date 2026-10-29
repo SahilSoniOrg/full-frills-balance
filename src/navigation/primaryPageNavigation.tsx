@@ -1,6 +1,14 @@
-import type { PrimaryPageGroup } from '@/src/navigation/primaryPages';
+import { primaryPageFromRouteName, type PrimaryPageGroup } from '@/src/navigation/primaryPages';
 import type { SharedValue } from 'react-native-reanimated';
-import { createContext, useContext, useCallback, useEffect, useId } from 'react';
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useIsFocused } from 'expo-router';
 
 export type PrimaryPageNavigationValue = {
@@ -15,22 +23,59 @@ export type PrimaryPageNavigationValue = {
 };
 
 const PrimaryPageNavigationContext = createContext<PrimaryPageNavigationValue | null>(null);
+type ScreenNavigationValue = Pick<
+  PrimaryPageNavigationValue,
+  'activeRouteName' | 'navigateToPage' | 'setPageSwipeLock'
+>;
+const ScreenNavigationContext = createContext<ScreenNavigationValue | null>(null);
 
-export const PrimaryPageNavigationProvider = PrimaryPageNavigationContext.Provider;
+export function PrimaryPageNavigationProvider({
+  value,
+  children,
+}: {
+  value: PrimaryPageNavigationValue;
+  children: ReactNode;
+}) {
+  const { activeRouteName, navigateToPage, setPageSwipeLock } = value;
+  const screenNavigation = useMemo(
+    () => ({ activeRouteName, navigateToPage, setPageSwipeLock }),
+    [activeRouteName, navigateToPage, setPageSwipeLock],
+  );
+  return (
+    <PrimaryPageNavigationContext.Provider value={value}>
+      <ScreenNavigationContext.Provider value={screenNavigation}>
+        {children}
+      </ScreenNavigationContext.Provider>
+    </PrimaryPageNavigationContext.Provider>
+  );
+}
 
-export function usePrimaryPageNavigation(): PrimaryPageNavigationValue | null {
+/** Only pager mechanics subscribe to transition and gesture state. */
+export function usePrimaryPagerNavigation(): PrimaryPageNavigationValue | null {
   return useContext(PrimaryPageNavigationContext);
 }
 
+export function usePrimaryPageNavigation(): ScreenNavigationValue | null {
+  return useContext(ScreenNavigationContext);
+}
 /**
  * True while this primary group is focused or still mounted in the pager window.
- * Use instead of bare useIsFocused for data/subscriptions so pages sliding away
- * do not empty or remount mid-pan.
+ * Describes retained UI only. Use usePrimaryPageActive to gate live reads.
  */
 export function usePrimaryPageAlive(group: PrimaryPageGroup): boolean {
   const isFocused = useIsFocused();
-  const pageNavigation = usePrimaryPageNavigation();
+  const pageNavigation = usePrimaryPagerNavigation();
   return isFocused || (pageNavigation?.keptAliveGroups.has(group) ?? false);
+}
+
+/** Live reads belong to the selected group; retained pages keep their last paint. */
+export function usePrimaryPageActive(group: PrimaryPageGroup): boolean {
+  const isFocused = useIsFocused();
+  const navigation = usePrimaryPageNavigation();
+  return (
+    isFocused &&
+    (!navigation || primaryPageFromRouteName(navigation.activeRouteName)?.group === group)
+  );
 }
 
 /** Reserve paging while a child recognizer is deciding or handling a touch. */

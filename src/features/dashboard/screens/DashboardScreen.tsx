@@ -13,7 +13,7 @@ import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import {
-  usePrimaryPageAlive,
+  usePrimaryPageActive,
   usePrimaryPageNavigation,
 } from '@/src/navigation/primaryPageNavigation';
 import { analytics } from '@/src/services/analytics';
@@ -43,16 +43,16 @@ function trackDashboardFirstPaint() {
 
 function DashboardScreen() {
   const isFocused = useIsFocused();
-  const isAlive = usePrimaryPageAlive('dashboard');
+  const isActive = usePrimaryPageActive('dashboard');
   const pageNavigation = usePrimaryPageNavigation();
   const vm = useDashboardViewModel();
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
   const { isAppReady } = useAppReady();
   const { isAutomaticSmsImportEnabled } = useSmsPrefs();
-  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady && isAlive });
-  const supplementalInsights = useSupplementalInsights(workplaceId, false, isAlive);
-  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId, isAlive);
+  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady && isActive });
+  const supplementalInsights = useSupplementalInsights(workplaceId, false, isActive);
+  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId, isActive);
   const listRef = useRef<JournalEntryListRef>(null);
   const isBlockingSheetOpen =
     vm.explanationModalState.visible || vm.legendModalState.selectedItem !== null;

@@ -13,6 +13,8 @@ import { useLayoutEffect, useCallback, useEffect, useMemo, useRef, useState } fr
 import { Observable } from 'rxjs';
 
 export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
+  /** Pause live reads while retaining rows and pagination. */
+  enabled?: boolean;
   /** Number of items per page */
   pageSize: number;
   /** Optional filter object (previously dateRange) */
@@ -47,6 +49,7 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
 ): UsePaginatedObservableResult<E> {
   const {
     pageSize,
+    enabled = true,
     filter,
     searchQuery,
     observe,
@@ -103,6 +106,7 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
   });
 
   useEffect(() => {
+    if (!enabled) return;
     let isActive = true;
     let sequence = 0;
 
@@ -188,13 +192,22 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [currentLimit, structuralKey, retryKey, observe, enrich, pageSize, resolvedInitialItems]);
+  }, [
+    enabled,
+    currentLimit,
+    structuralKey,
+    retryKey,
+    observe,
+    enrich,
+    pageSize,
+    resolvedInitialItems,
+  ]);
 
   const loadMore = useCallback(() => {
-    if (isLoadingMore || !hasMore) return;
+    if (!enabled || isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     setCurrentLimit(prev => prev + pageSize);
-  }, [isLoadingMore, hasMore, pageSize]);
+  }, [enabled, isLoadingMore, hasMore, pageSize]);
 
   const retry = () => {
     setError(null);
@@ -210,5 +223,14 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     }
   };
 
-  return { items, isLoading, isLoadingMore, hasMore, loadMore, version, error, retry };
+  return {
+    items,
+    isLoading,
+    isLoadingMore: enabled && isLoadingMore,
+    hasMore,
+    loadMore,
+    version,
+    error,
+    retry,
+  };
 }

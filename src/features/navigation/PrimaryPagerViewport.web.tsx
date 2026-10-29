@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
+import { PrimaryPagerPageContent } from './PrimaryPagerPageContent';
 
 export function PrimaryPagerViewport({
   pages,
@@ -18,7 +19,7 @@ export function PrimaryPagerViewport({
             accessibilityElementsHidden={!active}
             importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
           >
-            {mountedIndices.has(index) || active ? page.render() : null}
+            {mountedIndices.has(index) || active ? <PrimaryPagerPageContent page={page} /> : null}
           </View>
         );
       })}

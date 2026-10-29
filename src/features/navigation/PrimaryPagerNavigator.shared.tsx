@@ -110,24 +110,14 @@ export function createPrimaryPagerContent(
 
     useEffect(() => {
       setMountedIndices(previous => {
-        const next = new Set(previous);
-        for (let offset = -2; offset <= 2; offset += 1) {
+        const next = isTransitioning ? new Set(previous) : new Set<number>();
+        for (let offset = -1; offset <= 1; offset += 1) {
           const index = swipeIndex + offset;
           if (index >= 0 && index < swipePageCount) next.add(index);
         }
-        return next;
-      });
-    }, [swipeIndex, swipePageCount]);
-
-    useEffect(() => {
-      if (isTransitioning) return;
-      setMountedIndices(() => {
-        const next = new Set<number>();
-        for (let offset = -2; offset <= 2; offset += 1) {
-          const index = swipeIndex + offset;
-          if (index >= 0 && index < swipePageCount) next.add(index);
-        }
-        return next;
+        return next.size === previous.size && [...next].every(index => previous.has(index))
+          ? previous
+          : next;
       });
     }, [isTransitioning, swipeIndex, swipePageCount]);
 

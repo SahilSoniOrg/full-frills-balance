@@ -16,6 +16,8 @@ jest.mock('@/src/features/commitments/CommitmentsGroupProvider', () => ({
 }));
 jest.mock('@/src/navigation/primaryPageNavigation', () => ({
   usePrimaryPageNavigation: jest.fn(() => null),
+  usePrimaryPageActive: jest.fn(() => true),
+  usePrimaryPagerNavigation: jest.fn(() => null),
 }));
 
 jest.mock('@/src/features/budget', () => ({
@@ -51,10 +53,6 @@ function mockPrimaryRoute(activeRouteName: string) {
   const navigateToPage = jest.fn();
   jest.mocked(usePrimaryPageNavigation).mockReturnValue({
     activeRouteName,
-    isTransitioning: false,
-    scrollEnabled: true,
-    pageProgress: { value: 0 } as never,
-    keptAliveGroups: new Set(['commitments']),
     navigateToPage,
     setPageSwipeLock: jest.fn(),
   });
@@ -103,15 +101,15 @@ it('leaves creation to the contextual Add menu instead of a screen FAB', () => {
   expect(screen.queryByRole('button', { name: 'Create a planned payment' })).toBeNull();
 });
 
-it('keeps both commitment lists warm while the shell is mounted', () => {
+it('subscribes only to the selected commitment list', () => {
   render(<CommitmentsPage />);
   expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
-  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
+  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', false);
 
   jest.clearAllMocks();
   mockPrimaryRoute('planned-payments');
   render(<CommitmentsPage />);
-  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
+  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', false);
   expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
 });
 
@@ -129,7 +127,7 @@ it('opens Planned from the planned-payments route', () => {
   const screen = render(<CommitmentsPage />);
   expect(screen.getByRole('tab', { name: 'Planned' }).props.accessibilityState.selected).toBe(true);
   expect(screen.getByText('Planned list')).toBeTruthy();
-  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
+  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', false);
   expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
 
   fireEvent.press(screen.getByRole('tab', { name: 'Budgets' }));

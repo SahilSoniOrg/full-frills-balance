@@ -7,6 +7,7 @@ import PagerView, {
 import Animated, { runOnJS, useEvent } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
+import { PrimaryPagerPageContent } from './PrimaryPagerPageContent';
 
 const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
 
@@ -181,8 +182,8 @@ export function PrimaryPagerViewport({
       ref={pagerRef}
       style={styles.pager}
       initialPage={committedIndex}
-      // Keep both neighbors warm so a drag always reveals real content, not a blank.
-      offscreenPageLimit={2}
+      // Retain only the immediate neighbors for native paging.
+      offscreenPageLimit={1}
       scrollEnabled={scrollEnabled}
       // iOS only: rubber-band past Dashboard so a mid-screen LTR can open the drawer
       // without full-width drawer hitSlop (which starved native RTL paging).
@@ -208,7 +209,9 @@ export function PrimaryPagerViewport({
             accessibilityElementsHidden={!isCommitted}
             importantForAccessibility={isCommitted ? 'auto' : 'no-hide-descendants'}
           >
-            {mountedIndices.has(index) || isCommitted ? page.render() : null}
+            {mountedIndices.has(index) || isCommitted ? (
+              <PrimaryPagerPageContent page={page} />
+            ) : null}
           </View>
         );
       })}

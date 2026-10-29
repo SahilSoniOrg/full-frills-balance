@@ -9,7 +9,10 @@ import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { useCommitmentsBadgeSnapshot } from '@/src/features/commitments/CommitmentsGroupProvider';
 import { GroupInnerPager } from '@/src/navigation/GroupInnerPager';
-import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import {
+  usePrimaryPageActive,
+  usePrimaryPageNavigation,
+} from '@/src/navigation/primaryPageNavigation';
 import {
   primaryAdjacentSwipeGroup,
   primaryEntryRouteForGroup,
@@ -29,6 +32,7 @@ export type CommitmentsTab = 'budgets' | 'planned';
 export function CommitmentsGroupPager() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const pageNavigation = usePrimaryPageNavigation();
+  const isActive = usePrimaryPageActive('commitments');
   const activeRouteName = pageNavigation?.activeRouteName ?? 'commitments';
   // Keep the remembered leaf while this shell is mounted off-screen.
   const groupRoute =
@@ -42,9 +46,13 @@ export function CommitmentsGroupPager() {
   const { counts, updateCount } = useCommitmentsBadgeSnapshot();
   const strings = AppConfig.strings.commitmentsRedesign;
 
-  // Keep both panes warm while the group shell is mounted so inner pans are painted.
-  const budgets = useBudgetListViewModel(workplaceId, defaultCurrencyCode, true);
-  const planned = usePlannedPayments(workplaceId, true);
+  // Retain the last paint in both panes; only the selected pane performs live reads.
+  const budgets = useBudgetListViewModel(
+    workplaceId,
+    defaultCurrencyCode,
+    isActive && activeTab === 'budgets',
+  );
+  const planned = usePlannedPayments(workplaceId, isActive && activeTab === 'planned');
 
   useEffect(() => {
     if (activeTab === 'budgets' && !budgets.isLoading) updateCount('budgets', budgets.items.length);

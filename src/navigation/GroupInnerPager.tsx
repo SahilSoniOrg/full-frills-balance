@@ -9,7 +9,7 @@ import Animated, { runOnJS, useEvent, type SharedValue } from 'react-native-rean
 
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { primaryPageFromRouteName } from './primaryPages';
-import { usePrimaryPageNavigation } from './primaryPageNavigation';
+import { usePrimaryPagerNavigation } from './primaryPageNavigation';
 
 const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
 
@@ -49,7 +49,7 @@ export function GroupInnerPager({
   onEdgeSwipe,
   children,
 }: GroupInnerPagerProps) {
-  const navigation = usePrimaryPageNavigation();
+  const navigation = usePrimaryPagerNavigation();
   const reduceMotion = useReducedMotion();
   const scrollEnabled = navigation
     ? navigation.scrollEnabled &&
