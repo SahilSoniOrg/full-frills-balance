@@ -10,17 +10,19 @@ import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMemo, useEffect } from 'react';
-import { useIsFocused } from 'expo-router';
-import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import {
+  usePrimaryPageAlive,
+  usePrimaryPageNavigation,
+} from '@/src/navigation/primaryPageNavigation';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
-  const isFocused = useIsFocused();
+  const isAlive = usePrimaryPageAlive('activity');
   const pageNavigation = usePrimaryPageNavigation();
 
   const journalList = useJournalList(
     {
-      enabled: isFocused,
+      enabled: isAlive,
       pageSize: AppConfig.pagination.dashboardPageSize,
       emptyState: {
         title: AppConfig.strings.journal.emptyTitle,

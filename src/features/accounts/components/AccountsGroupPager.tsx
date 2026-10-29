@@ -14,8 +14,10 @@ import {
   primaryAdjacentSwipeGroup,
   primaryEntryRouteForGroup,
   primaryInnerIndex,
+  primaryPageFromRouteName,
+  primaryRouteForGroup,
 } from '@/src/navigation/primaryPages';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { Spacing } from '@/src/constants';
@@ -26,17 +28,22 @@ import { Spacing } from '@/src/constants';
 export function AccountsGroupPager() {
   const pageNavigation = usePrimaryPageNavigation();
   const activeRouteName = pageNavigation?.activeRouteName ?? 'accounts';
-  const activeTab = activeRouteName === 'categories' ? 'categories' : 'accounts';
-  const innerIndex = primaryInnerIndex(activeTab);
+  // While this shell stays mounted off-screen, ignore other groups' routes —
+  // treating `index` as Accounts was snapping Categories → Accounts mid-pan.
+  const groupRoute =
+    primaryPageFromRouteName(activeRouteName)?.group === 'accounts'
+      ? activeRouteName
+      : primaryRouteForGroup('accounts');
+  const activeTab = groupRoute === 'categories' ? 'categories' : 'accounts';
+  const innerIndex = primaryInnerIndex(groupRoute);
+  // Progress is owned by GroupInnerPager (scroll + programmatic sync). Do not
+  // snap it from the route here — that made AppTabs show Categories while the
+  // body was still on Accounts when setPage lagged.
   const innerProgress = useSharedValue(innerIndex);
 
   const accountsVm = useAccountsListViewModel('accounts');
   const categoriesVm = useAccountsListViewModel('categories');
   const activeVm = activeTab === 'categories' ? categoriesVm : accountsVm;
-
-  useEffect(() => {
-    innerProgress.value = innerIndex;
-  }, [innerIndex, innerProgress]);
 
   const chrome = useMemo<TabScreenChrome>(() => {
     const baseChrome: TabScreenChrome = {
@@ -108,6 +115,7 @@ export function AccountsGroupPager() {
         />
       </View>
       <GroupInnerPager
+        group="accounts"
         pageCount={2}
         index={innerIndex}
         pageProgress={innerProgress}

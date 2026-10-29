@@ -26,6 +26,10 @@ export function createTestGesture() {
       config.activeOffsetX = value;
       return gesture;
     },
+    failOffsetX: (value: number | number[]) => {
+      config.failOffsetX = value;
+      return gesture;
+    },
     failOffsetY: (value: number | number[]) => {
       config.failOffsetY = value;
       return gesture;
@@ -42,6 +46,7 @@ export function createTestGesture() {
       config.maxPointers = value;
       return gesture;
     },
+    // Present for drawers that compose pans; no-op beyond recording config.
     onBegin: (callback: Callback) => {
       handlers.onBegin = callback;
       return gesture;
@@ -80,6 +85,9 @@ export const Gesture = {
     tapGestures.push(gesture);
     return gesture;
   },
-  Exclusive: (...gestures: ReturnType<typeof createTestGesture>[]) => gestures,
+  Exclusive: (...gestures: ReturnType<typeof createTestGesture>[]) =>
+    Object.assign(gestures, { kind: 'exclusive' as const, gestures }),
   Simultaneous: (...gestures: ReturnType<typeof createTestGesture>[]) => gestures,
+  Race: (...gestures: ReturnType<typeof createTestGesture>[]) =>
+    Object.assign(gestures, { kind: 'race' as const, gestures }),
 };

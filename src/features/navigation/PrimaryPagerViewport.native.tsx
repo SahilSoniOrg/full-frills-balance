@@ -1,15 +1,17 @@
-import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import PagerView, {
   type PageScrollStateChangedNativeEventData,
   type PagerViewOnPageScrollEvent,
 } from 'react-native-pager-view';
-import Animated, { useEvent } from 'react-native-reanimated';
+import Animated, { runOnJS, useEvent } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { PrimaryPageGestureProvider } from '@/src/navigation/primaryPageNavigation';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 
 const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
+
+/** Fraction of page width pulled past the leading edge before the drawer opens. */
+const LEADING_OVERSCROLL_OPEN = -0.14;
 
 function writePageProgress(progress: SharedValue<number>, value: number) {
   'worklet';
@@ -21,11 +23,12 @@ export function PrimaryPagerViewport({
   committedIndex,
   mountedIndices,
   isTransitioning: _isTransitioning,
+  reduceMotion,
   scrollEnabled,
   pageProgress,
   onPageSelected,
   onTransitioningChange,
-  onPageGestureReady,
+  onLeadingOverscrollOpen,
 }: PrimaryPagerViewportProps) {
   const pagerRef = useRef<PagerView>(null);
   const committedIndexRef = useRef(committedIndex);
@@ -34,24 +37,48 @@ export function PrimaryPagerViewport({
   const programmaticTargetRef = useRef<number | null>(null);
   const userGestureRef = useRef(false);
   const gestureEpochRef = useRef(0);
+  const leadingOverscrollRef = useRef(0);
+  const leadingOpenArmedRef = useRef(false);
+  const leadingOverscrollEnabledRef = useRef(false);
+  const onLeadingOverscrollOpenRef = useRef(onLeadingOverscrollOpen);
   const pageCount = pages.length;
+  const leadingOverscrollEnabled =
+    Platform.OS === 'ios' && committedIndex === 0 && scrollEnabled && !!onLeadingOverscrollOpen;
+
+  useEffect(() => {
+    onLeadingOverscrollOpenRef.current = onLeadingOverscrollOpen;
+  }, [onLeadingOverscrollOpen]);
+
+  useEffect(() => {
+    leadingOverscrollEnabledRef.current = leadingOverscrollEnabled;
+  }, [leadingOverscrollEnabled]);
+
+  const resetLeadingOverscroll = useCallback(() => {
+    leadingOverscrollRef.current = 0;
+    leadingOpenArmedRef.current = false;
+  }, []);
+
+  const deliverLeadingOverscroll = useCallback((offset: number) => {
+    if (!leadingOverscrollEnabledRef.current || !userGestureRef.current) return;
+    leadingOverscrollRef.current = Math.min(leadingOverscrollRef.current, offset);
+    if (!leadingOpenArmedRef.current && offset <= LEADING_OVERSCROLL_OPEN) {
+      leadingOpenArmedRef.current = true;
+      onLeadingOverscrollOpenRef.current?.();
+    }
+  }, []);
 
   const onPageScroll = useEvent<PagerViewOnPageScrollEvent>(
     event => {
       'worklet';
-      const position = Math.min(Math.max(event.position + event.offset, 0), pageCount - 1);
+      const raw = event.position + event.offset;
+      const position = Math.min(Math.max(raw, 0), pageCount - 1);
       writePageProgress(pageProgress, position);
+      if (event.position <= 0 && event.offset < 0) {
+        runOnJS(deliverLeadingOverscroll)(event.offset);
+      }
     },
     ['onPageScroll'],
   );
-
-  // Do not wrap PagerView in Gesture.Native()/GestureDetector: on iOS that
-  // intercepts the UIScrollView touch stream and page swipes never move.
-  // Chart/swipe-to-remove composition uses setPageSwipeLock instead.
-  useEffect(() => {
-    onPageGestureReady(null);
-    return () => onPageGestureReady(null);
-  }, [onPageGestureReady]);
 
   useEffect(() => {
     if (renderedIndexRef.current === committedIndex) return;
@@ -68,11 +95,21 @@ export function PrimaryPagerViewport({
 
     userGestureRef.current = false;
     gestureEpochRef.current += 1;
-    programmaticTargetRef.current = committedIndex;
+    resetLeadingOverscroll();
+    if (reduceMotion) {
+      // Keep finger-driven paging native; only remove travel from route changes.
+      programmaticTargetRef.current = null;
+      pagerRef.current?.setPageWithoutAnimation(committedIndex);
+      writePageProgress(pageProgress, committedIndex);
+      onTransitioningChange(false);
+      return;
+    }
+
     // Tab / Back / deep-link: animate the pan so it matches finger swipes.
+    programmaticTargetRef.current = committedIndex;
     onTransitioningChange(true);
     pagerRef.current?.setPage(committedIndex);
-  }, [committedIndex, onTransitioningChange]);
+  }, [committedIndex, onTransitioningChange, pageProgress, reduceMotion, resetLeadingOverscroll]);
 
   useEffect(() => {
     if (scrollEnabled) return;
@@ -81,11 +118,12 @@ export function PrimaryPagerViewport({
       pendingUserIndexRef.current = null;
       gestureEpochRef.current += 1;
       programmaticTargetRef.current = committedIndexRef.current;
+      resetLeadingOverscroll();
       pagerRef.current?.setPageWithoutAnimation(committedIndexRef.current);
       writePageProgress(pageProgress, committedIndexRef.current);
       onTransitioningChange(false);
     }
-  }, [scrollEnabled, pageProgress, onTransitioningChange]);
+  }, [scrollEnabled, pageProgress, onTransitioningChange, resetLeadingOverscroll]);
 
   const onPageSelectedNative = (event: { nativeEvent: { position: number } }) => {
     const index = event.nativeEvent.position;
@@ -109,6 +147,7 @@ export function PrimaryPagerViewport({
     if (scrollState === 'dragging') {
       gestureEpochRef.current += 1;
       userGestureRef.current = scrollEnabled;
+      resetLeadingOverscroll();
       onTransitioningChange(scrollEnabled);
       return;
     }
@@ -118,6 +157,15 @@ export function PrimaryPagerViewport({
       return;
     }
     if (scrollState !== 'idle') return;
+
+    if (
+      leadingOverscrollEnabledRef.current &&
+      !leadingOpenArmedRef.current &&
+      leadingOverscrollRef.current <= LEADING_OVERSCROLL_OPEN
+    ) {
+      onLeadingOverscrollOpenRef.current?.();
+    }
+    resetLeadingOverscroll();
 
     const epoch = gestureEpochRef.current;
     onTransitioningChange(false);
@@ -129,41 +177,42 @@ export function PrimaryPagerViewport({
   };
 
   return (
-    <PrimaryPageGestureProvider value={null}>
-      <AnimatedPagerView
-        ref={pagerRef}
-        style={styles.pager}
-        initialPage={committedIndex}
-        // Keep both neighbors warm so a drag always reveals real content, not a blank.
-        offscreenPageLimit={2}
-        scrollEnabled={scrollEnabled}
-        keyboardDismissMode="none"
-        onPageScroll={onPageScroll}
-        onPageSelected={onPageSelectedNative}
-        onPageScrollStateChanged={onPageScrollStateChanged}
-      >
-        {pages.map((page, index) => {
-          // Do not tie pointerEvents / a11y to isTransitioning: flipping them at
-          // drag-start makes ScrollView/FlashList jump on the page sliding away.
-          const isCommitted = index === committedIndex;
-          return (
-            <View
-              // Route name, not route.key: placeholders use key===name until first
-              // visit, then navigation mints a new key — remounting mid-pan feels
-              // like opening a fresh screen instead of sliding.
-              key={page.name}
-              collapsable={false}
-              style={styles.page}
-              pointerEvents={isCommitted ? 'auto' : 'none'}
-              accessibilityElementsHidden={!isCommitted}
-              importantForAccessibility={isCommitted ? 'auto' : 'no-hide-descendants'}
-            >
-              {mountedIndices.has(index) || isCommitted ? page.render() : null}
-            </View>
-          );
-        })}
-      </AnimatedPagerView>
-    </PrimaryPageGestureProvider>
+    <AnimatedPagerView
+      ref={pagerRef}
+      style={styles.pager}
+      initialPage={committedIndex}
+      // Keep both neighbors warm so a drag always reveals real content, not a blank.
+      offscreenPageLimit={2}
+      scrollEnabled={scrollEnabled}
+      // iOS only: rubber-band past Dashboard so a mid-screen LTR can open the drawer
+      // without full-width drawer hitSlop (which starved native RTL paging).
+      overdrag={leadingOverscrollEnabled}
+      keyboardDismissMode="none"
+      onPageScroll={onPageScroll}
+      onPageSelected={onPageSelectedNative}
+      onPageScrollStateChanged={onPageScrollStateChanged}
+    >
+      {pages.map((page, index) => {
+        // Do not tie pointerEvents / a11y to isTransitioning: flipping them at
+        // drag-start makes ScrollView/FlashList jump on the page sliding away.
+        const isCommitted = index === committedIndex;
+        return (
+          <View
+            // Route name, not route.key: placeholders use key===name until first
+            // visit, then navigation mints a new key — remounting mid-pan feels
+            // like opening a fresh screen instead of sliding.
+            key={page.name}
+            collapsable={false}
+            style={styles.page}
+            pointerEvents={isCommitted ? 'auto' : 'none'}
+            accessibilityElementsHidden={!isCommitted}
+            importantForAccessibility={isCommitted ? 'auto' : 'no-hide-descendants'}
+          >
+            {mountedIndices.has(index) || isCommitted ? page.render() : null}
+          </View>
+        );
+      })}
+    </AnimatedPagerView>
   );
 }
 

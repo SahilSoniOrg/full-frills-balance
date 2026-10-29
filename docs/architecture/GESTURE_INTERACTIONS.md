@@ -56,15 +56,15 @@ ClockWheel and GlyphCarousel share `useScrollSettlement`:
 
 ## Primary page navigation
 
-The native primary pager has six committed routes in order: Dashboard (`index`), Accounts (`accounts`), Categories (`categories`), Budgets (`commitments`), Planned Payments (`planned-payments`), and Activity (`activity`). The stationary bottom bar exposes four groups: Dashboard, Accounts (Accounts/Categories), Plans (Budgets/Planned Payments), and Activity. Group taps select the last committed route in that group; subtab controls select the sibling route. Web uses those same routes and controls without touch paging.
+The native outer pager has four groups: Dashboard, Accounts, Plans, Activity. Accounts/Categories and Budgets/Planned Payments use nested native pagers with stationary headers and subtab controls. All six leaves remain canonical router routes. Bottom-bar taps restore the remembered sibling; swiping into a group selects the sibling nearest the entry direction.
 
-The pager owns horizontal movement outside the screen content. A preview is not the selected route: feature actions and focus-controlled reads follow the committed route, and only a selected/settled native page changes the router state. Legacy `accounts?tab=categories` and `commitments?tab=planned` links are replaced with their canonical leaf routes before screen content mounts.
+Outer and inner pagers share swipe permission: focus, app activity, keyboard, app lock, screen reader, workplace switching, selection mode, drawer visibility, and screen-owned overlay locks. Inner pagers also require their group to be active. Losing permission resets an interrupted drag to its committed route. Programmatic tab navigation remains available; the Reduce Motion preference skips its automatic page travel while preserving user-driven swipe navigation.
 
-On Dashboard, a rightward body drag belongs to the full-width drawer gesture and a leftward drag belongs to the pager. On other primary pages the drawer opens from its leading edge; body swipes remain available to the pager. An open drawer disables pager movement and owns its close drag. Both recognizers use directional activation, with the drawer configured to block the page recognizer when it owns the boundary drag.
+Boundary gestures use 28-point edge overlay strips on the inner pager (not a GestureDetector wrap around PagerView — that blocked iOS paging on the outer strip). They require a successful outward drag beyond 48 points and reject the opposite direction and vertical movement. The closed drawer opens from its 32-point leading edge on non-Dashboard pages. On Dashboard, iOS also listens for native pager leading overscroll (at 14% of page width) and opens the drawer; Android widens drawer hitSlop to the full page, relying on the native pager to yield the leading-direction swipe at page zero. The iOS overscroll path triggers a separate drawer spring rather than a finger-tracked reveal. An open drawer disables paging.
 
-Chart pans and swipe-to-remove rows establish an explicit native relationship that lets the child gesture block the pager. Vertical scroll, taps, long presses, selection mode, keyboard presence, app/workplace interruption, screen-reader use, and screen-owned blocking overlays retain their existing owners. Do not decide ownership from JavaScript callbacks after movement begins, and do not use a global responder capture.
+The native pager exposes no RNGH native gesture: wrapping it prevented iOS paging. Chart pans and swipe-removal recognizers reserve paging through `setPageSwipeLock` when recognition begins and release on finalization or unmount. This is a JavaScript-mediated reservation, not a proven native arbitration relationship. Hierarchy management is presented in a blocking overlay and uses the screen's overlay lock.
 
-Native recognizer configuration is source-integrated but has not been demonstrated on Android or iOS for this pager. Reduced-motion behavior, VoiceOver/TalkBack focus, interruption/cancellation, and release performance also remain device acceptance work. The implementation does not claim those gates passed.
+Device acceptance remains required for nested boundary gestures versus the drawer, chart/row ownership, interruption, vertical scrolling near edges, accessibility, and reduced motion. No device results are claimed for these changes.
 
 ## Prior verification for the October 7 gesture fixes
 
@@ -79,3 +79,4 @@ Native recognizer configuration is source-integrated but has not been demonstrat
 - `bun run typecheck` passed for the source changes.
 - Automated tests and native builds were not run for the pager change.
 - Android/iOS gesture arbitration, cancellation, accessibility, and matched release-performance acceptance remain unverified on device.
+- Dashboard drawer arbitration differs by platform as described above; both paths remain unverified on device.

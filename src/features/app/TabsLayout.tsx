@@ -9,7 +9,6 @@ import {
 } from '@/src/features/navigation';
 import { AppNavigation } from '@/src/utils/navigation';
 import { PRIMARY_PAGES } from '@/src/navigation/primaryPages';
-import type { GestureType } from 'react-native-gesture-handler';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -19,26 +18,21 @@ export function TabsLayout() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectionModeActive, setSelectionModeActive] = useState(false);
   const [activeRouteName, setActiveRouteName] = useState('index');
-  const [pageGesture, setPageGesture] = useState<GestureType | null>(null);
   const displayName = userName || 'User';
 
-  const closeDrawer = () => setDrawerVisible(false);
-  const reportSelectionMode = (active: boolean) => {
-    if (active) closeDrawer();
+  const closeDrawer = useCallback(() => setDrawerVisible(false), []);
+  const reportSelectionMode = useCallback((active: boolean) => {
+    if (active) setDrawerVisible(false);
     setSelectionModeActive(active);
-  };
-  const openDrawer = () => {
+  }, []);
+  const openDrawer = useCallback(() => {
     if (selectionModeActive || workplace.isSwitchingWorkplace) return;
     setDrawerVisible(true);
-  };
+  }, [selectionModeActive, workplace.isSwitchingWorkplace]);
   const reportActiveRoute = useCallback((routeName: string) => {
     setActiveRouteName(routeName);
     setSelectionModeActive(false);
   }, []);
-  const reportPageGesture = useCallback((gesture: GestureType | null) => {
-    setPageGesture(previous => (previous === gesture ? previous : gesture));
-  }, []);
-
   const onAddAction = (action: ContextualAddAction) => {
     const workplaceId = workplace.workplaceId;
     switch (action) {
@@ -74,8 +68,6 @@ export function TabsLayout() {
           userName: displayName,
           activeRouteName,
           reportActiveRoute,
-          pageGesture,
-          reportPageGesture,
         }}
       >
         <NavigationDrawer>

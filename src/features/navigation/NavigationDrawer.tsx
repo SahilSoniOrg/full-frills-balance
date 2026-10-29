@@ -27,6 +27,7 @@ import { Drawer } from 'react-native-drawer-layout';
 import {
   AccessibilityInfo,
   BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -128,7 +129,6 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     selectionModeActive,
     userName,
     activeRouteName,
-    pageGesture,
   } = primaryNav;
   const { data: workplaceRows = [] } = useObservable(
     () => workplaceService.observeAllWorkplaces(),
@@ -483,6 +483,11 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     </View>
   );
 
+  // Android's native pager yields LTR at page 0 to a parent drawer, so full-width
+  // hitSlop is safe there. iOS UIScrollView cannot start after RNGH fails, so
+  // Dashboard stays edge-only and PrimaryPagerViewport opens via overscroll.
+  const closedSwipeEdgeWidth = isDashboard && Platform.OS === 'android' ? width : 32;
+
   return (
     <Drawer
       open={drawerVisible}
@@ -494,19 +499,12 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
       }}
       drawerType="front"
       swipeEnabled={(drawerVisible || canOpen) && !selectorOpen && !isSwitching}
-      // Edge-only when closed so the primary pager owns page swipes. Full-width
-      // Dashboard hitSlop made RNGH hold the touch until the drawer pan failed,
-      // so UIScrollView paging never started. Keep directional activation; only
-      // block a real pageGesture when present (native pager no longer exposes one).
-      swipeEdgeWidth={drawerVisible ? width : 32}
+      swipeEdgeWidth={drawerVisible ? width : closedSwipeEdgeWidth}
       configureGestureHandler={gesture => {
         const legacyPan = gesture as unknown as LegacyPanGesture;
         const configured = drawerVisible
           ? legacyPan.activeOffsetX(-20).failOffsetX(20)
           : legacyPan.activeOffsetX(20).failOffsetX(-20);
-        if (pageGesture && (drawerVisible || !isDashboard)) {
-          configured.blocksExternalGesture(pageGesture);
-        }
         return configured as unknown as typeof gesture;
       }}
       reduceMotion={reduceMotion}

@@ -12,7 +12,10 @@ import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
-import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import {
+  usePrimaryPageAlive,
+  usePrimaryPageNavigation,
+} from '@/src/navigation/primaryPageNavigation';
 import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useScrollToTop, useIsFocused } from 'expo-router';
@@ -40,15 +43,16 @@ function trackDashboardFirstPaint() {
 
 function DashboardScreen() {
   const isFocused = useIsFocused();
+  const isAlive = usePrimaryPageAlive('dashboard');
   const pageNavigation = usePrimaryPageNavigation();
   const vm = useDashboardViewModel();
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
   const { isAppReady } = useAppReady();
   const { isAutomaticSmsImportEnabled } = useSmsPrefs();
-  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady && isFocused });
-  const supplementalInsights = useSupplementalInsights(workplaceId, false, isFocused);
-  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId, isFocused);
+  const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady && isAlive });
+  const supplementalInsights = useSupplementalInsights(workplaceId, false, isAlive);
+  const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId, isAlive);
   const listRef = useRef<JournalEntryListRef>(null);
   const isBlockingSheetOpen =
     vm.explanationModalState.visible || vm.legendModalState.selectedItem !== null;

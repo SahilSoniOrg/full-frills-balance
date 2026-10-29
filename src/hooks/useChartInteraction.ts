@@ -6,7 +6,7 @@ import {
   CHART_TAP_MAX_DISTANCE,
 } from '@/src/constants/gesture-constants';
 import { triggerHaptic } from '@/src/utils/haptics';
-import { usePrimaryPageGesture } from '@/src/navigation/primaryPageNavigation';
+import { usePrimaryPageSwipeReservation } from '@/src/navigation/primaryPageNavigation';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
@@ -41,7 +41,7 @@ export function useChartInteraction({
 }: UseChartInteractionProps) {
   const { registerChart, beginInteraction, endInteraction, isInteracting } =
     useChartInteractionRegistry();
-  const pageGesture = usePrimaryPageGesture();
+  const { reserve, release } = usePrimaryPageSwipeReservation();
   const chartRef = useRef<View>(null);
   const owner = useMemo(() => Symbol('chart-pan'), []);
   const selectionRef = useRef<InteractionState>({ type: 'none' });
@@ -123,6 +123,10 @@ export function useChartInteraction({
     const pan = Gesture.Pan()
       .enabled(enabled)
       .maxPointers(1)
+      .onBegin(() => {
+        'worklet';
+        runOnJS(reserve)();
+      })
       .onStart(event => {
         'worklet';
         runOnJS(startPan)(event.x, event.y);
@@ -134,8 +138,8 @@ export function useChartInteraction({
       .onFinalize((event, success) => {
         'worklet';
         runOnJS(finishPan)(event.x, event.y, success);
+        runOnJS(release)();
       });
-    if (pageGesture) pan.blocksExternalGesture(pageGesture);
     if (panActivation === 'hold') pan.activateAfterLongPress(CHART_SCRUB_HOLD_MS);
     else
       pan
@@ -151,7 +155,7 @@ export function useChartInteraction({
       });
     return Gesture.Exclusive(pan, tap);
     /* eslint-enable react-hooks/refs */
-  }, [enabled, finishPan, pageGesture, panActivation, selectTap, startPan, updatePan]);
+  }, [enabled, finishPan, panActivation, selectTap, startPan, updatePan, reserve, release]);
 
   const resetInteraction = useCallback(
     (x?: number, y?: number) => {

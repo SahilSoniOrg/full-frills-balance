@@ -5,7 +5,6 @@ import {
   primaryPageFromRouteName,
   type PrimaryPageGroup,
 } from '@/src/navigation/primaryPages';
-import type { GestureType } from 'react-native-gesture-handler';
 import { createContext, useContext } from 'react';
 
 export type PrimaryTab = PrimaryPageGroup;
@@ -58,8 +57,6 @@ export type PrimaryNavigationContextValue = {
   userName: string;
   activeRouteName?: string;
   reportActiveRoute?: (routeName: string) => void;
-  pageGesture?: GestureType | null;
-  reportPageGesture?: (gesture: GestureType | null) => void;
 };
 
 const PrimaryNavigationContext = createContext<PrimaryNavigationContextValue | undefined>(

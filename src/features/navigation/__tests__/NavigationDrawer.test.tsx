@@ -3,7 +3,7 @@ import { NavigationDrawer } from '@/src/features/navigation/NavigationDrawer';
 import { AppNavigation } from '@/src/utils/navigation';
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import type { ComponentProps } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 import type { Drawer } from 'react-native-drawer-layout';
 type DrawerProps = ComponentProps<typeof Drawer>;
 
@@ -145,18 +145,14 @@ describe('NavigationDrawer shell', () => {
     expect(mockDrawerProps?.swipeEnabled).toBe(false);
   });
 
-  it('keeps closed-drawer hitSlop edge-only on Dashboard so the pager can swipe', () => {
-    const pageGesture = { tag: 'page' };
-    const blocksExternalGesture = jest.fn(function (this: { config: object }) {
-      return this;
-    });
+  it('keeps closed-drawer hitSlop edge-only on iOS Dashboard so native paging stays reliable', () => {
     const activeOffsetX = jest.fn(function (this: { config: object }) {
       return this;
     });
     const failOffsetX = jest.fn(function (this: { config: object }) {
       return this;
     });
-    const pan = { activeOffsetX, failOffsetX, blocksExternalGesture };
+    const pan = { activeOffsetX, failOffsetX };
 
     render(
       <PrimaryNavigationProvider
@@ -168,53 +164,44 @@ describe('NavigationDrawer shell', () => {
           closeDrawer: jest.fn(),
           userName: 'Test User',
           activeRouteName: 'index',
-          pageGesture: pageGesture as never,
         }}
       >
         <NavigationDrawer>{null}</NavigationDrawer>
       </PrimaryNavigationProvider>,
     );
 
+    expect(Platform.OS).toBe('ios');
     expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
     mockDrawerProps?.configureGestureHandler?.(pan as never);
     expect(activeOffsetX).toHaveBeenCalledWith(20);
     expect(failOffsetX).toHaveBeenCalledWith(-20);
-    expect(blocksExternalGesture).not.toHaveBeenCalled();
   });
 
-  it('blocks the pager for edge pans on non-Dashboard pages', () => {
-    const pageGesture = { tag: 'page' };
-    const blocksExternalGesture = jest.fn(function (this: { config: object }) {
-      return this;
-    });
-    const activeOffsetX = jest.fn(function (this: { config: object }) {
-      return this;
-    });
-    const failOffsetX = jest.fn(function (this: { config: object }) {
-      return this;
-    });
-    const pan = { activeOffsetX, failOffsetX, blocksExternalGesture };
+  it('uses full-width closed-drawer hitSlop on Android Dashboard', () => {
+    const previousOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
 
-    render(
-      <PrimaryNavigationProvider
-        value={{
-          reportSelectionMode: jest.fn(),
-          selectionModeActive: false,
-          drawerVisible: false,
-          openDrawer: jest.fn(),
-          closeDrawer: jest.fn(),
-          userName: 'Test User',
-          activeRouteName: 'accounts',
-          pageGesture: pageGesture as never,
-        }}
-      >
-        <NavigationDrawer>{null}</NavigationDrawer>
-      </PrimaryNavigationProvider>,
-    );
+    try {
+      render(
+        <PrimaryNavigationProvider
+          value={{
+            reportSelectionMode: jest.fn(),
+            selectionModeActive: false,
+            drawerVisible: false,
+            openDrawer: jest.fn(),
+            closeDrawer: jest.fn(),
+            userName: 'Test User',
+            activeRouteName: 'index',
+          }}
+        >
+          <NavigationDrawer>{null}</NavigationDrawer>
+        </PrimaryNavigationProvider>,
+      );
 
-    expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
-    mockDrawerProps?.configureGestureHandler?.(pan as never);
-    expect(blocksExternalGesture).toHaveBeenCalledWith(pageGesture);
+      expect(mockDrawerProps?.swipeEdgeWidth).toBeGreaterThan(32);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, get: () => previousOS });
+    }
   });
 
   it('closes the selector, then the drawer, on the Android back button', () => {

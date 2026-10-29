@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import PagerView, {
   type PageScrollStateChangedNativeEventData,
   type PagerViewOnPageScrollEvent,
@@ -7,12 +7,17 @@ import PagerView, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useEvent, type SharedValue } from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { primaryPageFromRouteName } from './primaryPages';
+import { usePrimaryPageNavigation } from './primaryPageNavigation';
+
 const AnimatedPagerView = Animated.createAnimatedComponent(PagerView);
 
 const EDGE_WIDTH = 28;
 const EDGE_COMMIT = 48;
 
 type GroupInnerPagerProps = {
+  group: 'accounts' | 'commitments';
   pageCount: number;
   index: number;
   pageProgress: SharedValue<number>;
@@ -31,8 +36,12 @@ function writePageProgress(progress: SharedValue<number>, value: number) {
  * Horizontal pager for sibling tabs inside a primary group. Keep group chrome
  * (title / AppTabs) outside this component so those areas still drive the outer
  * strip; only the body children pan here.
+ *
+ * Edge handoff uses thin overlay strips so we never wrap PagerView in
+ * GestureDetector (that pattern blocked iOS paging on the outer strip).
  */
 export function GroupInnerPager({
+  group,
   pageCount,
   index,
   pageProgress,
@@ -40,23 +49,74 @@ export function GroupInnerPager({
   onEdgeSwipe,
   children,
 }: GroupInnerPagerProps) {
-  const pagerRef = useRef<PagerView>(null);
-  const indexRef = useRef(index);
-  const pendingRef = useRef<number | null>(null);
-  const programmaticRef = useRef<number | null>(null);
-  const userGestureRef = useRef(false);
+  const navigation = usePrimaryPageNavigation();
+  const reduceMotion = useReducedMotion();
+  const scrollEnabled = navigation
+    ? navigation.scrollEnabled &&
+      primaryPageFromRouteName(navigation.activeRouteName)?.group === group
+    : Platform.OS !== 'web';
 
-  useEffect(() => {
-    if (indexRef.current === index) return;
-    indexRef.current = index;
-    if (pendingRef.current === index) {
-      pendingRef.current = null;
-      programmaticRef.current = null;
+  const pagerRef = useRef<PagerView>(null);
+  const committedIndexRef = useRef(index);
+  const pendingUserIndexRef = useRef<number | null>(null);
+  const programmaticTargetRef = useRef<number | null>(null);
+  const userGestureRef = useRef(false);
+  const gestureEpochRef = useRef(0);
+  const scrollEnabledRef = useRef(scrollEnabled);
+
+  useLayoutEffect(() => {
+    scrollEnabledRef.current = scrollEnabled;
+  }, [scrollEnabled]);
+
+  // Drive the native page from the committed route. useLayoutEffect so the ref
+  // is attached; retry once on the next frame if setPage raced layout.
+  useLayoutEffect(() => {
+    if (pendingUserIndexRef.current === index) {
+      pendingUserIndexRef.current = null;
+      programmaticTargetRef.current = null;
+      committedIndexRef.current = index;
+      writePageProgress(pageProgress, index);
       return;
     }
-    programmaticRef.current = index;
-    pagerRef.current?.setPage(index);
-  }, [index]);
+
+    // Finger swipe (or a prior setPage) already committed this index.
+    if (committedIndexRef.current === index) {
+      writePageProgress(pageProgress, index);
+      return;
+    }
+
+    committedIndexRef.current = index;
+    userGestureRef.current = false;
+    gestureEpochRef.current += 1;
+    programmaticTargetRef.current = index;
+    writePageProgress(pageProgress, index);
+
+    // Outer-strip entry must jump; animating here reads as an auto sibling
+    // transition when coming back into a keep-alive group. In-group tab taps
+    // still animate unless Reduce Motion is enabled.
+    const animate = !navigation?.isTransitioning && !reduceMotion;
+    const target = index;
+    const apply = () => {
+      if (programmaticTargetRef.current !== target) return;
+      if (animate) pagerRef.current?.setPage(target);
+      else pagerRef.current?.setPageWithoutAnimation(target);
+    };
+    apply();
+    if (pagerRef.current) return;
+    const retry = requestAnimationFrame(apply);
+    return () => cancelAnimationFrame(retry);
+  }, [index, pageProgress, navigation?.isTransitioning, reduceMotion]);
+
+  useLayoutEffect(() => {
+    if (scrollEnabled) return;
+    if (!userGestureRef.current && pendingUserIndexRef.current === null) return;
+    userGestureRef.current = false;
+    pendingUserIndexRef.current = null;
+    gestureEpochRef.current += 1;
+    programmaticTargetRef.current = committedIndexRef.current;
+    pagerRef.current?.setPageWithoutAnimation(committedIndexRef.current);
+    writePageProgress(pageProgress, committedIndexRef.current);
+  }, [scrollEnabled, pageProgress]);
 
   const onPageScroll = useEvent<PagerViewOnPageScrollEvent>(
     event => {
@@ -69,14 +129,24 @@ export function GroupInnerPager({
 
   const onPageSelectedNative = (event: { nativeEvent: { position: number } }) => {
     const next = event.nativeEvent.position;
-    if (programmaticRef.current === next) {
-      programmaticRef.current = null;
+    if (programmaticTargetRef.current === next) {
+      programmaticTargetRef.current = null;
+      committedIndexRef.current = next;
+      writePageProgress(pageProgress, next);
       return;
     }
-    if (!userGestureRef.current || next === indexRef.current) return;
+    if (
+      !scrollEnabledRef.current ||
+      !userGestureRef.current ||
+      next === committedIndexRef.current
+    ) {
+      return;
+    }
+
     userGestureRef.current = false;
-    pendingRef.current = next;
-    indexRef.current = next;
+    pendingUserIndexRef.current = next;
+    committedIndexRef.current = next;
+    writePageProgress(pageProgress, next);
     onIndexChange(next);
   };
 
@@ -85,28 +155,37 @@ export function GroupInnerPager({
   }) => {
     const state = event.nativeEvent.pageScrollState;
     if (state === 'dragging') {
-      userGestureRef.current = true;
+      gestureEpochRef.current += 1;
+      userGestureRef.current = scrollEnabledRef.current;
       return;
     }
-    if (state === 'idle') userGestureRef.current = false;
+    if (state !== 'idle') return;
+
+    const epoch = gestureEpochRef.current;
+    requestAnimationFrame(() => {
+      if (gestureEpochRef.current !== epoch || pendingUserIndexRef.current !== null) return;
+      userGestureRef.current = false;
+      writePageProgress(pageProgress, committedIndexRef.current);
+    });
   };
 
   const emitPrevEdge = useCallback(() => {
-    onEdgeSwipe?.('prev');
-  }, [onEdgeSwipe]);
+    if (scrollEnabled && index === 0) onEdgeSwipe?.('prev');
+  }, [scrollEnabled, index, onEdgeSwipe]);
 
   const emitNextEdge = useCallback(() => {
-    onEdgeSwipe?.('next');
-  }, [onEdgeSwipe]);
+    if (scrollEnabled && index === pageCount - 1) onEdgeSwipe?.('next');
+  }, [scrollEnabled, index, pageCount, onEdgeSwipe]);
 
   const prevEdge = useMemo(
     () =>
       Gesture.Pan()
-        .activeOffsetX([EDGE_COMMIT / 2, 1000])
+        .activeOffsetX(EDGE_COMMIT / 2)
+        .failOffsetX(-EDGE_COMMIT / 2)
         .failOffsetY([-20, 20])
-        .onEnd(event => {
+        .onEnd((event, success) => {
           'worklet';
-          if (event.translationX > EDGE_COMMIT) runOnJS(emitPrevEdge)();
+          if (success && event.translationX > EDGE_COMMIT) runOnJS(emitPrevEdge)();
         }),
     [emitPrevEdge],
   );
@@ -114,16 +193,19 @@ export function GroupInnerPager({
   const nextEdge = useMemo(
     () =>
       Gesture.Pan()
-        .activeOffsetX([-1000, -EDGE_COMMIT / 2])
+        .activeOffsetX(-EDGE_COMMIT / 2)
+        .failOffsetX(EDGE_COMMIT / 2)
         .failOffsetY([-20, 20])
-        .onEnd(event => {
+        .onEnd((event, success) => {
           'worklet';
-          if (event.translationX < -EDGE_COMMIT) runOnJS(emitNextEdge)();
+          if (success && event.translationX < -EDGE_COMMIT) runOnJS(emitNextEdge)();
         }),
     [emitNextEdge],
   );
 
   const childList = Array.isArray(children) ? children : [children];
+  const showPrevEdge = scrollEnabled && !!onEdgeSwipe && index === 0;
+  const showNextEdge = scrollEnabled && !!onEdgeSwipe && index === pageCount - 1;
 
   return (
     <View style={styles.fill}>
@@ -131,6 +213,7 @@ export function GroupInnerPager({
         ref={pagerRef}
         style={styles.fill}
         initialPage={index}
+        scrollEnabled={scrollEnabled}
         offscreenPageLimit={1}
         onPageScroll={onPageScroll}
         onPageSelected={onPageSelectedNative}
@@ -142,7 +225,7 @@ export function GroupInnerPager({
           </View>
         ))}
       </AnimatedPagerView>
-      {onEdgeSwipe && index <= 0 ? (
+      {showPrevEdge ? (
         <GestureDetector gesture={prevEdge}>
           <View
             style={styles.edgeLeft}
@@ -151,7 +234,7 @@ export function GroupInnerPager({
           />
         </GestureDetector>
       ) : null}
-      {onEdgeSwipe && index >= pageCount - 1 ? (
+      {showNextEdge ? (
         <GestureDetector gesture={nextEdge}>
           <View
             style={styles.edgeRight}

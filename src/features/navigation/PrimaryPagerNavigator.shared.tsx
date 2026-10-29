@@ -23,12 +23,12 @@ import { PrimaryPageNavigationProvider } from '@/src/navigation/primaryPageNavig
 import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useKeyboard } from '@/src/design-system/Keyboard';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { NavigatorContentProps } from 'expo-router';
 import { unstable_useReconcileTabHistory, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, AppState, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
-import type { GestureType } from 'react-native-gesture-handler';
 import type { ComponentType } from 'react';
 
 type PrimaryPageOptions = { title?: string };
@@ -88,6 +88,7 @@ export function createPrimaryPagerContent(
     const isFocused = useIsFocused();
     const { isAppCurrentlyLocked } = useAppLock();
     const { isKeyboardVisible } = useKeyboard();
+    const reduceMotion = useReducedMotion();
     const [isScreenReaderEnabled, setScreenReaderEnabled] = useState(false);
     const [isAppActive, setAppActive] = useState(AppState.currentState === 'active');
     const [isTransitioning, setTransitioning] = useState(false);
@@ -211,11 +212,6 @@ export function createPrimaryPagerContent(
       },
       [emitter],
     );
-    const reportPageGesture = useCallback(
-      (gesture: GestureType | null) => primaryNavigation?.reportPageGesture?.(gesture),
-      [primaryNavigation?.reportPageGesture],
-    );
-
     const pages = useMemo<PrimaryPagerPage[]>(
       () =>
         PRIMARY_SWIPE_GROUPS.map(group => ({
@@ -254,11 +250,12 @@ export function createPrimaryPagerContent(
       committedIndex: swipeIndex,
       mountedIndices,
       isTransitioning,
+      reduceMotion,
       scrollEnabled,
       pageProgress,
       onPageSelected: onUserPageSelected,
       onTransitioningChange: setTransitioning,
-      onPageGestureReady: reportPageGesture,
+      onLeadingOverscrollOpen: primaryNavigation?.openDrawer,
     };
 
     return (
@@ -267,6 +264,7 @@ export function createPrimaryPagerContent(
           value={{
             activeRouteName,
             isTransitioning,
+            scrollEnabled,
             pageProgress,
             keptAliveGroups,
             navigateToPage,

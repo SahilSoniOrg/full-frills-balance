@@ -14,6 +14,8 @@ import {
   primaryAdjacentSwipeGroup,
   primaryEntryRouteForGroup,
   primaryInnerIndex,
+  primaryPageFromRouteName,
+  primaryRouteForGroup,
 } from '@/src/navigation/primaryPages';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -28,10 +30,14 @@ export function CommitmentsGroupPager() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const pageNavigation = usePrimaryPageNavigation();
   const activeRouteName = pageNavigation?.activeRouteName ?? 'commitments';
-  const activeTab: CommitmentsTab = activeRouteName === 'planned-payments' ? 'planned' : 'budgets';
-  const innerIndex = primaryInnerIndex(
-    activeTab === 'planned' ? 'planned-payments' : 'commitments',
-  );
+  // Keep the remembered leaf while this shell is mounted off-screen.
+  const groupRoute =
+    primaryPageFromRouteName(activeRouteName)?.group === 'commitments'
+      ? activeRouteName
+      : primaryRouteForGroup('commitments');
+  const activeTab: CommitmentsTab = groupRoute === 'planned-payments' ? 'planned' : 'budgets';
+  const innerIndex = primaryInnerIndex(groupRoute);
+  // Progress is owned by GroupInnerPager — do not snap from the route here.
   const innerProgress = useSharedValue(innerIndex);
   const { counts, updateCount } = useCommitmentsBadgeSnapshot();
   const strings = AppConfig.strings.commitmentsRedesign;
@@ -39,10 +45,6 @@ export function CommitmentsGroupPager() {
   // Keep both panes warm while the group shell is mounted so inner pans are painted.
   const budgets = useBudgetListViewModel(workplaceId, defaultCurrencyCode, true);
   const planned = usePlannedPayments(workplaceId, true);
-
-  useEffect(() => {
-    innerProgress.value = innerIndex;
-  }, [innerIndex, innerProgress]);
 
   useEffect(() => {
     if (activeTab === 'budgets' && !budgets.isLoading) updateCount('budgets', budgets.items.length);
@@ -122,6 +124,7 @@ export function CommitmentsGroupPager() {
         />
       </Box>
       <GroupInnerPager
+        group="commitments"
         pageCount={2}
         index={innerIndex}
         pageProgress={innerProgress}
