@@ -18,5 +18,5 @@ export default function CommitmentsRoute() {
     } as Href);
   }, [params, router, shouldNormalize]);
 
-  return shouldNormalize ? null : <CommitmentsPage activeTab="budgets" />;
+  return shouldNormalize ? null : <CommitmentsPage />;
 }

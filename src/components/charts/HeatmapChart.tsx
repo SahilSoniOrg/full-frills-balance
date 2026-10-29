@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText, PressScaleTouchable } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
   },
   viewButton: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.xs,
+    marginTop: Spacing.xs,
   },
 });

@@ -1,6 +1,6 @@
 import { IconButton, AppText, Icon } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
-import { Spacing } from '@/src/constants/design-tokens';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -39,7 +39,7 @@ export function ContextualExplanation({
       <IconButton
         name={Icon.Info}
         variant="clear"
-        size={18}
+        size={Size.iconXs}
         accessibilityLabel={triggerLabel}
         onPress={() => setVisible(true)}
         testID={testID}
@@ -51,7 +51,7 @@ export function ContextualExplanation({
           onClose={close}
           position="bottomSheet"
           fixedHeight={false}
-          maxHeightPercent={82}
+          maxHeightPercent={AppConfig.layout.popupModalHeightPercent}
           accessibilityCloseLabel={`Close ${title} explanation`}
           contentTestID={testID ? `${testID}-content` : undefined}
         >

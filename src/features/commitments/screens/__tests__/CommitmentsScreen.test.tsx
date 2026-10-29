@@ -15,10 +15,7 @@ jest.mock('@/src/features/commitments/CommitmentsGroupProvider', () => ({
   }),
 }));
 jest.mock('@/src/navigation/primaryPageNavigation', () => ({
-  usePrimaryPageNavigation: () => null,
-}));
-jest.mock('expo-router', () => ({
-  useIsFocused: jest.fn(() => true),
+  usePrimaryPageNavigation: jest.fn(() => null),
 }));
 
 jest.mock('@/src/features/budget', () => ({
@@ -46,11 +43,27 @@ jest.mock('@/src/utils/navigation', () => ({
   },
 }));
 
-const { useIsFocused } = jest.requireMock<typeof import('expo-router')>('expo-router');
+const { usePrimaryPageNavigation } = jest.requireMock<
+  typeof import('@/src/navigation/primaryPageNavigation')
+>('@/src/navigation/primaryPageNavigation');
+
+function mockPrimaryRoute(activeRouteName: string) {
+  const navigateToPage = jest.fn();
+  jest.mocked(usePrimaryPageNavigation).mockReturnValue({
+    activeRouteName,
+    isTransitioning: false,
+    scrollEnabled: true,
+    pageProgress: { value: 0 } as never,
+    keptAliveGroups: new Set(['commitments']),
+    navigateToPage,
+    setPageSwipeLock: jest.fn(),
+  });
+  return navigateToPage;
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.mocked(useIsFocused).mockReturnValue(true);
+  jest.mocked(usePrimaryPageNavigation).mockReturnValue(null);
   jest.mocked(useBudgetListViewModel).mockReturnValue({
     items: [],
     summary: undefined,
@@ -85,25 +98,25 @@ const emptyTotals = {
 };
 
 it('leaves creation to the contextual Add menu instead of a screen FAB', () => {
-  const screen = render(<CommitmentsPage activeTab="budgets" />);
+  const screen = render(<CommitmentsPage />);
   expect(screen.queryByRole('button', { name: 'Create a budget' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Create a planned payment' })).toBeNull();
 });
 
-it('enables only the focused matching read pipeline', () => {
-  render(<CommitmentsPage activeTab="budgets" />);
+it('keeps both commitment lists warm while the shell is mounted', () => {
+  render(<CommitmentsPage />);
   expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
-  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', false);
+  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
 
   jest.clearAllMocks();
-  jest.mocked(useIsFocused).mockReturnValue(false);
-  render(<CommitmentsPage activeTab="planned" />);
-  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', false);
-  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', false);
+  mockPrimaryRoute('planned-payments');
+  render(<CommitmentsPage />);
+  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
+  expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
 });
 
 it('navigates between Budgets and Planned through primary page routes', () => {
-  const screen = render(<CommitmentsPage activeTab="budgets" />);
+  const screen = render(<CommitmentsPage />);
   expect(screen.getByRole('tab', { name: 'Budgets' }).props.accessibilityState.selected).toBe(true);
   expect(screen.getByText('Budget list')).toBeTruthy();
 
@@ -111,13 +124,14 @@ it('navigates between Budgets and Planned through primary page routes', () => {
   expect(AppNavigation.toPrimaryPage).toHaveBeenCalledWith('planned-payments');
 });
 
-it('opens Planned with its own page tab selection', () => {
-  const screen = render(<CommitmentsPage activeTab="planned" />);
+it('opens Planned from the planned-payments route', () => {
+  const navigateToPage = mockPrimaryRoute('planned-payments');
+  const screen = render(<CommitmentsPage />);
   expect(screen.getByRole('tab', { name: 'Planned' }).props.accessibilityState.selected).toBe(true);
   expect(screen.getByText('Planned list')).toBeTruthy();
-  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', false);
+  expect(useBudgetListViewModel).toHaveBeenCalledWith('workplace', 'INR', true);
   expect(usePlannedPayments).toHaveBeenCalledWith('workplace', true);
 
   fireEvent.press(screen.getByRole('tab', { name: 'Budgets' }));
-  expect(AppNavigation.toPrimaryPage).toHaveBeenCalledWith('commitments');
+  expect(navigateToPage).toHaveBeenCalledWith('commitments');
 });

@@ -329,6 +329,7 @@ jest.mock('react-native-reanimated', () => {
     cancelAnimation: jest.fn(),
     runOnJS: jest.fn(fn => fn),
     runOnUI: jest.fn(fn => fn),
+    useEvent: jest.fn(() => jest.fn()),
     interpolate: jest.fn((x, input, output, type) => 0),
     Extrapolation: { CLAMP: 'clamp' },
     View: View,
@@ -363,6 +364,19 @@ jest.mock('moti', () => {
       animateTo: jest.fn(),
     }),
   };
+});
+
+jest.mock('react-native-pager-view', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  class PagerView extends React.Component {
+    setPage() {}
+    setPageWithoutAnimation() {}
+    render() {
+      return React.createElement(View, null, this.props.children);
+    }
+  }
+  return { __esModule: true, default: PagerView };
 });
 
 // Mock Gesture Handler

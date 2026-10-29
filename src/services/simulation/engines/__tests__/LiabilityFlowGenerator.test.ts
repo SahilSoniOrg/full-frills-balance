@@ -1,7 +1,30 @@
 import { LiabilityFlowGenerator } from '../LiabilityFlowGenerator';
+import type {
+  Flow,
+  LiabilityMetadata,
+  Obligation,
+  SimulationContext,
+  SimulationLiabilityAccount,
+} from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/types/enums';
 
 import dayjs from 'dayjs';
+
+const generateObligations = (
+  LiabilityFlowGenerator as unknown as {
+    generateObligations: (
+      acc: SimulationLiabilityAccount,
+      currentBalance: number,
+      metadata: LiabilityMetadata | undefined,
+      statementBalance: number,
+      settledSinceStatement: number,
+      startOfToday: dayjs.Dayjs,
+      simulationDays: number,
+      spendingFlows: Flow[],
+      context: SimulationContext,
+    ) => Obligation[];
+  }
+).generateObligations;
 
 // Minimal mock for Account
 const mockAcc = (id: string, subtype: AccountSubtype, name: string) =>
@@ -34,7 +57,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         { kind: 'OUTFLOW', accountId: 'cc-1', amount: 150, dayOffset: 35 }, // May 6th -> Due June 15th
       ] as any[];
 
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         cc,
         0, // currentBalance
         metadata,
@@ -70,7 +93,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         { kind: 'OUTFLOW', accountId: 'cc-1', amount: 80, dayOffset: 10 }, // April 11th > April 5th STATEMENT -> Due May 20th
       ] as any[];
 
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         cc,
         0,
         metadata2,
@@ -95,7 +118,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     const metadata = { emiDay: 5, emiAmount: 500 };
 
     it('projects multiple EMI payments if the simulation window allows', () => {
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loan,
         1200, // currentBalance
         metadata,
@@ -117,7 +140,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     });
 
     it('caps the last obligation to the remaining balance', () => {
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loan,
         600, // currentBalance
         metadata,
@@ -136,7 +159,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
 
     it('does not generate obligations if emiAmount is missing for loans (FUL-101)', () => {
       const loanNoEmi = mockAcc('loan-2', AccountSubtype.LOAN, 'Large Loan');
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loanNoEmi,
         24000, // currentBalance
         {}, // No emiAmount
@@ -154,7 +177,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
 
     it('does not generate obligations for general liabilities if emiAmount is missing (FUL-101)', () => {
       const otherLiability = mockAcc('other-1', AccountSubtype.OTHER, 'Vendor Payable');
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         otherLiability,
         5000000,
         {},
@@ -170,7 +193,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     });
 
     it('reduces obligations by settledSinceStatement', () => {
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loan,
         1200, // currentBalance
         metadata,
@@ -190,7 +213,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     });
 
     it('skips obligations if settledSinceStatement covers them fully', () => {
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loan,
         1200, // currentBalance
         metadata,
@@ -211,7 +234,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     it('uses minimumPaymentAmount as fallback for emiAmount for loans', () => {
       const loanMin = mockAcc('loan-min', AccountSubtype.LOAN, 'Loan with Min');
       const metadataMin = { minimumPaymentAmount: 750 };
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         loanMin,
         2000,
         metadataMin,
@@ -235,7 +258,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         { kind: 'OUTFLOW', accountId: 'cc-1', amount: 100.005, dayOffset: 5 },
       ] as any[];
 
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         cc,
         0,
         { statementDay: 1, dueDay: 15 },
@@ -261,7 +284,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       };
 
       // Current bill has 200 remaining statement balance
-      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+      const obligations = generateObligations(
         cc,
         1000, // current balance
         metadata,
@@ -295,7 +318,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         minimumPaymentPercent: 5,
       };
 
-      const obligationsHighPercent = (LiabilityFlowGenerator as any).generateObligations(
+      const obligationsHighPercent = generateObligations(
         cc,
         1000,
         metadata,
@@ -308,7 +331,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       );
       expect(obligationsHighPercent[0].amount).toBe(50);
 
-      const obligationsHighAbsolute = (LiabilityFlowGenerator as any).generateObligations(
+      const obligationsHighAbsolute = generateObligations(
         cc,
         100,
         metadata,

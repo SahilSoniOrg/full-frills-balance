@@ -18,5 +18,5 @@ export default function AccountsRoute() {
     } as Href);
   }, [params, router, shouldNormalize]);
 
-  return shouldNormalize ? null : <AccountsListScreen activeTab="accounts" />;
+  return shouldNormalize ? null : <AccountsListScreen />;
 }

@@ -109,5 +109,9 @@ describe('ArchiveVisibilityScope', () => {
     activeRef.current = false;
     rerender({});
     expect(result.current.showArchived).toBe(false);
+
+    activeRef.current = true;
+    rerender({});
+    expect(result.current.showArchived).toBe(false);
   });
 });

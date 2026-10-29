@@ -3,7 +3,7 @@ import { CommitmentsGroupPager } from '@/src/features/commitments/components/Com
 export type { CommitmentsTab } from '@/src/features/commitments/components/CommitmentsGroupPager';
 
 /** Both `commitments` and `planned-payments` routes render the same group shell. */
-export function CommitmentsPage(_props?: { activeTab?: 'budgets' | 'planned' }) {
+export function CommitmentsPage() {
   return <CommitmentsGroupPager />;
 }
 
