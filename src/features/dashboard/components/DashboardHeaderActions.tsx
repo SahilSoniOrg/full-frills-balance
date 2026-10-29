@@ -40,7 +40,11 @@ export function DashboardHeaderActions({
             variant="clear"
             onPress={onSmsPress}
             accessibilityRole="button"
-            accessibilityLabel="View transaction inbox"
+            accessibilityLabel={
+              unreadSmsCount > 0
+                ? `View transaction inbox, ${unreadSmsCount} item${unreadSmsCount === 1 ? '' : 's'} need${unreadSmsCount === 1 ? 's' : ''} review`
+                : 'View transaction inbox'
+            }
             iconColor={theme.text}
           />
           {unreadSmsCount > 0 ? (
@@ -55,7 +59,11 @@ export function DashboardHeaderActions({
           variant="clear"
           onPress={onNotificationsPress}
           accessibilityRole="button"
-          accessibilityLabel="View Notifications"
+          accessibilityLabel={
+            notificationCount > 0
+              ? `View notifications, ${notificationCount} notification${notificationCount === 1 ? '' : 's'}`
+              : 'View notifications'
+          }
           iconColor={theme.text}
         />
         {notificationCount > 0 ? (
