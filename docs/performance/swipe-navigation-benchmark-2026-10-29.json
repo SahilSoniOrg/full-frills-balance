@@ -1,0 +1,461 @@
+{
+  "measured_on": "2026-10-29",
+  "implementation_commits": [
+    "7e64799304b9cb75df489d7952617bb5ef220016 perf(budget): batch list lookups and reuse overlapping valuations",
+    "1c33489edf79c7bea1eb0791d86aa1cee02beb92 perf(nav): pause hidden tab reads and isolate swipe updates"
+  ],
+  "snapshot_note": "Measurements precede the pre-commit correction deriving paused isLoadingMore from enabled instead of updating state in the effect. Final commits were not re-benchmarked. Exact measured file/bundle hashes are retained in provenance.",
+  "results": {
+    "fixtureSha256": "123bacf106e3ea7d6c928e465eb664f75fef29f61a3123d4f177ea74731f8bdc",
+    "runs": [
+      {
+        "run": "01-baseline-trace",
+        "variant": "baseline",
+        "dev": false,
+        "windowMs": 27322,
+        "callbackSamples": 1467,
+        "startupMaxJsGapMs": 29.71066701412201,
+        "jsGapP95Ms": 17.587890625,
+        "jsGapMaxMs": 286,
+        "jsGapsOver50Ms": 17,
+        "jsGapsOver100Ms": 13,
+        "memoryMiB": [
+          504.359375,
+          541.984375,
+          512.859375
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 3387,
+        "budgetEntryReadyMs": [
+          0,
+          0
+        ],
+        "counts": {
+          "budget_transaction_observer": 60,
+          "currency_conversion": 310000
+        }
+      },
+      {
+        "run": "02-changed-trace",
+        "variant": "changed",
+        "dev": false,
+        "windowMs": 27866,
+        "callbackSamples": 1524,
+        "startupMaxJsGapMs": 4755.643208026886,
+        "jsGapP95Ms": 17.2421875,
+        "jsGapMaxMs": 553.834716796875,
+        "jsGapsOver50Ms": 16,
+        "jsGapsOver100Ms": 9,
+        "memoryMiB": [
+          466.75,
+          516.59375,
+          524.1875
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 7991,
+        "budgetEntryReadyMs": [
+          562,
+          606
+        ],
+        "counts": {
+          "budget_transaction_observer": 22,
+          "currency_conversion": 120000
+        }
+      },
+      {
+        "run": "03-changed-trace",
+        "variant": "changed",
+        "dev": false,
+        "windowMs": 27963,
+        "callbackSamples": 1531,
+        "startupMaxJsGapMs": 6154.258957982063,
+        "jsGapP95Ms": 17.2431640625,
+        "jsGapMaxMs": 548.843505859375,
+        "jsGapsOver50Ms": 16,
+        "jsGapsOver100Ms": 8,
+        "memoryMiB": [
+          509.71875,
+          561.109375,
+          461.53125
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 7828,
+        "budgetEntryReadyMs": [
+          570,
+          602
+        ],
+        "counts": {
+          "budget_transaction_observer": 22,
+          "currency_conversion": 120000
+        }
+      },
+      {
+        "run": "04-baseline-trace",
+        "variant": "baseline",
+        "dev": false,
+        "windowMs": 27726,
+        "callbackSamples": 1351,
+        "startupMaxJsGapMs": 38.80658400058746,
+        "jsGapP95Ms": 17.68505859375,
+        "jsGapMaxMs": 2699,
+        "jsGapsOver50Ms": 18,
+        "jsGapsOver100Ms": 10,
+        "memoryMiB": [
+          543.84375,
+          557.875,
+          567.203125
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 3958,
+        "budgetEntryReadyMs": [
+          0,
+          0
+        ],
+        "counts": {
+          "budget_transaction_observer": 60,
+          "currency_conversion": 310000
+        }
+      },
+      {
+        "run": "05-baseline-trace",
+        "variant": "baseline",
+        "dev": false,
+        "windowMs": 27109,
+        "callbackSamples": 1427,
+        "startupMaxJsGapMs": 32.183542013168335,
+        "jsGapP95Ms": 17.50732421875,
+        "jsGapMaxMs": 883,
+        "jsGapsOver50Ms": 15,
+        "jsGapsOver100Ms": 8,
+        "memoryMiB": [
+          541.0625,
+          550.734375,
+          501.40625
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 3508,
+        "budgetEntryReadyMs": [
+          0,
+          0
+        ],
+        "counts": {
+          "budget_transaction_observer": 60,
+          "currency_conversion": 310000
+        }
+      },
+      {
+        "run": "06-changed-trace",
+        "variant": "changed",
+        "dev": false,
+        "windowMs": 27628,
+        "callbackSamples": 1505,
+        "startupMaxJsGapMs": 5161.710915923119,
+        "jsGapP95Ms": 17.2333984375,
+        "jsGapMaxMs": 565.004638671875,
+        "jsGapsOver50Ms": 16,
+        "jsGapsOver100Ms": 10,
+        "memoryMiB": [
+          506.5,
+          548.765625,
+          543.296875
+        ],
+        "routeSequence": [
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index",
+          "accounts",
+          "commitments",
+          "activity",
+          "planned-payments",
+          "categories",
+          "index"
+        ],
+        "firstBudgetReadyAfterDashboardMs": 7931,
+        "budgetEntryReadyMs": [
+          575,
+          616
+        ],
+        "counts": {
+          "budget_transaction_observer": 22,
+          "currency_conversion": 120000
+        }
+      }
+    ],
+    "medians": {
+      "baseline": {
+        "jsGapP95Ms": 17.587890625,
+        "jsGapMaxMs": 883,
+        "jsGapsOver50Ms": 17,
+        "jsGapsOver100Ms": 10,
+        "firstBudgetReadyAfterDashboardMs": 3508
+      },
+      "changed": {
+        "jsGapP95Ms": 17.2421875,
+        "jsGapMaxMs": 553.834716796875,
+        "jsGapsOver50Ms": 16,
+        "jsGapsOver100Ms": 9,
+        "firstBudgetReadyAfterDashboardMs": 7931
+      }
+    },
+    "limits": [
+      "iOS simulator on shared Mac; host contention affects timing",
+      "requestAnimationFrame measures JS scheduling gaps, not native frame drops",
+      "RSS is simulator process memory, not physical-device footprint",
+      "Synthetic high-overlap budget workload; not representative prevalence"
+    ]
+  },
+  "provenance": {
+    "head": "f0860ae66c0e3ddc05143022fe5e6cb2f1971f49",
+    "baseline": "HEAD performance files; other working changes held constant",
+    "files": {
+      "src/features/commitments/components/CommitmentsGroupPager.tsx": {
+        "baseline": "bf15565847650152fabe9045c30cc73ae5fd4da1cb2ef5998e9b8414e641521c",
+        "changed": "cb9daea04390c277c6ebcc50852de41e20eefead7024d828f1f0edfdcb803baf"
+      },
+      "src/features/dashboard/hooks/useDashboardViewModel.ts": {
+        "baseline": "9fb76e236d86ad671ef606ab8d6fd920dd618152a67c5a3b6b04e329658cfd51",
+        "changed": "10cd0bf846ea0c12b31ff888334875f992be5e58642e4aef300b7a37273a6909"
+      },
+      "src/features/dashboard/screens/DashboardScreen.tsx": {
+        "baseline": "39d72e89a7d24cdf8b26335854e108bb290661cc7b6dd9bdc1ebae87dd72c44c",
+        "changed": "32ac5b28746b1063c673697f38c8c8afaee3485fc5d30b35921c098525b902fd"
+      },
+      "src/features/journal/hooks/useJournals.ts": {
+        "baseline": "6c03c871ae979150ad0583a33928031c2ada1aed92815ab6a6f36ce1792a4fe0",
+        "changed": "db76f932eff39f45ef7a036a51f5f2ee1185ced6bf6a522be0309f32317baf68"
+      },
+      "src/features/journal/list/screens/JournalScreen.tsx": {
+        "baseline": "099f05842bc4f66f2b4fec94d8461995f89bf92abdec9c23ff8badc0d6413238",
+        "changed": "8b5bc656217186f34fca76a47d142b9983a8d603e485336e3fe241b44e2993fa"
+      },
+      "src/features/navigation/PrimaryPagerNavigator.shared.tsx": {
+        "baseline": "4cb83d6beb22959d8fe74084f44aeb5c0f99786896231f456b4df17c47fce583",
+        "changed": "47e73928b04434be144b2daa71e94f48b9911dc4e572f9fcdf1bcb713bfbc441"
+      },
+      "src/features/navigation/PrimaryPagerViewport.native.tsx": {
+        "baseline": "e94faa875e915235bddd096f3e21214477a7c73c4e4d2ffee219d47caf34eab9",
+        "changed": "7b88d21ee96fcb844455b72aa33b7816593f80051912ec1757772b5b3cbc2ead"
+      },
+      "src/features/navigation/PrimaryPagerViewport.web.tsx": {
+        "baseline": "16b345d9b3cd290d667e38ec7709e015fdcc719dd43a95c4351724f4b12d9d62",
+        "changed": "92225a1292667cb7a74b5009ca6fb6362478f305a73309fb354330622b6dd3bb"
+      },
+      "src/hooks/usePaginatedObservable.ts": {
+        "baseline": "e6d8fab13019c4b990022ce3dbb455c3872775e4a27cf6a51d90f6f957d5acce",
+        "changed": "3d0d7379399c88245754cd5616636ebe858cc7776605e1273dc6e4aa5fee20e4"
+      },
+      "src/navigation/primaryPageNavigation.tsx": {
+        "baseline": "a545688d61081de2a5c353c2f4659199cd43735f8182e873930693193a6004b2",
+        "changed": "a15ab6a01930ebb8e4b50e22a62e613f33a961a7936816adf74433685bc1ca4a"
+      },
+      "src/navigation/GroupInnerPager.tsx": {
+        "baseline": "fb6e0c37d0eb0b94fce3bdda80d0f464878d61d00481d071b1ee3e5244cdb801",
+        "changed": "b45c5f4a013bb12cb9ae2a12fa20863874d4a5349b3a0edf4271e0d55830e269"
+      },
+      "src/services/budget/budgetCalculationHelpers.ts": {
+        "baseline": "efd7b49a7657708c7a74f28fd71b5adf997a867289b5defc56234c52b649e3a6",
+        "changed": "848ee890c2d46e1badb55600e020cd11dbd4b837fe950b38749d9e3c8a771248"
+      },
+      "src/features/budget/hooks/useBudgetListViewModel.ts": {
+        "baseline": "9a5a866ab9f442adb5cb461bddb0de898e6f15e8885903a0fc71e118e49ed36d",
+        "changed": "4e69aabb3a6ea7652a196a13600c52236c74822c0c3ba515a62886e693a7744a"
+      }
+    },
+    "sourceRoot": "/tmp/ffb-swipe-benchmark-sources",
+    "bundles": {
+      "baseline": "10ce520179b105966a38bd6fad3cd1cf342a12cbf4afada123ef27be433b30b8",
+      "changed": "42b670e41465e97af3576f205762e367d99bd66afd14bce6483981609e56c152"
+    },
+    "environment": {
+      "host": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+      "architecture": "arm64",
+      "simulator": "iPhone 17 Daily, iOS 26.4",
+      "configuration": "Release; embedded Hermes bytecode; __DEV__ false requested; same native binary for both variants",
+      "fixtures": "Synthetic USD-only; 10,000 posted expense journals; 20,000 postings; 20 budgets with identical scopes over 10 categories",
+      "nativeFrameMetrics": "Unavailable: tool supports connected iOS devices only"
+    },
+    "controls": [
+      "Native widget writes disabled equally in isolated copies to avoid sharing the production app group",
+      "Analytics DSN and API key unset; dotenv loading disabled"
+    ],
+    "nativeExecutableSha256": "4d2d557b40be959e816853957a1e8a282b79f69c89dac83d17ccb22008e3f37a"
+  },
+  "calculation_control": {
+    "scope": "Node/Jest algorithm benchmark; in-memory repository and identity-conversion doubles; excludes SQLite, real FX, React, native rendering, and device scheduling",
+    "transactionsPerBudget": 5000,
+    "budgets": 20,
+    "allOutputsIdentical": true,
+    "samples": [
+      {
+        "round": 0,
+        "variant": "baseline",
+        "elapsedMs": 761.3786250000012,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      },
+      {
+        "round": 0,
+        "variant": "changed",
+        "elapsedMs": 608.6266250000008,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 1,
+        "variant": "changed",
+        "elapsedMs": 526.8001249999998,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 1,
+        "variant": "baseline",
+        "elapsedMs": 724.7922499999986,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      },
+      {
+        "round": 2,
+        "variant": "baseline",
+        "elapsedMs": 685.4803339999999,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      },
+      {
+        "round": 2,
+        "variant": "changed",
+        "elapsedMs": 536.3484159999989,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 3,
+        "variant": "changed",
+        "elapsedMs": 534.6264580000006,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 3,
+        "variant": "baseline",
+        "elapsedMs": 733.5452499999992,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      },
+      {
+        "round": 4,
+        "variant": "baseline",
+        "elapsedMs": 664.2170829999995,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      },
+      {
+        "round": 4,
+        "variant": "changed",
+        "elapsedMs": 629.6752500000002,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 5,
+        "variant": "changed",
+        "elapsedMs": 669.4607079999987,
+        "accountLookups": 1,
+        "journalLookups": 1,
+        "conversions": 5000
+      },
+      {
+        "round": 5,
+        "variant": "baseline",
+        "elapsedMs": 840.2205410000006,
+        "accountLookups": 20,
+        "journalLookups": 20,
+        "conversions": 100000
+      }
+    ]
+  }
+}
