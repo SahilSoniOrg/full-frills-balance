@@ -21,6 +21,7 @@ import {
 } from '@/src/navigation/primaryPages';
 import { PrimaryPageNavigationProvider } from '@/src/navigation/primaryPageNavigation';
 import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
+import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -109,15 +110,20 @@ export function createPrimaryPagerContent(
     }, [activeRouteName, primaryNavigation?.reportActiveRoute]);
 
     useEffect(() => {
-      setMountedIndices(previous => {
-        const next = isTransitioning ? new Set(previous) : new Set<number>();
-        for (let offset = -1; offset <= 1; offset += 1) {
-          const index = swipeIndex + offset;
-          if (index >= 0 && index < swipePageCount) next.add(index);
-        }
-        return next.size === previous.size && [...next].every(index => previous.has(index))
-          ? previous
-          : next;
+      // Never mount speculative neighbors while the native pager is moving.
+      if (isTransitioning) return;
+      return runAfterInteractions(() => {
+        setMountedIndices(previous => {
+          // Retain visited neighbors: eviction rebuilt observers and lists on every return.
+          const next = new Set(previous);
+          for (let offset = -1; offset <= 1; offset += 1) {
+            const index = swipeIndex + offset;
+            if (index >= 0 && index < swipePageCount) next.add(index);
+          }
+          return next.size === previous.size && [...next].every(index => previous.has(index))
+            ? previous
+            : next;
+        });
       });
     }, [isTransitioning, swipeIndex, swipePageCount]);
 

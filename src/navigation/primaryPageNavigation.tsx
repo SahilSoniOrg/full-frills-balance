@@ -28,6 +28,7 @@ type ScreenNavigationValue = Pick<
   'activeRouteName' | 'navigateToPage' | 'setPageSwipeLock'
 >;
 const ScreenNavigationContext = createContext<ScreenNavigationValue | null>(null);
+const RetainedGroupsContext = createContext<ReadonlySet<PrimaryPageGroup> | null>(null);
 
 export function PrimaryPageNavigationProvider({
   value,
@@ -43,9 +44,11 @@ export function PrimaryPageNavigationProvider({
   );
   return (
     <PrimaryPageNavigationContext.Provider value={value}>
-      <ScreenNavigationContext.Provider value={screenNavigation}>
-        {children}
-      </ScreenNavigationContext.Provider>
+      <RetainedGroupsContext.Provider value={value.keptAliveGroups}>
+        <ScreenNavigationContext.Provider value={screenNavigation}>
+          {children}
+        </ScreenNavigationContext.Provider>
+      </RetainedGroupsContext.Provider>
     </PrimaryPageNavigationContext.Provider>
   );
 }
@@ -64,8 +67,8 @@ export function usePrimaryPageNavigation(): ScreenNavigationValue | null {
  */
 export function usePrimaryPageAlive(group: PrimaryPageGroup): boolean {
   const isFocused = useIsFocused();
-  const pageNavigation = usePrimaryPagerNavigation();
-  return isFocused || (pageNavigation?.keptAliveGroups.has(group) ?? false);
+  const retainedGroups = useContext(RetainedGroupsContext);
+  return isFocused || (retainedGroups?.has(group) ?? false);
 }
 
 /** Live reads belong to the selected group; retained pages keep their last paint. */

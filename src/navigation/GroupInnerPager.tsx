@@ -135,11 +135,7 @@ export function GroupInnerPager({
       writePageProgress(pageProgress, next);
       return;
     }
-    if (
-      !scrollEnabledRef.current ||
-      !userGestureRef.current ||
-      next === committedIndexRef.current
-    ) {
+    if (!scrollEnabledRef.current || next === committedIndexRef.current) {
       return;
     }
 

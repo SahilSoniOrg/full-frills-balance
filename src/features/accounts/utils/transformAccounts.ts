@@ -125,6 +125,7 @@ export function transformAccountsToSections(
     else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
 
     const typeAccounts = section.data;
+    const accountsById = new Map(typeAccounts.map(account => [account.id, account]));
     const accountsByParent = new Map<string, AccountFields[]>();
     typeAccounts.forEach(a => {
       if (a.parentAccountId) {
@@ -232,7 +233,9 @@ export function transformAccountsToSections(
             : new Date(account.reconciledAt)
           : undefined,
         isArchived: isAccountArchived(account),
-        parentName: typeAccounts.find(p => p.id === account.parentAccountId)?.name,
+        parentName: account.parentAccountId
+          ? accountsById.get(account.parentAccountId)?.name
+          : undefined,
       };
 
       viewModel = createdViewModel;
@@ -250,9 +253,8 @@ export function transformAccountsToSections(
       }
     };
 
-    rootAccounts.forEach(root => flatten(root, 0));
-
     const isCollapsed = collapsedSections.has(section.title);
+    if (!isCollapsed) rootAccounts.forEach(root => flatten(root, 0));
 
     return {
       title: section.title,

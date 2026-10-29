@@ -132,7 +132,10 @@ export function PrimaryPagerViewport({
       programmaticTargetRef.current = null;
       return;
     }
-    if (!scrollEnabled || !userGestureRef.current || index === committedIndexRef.current) return;
+    // Native selection can arrive after idle, especially while JS is busy.
+    // Programmatic events are filtered above; do not discard a real selection
+    // merely because the idle callback has already cleared the gesture flag.
+    if (!scrollEnabled || index === committedIndexRef.current) return;
 
     userGestureRef.current = false;
     pendingUserIndexRef.current = index;
