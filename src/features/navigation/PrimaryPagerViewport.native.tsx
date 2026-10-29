@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import PagerView, {
   type PageScrollStateChangedNativeEventData,
@@ -6,7 +6,6 @@ import PagerView, {
 } from 'react-native-pager-view';
 import Animated, { useEvent } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler';
 import { PrimaryPageGestureProvider } from '@/src/navigation/primaryPageNavigation';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 
@@ -21,7 +20,7 @@ export function PrimaryPagerViewport({
   pages,
   committedIndex,
   mountedIndices,
-  isTransitioning,
+  isTransitioning: _isTransitioning,
   scrollEnabled,
   pageProgress,
   onPageSelected,
@@ -35,7 +34,6 @@ export function PrimaryPagerViewport({
   const programmaticTargetRef = useRef<number | null>(null);
   const userGestureRef = useRef(false);
   const gestureEpochRef = useRef(0);
-  const nativeGesture = useMemo(() => Gesture.Native(), []) as GestureType;
   const pageCount = pages.length;
 
   const onPageScroll = useEvent<PagerViewOnPageScrollEvent>(
@@ -47,28 +45,34 @@ export function PrimaryPagerViewport({
     ['onPageScroll'],
   );
 
+  // Do not wrap PagerView in Gesture.Native()/GestureDetector: on iOS that
+  // intercepts the UIScrollView touch stream and page swipes never move.
+  // Chart/swipe-to-remove composition uses setPageSwipeLock instead.
   useEffect(() => {
-    onPageGestureReady(nativeGesture);
+    onPageGestureReady(null);
     return () => onPageGestureReady(null);
-  }, [nativeGesture, onPageGestureReady]);
+  }, [onPageGestureReady]);
 
   useEffect(() => {
     if (renderedIndexRef.current === committedIndex) return;
     renderedIndexRef.current = committedIndex;
     committedIndexRef.current = committedIndex;
-    writePageProgress(pageProgress, committedIndex);
 
+    // Finger swipe already moved the pager — just clear the pending flag.
     if (pendingUserIndexRef.current === committedIndex) {
       pendingUserIndexRef.current = null;
       programmaticTargetRef.current = null;
+      onTransitioningChange(false);
       return;
     }
 
     userGestureRef.current = false;
     gestureEpochRef.current += 1;
     programmaticTargetRef.current = committedIndex;
-    pagerRef.current?.setPageWithoutAnimation(committedIndex);
-  }, [committedIndex, pageProgress]);
+    // Tab / Back / deep-link: animate the pan so it matches finger swipes.
+    onTransitioningChange(true);
+    pagerRef.current?.setPage(committedIndex);
+  }, [committedIndex, onTransitioningChange]);
 
   useEffect(() => {
     if (scrollEnabled) return;
@@ -108,6 +112,11 @@ export function PrimaryPagerViewport({
       onTransitioningChange(scrollEnabled);
       return;
     }
+    if (scrollState === 'settling') {
+      // Keep the transition lock through the animated settle (finger or setPage).
+      onTransitioningChange(true);
+      return;
+    }
     if (scrollState !== 'idle') return;
 
     const epoch = gestureEpochRef.current;
@@ -120,36 +129,40 @@ export function PrimaryPagerViewport({
   };
 
   return (
-    <PrimaryPageGestureProvider value={nativeGesture}>
-      <GestureDetector gesture={nativeGesture}>
-        <AnimatedPagerView
-          ref={pagerRef}
-          style={styles.pager}
-          initialPage={committedIndex}
-          offscreenPageLimit={1}
-          scrollEnabled={scrollEnabled}
-          keyboardDismissMode="none"
-          onPageScroll={onPageScroll}
-          onPageSelected={onPageSelectedNative}
-          onPageScrollStateChanged={onPageScrollStateChanged}
-        >
-          {pages.map((page, index) => {
-            const active = index === committedIndex && !isTransitioning;
-            return (
-              <View
-                key={page.key}
-                collapsable={false}
-                style={styles.page}
-                pointerEvents={active ? 'auto' : 'none'}
-                accessibilityElementsHidden={!active}
-                importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
-              >
-                {mountedIndices.has(index) || index === committedIndex ? page.render() : null}
-              </View>
-            );
-          })}
-        </AnimatedPagerView>
-      </GestureDetector>
+    <PrimaryPageGestureProvider value={null}>
+      <AnimatedPagerView
+        ref={pagerRef}
+        style={styles.pager}
+        initialPage={committedIndex}
+        // Keep both neighbors warm so a drag always reveals real content, not a blank.
+        offscreenPageLimit={2}
+        scrollEnabled={scrollEnabled}
+        keyboardDismissMode="none"
+        onPageScroll={onPageScroll}
+        onPageSelected={onPageSelectedNative}
+        onPageScrollStateChanged={onPageScrollStateChanged}
+      >
+        {pages.map((page, index) => {
+          // Do not tie pointerEvents / a11y to isTransitioning: flipping them at
+          // drag-start makes ScrollView/FlashList jump on the page sliding away.
+          const isCommitted = index === committedIndex;
+          return (
+            <View
+              // Route name, not route.key: placeholders use key===name until first
+              // visit, then navigation mints a new key — remounting mid-pan feels
+              // like opening a fresh screen instead of sliding.
+              key={page.name}
+              collapsable={false}
+              style={styles.page}
+              pointerEvents={isCommitted ? 'auto' : 'none'}
+              accessibilityElementsHidden={!isCommitted}
+              importantForAccessibility={isCommitted ? 'auto' : 'no-hide-descendants'}
+            >
+              {mountedIndices.has(index) || isCommitted ? page.render() : null}
+            </View>
+          );
+        })}
+      </AnimatedPagerView>
     </PrimaryPageGestureProvider>
   );
 }

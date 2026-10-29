@@ -67,6 +67,14 @@ export const PRIMARY_GROUP_DEFAULT_ROUTE = Object.fromEntries(
   ]),
 ) as Readonly<Record<PrimaryPageGroup, string>>;
 
+/** Outer swipe strip order — sibling tabs live in an inner pager per group. */
+export const PRIMARY_SWIPE_GROUPS = [
+  'dashboard',
+  'accounts',
+  'commitments',
+  'activity',
+] as const satisfies readonly PrimaryPageGroup[];
+
 const rememberedGroupRoutes = new Map<PrimaryPageGroup, string>();
 
 /** Session-local group memory. Survives workplace remounts; clear in tests. */
@@ -97,6 +105,54 @@ export function primaryPageIndex(routeName?: string): number {
 
 export function primaryPageForIndex(index: number): PrimaryPage | undefined {
   return PRIMARY_PAGES[index];
+}
+
+export function primaryRoutesInGroup(group: PrimaryPageGroup): readonly string[] {
+  return PRIMARY_PAGES.filter(page => page.group === group).map(page => page.routeName);
+}
+
+export function primarySwipeIndex(routeName?: string): number {
+  const page = primaryPageFromRouteName(routeName);
+  if (!page) return 0;
+  const index = PRIMARY_SWIPE_GROUPS.indexOf(page.group);
+  return index >= 0 ? index : 0;
+}
+
+export function primarySwipeGroupForIndex(index: number): PrimaryPageGroup | undefined {
+  return PRIMARY_SWIPE_GROUPS[index];
+}
+
+/** Sibling index within a multi-leaf group (Accounts, Plans); 0 otherwise. */
+export function primaryInnerIndex(routeName?: string): number {
+  const page = primaryPageFromRouteName(routeName);
+  if (!page) return 0;
+  const routes = primaryRoutesInGroup(page.group);
+  const index = routes.indexOf(page.routeName);
+  return index >= 0 ? index : 0;
+}
+
+export function primaryAdjacentSwipeGroup(
+  group: PrimaryPageGroup,
+  direction: 'prev' | 'next',
+): PrimaryPageGroup | undefined {
+  const index = PRIMARY_SWIPE_GROUPS.indexOf(group);
+  if (index < 0) return undefined;
+  return PRIMARY_SWIPE_GROUPS[direction === 'next' ? index + 1 : index - 1];
+}
+
+/**
+ * Leaf to open when entering a group from the outer strip.
+ * - from the left (`next`) → first sibling (adjacent to the previous group)
+ * - from the right (`prev`) → last sibling (adjacent to the next group)
+ * Bottom-tab entry should keep using `primaryRouteForGroup` (remembered leaf).
+ */
+export function primaryEntryRouteForGroup(
+  group: PrimaryPageGroup,
+  fromDirection: 'prev' | 'next',
+): string {
+  const routes = primaryRoutesInGroup(group);
+  if (routes.length === 0) return PRIMARY_GROUP_DEFAULT_ROUTE[group];
+  return fromDirection === 'next' ? routes[0]! : routes[routes.length - 1]!;
 }
 
 export type LegacyPrimaryRoute = {

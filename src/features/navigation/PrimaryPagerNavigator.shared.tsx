@@ -3,17 +3,21 @@ import {
   PrivacyScopeProvider,
 } from '@/src/contexts/PrivacyScope';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
-import { AccountsGroupProvider } from '@/src/features/accounts';
-import { CommitmentsGroupProvider } from '@/src/features/commitments';
+import { AccountsGroupPager, AccountsGroupProvider } from '@/src/features/accounts';
+import { CommitmentsGroupPager, CommitmentsGroupProvider } from '@/src/features/commitments';
 import { PrimaryTabBar } from './PrimaryTabBar';
 import type { ContextualAddAction } from './ContextualAddMenu';
 import type { PrimaryPagerPage, PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 import { usePrimaryNavigation } from '@/src/navigation/primaryNavigation';
 import {
-  PRIMARY_PAGES,
-  primaryPageForIndex,
+  PRIMARY_GROUP_DEFAULT_ROUTE,
+  PRIMARY_SWIPE_GROUPS,
+  primaryEntryRouteForGroup,
   primaryPageFromRouteName,
+  primarySwipeGroupForIndex,
+  primarySwipeIndex,
   rememberPrimaryGroupRoute,
+  type PrimaryPageGroup,
 } from '@/src/navigation/primaryPages';
 import { PrimaryPageNavigationProvider } from '@/src/navigation/primaryPageNavigation';
 import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
@@ -38,6 +42,36 @@ export type PrimaryPageNavigatorProps = NavigatorContentProps<
   { onAddAction: (action: ContextualAddAction) => void }
 >;
 
+function renderGroupPage(
+  group: PrimaryPageGroup,
+  descriptors: PrimaryPageNavigatorProps['descriptors'],
+  routes: PrimaryPageNavigatorProps['state']['routes'],
+) {
+  if (group === 'accounts') {
+    return (
+      <PrivacyScopeProvider scopeKey="accounts">
+        <AccountsGroupPager />
+      </PrivacyScopeProvider>
+    );
+  }
+  if (group === 'commitments') {
+    return (
+      <PrivacyScopeProvider scopeKey="commitments">
+        <CommitmentsGroupPager />
+      </PrivacyScopeProvider>
+    );
+  }
+
+  const routeName = PRIMARY_GROUP_DEFAULT_ROUTE[group];
+  const route = routes.find(item => item.name === routeName);
+  const descriptor = route
+    ? (descriptors[route.key] ?? descriptors[route.name])
+    : descriptors[routeName];
+  const page = primaryPageFromRouteName(routeName);
+  if (!page || !descriptor) return null;
+  return <PrivacyScopeProvider scopeKey={page.group}>{descriptor.render()}</PrivacyScopeProvider>;
+}
+
 export function createPrimaryPagerContent(
   PrimaryPagerViewport: ComponentType<PrimaryPagerViewportProps>,
 ): ComponentType<PrimaryPageNavigatorProps> {
@@ -57,13 +91,15 @@ export function createPrimaryPagerContent(
     const [isScreenReaderEnabled, setScreenReaderEnabled] = useState(false);
     const [isAppActive, setAppActive] = useState(AppState.currentState === 'active');
     const [isTransitioning, setTransitioning] = useState(false);
-    const [mountedIndices, setMountedIndices] = useState<ReadonlySet<number>>(
-      () => new Set([state.index]),
-    );
-    const [pageSwipeLocks, setPageSwipeLocks] = useState<ReadonlySet<string>>(() => new Set());
-    const pageProgress = useSharedValue(state.index);
     const activeRouteName = state.routes[state.index]?.name ?? 'index';
     const activePage = primaryPageFromRouteName(activeRouteName);
+    const swipeIndex = primarySwipeIndex(activeRouteName);
+    const swipePageCount = PRIMARY_SWIPE_GROUPS.length;
+    const [mountedIndices, setMountedIndices] = useState<ReadonlySet<number>>(
+      () => new Set([swipeIndex]),
+    );
+    const [pageSwipeLocks, setPageSwipeLocks] = useState<ReadonlySet<string>>(() => new Set());
+    const pageProgress = useSharedValue(swipeIndex);
     const routeNames = useMemo(() => state.routes.map(route => route.name), [state.routes]);
 
     useEffect(() => {
@@ -72,31 +108,27 @@ export function createPrimaryPagerContent(
     }, [activeRouteName, primaryNavigation?.reportActiveRoute]);
 
     useEffect(() => {
-      // Grow the mount set to cover the committed page and its neighbors so a
-      // swipe/tap destination can paint without waiting for eviction.
       setMountedIndices(previous => {
         const next = new Set(previous);
-        next.add(state.index);
-        if (state.index > 0) next.add(state.index - 1);
-        if (state.index + 1 < state.routes.length) next.add(state.index + 1);
+        for (let offset = -2; offset <= 2; offset += 1) {
+          const index = swipeIndex + offset;
+          if (index >= 0 && index < swipePageCount) next.add(index);
+        }
         return next;
       });
-    }, [state.index, state.routes.length]);
+    }, [swipeIndex, swipePageCount]);
 
     useEffect(() => {
-      // After settle, keep only the sliding window {index-1, index, index+1}.
       if (isTransitioning) return;
       setMountedIndices(() => {
-        const next = new Set<number>([state.index]);
-        if (state.index > 0) next.add(state.index - 1);
-        if (state.index + 1 < state.routes.length) next.add(state.index + 1);
+        const next = new Set<number>();
+        for (let offset = -2; offset <= 2; offset += 1) {
+          const index = swipeIndex + offset;
+          if (index >= 0 && index < swipePageCount) next.add(index);
+        }
         return next;
       });
-    }, [isTransitioning, state.index, state.routes.length]);
-
-    useEffect(() => {
-      pageProgress.value = state.index;
-    }, [state.index, pageProgress]);
+    }, [isTransitioning, swipeIndex, swipePageCount]);
 
     useEffect(() => {
       let mounted = true;
@@ -120,17 +152,15 @@ export function createPrimaryPagerContent(
     }, []);
 
     useEffect(() => {
-      // First-route Back policy: any non-Dashboard primary page returns to
-      // Dashboard; Dashboard yields to the surrounding navigator/system.
       if (Platform.OS === 'web' || !isFocused) return;
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
         if (primaryNavigation?.drawerVisible) return false;
-        if (state.index === 0) return false;
+        if (swipeIndex === 0) return false;
         actions.navigate('index');
         return true;
       });
       return () => subscription.remove();
-    }, [actions, isFocused, primaryNavigation?.drawerVisible, state.index]);
+    }, [actions, isFocused, primaryNavigation?.drawerVisible, swipeIndex]);
 
     const setPageSwipeLock = useCallback((lockId: string, locked: boolean) => {
       setPageSwipeLocks(previous => {
@@ -146,7 +176,10 @@ export function createPrimaryPagerContent(
       (routeName: string) => {
         if (!primaryPageFromRouteName(routeName) || !routeNames.includes(routeName)) return;
         if (routeName === activeRouteName) return;
-        setTransitioning(false);
+        // Only lock the outer strip when the group page itself changes.
+        if (primarySwipeIndex(routeName) !== primarySwipeIndex(activeRouteName)) {
+          setTransitioning(true);
+        }
         actions.navigate(routeName);
       },
       [actions, activeRouteName, routeNames],
@@ -154,11 +187,16 @@ export function createPrimaryPagerContent(
 
     const onUserPageSelected = useCallback(
       (index: number) => {
-        const page = primaryPageForIndex(index);
-        if (!page || !routeNames.includes(page.routeName)) return;
-        actions.navigate(page.routeName);
+        const group = primarySwipeGroupForIndex(index);
+        if (!group) return;
+        const fromIndex = primarySwipeIndex(activeRouteName);
+        // Enter from the side you swiped from; bottom tab keeps remembered leaf.
+        const fromDirection = index >= fromIndex ? 'next' : 'prev';
+        const routeName = primaryEntryRouteForGroup(group, fromDirection);
+        if (!routeNames.includes(routeName)) return;
+        actions.navigate(routeName);
       },
-      [actions, routeNames],
+      [actions, activeRouteName, routeNames],
     );
 
     const emitTabPress = useCallback(
@@ -180,21 +218,24 @@ export function createPrimaryPagerContent(
 
     const pages = useMemo<PrimaryPagerPage[]>(
       () =>
-        state.routes.map(route => ({
-          key: route.key,
-          name: route.name,
-          render: () => {
-            const page = PRIMARY_PAGES.find(item => item.routeName === route.name);
-            const descriptor = descriptors[route.key];
-            return page && descriptor ? (
-              <PrivacyScopeProvider key={route.key} scopeKey={page.group}>
-                {descriptor.render()}
-              </PrivacyScopeProvider>
-            ) : null;
-          },
+        PRIMARY_SWIPE_GROUPS.map(group => ({
+          key: group,
+          name: group,
+          render: () => renderGroupPage(group, descriptors, state.routes),
         })),
       [descriptors, state.routes],
     );
+
+    const keptAliveGroups = useMemo(() => {
+      const groups = new Set<PrimaryPageGroup>();
+      for (const index of mountedIndices) {
+        const group = primarySwipeGroupForIndex(index);
+        if (group) groups.add(group);
+      }
+      const activeGroup = primarySwipeGroupForIndex(swipeIndex);
+      if (activeGroup) groups.add(activeGroup);
+      return groups;
+    }, [mountedIndices, swipeIndex]);
 
     const scrollEnabled =
       Platform.OS !== 'web' &&
@@ -210,7 +251,7 @@ export function createPrimaryPagerContent(
 
     const viewportProps: PrimaryPagerViewportProps = {
       pages,
-      committedIndex: state.index,
+      committedIndex: swipeIndex,
       mountedIndices,
       isTransitioning,
       scrollEnabled,
@@ -227,6 +268,7 @@ export function createPrimaryPagerContent(
             activeRouteName,
             isTransitioning,
             pageProgress,
+            keptAliveGroups,
             navigateToPage,
             setPageSwipeLock,
           }}

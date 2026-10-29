@@ -29,15 +29,14 @@ import {
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
 import { useTheme } from '@/src/hooks/use-theme';
-import { primaryPageIndex } from '@/src/navigation/primaryPages';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import type { SharedValue } from 'react-native-reanimated';
 
-const TAB_OPTIONS = [
-  { id: 'accounts' as const, label: 'Accounts', pageIndex: primaryPageIndex('accounts') },
-  { id: 'categories' as const, label: 'Categories', pageIndex: primaryPageIndex('categories') },
+export const ACCOUNTS_GROUP_TAB_OPTIONS = [
+  { id: 'accounts' as const, label: 'Accounts', pageIndex: 0 },
+  { id: 'categories' as const, label: 'Categories', pageIndex: 1 },
 ] as const;
 
 export function AccountsListView({
@@ -71,7 +70,13 @@ export function AccountsListView({
   setActiveTab,
   chrome,
   pageProgress,
-}: AccountsListViewModel & { chrome: TabScreenChrome; pageProgress?: SharedValue<number> }) {
+  /** When true, omit ScreenWithChrome + AppTabs (provided by AccountsGroupPager). */
+  embedded = false,
+}: AccountsListViewModel & {
+  chrome: TabScreenChrome;
+  pageProgress?: SharedValue<number>;
+  embedded?: boolean;
+}) {
   const { theme } = useTheme();
 
   const rows = useMemo(() => buildAccountListRows(sections), [sections]);
@@ -228,7 +233,117 @@ export function AccountsListView({
     [selectedAccountIds, isSelectionModeActive],
   );
 
+  const screenTestID = activeTab === 'categories' ? 'categories-screen' : 'accounts-screen';
+
+  const body = (
+    <View style={styles.container}>
+      {!embedded ? (
+        <View style={styles.tabContainer}>
+          <AppTabs
+            options={ACCOUNTS_GROUP_TAB_OPTIONS}
+            value={activeTab}
+            onChange={setActiveTab}
+            pageProgress={pageProgress}
+          />
+        </View>
+      ) : null}
+
+      <FlashList
+        keyboardShouldPersistTaps="handled"
+        data={rows}
+        keyExtractor={keyExtractor}
+        renderItem={renderRow}
+        getItemType={item => item.kind}
+        maintainVisibleContentPosition={{ disabled: true }}
+        extraData={extraData}
+        ListHeaderComponent={
+          <View>
+            {activeTab === 'accounts' ? (
+              <View style={styles.header}>
+                <NetWorthCard
+                  netWorth={netWorth}
+                  totalAssets={totalAssets}
+                  totalLiabilities={totalLiabilities}
+                  currencyCode={currencyCode}
+                  isLoading={isLoading}
+                />
+              </View>
+            ) : (
+              <View style={styles.header}>
+                <CashFlowCard
+                  totalIncome={inflowIncome}
+                  totalExpense={inflowExpense}
+                  inflowPeriod={inflowPeriod}
+                  onChangePeriod={setInflowPeriod}
+                  currencyCode={currencyCode}
+                  isLoading={isLoading || isPeriodLoading}
+                  warning={
+                    inflowPeriod === '30days' && hasUnvaluedEntries
+                      ? AppConfig.strings.reports.incompleteFxWarning
+                      : undefined
+                  }
+                  onWarningPress={
+                    inflowPeriod === '30days' && hasUnvaluedEntries
+                      ? () =>
+                          showIncompleteFxDetails({
+                            context: 'cash-flow',
+                            currencyCode,
+                          })
+                      : undefined
+                  }
+                />
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <EmptyStateView
+                title={
+                  activeTab === 'categories'
+                    ? AppConfig.strings.accounts.emptyCategoriesTitle
+                    : AppConfig.strings.accounts.emptyTitle
+                }
+                subtitle={
+                  activeTab === 'categories'
+                    ? AppConfig.strings.accounts.emptyCategoriesSubtitle
+                    : AppConfig.strings.accounts.emptySubtitle
+                }
+                primaryActionLabel={
+                  activeTab === 'categories'
+                    ? AppConfig.strings.accounts.categoryForm.createCategory
+                    : AppConfig.strings.accounts.picker.createAccount
+                }
+                onPrimaryAction={onCreateAccount}
+                style={styles.emptyStateContent}
+              />
+            )}
+          </View>
+        }
+        contentContainerStyle={styles.listContainer}
+      />
+
+      <SelectionActionBar
+        isVisible={isSelectionModeActive}
+        selectedCount={selectedAccountIds.size}
+        totalCount={totalSelectableAccounts}
+        onClear={selectionChrome.exitSelectionMode}
+        onSelectAll={selectionChrome.selectAll}
+        onDeselectAll={selectionChrome.clearItems}
+        actions={selectionChrome.actions}
+      />
+
+      <AccountsListModals {...modals} />
+    </View>
+  );
+
   if (error && sections.length === 0) {
+    if (embedded) {
+      return <ErrorStateView message="We could not load accounts." onRetry={retry} />;
+    }
     return (
       <ScreenWithChrome chrome={chrome} scrollable={false}>
         <ErrorStateView message="We could not load accounts." onRetry={retry} />
@@ -236,108 +351,11 @@ export function AccountsListView({
     );
   }
 
+  if (embedded) return body;
+
   return (
-    <ScreenWithChrome chrome={chrome} scrollable={false} testID="accounts-screen">
-      <View style={styles.container}>
-        <View style={styles.tabContainer}>
-          <AppTabs
-            options={TAB_OPTIONS}
-            value={activeTab}
-            onChange={setActiveTab}
-            pageProgress={pageProgress}
-          />
-        </View>
-
-        <FlashList
-          keyboardShouldPersistTaps="handled"
-          data={rows}
-          keyExtractor={keyExtractor}
-          renderItem={renderRow}
-          getItemType={item => item.kind}
-          maintainVisibleContentPosition={{ disabled: true }}
-          extraData={extraData}
-          ListHeaderComponent={
-            <View>
-              {activeTab === 'accounts' ? (
-                <View style={styles.header}>
-                  <NetWorthCard
-                    netWorth={netWorth}
-                    totalAssets={totalAssets}
-                    totalLiabilities={totalLiabilities}
-                    currencyCode={currencyCode}
-                    isLoading={isLoading}
-                  />
-                </View>
-              ) : (
-                <View style={styles.header}>
-                  <CashFlowCard
-                    totalIncome={inflowIncome}
-                    totalExpense={inflowExpense}
-                    inflowPeriod={inflowPeriod}
-                    onChangePeriod={setInflowPeriod}
-                    currencyCode={currencyCode}
-                    isLoading={isLoading || isPeriodLoading}
-                    warning={
-                      inflowPeriod === '30days' && hasUnvaluedEntries
-                        ? AppConfig.strings.reports.incompleteFxWarning
-                        : undefined
-                    }
-                    onWarningPress={
-                      inflowPeriod === '30days' && hasUnvaluedEntries
-                        ? () =>
-                            showIncompleteFxDetails({
-                              context: 'cash-flow',
-                              currencyCode,
-                            })
-                        : undefined
-                    }
-                  />
-                </View>
-              )}
-            </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              {isLoading ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <EmptyStateView
-                  title={
-                    activeTab === 'categories'
-                      ? AppConfig.strings.accounts.emptyCategoriesTitle
-                      : AppConfig.strings.accounts.emptyTitle
-                  }
-                  subtitle={
-                    activeTab === 'categories'
-                      ? AppConfig.strings.accounts.emptyCategoriesSubtitle
-                      : AppConfig.strings.accounts.emptySubtitle
-                  }
-                  primaryActionLabel={
-                    activeTab === 'categories'
-                      ? AppConfig.strings.accounts.categoryForm.createCategory
-                      : AppConfig.strings.accounts.picker.createAccount
-                  }
-                  onPrimaryAction={onCreateAccount}
-                  style={styles.emptyStateContent}
-                />
-              )}
-            </View>
-          }
-          contentContainerStyle={styles.listContainer}
-        />
-
-        <SelectionActionBar
-          isVisible={isSelectionModeActive}
-          selectedCount={selectedAccountIds.size}
-          totalCount={totalSelectableAccounts}
-          onClear={selectionChrome.exitSelectionMode}
-          onSelectAll={selectionChrome.selectAll}
-          onDeselectAll={selectionChrome.clearItems}
-          actions={selectionChrome.actions}
-        />
-
-        <AccountsListModals {...modals} />
-      </View>
+    <ScreenWithChrome chrome={chrome} scrollable={false} testID={screenTestID}>
+      {body}
     </ScreenWithChrome>
   );
 }
