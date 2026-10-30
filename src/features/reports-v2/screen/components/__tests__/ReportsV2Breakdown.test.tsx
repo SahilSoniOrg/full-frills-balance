@@ -1,3 +1,4 @@
+import { asAccountId } from '@/src/types/ids';
 import { ReportsV2Breakdown } from '../ReportsV2Breakdown';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
@@ -80,7 +81,7 @@ describe('ReportsV2Breakdown', () => {
               id: 'food',
               label: 'Food',
               value: { kind: 'MONEY', amount: 120, currencyCode: 'INR' },
-              accountIds: ['food-1'],
+              accountIds: [asAccountId('food-1')],
             },
           ],
         }}
@@ -100,7 +101,7 @@ describe('ReportsV2Breakdown', () => {
     fireEvent.press(screen.getByText('Food'));
     expect(onDrilldown).toHaveBeenCalledWith({
       label: 'Food',
-      accountIds: ['food-1'],
+      accountIds: [asAccountId('food-1')],
     });
   });
 });
