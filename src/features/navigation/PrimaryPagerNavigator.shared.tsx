@@ -22,7 +22,7 @@ import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { NavigatorContentProps } from 'expo-router';
 import { unstable_useReconcileTabHistory, useIsFocused } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, AppState, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import type { ComponentType } from 'react';
@@ -32,6 +32,7 @@ import {
 } from '@/src/components/layout/PersistentTabChrome';
 import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 import { HomeV2Header } from './HomeV2Header';
+import { usePrimaryPageTransitions } from './usePrimaryPageTransitions';
 
 type PrimaryPageOptions = { title?: string };
 type PrimaryPageEvents = {
@@ -82,20 +83,25 @@ export function createPrimaryPagerContent(
     const reduceMotion = useReducedMotion();
     const [isScreenReaderEnabled, setScreenReaderEnabled] = useState(false);
     const [isAppActive, setAppActive] = useState(AppState.currentState === 'active');
-    const [isTransitioning, setTransitioning] = useState(false);
     const activeRouteName = state.routes[state.index]?.name ?? 'index';
-    const [settledReadRoute, setSettledReadRoute] = useState(activeRouteName);
-    const transitioningRef = useRef(false);
-    const reportTransitioning = useCallback((moving: boolean) => {
-      transitioningRef.current = moving;
-      setTransitioning(moving);
-    }, []);
-    useEffect(() => {
-      if (!isTransitioning) setSettledReadRoute(activeRouteName);
-    }, [isTransitioning, activeRouteName]);
+    const routeNames = useMemo(() => state.routes.map(route => route.name), [state.routes]);
+    const {
+      isTransitioning,
+      settledReadRoute,
+      reportTransitioning,
+      navigateToPage,
+      onUserPageSelected,
+    } = usePrimaryPageTransitions({
+      activeRouteName,
+      routeNames,
+      actions,
+      isSwitchingWorkplace: workplace.isSwitchingWorkplace,
+      isFocused,
+      isAppActive,
+      isAppCurrentlyLocked,
+    });
     const swipeIndex = Math.max(0, primaryPageIndex(activeRouteName));
     const swipePageCount = PRIMARY_PAGES.length;
-    const queuedRoute = useRef<string | null>(null);
     const [mountedIndices, setMountedIndices] = useState<ReadonlySet<number>>(
       () => new Set([swipeIndex]),
     );
@@ -118,7 +124,6 @@ export function createPrimaryPagerContent(
       isAppCurrentlyLocked,
       workplace.isSwitchingWorkplace,
     ]);
-    const routeNames = useMemo(() => state.routes.map(route => route.name), [state.routes]);
 
     useEffect(() => {
       rememberPrimaryGroupRoute(activeRouteName);
@@ -184,49 +189,6 @@ export function createPrimaryPagerContent(
         return next;
       });
     }, []);
-
-    const navigateToPage = useCallback(
-      (routeName: string) => {
-        if (!primaryPageFromRouteName(routeName) || !routeNames.includes(routeName)) return;
-        if (transitioningRef.current) {
-          queuedRoute.current = routeName;
-          return;
-        }
-        if (routeName === activeRouteName) return;
-        // Native taps use the same transition coordinator as finger navigation.
-        if (Platform.OS !== 'web') {
-          reportTransitioning(true);
-        }
-        actions.navigate(routeName);
-      },
-      [actions, activeRouteName, routeNames, reportTransitioning],
-    );
-
-    useEffect(() => {
-      if (workplace.isSwitchingWorkplace || !isFocused || !isAppActive || isAppCurrentlyLocked) {
-        queuedRoute.current = null;
-        return;
-      }
-      if (isTransitioning || !queuedRoute.current) return;
-      const routeName = queuedRoute.current;
-      queuedRoute.current = null;
-      navigateToPage(routeName);
-    }, [
-      isTransitioning,
-      navigateToPage,
-      workplace.isSwitchingWorkplace,
-      isFocused,
-      isAppActive,
-      isAppCurrentlyLocked,
-    ]);
-
-    const onUserPageSelected = useCallback(
-      (index: number) => {
-        const routeName = PRIMARY_PAGES[index]?.routeName;
-        if (routeName && routeNames.includes(routeName)) actions.navigate(routeName);
-      },
-      [actions, routeNames],
-    );
 
     const emitTabPress = useCallback(
       (routeKey: string) =>
