@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import Account from '@/src/data/models/Account';
 import { FlowCategory, FlowSource } from '../types';
 import {
+  exchangeRateService,
   accountLedgerMetricsQueries,
   accountQueryRepository,
   atSimulationDay,
@@ -37,6 +38,11 @@ describe('CashFlowSimulationService scenario coverage', () => {
   const simulate = (overrides?: Record<string, unknown>) => simulateCashFlow(overrides ?? {});
 
   installCashFlowSimulationTestHooks();
+
+  it('does not wait for FX when every amount is already in the result currency', async () => {
+    await simulate();
+    expect(exchangeRateService.fetchRatesForBase).not.toHaveBeenCalled();
+  });
 
   beforeEach(() => {
     (cc.metadataRecords.fetch as jest.Mock).mockResolvedValue([

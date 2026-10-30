@@ -85,7 +85,6 @@ export class CashFlowSimulationService {
     // P1 Perf: Pre-warm rates per unique base currency, then read sync
     // Replaces N separate convert(1, from, to) calls that each hit DB
     const baseCurrencies = new Set<string>();
-    baseCurrencies.add(resultCurrency);
     allAccounts.forEach(a => {
       if (a.currencyCode) baseCurrencies.add(a.currencyCode);
     });
@@ -106,9 +105,9 @@ export class CashFlowSimulationService {
     let hasUnvaluedEntries = false;
 
     await Promise.all(
-      Array.from(baseCurrencies).map(base =>
-        exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
-      ),
+      Array.from(baseCurrencies)
+        .filter(base => base !== resultCurrency)
+        .map(base => exchangeRateService.fetchRatesForBase(base).catch(() => ({}))),
     );
 
     await Promise.all(

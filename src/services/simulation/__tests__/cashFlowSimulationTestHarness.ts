@@ -1,3 +1,4 @@
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
@@ -71,6 +72,7 @@ export const defaultWorkplaceId = 'test-wp' as WorkplaceId;
 export const pipelineWorkplaceId = 'wp-1' as WorkplaceId;
 
 export {
+  exchangeRateService,
   accountLedgerMetricsQueries,
   accountQueryRepository,
   budgetRepository,

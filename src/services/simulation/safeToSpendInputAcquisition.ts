@@ -233,7 +233,6 @@ export function observeSafeToSpendInputSnapshot(
       return combineLatest([budgetUsage$, history$, spotRateUpdates$]).pipe(
         switchMap(async ([usages, transactions]) => {
           const uniqueBaseCurrencies = new Set<string>();
-          uniqueBaseCurrencies.add(mapped.defaultCurrencyCode);
 
           for (const a of mapped.liquidAssets) {
             if (a.currencyCode && a.currencyCode !== mapped.defaultCurrencyCode) {
