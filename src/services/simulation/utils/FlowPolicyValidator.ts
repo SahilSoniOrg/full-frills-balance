@@ -8,6 +8,7 @@ export function assertPolicyInvariants(
   flow: Flow,
   throwInvariant: (msg: string, f: Flow) => never,
 ): void {
+  'worklet';
   // 1. Source <=> Category Invariants
   if (flow.origin === FlowSource.BUDGET && flow.category !== FlowCategory.BUDGET) {
     throwInvariant(`BUDGET source must have BUDGET category. Found: ${flow.category}`, flow);

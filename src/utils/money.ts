@@ -1,3 +1,4 @@
+import { roundToPrecision } from './moneyRounding';
 import { AppConfig } from '@/src/constants';
 import { getCurrencyPrecision } from './currencyPrecision';
 
@@ -5,10 +6,7 @@ import { getCurrencyPrecision } from './currencyPrecision';
  * Rounds a number to a specific precision (decimal places).
  * Essential for the "edge-rounding" strategy to prevent floating-point drift.
  */
-export const roundToPrecision = (amount: number, precision: number): number => {
-  const factor = Math.pow(10, precision);
-  return Math.round((amount + Number.EPSILON) * factor) / factor;
-};
+export { roundToPrecision } from './moneyRounding';
 
 /** Scale that turns a major-unit amount into whole minor units. */
 export const minorUnitFactor = (precision: number): number => 10 ** precision;

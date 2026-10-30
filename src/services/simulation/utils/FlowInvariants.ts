@@ -2,12 +2,29 @@ import { Flow, FlowCategory } from '../types';
 import { assertPolicyInvariants } from './FlowPolicyValidator';
 
 /**
- * Ensures that a Flow object adheres to core domain invariants.
- * Acts as the primary entry point for generator-level validation.
+ * Helper to throw formatted invariant errors with rich debug context.
  */
-export function assertValidFlow(flow: Flow): void {
-  assertHardInvariants(flow);
-  assertPolicyInvariants(flow, throwInvariant);
+function throwInvariant(message: string, flow: Flow): never {
+  'worklet';
+  const context = JSON.stringify(
+    {
+      kind: flow.kind,
+      category: flow.category,
+      origin: flow.origin,
+      label: flow.label,
+      amount: flow.amount,
+      dayOffset: flow.dayOffset,
+      referenceId: flow.referenceId,
+      resolvedFrom: flow.resolvedFrom,
+      accountId: flow.kind !== 'TRANSFER' ? flow.accountId : undefined,
+      from: flow.kind === 'TRANSFER' ? flow.fromAccountId : undefined,
+      to: flow.kind === 'TRANSFER' ? flow.toAccountId : undefined,
+    },
+    null,
+    2,
+  );
+
+  throw new Error(`[FlowInvariant] ${message}\nContext: ${context}`);
 }
 
 /**
@@ -15,6 +32,7 @@ export function assertValidFlow(flow: Flow): void {
  * These rules protect the technical integrity of the simulation engine.
  */
 export function assertHardInvariants(flow: Flow): void {
+  'worklet';
   // 1. Structural Presence
   if (!flow.label) throwInvariant('Flow is missing label', flow);
   if (!flow.origin) throwInvariant('Flow is missing origin', flow);
@@ -72,26 +90,11 @@ export function assertHardInvariants(flow: Flow): void {
 }
 
 /**
- * Helper to throw formatted invariant errors with rich debug context.
+ * Ensures that a Flow object adheres to core domain invariants.
+ * Acts as the primary entry point for generator-level validation.
  */
-function throwInvariant(message: string, flow: Flow): never {
-  const context = JSON.stringify(
-    {
-      kind: flow.kind,
-      category: flow.category,
-      origin: flow.origin,
-      label: flow.label,
-      amount: flow.amount,
-      dayOffset: flow.dayOffset,
-      referenceId: flow.referenceId,
-      resolvedFrom: flow.resolvedFrom,
-      accountId: flow.kind !== 'TRANSFER' ? flow.accountId : undefined,
-      from: flow.kind === 'TRANSFER' ? flow.fromAccountId : undefined,
-      to: flow.kind === 'TRANSFER' ? flow.toAccountId : undefined,
-    },
-    null,
-    2,
-  );
-
-  throw new Error(`[FlowInvariant] ${message}\nContext: ${context}`);
+export function assertValidFlow(flow: Flow): void {
+  'worklet';
+  assertHardInvariants(flow);
+  assertPolicyInvariants(flow, throwInvariant);
 }

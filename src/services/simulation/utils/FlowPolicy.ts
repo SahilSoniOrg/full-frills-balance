@@ -40,6 +40,7 @@ export type LiquidImpact = {
 };
 
 export function getLiquidImpact(flow: Flow, liquidAccountIds: ReadonlySet<string>): LiquidImpact {
+  'worklet';
   if (flow.kind === 'INFLOW') {
     const isLiquid = liquidAccountIds.has(flow.accountId);
     return {
@@ -86,6 +87,7 @@ export function findFirstMajorInflowDay(
   liquidAccountIdsSet: ReadonlySet<string>,
   threshold: number,
 ): number | null {
+  'worklet';
   const firstMajorInflow = flows.find(f => {
     if (f.timeframe !== 'FUTURE' || f.category !== FlowCategory.INCOME) return false;
 
