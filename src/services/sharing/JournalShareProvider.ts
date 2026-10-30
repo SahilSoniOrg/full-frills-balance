@@ -25,8 +25,6 @@ export interface JournalShareOptions {
   showEmojis?: boolean;
   /** @deprecated Use the default journal display metadata unless customization is required. */
   typeMetaOverride?: Record<JournalDisplayType, TypeMeta>;
-  /** @deprecated Journal entries now carry their own currency. */
-  defaultCurrency?: string;
 }
 
 const DEFAULT_TYPE_META: Record<JournalDisplayType, TypeMeta> = {
