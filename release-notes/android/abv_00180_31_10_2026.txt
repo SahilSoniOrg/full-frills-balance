@@ -1,0 +1,36 @@
+New release 🚀
+
+2 Big things! 
+You can now swipe between the main pages - Dashboard, Accounts, Plans and Activity — and between sub-tabs within Accounts and Plans.
+Cashew import works! If you have a Cashew backup, try importing it!
+
+
+Also in this update:
+
+- Reports: Tap totals or category rows to open the matching transactions. On a chart, tap a point and then the transactions link on the tooltip. Wealth and spending charts have an info button that explains what they measure. If the usual period has no transactions, Reports opens a window ending on your latest activity instead of a blank.
+
+- Import: Cashew SQLite restore was broken before. It works now.
+
+- Privacy: The eye highlights when this page shows or hides amounts differently from your usual setting. Hold it for a short explanation of what's visible.
+
+- SMS parsing: Currency amounts in messages are recognized in more local formats: comma decimals (150,00), dotted thousands (1.850,20), and a currency code next to the number (Ksh49.05).
+
+- Accessibility: Line charts include a spoken summary for screen readers. Unread action counts on the dashboard are announced, and inbox statuses use plain language.
+
+- Safe to Spend: Amounts that could not be converted are marked as approximate, so you know when the estimate is incomplete.
+
+- Journal: Batch suggestions no longer accidentally replace a manually chosen account.
+
+
+————
+
+
+Big difference you'll notice:
+
+- Swiping between pages feels like a single surface instead of separate tabs — the drawer and swipe gestures stay out of each other's way.
+
+- Tapping a number in Reports opens the transactions behind it, so you can check a total against the entries that make it up.
+
+————
+
+Under the hood, the dashboard starts loading data earlier, and the app yields during startup housekeeping so the first screen appears faster.
