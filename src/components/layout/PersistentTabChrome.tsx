@@ -3,7 +3,6 @@ import {
   createContext,
   useContext,
   useLayoutEffect,
-  useMemo,
   useState,
   useCallback,
   type ReactNode,
@@ -55,11 +54,8 @@ export function usePublishTabChrome(chrome: TabScreenChrome | null) {
   const routeName = useContext(LeafContext);
   // Keep registration independent of the header's entries context: publishing
   // an action must not subscribe every retained screen to all other actions.
-  const publication = useMemo(() => ({ register, routeName }), [register, routeName]);
   useLayoutEffect(() => {
-    if (publication.register && publication.routeName && chrome) {
-      return publication.register(publication.routeName, chrome);
-    }
-  }, [publication, chrome]);
+    if (register && routeName && chrome) return register(routeName, chrome);
+  }, [register, routeName, chrome]);
   return register && routeName && chrome ? routeName : null;
 }
