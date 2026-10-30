@@ -42,7 +42,8 @@ type PrimaryPageEvents = {
 export type PrimaryPageNavigatorProps = NavigatorContentProps<
   PrimaryPageOptions,
   PrimaryPageEvents,
-  { onAddAction: (action: ContextualAddAction) => void }
+  { onAddAction: (action: ContextualAddAction) => void },
+  { preloadPage: (routeName: string) => void }
 >;
 
 function renderLeafPage(
@@ -72,6 +73,7 @@ export function createPrimaryPagerContent(
     actions,
     emitter,
     onAddAction,
+    preloadPage,
   }: PrimaryPageNavigatorProps) {
     unstable_useReconcileTabHistory();
     const workplace = useWorkplace();
@@ -132,8 +134,15 @@ export function createPrimaryPagerContent(
 
     useEffect(() => {
       // Never mount speculative neighbors while the native pager is moving.
-      if (isTransitioning) return;
+      if (isTransitioning || preparedRoutes.size === 0) return;
       return runAfterInteractions(() => {
+        // Placeholder descriptors render null. Materialize real router entries
+        // before mounting neighbors so their effects and reads can prepare.
+        // PRELOAD keeps the current selection and route history intact.
+        for (let offset = -1; offset <= 1; offset += 1) {
+          const page = PRIMARY_PAGES[swipeIndex + offset];
+          if (page) preloadPage(page.routeName);
+        }
         setMountedIndices(previous => {
           // Retain visited neighbors: eviction rebuilt observers and lists on every return.
           const next = new Set(previous);
@@ -146,7 +155,7 @@ export function createPrimaryPagerContent(
             : next;
         });
       });
-    }, [isTransitioning, swipeIndex, swipePageCount]);
+    }, [isTransitioning, swipeIndex, swipePageCount, preloadPage, preparedRoutes]);
 
     useEffect(() => {
       let mounted = true;

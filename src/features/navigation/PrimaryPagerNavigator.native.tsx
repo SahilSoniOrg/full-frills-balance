@@ -6,9 +6,8 @@ import {
 import { createPrimaryPagerContent } from './PrimaryPagerNavigator.shared';
 import { HomeV2Viewport } from './HomeV2Viewport.native';
 
-// TabRouter activity pruning keeps only the focused route in `state.routes`.
-// NativeTabs/Expo Tabs expand placeholders so every declared screen stays
-// addressable — required here so the pager mounts all pages and tabs resolve.
+// TabRouter creates routes on demand. Placeholders keep every page addressable;
+// idle neighbor preparation must PRELOAD them to obtain renderable descriptors.
 export const PrimaryPager = createStandardRouterNavigator(
   createPrimaryPagerContent(HomeV2Viewport),
   TabRouter,
@@ -16,5 +15,14 @@ export const PrimaryPager = createStandardRouterNavigator(
     activityDefaultThreshold: 1,
     processDescriptors: appendMissingPlaceholderTabDescriptors,
     processState: appendMissingPlaceholderTabRoutes,
+    createProps: ({ state, dispatch }) => ({
+      preloadPage: (routeName: string) => {
+        const route = state.routes.find(item => item.name === routeName);
+        // appendMissingPlaceholderTabRoutes uses the route name as a placeholder
+        // key. Real routes already own their params and must not be re-preloaded.
+        if (!route || route.key !== route.name) return;
+        dispatch({ type: 'PRELOAD', payload: { name: routeName } });
+      },
+    }),
   },
 );

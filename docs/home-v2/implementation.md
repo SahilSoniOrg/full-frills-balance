@@ -19,7 +19,7 @@ Expo Router remains authoritative for canonical routes, deep links and Back beha
 
 Continuous movement stays in a Reanimated shared value. React state handles committed selection and the latest queued navigation intent, not each animation frame. Distant tab taps and Reduce Motion avoid automatic travel across unrelated pages. Gesture permission still accounts for focus, app activity, keyboard, lock state, screen readers, workplace switching, selection, drawer visibility and screen-owned locks.
 
-Visited scenes retain UI state. Immediate neighbors mount after idle and are eligible for prepared reads, while distant retained scenes pause costly reads. The shared Accounts read serves both siblings, with the rolling-period report limited to the live leaf. Existing domain hooks retain their snapshots; this is not a new global financial cache. Cold queries can still outlast a quick swipe.
+Visited scenes retain UI state. At idle, immediate neighbors are materialized through Expo Router PRELOAD actions, then mounted and made eligible for prepared reads. Placeholder descriptors alone render null and cannot prepare content. Existing real routes are not re-preloaded, preserving their params and identity. Preparation pauses during gestures and while the shell is unfocused, backgrounded, locked, or switching workplaces; distant retained scenes pause costly reads. The shared Accounts read serves both siblings, with the rolling-period report limited to the live leaf. Existing domain hooks retain their snapshots; this is not a new global financial cache. Cold queries can still outlast a quick swipe.
 
 Screen-owned actions publish into the persistent header while preserving group privacy scopes. Workplace-bound providers remount on a committed workplace change to isolate data and UI state.
 
@@ -38,3 +38,17 @@ No test suite, simulator run, release build or new performance benchmark was run
 - Check large text, RTL, Reduce Motion, screen-reader navigation and keyboard behavior.
 - Change workplaces and background/lock the app during interactions; verify that old-workplace data never flashes.
 - Start with an existing saved V1 choice and confirm the single layout still loads, with no version toggle or settings-search result.
+
+## Neighbor preparation correction
+
+The pager now dispatches PRELOAD for adjacent placeholder routes before attempting
+to mount them. Previously those placeholders stayed empty until navigation created
+a real route, so data hooks could start only after arrival despite the prepared-read
+flags. Both native and web adapters use the router's preload action without changing
+the selected route. This corrects the preparation wiring; it does not establish a
+measured readiness improvement or guarantee cold queries finish before a rapid swipe.
+
+Manual check: restart the app, pause briefly on each page, and swipe through Dashboard,
+Accounts, Categories, Budgets, Planned Payments and Activity in both directions. Also
+check rapid swipes, retained scroll position, route params, and lock/workplace changes.
+No tests or native timing measurements were run for this correction.
