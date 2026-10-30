@@ -15,7 +15,9 @@ import dayjs from 'dayjs';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { generateAccountSummaries, generateSimulationReport } from './SimulationReportGenerator';
 
-import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
+import { generateCashFlowTimeline } from './runCashFlowSimulationCore';
+import { executeBalanceSimulation } from './simulationExecutor';
+import { throwIfSimulationAborted } from './simulationCancellation';
 import {
   makeSimulationRateConverter,
   fetchBudgetCategoryMap,
@@ -40,6 +42,7 @@ export type SimulationInput = {
   /** Captured by the owning read model; reused for every date-sensitive calculation. */
   asOf?: number;
   trace?: Trace;
+  signal?: AbortSignal;
 };
 
 export class CashFlowSimulationService {
@@ -61,7 +64,9 @@ export class CashFlowSimulationService {
       simulationDays = AppConfig.defaults.safeToSpendDays,
       asOf = Date.now(),
       trace,
+      signal,
     } = input;
+    throwIfSimulationAborted(signal);
 
     const startOfToday = dayjs(asOf).startOf('day');
     const resultPrecision = getCurrencyPrecision(resultCurrency);
@@ -81,6 +86,8 @@ export class CashFlowSimulationService {
       fetchJournalTransactions(projectablePlannedJournals, workplaceId),
       fetchMetadata(liabilityAccountBalances, workplaceId),
     ]);
+
+    throwIfSimulationAborted(signal);
 
     // P1 Perf: Pre-warm rates per unique base currency, then read sync
     // Replaces N separate convert(1, from, to) calls that each hit DB
@@ -135,6 +142,8 @@ export class CashFlowSimulationService {
       },
     });
 
+    throwIfSimulationAborted(signal);
+
     // Normalize and Fetch remaining dependent data in parallel
     const [statementValues, budgetCategoryMap] = await Promise.all([
       fetchStatementValues(
@@ -150,6 +159,8 @@ export class CashFlowSimulationService {
     ]);
     const { statementBalances, settledSinceStatement } = statementValues;
     hasUnvaluedEntries ||= statementValues.hasUnvaluedEntries;
+
+    throwIfSimulationAborted(signal);
 
     // Currency Normalization using explicit mapping (avoiding class spread).
     // Preserve period fields so BudgetFlowGenerator can burn DAILY/WEEKLY/etc.
@@ -219,7 +230,7 @@ export class CashFlowSimulationService {
       }),
     );
 
-    const { simulationResult, allFlows } = runCashFlowSimulationCore({
+    const allFlows = generateCashFlowTimeline({
       context,
       plannedPayments: normalizedPlannedPayments,
       plannedJournals: projectablePlannedJournals,
@@ -236,6 +247,25 @@ export class CashFlowSimulationService {
       trace,
       precision: resultPrecision,
     });
+
+    throwIfSimulationAborted(signal);
+    const simulationResult = await executeBalanceSimulation(
+      {
+        startingBalances: normalizedStartingBalances,
+        flows: allFlows,
+        days: simulationDays,
+        liquidAccountIds: new Set(liquidAssetIds),
+        orderedLiquidAccountIds: [...liquidAssetIds],
+        startDayOffset: 0,
+        startDayTimestamp: simulationStartMs,
+        precision: resultPrecision,
+        majorInflowThreshold: AppConfig.defaults.simulation.majorInflowThreshold,
+        financialEpsilon: AppConfig.defaults.simulation.financialEpsilon,
+      },
+      signal,
+    );
+    throwIfSimulationAborted(signal);
+    trace?.metric('simulation_execution');
 
     const report = generateSimulationReport(
       allFlows,

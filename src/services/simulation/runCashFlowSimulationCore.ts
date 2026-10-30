@@ -16,7 +16,7 @@ import type {
 } from './types';
 import type { BudgetUsage } from '@/src/services/budget/types';
 
-export function runCashFlowSimulationCore(input: {
+export interface CashFlowSimulationCoreInput {
   context: SimulationContext;
   plannedPayments: readonly SimulationPlannedPayment[];
   plannedJournals: readonly Journal[];
@@ -32,7 +32,10 @@ export function runCashFlowSimulationCore(input: {
   startingBalances: ReadonlyMap<AccountId, number>;
   trace?: Trace;
   precision: number;
-}): { simulationResult: SimulationEngineResult; allFlows: ReturnType<typeof sortTimeline> } {
+}
+
+/** Flow generation stays on RN: it still consumes ORM models and recurrence services. */
+export function generateCashFlowTimeline(input: CashFlowSimulationCoreInput) {
   const {
     context,
     plannedPayments,
@@ -46,9 +49,7 @@ export function runCashFlowSimulationCore(input: {
     metadataMap,
     statementBalances,
     settledSinceStatement,
-    startingBalances,
     trace,
-    precision,
   } = input;
 
   const filteredBudgets: SimulationBudget[] = [];
@@ -91,18 +92,26 @@ export function runCashFlowSimulationCore(input: {
   const allFlows = sortTimeline([...resolvedSpendingFlows, ...liabilityFlows]);
   trace?.metric('flow_generation');
 
-  const simulationResult = Simulator.simulate(
-    new Map(startingBalances),
-    allFlows,
-    context.simulationDays,
-    context.liquidAccountIds,
-    context.orderedLiquidAccountIds,
-    0,
-    context.simulationStartMs,
-    trace,
-    precision,
-  );
-  trace?.metric('simulation_execution');
+  return allFlows;
+}
 
+/** Synchronous entry point retained for setup/draft callers. */
+export function runCashFlowSimulationCore(input: CashFlowSimulationCoreInput): {
+  simulationResult: SimulationEngineResult;
+  allFlows: ReturnType<typeof sortTimeline>;
+} {
+  const allFlows = generateCashFlowTimeline(input);
+  const simulationResult = Simulator.simulate(
+    new Map(input.startingBalances),
+    allFlows,
+    input.context.simulationDays,
+    input.context.liquidAccountIds,
+    input.context.orderedLiquidAccountIds,
+    0,
+    input.context.simulationStartMs,
+    input.trace,
+    input.precision,
+  );
+  input.trace?.metric('simulation_execution');
   return { simulationResult, allFlows };
 }

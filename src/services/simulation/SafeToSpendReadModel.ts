@@ -12,7 +12,7 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
-import { firstValueFrom, from, Observable, of } from 'rxjs';
+import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { observeForecastDateBasis } from '@/src/services/simulation/forecastDateBasis';
@@ -176,7 +176,22 @@ export class SafeToSpendReadModel {
           return of(failureSnapshot('Input refresh failed', 'Input unavailable'));
         }
 
-        return from(projectSafeToSpendDashboardFromSnapshot(outcome.snapshot)).pipe(
+        // RxJS unsubscription must cancel queued CPU work as well as ignore its result.
+        const projection$ = new Observable<SafeToSpendDashboard>(subscriber => {
+          const controller = new AbortController();
+          void projectSafeToSpendDashboardFromSnapshot(outcome.snapshot, controller.signal).then(
+            result => {
+              if (controller.signal.aborted) return;
+              subscriber.next(result);
+              subscriber.complete();
+            },
+            error => {
+              if (!controller.signal.aborted) subscriber.error(error);
+            },
+          );
+          return () => controller.abort();
+        });
+        return projection$.pipe(
           tap(result => {
             const ready = { ...result, quality: 'ready' as const };
             lastSuccessful = ready;

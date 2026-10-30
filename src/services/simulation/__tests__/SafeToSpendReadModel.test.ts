@@ -629,7 +629,10 @@ describe('SafeToSpendReadModel', () => {
       }
 
       expect(cashFlowSimulationService.simulate).toHaveBeenCalled();
+      const signal: AbortSignal = simulate.mock.calls[0][0].signal;
+      expect(signal.aborted).toBe(false);
       safeToSpendReadModel.clearCache();
+      expect(signal.aborted).toBe(true);
       resolveSimulation?.(emptySimResult);
       await preWarmPromise;
       await Promise.resolve();

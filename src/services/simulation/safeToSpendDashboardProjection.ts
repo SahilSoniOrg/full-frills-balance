@@ -21,6 +21,7 @@ import { Money, roundToPrecision } from '@/src/utils/money';
 import dayjs, { Dayjs } from 'dayjs';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import type { SafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
+import { throwIfSimulationAborted } from './simulationCancellation';
 import { startTrace } from '@/src/utils/TraceService';
 
 export interface SafeToSpendDataPoint {
@@ -272,6 +273,7 @@ export function assembleSafeToSpendDashboard(input: {
 
 export async function projectSafeToSpendDashboardFromSnapshot(
   snapshot: SafeToSpendInputSnapshot,
+  signal?: AbortSignal,
 ): Promise<SafeToSpendDashboard> {
   const trace = startTrace('SafeToSpendReadModel.observeSafeToSpend');
   const {
@@ -311,12 +313,15 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     simulationDays: safeToSpendDays,
     asOf,
     trace,
+    signal,
   });
 
+  throwIfSimulationAborted(signal);
   trace.metric('simulation_complete');
 
   const history = await buildNetCashFlowByDay(rawDeltas, defaultCurrencyCode);
 
+  throwIfSimulationAborted(signal);
   const historyPoints = buildSafeToSpendHistoryPoints({
     startOfToday,
     safeToSpendDays,

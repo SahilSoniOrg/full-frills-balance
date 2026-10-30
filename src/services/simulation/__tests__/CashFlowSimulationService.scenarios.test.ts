@@ -44,6 +44,15 @@ describe('CashFlowSimulationService scenario coverage', () => {
     expect(exchangeRateService.fetchRatesForBase).not.toHaveBeenCalled();
   });
 
+  it('stops a cancelled projection before acquisition', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(simulate({ signal: controller.signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(exchangeRateService.fetchRatesForBase).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     (cc.metadataRecords.fetch as jest.Mock).mockResolvedValue([
       { statementDay: 1, dueDay: 15, payFromAccountId: 'cash' },

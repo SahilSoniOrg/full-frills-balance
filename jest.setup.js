@@ -438,3 +438,10 @@ afterEach(async () => {
     // Service may not be available in all test contexts
   }
 });
+
+jest.mock('react-native-worklets', () => ({
+  createWorkletRuntime: jest.fn(config => ({ name: config.name })),
+  runOnRuntimeAsync: jest.fn((_runtime, worklet, ...args) =>
+    Promise.resolve().then(() => worklet(...args)),
+  ),
+}));
