@@ -88,13 +88,6 @@ export class PreferencesStore {
       delete sanitized.theme;
     }
     if (
-      sanitized.homeScreenVersion !== undefined &&
-      sanitized.homeScreenVersion !== 'v1' &&
-      sanitized.homeScreenVersion !== 'v2'
-    ) {
-      delete sanitized.homeScreenVersion;
-    }
-    if (
       sanitized.hourCyclePreference !== undefined &&
       !isHourCyclePreference(sanitized.hourCyclePreference)
     ) {

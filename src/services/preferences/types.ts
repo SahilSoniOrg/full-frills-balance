@@ -27,7 +27,6 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
   defaultShareFormat: ShareFormat.TEXT,
   showSafeToSpendChart: true,
-  homeScreenVersion: 'v2',
 };
 
 export const USER_PREFERENCE_KEYS = [
@@ -48,7 +47,6 @@ export const USER_PREFERENCE_KEYS = [
   'notificationWeekday',
   'defaultShareFormat',
   'showSafeToSpendChart',
-  'homeScreenVersion',
 ] as const;
 export const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 export const USER_PREFERENCES_KEY = 'full_frills_balance_user_preferences';
@@ -60,6 +58,7 @@ export const REMOVED_PREFERENCE_KEYS = [
   'preferredAiModelId',
   'aiInferenceMode',
   'archetype',
+  'homeScreenVersion',
 ] as const;
 
 export function isPrivacyPolicyAcknowledgement(

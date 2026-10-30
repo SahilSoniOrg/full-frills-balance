@@ -7,7 +7,6 @@ import {
 } from '@/src/hooks/useDeviceMotionPrefs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { useHomeScreenPrefs } from '@/src/hooks/useHomeScreenPrefs';
 import { analytics } from '@/src/services/analytics';
 import type { HourCyclePreference, ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { useCallback } from 'react';
@@ -30,12 +29,9 @@ export interface AppearanceSettingsViewModel {
   onToggleSafeToSpendChart: () => void;
   reduceMotion: boolean;
   onToggleReduceMotion: () => void;
-  homeV2Enabled: boolean;
-  setHomeV2Enabled: (enabled: boolean) => void;
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
-  const { homeV2Enabled, setHomeV2Enabled } = useHomeScreenPrefs();
   const { themePreference, setThemePreference, themeId, setThemeId, fontId, setFontId } =
     useThemePrefs();
   const { hourCyclePreference, resolvedHourCycle, setHourCyclePreference } = useHourCyclePrefs();
@@ -118,8 +114,6 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   );
 
   return {
-    homeV2Enabled,
-    setHomeV2Enabled,
     themePreference,
     setThemePreference: handleSetThemePreference,
     themeId,

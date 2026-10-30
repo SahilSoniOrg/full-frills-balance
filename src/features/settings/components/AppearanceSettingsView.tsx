@@ -55,16 +55,6 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
 
         <ListGroup variant="plain" header={AppConfig.strings.settings.sections.displayOptions}>
           <ListRow
-            focusId="home-navigation"
-            icon={Icon.SwapHorizontal}
-            title={AppConfig.strings.settings.homeNavigation.title}
-            subtitle={AppConfig.strings.settings.homeNavigation.description}
-            testID="settings-home-v2-toggle"
-            trailing={
-              <ListRow.Toggle value={vm.homeV2Enabled} onValueChange={vm.setHomeV2Enabled} />
-            }
-          />
-          <ListRow
             focusId="reduce-motion"
             icon={Icon.Pause}
             title={AppConfig.strings.settings.reduceMotion.title}
