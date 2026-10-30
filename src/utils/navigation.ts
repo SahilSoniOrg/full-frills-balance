@@ -82,7 +82,7 @@ export const AppNavigation = {
    * Navigate to the Dashboard (Home tab).
    */
   toDashboard: () => {
-    router.replace('/(tabs)/index');
+    router.replace('/(tabs)');
   },
 
   /** Select a canonical primary page without adding an outer Stack destination. */
