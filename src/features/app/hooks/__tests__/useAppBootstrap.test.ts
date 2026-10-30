@@ -10,6 +10,8 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { preferences } from '@/src/services/preferences';
 import { WorkplaceId } from '@/src/types/ids';
 import { purgeLocalAiCachesOnce } from '@/src/features/app/purgeLocalAiCaches';
+import { notificationService } from '@/src/services/notification/NotificationService';
+import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/contexts/app-shell/appReady', () => ({ useAppReady: jest.fn() }));
@@ -91,7 +93,10 @@ jest.mock('@/src/services/preferences', () => ({
   },
 }));
 jest.mock('@/src/utils/scheduler', () => ({
-  runAfterInteractions: jest.fn((task: () => void) => task()),
+  runAfterInteractions: jest.fn((task: () => void) => {
+    task();
+    return jest.fn();
+  }),
 }));
 
 const devicePrefs = preferences.device as unknown as {
@@ -164,6 +169,30 @@ describe('useAppBootstrap generation safety', () => {
       'workplace-b' as WorkplaceId,
       expect.any(AbortSignal),
     );
+  });
+
+  it('starts reminders and SMS setup while optional FX warmup is still pending', async () => {
+    let releaseFx!: () => void;
+    (exchangeRateService.preWarmCache as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          releaseFx = resolve;
+        }),
+    );
+    const { unmount } = renderHook(() => useAppBootstrap('workplace-a' as WorkplaceId, 'USD'));
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(exchangeRateService.preWarmCache).toHaveBeenCalled();
+    expect(notificationService.scheduleReminder).toHaveBeenCalled();
+    expect(automaticSmsImportService.synchronizeOnAppStart).toHaveBeenCalled();
+    expect(processDuePlannedPayments).toHaveBeenCalled();
+    expect(reactiveDataService.preWarm).not.toHaveBeenCalled();
+    unmount();
+    await act(async () => {
+      releaseFx();
+    });
+    expect(reactiveDataService.preWarm).not.toHaveBeenCalled();
   });
 
   it('mints a non-production telemetry id when this install has none', async () => {

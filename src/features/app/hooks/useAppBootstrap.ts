@@ -80,7 +80,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     const controller = new AbortController();
     let stabilizationTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    runAfterInteractions(() => {
+    const cancelInitialIdle = runAfterInteractions(() => {
       if (controller.signal.aborted) {
         logger.info('[Bootstrap] Stabilization cancelled (workspace changed or unmounted)');
         return;
@@ -118,55 +118,79 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             notificationWeekday: notifWeekday,
           } = preferences.getSnapshot();
           const notifCadence = notificationCadence || 'none';
-          const accountCurrencyBases = await accountQueryRepository
-            .findAll(workplaceId)
-            .then(accounts => accounts.map(account => account.currencyCode))
-            .catch(error => {
-              logger.warn('[Bootstrap] Could not load account currencies for FX pre-warm', {
-                error,
+          const runTask = (name: string, task: () => unknown): Promise<void> => {
+            if (controller.signal.aborted) return Promise.resolve();
+            return new Promise(resolve => {
+              let cancelIdle = () => {};
+              const finish = () => {
+                controller.signal.removeEventListener('abort', onAbort);
+                resolve();
+              };
+              const onAbort = () => {
+                cancelIdle();
+                finish();
+              };
+              controller.signal.addEventListener('abort', onAbort, { once: true });
+              cancelIdle = runAfterInteractions(() => {
+                if (controller.signal.aborted) return finish();
+                void Promise.resolve()
+                  .then(() => {
+                    if (!controller.signal.aborted) return task();
+                  })
+                  .catch(error => logger.warn(`[Bootstrap] ${name} failed`, { error }))
+                  .finally(finish);
               });
-              return [] as string[];
             });
+          };
 
-          // FX first: hydrate DB then await network sheets for workplace + account
-          // bases. Parallel with reactive preWarm used to convert against an empty
-          // sheet and spam USD/THB/…→INR misses.
-          if (!controller.signal.aborted) {
-            await exchangeRateService.preWarmCache(defaultCurrencyCode, accountCurrencyBases);
-          }
-
-          if (controller.signal.aborted) return;
-
+          // Independent platform setup must not wait for filesystem cleanup,
+          // forecast emissions or an exchange-rate network request.
           await Promise.allSettled([
-            purgeLocalAiCachesOnce(),
-            currencyInitService.initialize(),
-            currencyReadService.getAllPrecisions(),
-            reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
-            insightService.preWarm(workplaceId),
-            runStartupCheck(workplaceId, controller.signal),
-            cleanupGhostWorkplaces(),
-            processDuePlannedPayments(workplaceId, controller.signal),
-            smsPrivacyService.cleanupLegacyContent(),
-            sharingService.init(),
-            notificationService.scheduleReminder(
-              notifCadence,
-              notifHour,
-              notifMinute,
-              notifWeekday,
-            ),
-            automaticSmsImportService
-              .synchronizeOnAppStart()
-              .catch(error =>
-                logger.warn('[Bootstrap] Automatic SMS import setup failed', { error }),
+            runTask('Legacy AI cleanup', () => purgeLocalAiCachesOnce()),
+            runTask('Sharing setup', () => sharingService.init()),
+            runTask('Reminder setup', () =>
+              notificationService.scheduleReminder(
+                notifCadence,
+                notifHour,
+                notifMinute,
+                notifWeekday,
               ),
-          ]);
+            ),
+            runTask('SMS setup', () => automaticSmsImportService.synchronizeOnAppStart()),
+            (async () => {
+              // Serialize expensive maintenance and yield between tasks. Writes
+              // precede optional cache warming to avoid immediately rebuilding it.
+              await runTask('Currency initialization', () => currencyInitService.initialize());
+              await runTask('Currency precision warmup', () =>
+                currencyReadService.getAllPrecisions(),
+              );
+              await runTask('Due planned payments', () =>
+                processDuePlannedPayments(workplaceId, controller.signal),
+              );
+              await runTask('Startup integrity check', () =>
+                runStartupCheck(workplaceId, controller.signal),
+              );
+              await runTask('Workplace cleanup', () => cleanupGhostWorkplaces());
+              await runTask('Legacy SMS cleanup', () => smsPrivacyService.cleanupLegacyContent());
+              await runTask('Journal balance check', () =>
+                checkJournalBalancesOnStartup(workplaceId, controller.signal),
+              );
 
-          // Runs after the batch so a full journal scan does not contend with startup work.
-          if (!controller.signal.aborted) {
-            await checkJournalBalancesOnStartup(workplaceId, controller.signal).catch(error =>
-              logger.warn('[Bootstrap] Journal balance check failed', { error }),
-            );
-          }
+              // Only optional valuation caches depend on completed FX warmup.
+              await runTask('FX cache warmup', async () => {
+                const accounts = await accountQueryRepository.findAll(workplaceId);
+                if (controller.signal.aborted) return;
+                await exchangeRateService.preWarmCache(
+                  defaultCurrencyCode,
+                  accounts.map(account => account.currencyCode),
+                );
+              });
+              await runTask('Account cache warmup', () =>
+                reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
+              );
+              await runTask('Insights warmup', () => insightService.preWarm(workplaceId));
+            })(),
+          ]);
 
           if (!controller.signal.aborted) {
             logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);
@@ -177,6 +201,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
     return () => {
       controller.abort();
+      cancelInitialIdle();
       if (stabilizationTimeoutId) clearTimeout(stabilizationTimeoutId);
     };
   }, [isAppReady, workplaceId, defaultCurrencyCode]);
