@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { REVERT_CONFLICT_MESSAGE } from '@/src/services/revert-registry';
+import { REVERT_CONFLICT_MESSAGE } from '@/src/domain/audit/revertErrors';
 import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 /**
@@ -39,14 +39,10 @@ export function assertExpectedJournalSnapshot(
     const matches =
       field === 'transactions' && Array.isArray(actualValue) && Array.isArray(expectedValue)
         ? stableAuditJson(
-            [...actualValue].sort((a, b) =>
-              stableAuditJson(a).localeCompare(stableAuditJson(b)),
-            ),
+            [...actualValue].sort((a, b) => stableAuditJson(a).localeCompare(stableAuditJson(b))),
           ) ===
           stableAuditJson(
-            [...expectedValue].sort((a, b) =>
-              stableAuditJson(a).localeCompare(stableAuditJson(b)),
-            ),
+            [...expectedValue].sort((a, b) => stableAuditJson(a).localeCompare(stableAuditJson(b))),
           )
         : stableAuditJson(actualValue) === stableAuditJson(expectedValue);
     if (!matches) throw new Error(REVERT_CONFLICT_MESSAGE);

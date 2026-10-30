@@ -16,13 +16,12 @@ import {
   ACCOUNT_REVERT_CONFLICT_MESSAGE,
   REVERT_CONFLICT_MESSAGE,
   WORKPLACE_REVERT_CONFLICT_MESSAGE,
-  revertRegistry,
-  type RevertCapability,
-} from '@/src/services/revert-registry';
+} from '@/src/domain/audit/revertErrors';
+import { revertRegistry, type RevertCapability } from '@/src/services/revert-registry';
 import { AccountAuditState, TransactionAuditState } from '@/src/types/audit';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction, JournalStatus } from '@/src/types/enums';
-import { getAuditEventFieldDeltas, isAuditEventPayload } from '@/src/types/auditEvents';
+import { getAuditEventFieldDeltas, isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 type AuditChanges = Record<string, unknown> & {

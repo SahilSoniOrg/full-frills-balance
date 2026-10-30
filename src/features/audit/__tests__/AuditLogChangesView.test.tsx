@@ -1,7 +1,7 @@
 import './auditUiTestMocks';
 import { render } from '@testing-library/react-native';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
-import { createAuditEventPayload } from '@/src/types/auditEvents';
+import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { AuditAction } from '@/src/types/enums';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 

@@ -16,7 +16,7 @@ import {
   hasBeforeAfterChanges,
   isAuditChangeRecord,
 } from '@/src/services/audit/auditLogTypes';
-import { isAuditEventPayload } from '@/src/types/auditEvents';
+import { isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

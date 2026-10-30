@@ -18,7 +18,7 @@ import {
   shouldHideUnchangedTransactionLeg,
   type AuditAccountMap,
 } from '@/src/services/audit/auditLogDiffDisplay';
-import { isAuditEventPayload } from '@/src/types/auditEvents';
+import { isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { AuditAction } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import { formatImportSource } from './journalSourcePresentation';

@@ -8,7 +8,7 @@ import {
   hasBeforeAfterChanges,
   parseAuditChanges,
 } from '@/src/services/audit/auditLogTypes';
-import { createAuditEventPayload, getAuditEventFieldDeltas } from '@/src/types/auditEvents';
+import { createAuditEventPayload, getAuditEventFieldDeltas } from '@/src/domain/audit/auditEvents';
 
 describe('auditLogTypes', () => {
   describe('parseAuditChanges', () => {

@@ -2,7 +2,7 @@ import { journalHistoryAccountIds, mapJournalHistory } from '../journalHistoryPr
 import { formatImportSource } from '../journalSourcePresentation';
 import type { AuditLogEntry } from '@/src/services/audit/auditLogTypes';
 import { AuditAction } from '@/src/types/enums';
-import { createAuditEventPayload } from '@/src/types/auditEvents';
+import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
 
 function event(id: string, timestamp: number, canRevert = true): AuditLogEntry {
   return {

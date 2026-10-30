@@ -1,13 +1,12 @@
-import { resolveAuditDisplayName } from '@/src/services/audit-identity';
+import {
+  getAuditEventFieldDeltas,
+  isAuditEventPayload,
+  resolveAuditDisplayName,
+} from '@/src/domain/audit/auditEvents';
 import { AuditAction } from '@/src/types/enums';
 import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
 import { AccountId } from '@/src/types/ids';
-import {
-  AuditEventPayload,
-  getAuditEventFieldDeltas,
-  isAuditEventPayload,
-} from '@/src/types/auditEvents';
-import type { AuditActor } from '@/src/types/auditEvents';
+import type { AuditActor, AuditEventPayload } from '@/src/types/auditEvents';
 
 export interface EntityStatus {
   exists: boolean;

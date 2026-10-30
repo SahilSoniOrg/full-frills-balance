@@ -2,12 +2,8 @@ import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import AuditLog from '@/src/data/models/AuditLog';
 import { AuditAction, AuditEntityType } from '@/src/types/enums';
-import {
-  AuditActor,
-  AuditEventSource,
-  AuditEventType,
-  createAuditEventPayload,
-} from '@/src/types/auditEvents';
+import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
+import type { AuditActor, AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
 import { resolveAuditActor } from '@/src/utils/resolveAuditActor';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
