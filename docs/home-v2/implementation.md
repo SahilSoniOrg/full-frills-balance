@@ -1,6 +1,6 @@
 # Home V2 in-app candidate
 
-Home V2 is implemented with a persisted user switch under Settings → Appearance → Swipe navigation (Home V2). Until a user makes a choice, development builds default to V2 and production/release builds keep their existing V1 default unless the build explicitly opts into V2. This is an interaction candidate using the real page content and real local data.
+Home V2 is the default in development and production/release builds, with a persisted user switch under Settings → Appearance → Swipe navigation (Home V2). The toggle starts on for users who have not chosen a layout. Saved V1 choices remain respected. This is an interaction candidate using the real page content and real local data.
 
 ## Try it
 
@@ -11,7 +11,7 @@ Open Settings → Appearance → Display Options → Swipe navigation (Home V2).
 
 Changes apply immediately and persist in user preferences across restarts and workplace changes. The current canonical route stays in the router; mode-specific page/gesture state is remounted when the mode changes. No financial data is changed. The sidebar retains its established drawer gesture in V1.
 
-`EXPO_PUBLIC_HOME_V2` controls only the default for users who have not chosen a layout: 1 defaults to V2, 0 defaults to V1, and unset retains the development/release defaults. Once chosen in settings, the saved preference wins. Reload/rebuild only when changing a build variable, not when using the setting.
+The saved preference controls the layout in all builds; `EXPO_PUBLIC_HOME_V2` is no longer used. Users without a saved choice get V2. Changing the setting does not require restarting the app.
 
 ## Implemented
 

@@ -27,7 +27,7 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
   defaultShareFormat: ShareFormat.TEXT,
   showSafeToSpendChart: true,
-  homeScreenVersion: undefined,
+  homeScreenVersion: 'v2',
 };
 
 export const USER_PREFERENCE_KEYS = [

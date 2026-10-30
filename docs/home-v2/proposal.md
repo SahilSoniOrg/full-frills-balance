@@ -84,7 +84,7 @@ Memory is the tradeoff: six fully active lists and observers are not free. Start
 2. Extract all six leaf scenes, preserving actions, IDs, accessibility and privacy. Build the flat coordinator, fixed header with sibling selectors, and persistent rail. Remove nested pagers only in V2.
 3. Add explicit leaf activation and snapshot-first adapters; fix duplicate request ownership where traces establish it. Move nonessential work after settle.
 4. Redesign each page around its real tasks, including long lists, filters, stale/error/empty states and selection. The concept illustrates navigation and hierarchy; it is not a complete functional replacement of those workflows.
-5. Validate with matched release runs before making V2 default.
+5. Validate navigation regressions with matched release runs. V2 is now the default in all builds, with V1 available through settings.
 
 ## Acceptance plan (not executed)
 
