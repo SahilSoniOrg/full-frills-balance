@@ -65,6 +65,14 @@ const PrimaryNavigationContext = createContext<PrimaryNavigationContextValue | u
 
 export const PrimaryNavigationProvider = PrimaryNavigationContext.Provider;
 
+// The drawer already observes the workplace list. Share its cardinality with
+// header chrome instead of starting another list subscription for a label.
+const MultipleWorkplacesContext = createContext(false);
+export const MultipleWorkplacesProvider = MultipleWorkplacesContext.Provider;
+export function useHasMultipleWorkplaces() {
+  return useContext(MultipleWorkplacesContext);
+}
+
 export function usePrimaryNavigation() {
   return useContext(PrimaryNavigationContext);
 }

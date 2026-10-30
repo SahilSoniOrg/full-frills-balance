@@ -13,7 +13,10 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import { usePrimaryNavigation } from '@/src/navigation/primaryNavigation';
+import {
+  MultipleWorkplacesProvider,
+  usePrimaryNavigation,
+} from '@/src/navigation/primaryNavigation';
 import { primaryPageFromRouteName } from '@/src/navigation/primaryPages';
 import type { LegacyPanGesture } from 'react-native-gesture-handler';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -44,6 +47,7 @@ export interface NavigationWorkplace {
 
 export interface NavigationDrawerProps {
   children: ReactNode;
+  edgeSwipeEnabled?: boolean;
 }
 
 const copy = AppConfig.strings.navigation;
@@ -116,7 +120,7 @@ const NAV_SECTIONS: {
   },
 ];
 
-export function NavigationDrawer({ children }: NavigationDrawerProps) {
+export function NavigationDrawer({ children, edgeSwipeEnabled = true }: NavigationDrawerProps) {
   const workplace = useWorkplace();
   const primaryNav = usePrimaryNavigation();
   if (!primaryNav) {
@@ -489,32 +493,36 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
   const closedSwipeEdgeWidth = isDashboard && Platform.OS === 'android' ? width : 32;
 
   return (
-    <Drawer
-      open={drawerVisible}
-      onOpen={() => {
-        if (!drawerVisible) openDrawer();
-      }}
-      onClose={() => {
-        if (drawerVisible) closeDrawer();
-      }}
-      drawerType="front"
-      swipeEnabled={(drawerVisible || canOpen) && !selectorOpen && !isSwitching}
-      swipeEdgeWidth={drawerVisible ? width : closedSwipeEdgeWidth}
-      configureGestureHandler={gesture => {
-        const legacyPan = gesture as unknown as LegacyPanGesture;
-        const configured = drawerVisible
-          ? legacyPan.activeOffsetX(-20).failOffsetX(20)
-          : legacyPan.activeOffsetX(20).failOffsetX(-20);
-        return configured as unknown as typeof gesture;
-      }}
-      reduceMotion={reduceMotion}
-      drawerStyle={[styles.drawer, { width: drawerWidth, backgroundColor: theme.surface }]}
-      overlayStyle={{ backgroundColor: theme.overlay }}
-      overlayAccessibilityLabel={copy.closeDrawer}
-      renderDrawerContent={renderDrawerContent}
-    >
-      {children}
-    </Drawer>
+    <MultipleWorkplacesProvider value={workplaceRows.length > 1}>
+      <Drawer
+        open={drawerVisible}
+        onOpen={() => {
+          if (!drawerVisible) openDrawer();
+        }}
+        onClose={() => {
+          if (drawerVisible) closeDrawer();
+        }}
+        drawerType="front"
+        swipeEnabled={
+          (drawerVisible || (edgeSwipeEnabled && canOpen)) && !selectorOpen && !isSwitching
+        }
+        swipeEdgeWidth={drawerVisible ? width : closedSwipeEdgeWidth}
+        configureGestureHandler={gesture => {
+          const legacyPan = gesture as unknown as LegacyPanGesture;
+          const configured = drawerVisible
+            ? legacyPan.activeOffsetX(-20).failOffsetX(20)
+            : legacyPan.activeOffsetX(20).failOffsetX(-20);
+          return configured as unknown as typeof gesture;
+        }}
+        reduceMotion={reduceMotion}
+        drawerStyle={[styles.drawer, { width: drawerWidth, backgroundColor: theme.surface }]}
+        overlayStyle={{ backgroundColor: theme.overlay }}
+        overlayAccessibilityLabel={copy.closeDrawer}
+        renderDrawerContent={renderDrawerContent}
+      >
+        {children}
+      </Drawer>
+    </MultipleWorkplacesProvider>
   );
 }
 

@@ -33,16 +33,18 @@ export function PrimaryNavigationHeader() {
       accessibilityState={{ expanded, disabled }}
       style={[styles.trigger, disabled && styles.disabled]}
     >
-      <PersonAvatar name={identity} />
-      <View
-        pointerEvents="none"
-        style={[styles.menuCue, { backgroundColor: theme.surface, borderColor: theme.border }]}
-      >
-        <AppIcon
-          name={Icon.Menu}
-          size={Size.iconXs}
-          color={getReadableColor(theme.textSecondary, theme.surface, 3)}
-        />
+      <View style={styles.avatar}>
+        <PersonAvatar name={identity} />
+        <View
+          pointerEvents="none"
+          style={[styles.menuCue, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        >
+          <AppIcon
+            name={Icon.Menu}
+            size={Size.iconXs}
+            color={getReadableColor(theme.textSecondary, theme.surface, 3)}
+          />
+        </View>
       </View>
     </PressScaleTouchable>
   );
@@ -50,6 +52,11 @@ export function PrimaryNavigationHeader() {
 
 const styles = StyleSheet.create({
   trigger: { width: PRIMARY_NAVIGATION_TRIGGER_SIZE, height: PRIMARY_NAVIGATION_TRIGGER_SIZE },
+  avatar: {
+    width: PRIMARY_NAVIGATION_TRIGGER_SIZE,
+    height: PRIMARY_NAVIGATION_TRIGGER_SIZE,
+    flexShrink: 0,
+  },
   menuCue: {
     position: 'absolute',
     right: -2,

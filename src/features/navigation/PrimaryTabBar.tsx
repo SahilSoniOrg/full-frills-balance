@@ -4,10 +4,15 @@ import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PRIMARY_TABS, primaryTabFromRouteName } from '@/src/navigation/primaryNavigation';
-import { primaryRouteForGroup } from '@/src/navigation/primaryPages';
+import { PRIMARY_PAGES, primaryRouteForGroup } from '@/src/navigation/primaryPages';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { toast } from '@/src/utils/alerts';
 import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { ContextualAddMenu, type ContextualAddAction } from './ContextualAddMenu';
 
 const TAB_BAR_ROW_HEIGHT = Size.fab;
@@ -23,6 +28,9 @@ export type PrimaryTabBarProps = {
   onNavigateToPage: (routeName: string) => void;
   isSwitching: boolean;
   isTransitioning: boolean;
+  allowTransitionNavigation?: boolean;
+  /** Six-leaf native position, supplied by Home V2 only. */
+  pageProgress?: SharedValue<number>;
   onAddAction: (action: ContextualAddAction) => void;
 };
 
@@ -34,6 +42,8 @@ export function PrimaryTabBar({
   onNavigateToPage,
   isSwitching,
   isTransitioning,
+  allowTransitionNavigation = false,
+  pageProgress,
   onAddAction,
 }: PrimaryTabBarProps) {
   const { theme } = useTheme();
@@ -41,9 +51,6 @@ export function PrimaryTabBar({
   const { insets } = useWindowSafeAreaLayout();
   const activeTab = primaryTabFromRouteName(activeRouteName) ?? 'dashboard';
   const barColor = theme.background;
-  const selectedLabelColor = getReadableColor(theme.primary, barColor);
-  const inactiveLabelColor = getReadableColor(theme.textSecondary, barColor);
-  const selectedIconColor = getReadableColor(theme.primary, theme.primaryLight, 3);
 
   if (isKeyboardVisible) return null;
 
@@ -54,11 +61,12 @@ export function PrimaryTabBar({
     return (
       <PressScaleTouchable
         key={copy.tab}
-        disabled={isSwitching || isTransitioning || !targetRoute}
+        disabled={isSwitching || (!allowTransitionNavigation && isTransitioning) || !targetRoute}
         onPress={() => {
           if (!targetRoute) return;
           const prevented = emitTabPress(targetRoute.key);
-          if (!selected && !prevented) onNavigateToPage(targetRouteName);
+          if ((!selected || (allowTransitionNavigation && isTransitioning)) && !prevented)
+            onNavigateToPage(targetRouteName);
         }}
         onLongPress={() => {
           if (targetRoute) emitTabLongPress(targetRoute.key);
@@ -67,34 +75,17 @@ export function PrimaryTabBar({
           });
         }}
         accessibilityRole="tab"
-        accessibilityState={{ selected, disabled: isSwitching || isTransitioning || !targetRoute }}
+        accessibilityState={{
+          selected,
+          disabled: isSwitching || (!allowTransitionNavigation && isTransitioning) || !targetRoute,
+        }}
         accessibilityLabel={copy.label}
         accessibilityHint={AppConfig.strings.navigation.tabDescriptions[copy.tab]}
         testID={`tab-${copy.tab}`}
         style={styles.tabItem}
         pressScale="subtle"
       >
-        <View
-          // Keep the rounded native surface when deselection removes its background.
-          collapsable={false}
-          style={[styles.tabIcon, selected && { backgroundColor: theme.primaryLight }]}
-        >
-          <AppIcon
-            name={copy.icon}
-            size={Size.iconMd}
-            color={selected ? selectedIconColor : inactiveLabelColor}
-            strokeWidth={selected ? 2.5 : 2}
-          />
-        </View>
-        <AppText
-          variant="caption"
-          weight={selected ? 'semibold' : 'medium'}
-          style={[styles.tabLabel, { color: selected ? selectedLabelColor : inactiveLabelColor }]}
-          numberOfLines={2}
-          textBreakStrategy="balanced"
-        >
-          {copy.label}
-        </AppText>
+        <TabVisual copy={copy} selected={selected} pageProgress={pageProgress} />
       </PressScaleTouchable>
     );
   };
@@ -133,6 +124,77 @@ export function PrimaryTabBar({
   );
 }
 
+/** Both paints stay mounted: native progress blends selection without React per frame. */
+function TabVisual({
+  copy,
+  selected,
+  pageProgress,
+}: {
+  copy: (typeof PRIMARY_TABS)[number];
+  selected: boolean;
+  pageProgress?: SharedValue<number>;
+}) {
+  const { theme } = useTheme();
+  const indices = PRIMARY_PAGES.flatMap((page, index) => (page.group === copy.tab ? [index] : []));
+  const first = indices[0];
+  const last = indices[indices.length - 1];
+  // Group ranges hold selection steady across sibling leaves.
+  const selectionProgress = useDerivedValue(() =>
+    pageProgress
+      ? Math.max(0, 1 - Math.max(first - pageProgress.value, pageProgress.value - last, 0))
+      : selected
+        ? 1
+        : 0,
+  );
+  const emphasis = useAnimatedStyle(() => ({ opacity: selectionProgress.value }));
+  const inactive = useAnimatedStyle(() => ({ opacity: 1 - selectionProgress.value }));
+  const inactiveColor = getReadableColor(theme.textSecondary, theme.background);
+  const selectedLabelColor = getReadableColor(theme.primary, theme.background);
+  const selectedIconColor = getReadableColor(theme.primary, theme.primaryLight, 3);
+  return (
+    <View
+      style={styles.tabVisual}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Animated.View style={[styles.tabVisual, inactive]}>
+        <View collapsable={false} style={styles.tabIcon}>
+          <AppIcon name={copy.icon} size={Size.iconMd} color={inactiveColor} strokeWidth={2} />
+        </View>
+        <AppText
+          variant="caption"
+          weight="medium"
+          style={[styles.tabLabel, { color: inactiveColor }]}
+          numberOfLines={2}
+          textBreakStrategy="balanced"
+        >
+          {copy.label}
+        </AppText>
+      </Animated.View>
+      <Animated.View style={[styles.selectedVisual, emphasis]}>
+        <View collapsable={false} style={[styles.tabIcon, { backgroundColor: theme.primaryLight }]}>
+          <AppIcon
+            name={copy.icon}
+            size={Size.iconMd}
+            color={selectedIconColor}
+            strokeWidth={2.5}
+          />
+        </View>
+        <AppText
+          variant="caption"
+          weight="semibold"
+          style={[styles.tabLabel, { color: selectedLabelColor }]}
+          numberOfLines={2}
+          textBreakStrategy="balanced"
+        >
+          {copy.label}
+        </AppText>
+      </Animated.View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   tabBar: {
     overflow: 'visible',
@@ -155,6 +217,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
   },
+  tabVisual: { width: '100%', alignItems: 'center', gap: Spacing.xs },
+  selectedVisual: { ...StyleSheet.absoluteFill, alignItems: 'center', gap: Spacing.xs },
   tabIcon: {
     width: Size.xxl,
     height: Size.lg,
