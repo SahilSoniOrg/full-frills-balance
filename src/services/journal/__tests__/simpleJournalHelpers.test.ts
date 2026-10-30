@@ -1,10 +1,10 @@
 import {
   buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
-  hasNegativeAmountSign,
   parseSimpleAmountInput,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
+import { hasNegativeAmountSign } from '@/src/utils/amountInput';
 import { AccountType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 

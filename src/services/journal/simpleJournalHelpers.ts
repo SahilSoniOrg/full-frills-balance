@@ -7,11 +7,8 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
+import { hasNegativeAmountSign } from '@/src/utils/amountInput';
 import { formatRoundedAmount } from '@/src/utils/money';
-
-export function hasNegativeAmountSign(amount: string): boolean {
-  return /[-−﹣－]/.test(amount);
-}
 
 export function parseSimpleAmountInput(amount: string): number {
   if (hasNegativeAmountSign(amount)) return 0;

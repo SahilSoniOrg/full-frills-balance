@@ -7,10 +7,10 @@ import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/form
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import { hasNegativeAmountSign } from '@/src/services/journal/simpleJournalHelpers';
 import { Icon } from '@/src/types/domainIcons';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
+import { hasNegativeAmountSign } from '@/src/utils/amountInput';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
