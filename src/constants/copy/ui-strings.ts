@@ -560,6 +560,11 @@ export const UI_STRINGS = {
       title: 'Reduce motion',
       description: 'Minimize animations on this device. System accessibility settings still apply.',
     },
+    homeNavigation: {
+      title: 'Swipe navigation (Home V2)',
+      description:
+        'Use the compact animated header and swipe between pages. Turn off for the classic tap-only layout.',
+    },
     data: {
       backupRestoreHeader: 'Backup & Restore',
       reviewHeader: 'Review',

@@ -2,6 +2,7 @@ import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { SafeAreaScope } from '@/src/design-system/SafeArea';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
+import { useHomeScreenPrefs } from '@/src/hooks/useHomeScreenPrefs';
 import {
   NavigationDrawer,
   PrimaryPager,
@@ -13,6 +14,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function TabsLayout() {
+  const { homeV2Enabled } = useHomeScreenPrefs();
   const workplace = useWorkplace();
   const { userName } = useProfilePrefs();
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -70,9 +72,9 @@ export function TabsLayout() {
           reportActiveRoute,
         }}
       >
-        <NavigationDrawer>
+        <NavigationDrawer edgeSwipeEnabled={!homeV2Enabled}>
           <View style={styles.shell}>
-            <PrimaryPager onAddAction={onAddAction} backBehavior="none">
+            <PrimaryPager homeV2={homeV2Enabled} onAddAction={onAddAction} backBehavior="none">
               {PRIMARY_PAGES.map(page => (
                 <PrimaryPager.Screen
                   key={page.routeName}

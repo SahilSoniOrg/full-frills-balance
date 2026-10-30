@@ -32,6 +32,7 @@ export interface UIPreferences {
   notificationWeekday: number;
   defaultShareFormat: ShareFormat;
   showSafeToSpendChart: boolean;
+  homeScreenVersion?: 'v1' | 'v2';
 }
 
 export type ThemeAppearance = 'light' | 'dark' | 'system';

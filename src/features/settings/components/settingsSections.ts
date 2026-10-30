@@ -106,6 +106,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     row('time-format', Icon.Clock, look.hourCycleTitle, look.hourCycleDesc, ['appearance', 'time', 'clock', '12 hour', '24 hour']),
   ]),
   ...screen(DISPLAY, 'onAppearance', [
+    row('home-navigation', Icon.SwapHorizontal, s.homeNavigation.title, s.homeNavigation.description, ['home', 'navigation', 'swipe', 'tabs', 'classic', 'v1', 'v2', 'layout']),
     row('reduce-motion', Icon.Pause, s.reduceMotion.title, s.reduceMotion.description, ['appearance', 'display', 'options', 'reduce motion', 'animation', 'accessibility', 'motion']),
     row('compact-account-picker', Icon.Wallet, s.accountPicker.title, s.accountPicker.description, ['appearance', 'display', 'options', 'accounts', 'compact', 'picker']),
     row('account-statistics', Icon.BarChart, s.stats.title, s.stats.description, ['appearance', 'display', 'options', 'account', 'statistics', 'stats', 'monthly']),
