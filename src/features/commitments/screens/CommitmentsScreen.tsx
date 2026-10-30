@@ -1,10 +1,9 @@
-import { CommitmentsGroupPager } from '@/src/features/commitments/components/CommitmentsGroupPager';
+import { CommitmentsPagerLeaf } from '../components/CommitmentsPagerLeaf';
 
-export type { CommitmentsTab } from '@/src/features/commitments/components/CommitmentsGroupPager';
+export type CommitmentsTab = 'budgets' | 'planned';
 
-/** Both `commitments` and `planned-payments` routes render the same group shell. */
-export function CommitmentsPage() {
-  return <CommitmentsGroupPager />;
+export function CommitmentsPage({ tab = 'budgets' }: { tab?: CommitmentsTab }) {
+  return <CommitmentsPagerLeaf tab={tab} />;
 }
 
 export default CommitmentsPage;

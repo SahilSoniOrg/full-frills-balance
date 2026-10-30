@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { AppConfig } from '@/src/constants';
@@ -7,7 +7,6 @@ import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { usePrimaryLeafPrepared } from '@/src/navigation/primaryPageNavigation';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCommitmentsBadgeSnapshot } from '../CommitmentsGroupProvider';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 
 export function CommitmentsPagerLeaf({ tab }: { tab: 'budgets' | 'planned' }) {
@@ -34,10 +33,6 @@ function BudgetLeaf() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const active = usePrimaryLeafPrepared('commitments');
   const vm = useBudgetListViewModel(workplaceId, defaultCurrencyCode, active);
-  const { updateCount } = useCommitmentsBadgeSnapshot();
-  useEffect(() => {
-    if (active && !vm.isLoading) updateCount('budgets', vm.items.length);
-  }, [active, vm.isLoading, vm.items.length, updateCount]);
   return (
     <BudgetListView {...vm} onRetry={vm.retry} onCreate={() => AppNavigation.toBudgetForm()} />
   );
@@ -47,10 +42,6 @@ function PlannedLeaf() {
   const { workplaceId } = useWorkplace();
   const active = usePrimaryLeafPrepared('planned-payments');
   const vm = usePlannedPayments(workplaceId, active);
-  const { updateCount } = useCommitmentsBadgeSnapshot();
-  useEffect(() => {
-    if (active && !vm.isLoading) updateCount('planned', vm.items.length);
-  }, [active, vm.isLoading, vm.items.length, updateCount]);
   return (
     <PlannedPaymentListView
       {...vm}

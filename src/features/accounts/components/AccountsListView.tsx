@@ -7,12 +7,9 @@ import {
   ErrorStateView,
   Icon,
   IconButton,
-  AppTabs,
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { ScreenWithChrome } from '@/src/components/layout';
-import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
@@ -32,12 +29,6 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
-import type { SharedValue } from 'react-native-reanimated';
-
-export const ACCOUNTS_GROUP_TAB_OPTIONS = [
-  { id: 'accounts' as const, label: 'Accounts', pageIndex: 0 },
-  { id: 'categories' as const, label: 'Categories', pageIndex: 1 },
-] as const;
 
 export function AccountsListView({
   sections,
@@ -67,16 +58,7 @@ export function AccountsListView({
   hasUnvaluedEntries,
   currencyCode,
   activeTab,
-  setActiveTab,
-  chrome,
-  pageProgress,
-  /** When true, omit ScreenWithChrome + AppTabs (provided by AccountsGroupPager). */
-  embedded = false,
-}: AccountsListViewModel & {
-  chrome: TabScreenChrome;
-  pageProgress?: SharedValue<number>;
-  embedded?: boolean;
-}) {
+}: AccountsListViewModel) {
   const { theme } = useTheme();
 
   const rows = useMemo(() => buildAccountListRows(sections), [sections]);
@@ -233,21 +215,8 @@ export function AccountsListView({
     [selectedAccountIds, isSelectionModeActive],
   );
 
-  const screenTestID = activeTab === 'categories' ? 'categories-screen' : 'accounts-screen';
-
   const body = (
     <View style={styles.container}>
-      {!embedded ? (
-        <View style={styles.tabContainer}>
-          <AppTabs
-            options={ACCOUNTS_GROUP_TAB_OPTIONS}
-            value={activeTab}
-            onChange={setActiveTab}
-            pageProgress={pageProgress}
-          />
-        </View>
-      ) : null}
-
       <FlashList
         keyboardShouldPersistTaps="handled"
         data={rows}
@@ -341,31 +310,14 @@ export function AccountsListView({
   );
 
   if (error && sections.length === 0) {
-    if (embedded) {
-      return <ErrorStateView message="We could not load accounts." onRetry={retry} />;
-    }
-    return (
-      <ScreenWithChrome chrome={chrome} scrollable={false}>
-        <ErrorStateView message="We could not load accounts." onRetry={retry} />
-      </ScreenWithChrome>
-    );
+    return <ErrorStateView message="We could not load accounts." onRetry={retry} />;
   }
-
-  if (embedded) return body;
-
-  return (
-    <ScreenWithChrome chrome={chrome} scrollable={false} testID={screenTestID}>
-      {body}
-    </ScreenWithChrome>
-  );
+  return body;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  tabContainer: {
-    paddingTop: Spacing.md,
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,

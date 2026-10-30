@@ -17,8 +17,6 @@ import {
   MultipleWorkplacesProvider,
   usePrimaryNavigation,
 } from '@/src/navigation/primaryNavigation';
-import { primaryPageFromRouteName } from '@/src/navigation/primaryPages';
-import type { LegacyPanGesture } from 'react-native-gesture-handler';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -30,7 +28,6 @@ import { Drawer } from 'react-native-drawer-layout';
 import {
   AccessibilityInfo,
   BackHandler,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,7 +44,6 @@ export interface NavigationWorkplace {
 
 export interface NavigationDrawerProps {
   children: ReactNode;
-  edgeSwipeEnabled?: boolean;
 }
 
 const copy = AppConfig.strings.navigation;
@@ -120,20 +116,13 @@ const NAV_SECTIONS: {
   },
 ];
 
-export function NavigationDrawer({ children, edgeSwipeEnabled = true }: NavigationDrawerProps) {
+export function NavigationDrawer({ children }: NavigationDrawerProps) {
   const workplace = useWorkplace();
   const primaryNav = usePrimaryNavigation();
   if (!primaryNav) {
     throw new Error('NavigationDrawer must be used within PrimaryNavigationProvider');
   }
-  const {
-    drawerVisible,
-    openDrawer,
-    closeDrawer: closePrimaryDrawer,
-    selectionModeActive,
-    userName,
-    activeRouteName,
-  } = primaryNav;
+  const { drawerVisible, openDrawer, closeDrawer: closePrimaryDrawer, userName } = primaryNav;
   const { data: workplaceRows = [] } = useObservable(
     () => workplaceService.observeAllWorkplaces(),
     [],
@@ -151,8 +140,6 @@ export function NavigationDrawer({ children, edgeSwipeEnabled = true }: Navigati
   };
   const isSwitching = workplace.isSwitchingWorkplace;
   const error = workplace.workplaceSwitchError;
-  const canOpen = !selectionModeActive && !isSwitching;
-  const isDashboard = primaryPageFromRouteName(activeRouteName ?? 'index')?.id === 'dashboard';
   const router = useRouter();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -487,11 +474,6 @@ export function NavigationDrawer({ children, edgeSwipeEnabled = true }: Navigati
     </View>
   );
 
-  // Android's native pager yields LTR at page 0 to a parent drawer, so full-width
-  // hitSlop is safe there. iOS UIScrollView cannot start after RNGH fails, so
-  // Dashboard stays edge-only and PrimaryPagerViewport opens via overscroll.
-  const closedSwipeEdgeWidth = isDashboard && Platform.OS === 'android' ? width : 32;
-
   return (
     <MultipleWorkplacesProvider value={workplaceRows.length > 1}>
       <Drawer
@@ -503,16 +485,16 @@ export function NavigationDrawer({ children, edgeSwipeEnabled = true }: Navigati
           if (drawerVisible) closeDrawer();
         }}
         drawerType="front"
-        swipeEnabled={
-          (drawerVisible || (edgeSwipeEnabled && canOpen)) && !selectorOpen && !isSwitching
-        }
-        swipeEdgeWidth={drawerVisible ? width : closedSwipeEdgeWidth}
+        swipeEnabled={drawerVisible && !selectorOpen && !isSwitching}
+        swipeEdgeWidth={width}
         configureGestureHandler={gesture => {
-          const legacyPan = gesture as unknown as LegacyPanGesture;
-          const configured = drawerVisible
-            ? legacyPan.activeOffsetX(-20).failOffsetX(20)
-            : legacyPan.activeOffsetX(20).failOffsetX(-20);
-          return configured as unknown as typeof gesture;
+          // These native config fields work with the drawer's builder gesture
+          // and its public callback type, without deprecated gesture aliases.
+          Object.assign(gesture.config, {
+            activeOffsetXStart: -20,
+            failOffsetXEnd: 20,
+          });
+          return gesture;
         }}
         reduceMotion={reduceMotion}
         drawerStyle={[styles.drawer, { width: drawerWidth, backgroundColor: theme.surface }]}

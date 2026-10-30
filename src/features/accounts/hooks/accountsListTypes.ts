@@ -65,7 +65,6 @@ export interface AccountsListViewModel {
   hasUnvaluedEntries?: boolean;
   currencyCode: string;
   activeTab: 'accounts' | 'categories';
-  setActiveTab: (tab: 'accounts' | 'categories') => void;
   searchQuery: string;
   isSearching: boolean;
   onSearchChange: (query: string) => void;

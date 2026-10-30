@@ -44,7 +44,7 @@ export function AccountsPagerLeaf({ tab }: { tab: 'accounts' | 'categories' }) {
   );
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false} testID={`${tab}-screen`}>
-      <AccountsListView {...vm} chrome={chrome} embedded />
+      <AccountsListView {...vm} />
     </ScreenWithChrome>
   );
 }

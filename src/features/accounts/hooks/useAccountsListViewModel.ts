@@ -34,7 +34,6 @@ import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -72,57 +71,60 @@ export function useAccountsListViewModel(
     setIsPeriodLoading,
   } = useAccountsGroupPreferences();
   const pageNavigation = usePrimaryPageNavigation();
+  const setPageSwipeLock = pageNavigation?.setPageSwipeLock;
 
   const [activeModal, setActiveModal] = useState<AccountsListActiveModal>(null);
   const selection = useSelection<AccountId>();
+  const exitSelectionMode = selection.exitSelectionMode;
   useEffect(() => {
     const lockId = `accounts-modal:${activeTab}`;
-    pageNavigation?.setPageSwipeLock(lockId, activeModal !== null);
-    return () => pageNavigation?.setPageSwipeLock(lockId, false);
-  }, [activeModal, activeTab, pageNavigation?.setPageSwipeLock]);
-  const setActiveTab = useCallback(
-    (tab: AccountsListTab) => {
-      selection.exitSelectionMode();
-      if (pageNavigation) pageNavigation.navigateToPage(tab);
-      else AppNavigation.toPrimaryPage(tab);
-    },
-    [pageNavigation, selection.exitSelectionMode],
-  );
+    setPageSwipeLock?.(lockId, activeModal !== null);
+    return () => setPageSwipeLock?.(lockId, false);
+  }, [activeModal, activeTab, setPageSwipeLock]);
   const focusStartVersion = useRef<number | null>(null);
   const wasFocused = useRef(isFocused);
 
   useEffect(() => {
-    if (wasFocused.current && !isFocused) selection.exitSelectionMode();
+    if (wasFocused.current && !isFocused) exitSelectionMode();
     wasFocused.current = isFocused;
-  }, [isFocused, selection.exitSelectionMode]);
+  }, [isFocused, exitSelectionMode]);
 
-  const onToggleSection = useCallback((title: string) => {
-    setCollapsedSections(previous => {
-      const next = new Set(previous);
-      if (next.has(title)) next.delete(title);
-      else next.add(title);
-      return next;
-    });
-  }, []);
+  const onToggleSection = useCallback(
+    (title: string) => {
+      setCollapsedSections(previous => {
+        const next = new Set(previous);
+        if (next.has(title)) next.delete(title);
+        else next.add(title);
+        return next;
+      });
+    },
+    [setCollapsedSections],
+  );
 
-  const onCollapseAccount = useCallback((accountId: AccountId) => {
-    setExpandedAccountIds(previous => {
-      const next = new Set(previous);
-      if (next.has(accountId)) {
-        next.delete(accountId);
-      } else {
-        next.add(accountId);
+  const onCollapseAccount = useCallback(
+    (accountId: AccountId) => {
+      setExpandedAccountIds(previous => {
+        const next = new Set(previous);
+        if (next.has(accountId)) {
+          next.delete(accountId);
+        } else {
+          next.add(accountId);
+        }
+        return next;
+      });
+    },
+    [setExpandedAccountIds],
+  );
+
+  const setInflowPeriod = useCallback(
+    (period: AccountsListInflowPeriod) => {
+      setInflowPeriodState(period);
+      if (period !== '30days') {
+        setRollingPeriodTotals(null);
       }
-      return next;
-    });
-  }, []);
-
-  const setInflowPeriod = useCallback((period: AccountsListInflowPeriod) => {
-    setInflowPeriodState(period);
-    if (period !== '30days') {
-      setRollingPeriodTotals(null);
-    }
-  }, []);
+    },
+    [setInflowPeriodState, setRollingPeriodTotals],
+  );
 
   const accounts = dashboardData.accounts;
 
@@ -188,7 +190,15 @@ export function useAccountsListViewModel(
     return () => {
       isMounted = false;
     };
-  }, [isFocused, inflowPeriod, workplaceId, workplaceCurrency, version]);
+  }, [
+    isFocused,
+    inflowPeriod,
+    workplaceId,
+    workplaceCurrency,
+    version,
+    setIsPeriodLoading,
+    setRollingPeriodTotals,
+  ]);
 
   const periodTotals = inflowPeriod === 'month' ? monthPeriodTotals : rollingPeriodTotals;
   const { inflowIncome, inflowExpense } = useMemo(
@@ -384,7 +394,6 @@ export function useAccountsListViewModel(
     onSearchChange: setSearchQuery,
     setIsSearching,
     activeTab,
-    setActiveTab,
     accountsForArchiveToggle,
   };
 }

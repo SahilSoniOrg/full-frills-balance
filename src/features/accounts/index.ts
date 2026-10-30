@@ -5,7 +5,6 @@ export { resolveCurrencySymbol } from './helpers/currencyPickerOptions';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
 export { default as AccountManagementScreen } from './screens/AccountManagementScreen';
-export { AccountsGroupPager } from './components/AccountsGroupPager';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';
 export { AccountsGroupProvider } from './AccountsGroupProvider';
 export { AccountsPagerLeaf } from './components/AccountsPagerLeaf';

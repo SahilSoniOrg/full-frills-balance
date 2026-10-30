@@ -28,9 +28,8 @@ export type PrimaryTabBarProps = {
   onNavigateToPage: (routeName: string) => void;
   isSwitching: boolean;
   isTransitioning: boolean;
-  allowTransitionNavigation?: boolean;
-  /** Six-leaf native position, supplied by Home V2 only. */
-  pageProgress?: SharedValue<number>;
+  /** Continuous six-leaf native position. */
+  pageProgress: SharedValue<number>;
   onAddAction: (action: ContextualAddAction) => void;
 };
 
@@ -42,7 +41,6 @@ export function PrimaryTabBar({
   onNavigateToPage,
   isSwitching,
   isTransitioning,
-  allowTransitionNavigation = false,
   pageProgress,
   onAddAction,
 }: PrimaryTabBarProps) {
@@ -61,12 +59,11 @@ export function PrimaryTabBar({
     return (
       <PressScaleTouchable
         key={copy.tab}
-        disabled={isSwitching || (!allowTransitionNavigation && isTransitioning) || !targetRoute}
+        disabled={isSwitching || !targetRoute}
         onPress={() => {
           if (!targetRoute) return;
           const prevented = emitTabPress(targetRoute.key);
-          if ((!selected || (allowTransitionNavigation && isTransitioning)) && !prevented)
-            onNavigateToPage(targetRouteName);
+          if ((!selected || isTransitioning) && !prevented) onNavigateToPage(targetRouteName);
         }}
         onLongPress={() => {
           if (targetRoute) emitTabLongPress(targetRoute.key);
@@ -77,7 +74,7 @@ export function PrimaryTabBar({
         accessibilityRole="tab"
         accessibilityState={{
           selected,
-          disabled: isSwitching || (!allowTransitionNavigation && isTransitioning) || !targetRoute,
+          disabled: isSwitching || !targetRoute,
         }}
         accessibilityLabel={copy.label}
         accessibilityHint={AppConfig.strings.navigation.tabDescriptions[copy.tab]}
@@ -85,7 +82,7 @@ export function PrimaryTabBar({
         style={styles.tabItem}
         pressScale="subtle"
       >
-        <TabVisual copy={copy} selected={selected} pageProgress={pageProgress} />
+        <TabVisual copy={copy} pageProgress={pageProgress} />
       </PressScaleTouchable>
     );
   };
@@ -127,12 +124,10 @@ export function PrimaryTabBar({
 /** Both paints stay mounted: native progress blends selection without React per frame. */
 function TabVisual({
   copy,
-  selected,
   pageProgress,
 }: {
   copy: (typeof PRIMARY_TABS)[number];
-  selected: boolean;
-  pageProgress?: SharedValue<number>;
+  pageProgress: SharedValue<number>;
 }) {
   const { theme } = useTheme();
   const indices = PRIMARY_PAGES.flatMap((page, index) => (page.group === copy.tab ? [index] : []));
@@ -140,11 +135,7 @@ function TabVisual({
   const last = indices[indices.length - 1];
   // Group ranges hold selection steady across sibling leaves.
   const selectionProgress = useDerivedValue(() =>
-    pageProgress
-      ? Math.max(0, 1 - Math.max(first - pageProgress.value, pageProgress.value - last, 0))
-      : selected
-        ? 1
-        : 0,
+    Math.max(0, 1 - Math.max(first - pageProgress.value, pageProgress.value - last, 0)),
   );
   const emphasis = useAnimatedStyle(() => ({ opacity: selectionProgress.value }));
   const inactive = useAnimatedStyle(() => ({ opacity: 1 - selectionProgress.value }));

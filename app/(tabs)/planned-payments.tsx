@@ -1,5 +1,5 @@
 import { CommitmentsPage } from '@/src/features/commitments';
 
 export default function PlannedPaymentsRoute() {
-  return <CommitmentsPage />;
+  return <CommitmentsPage tab="planned" />;
 }

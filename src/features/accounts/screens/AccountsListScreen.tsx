@@ -1,8 +1,7 @@
-import { AccountsGroupPager } from '@/src/features/accounts/components/AccountsGroupPager';
+import { AccountsPagerLeaf } from '../components/AccountsPagerLeaf';
 
-/** Both `accounts` and `categories` routes render the same group shell. */
-export function AccountsListScreen() {
-  return <AccountsGroupPager />;
+export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'categories' }) {
+  return <AccountsPagerLeaf tab={tab} />;
 }
 
 export default AccountsListScreen;

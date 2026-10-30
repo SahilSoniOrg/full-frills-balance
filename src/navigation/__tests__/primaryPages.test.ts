@@ -3,16 +3,11 @@ import {
   normalizeLegacyPrimaryRoute,
   PRIMARY_GROUP_DEFAULT_ROUTE,
   PRIMARY_PAGES,
-  PRIMARY_SWIPE_GROUPS,
-  primaryAdjacentSwipeGroup,
-  primaryEntryRouteForGroup,
-  primaryInnerIndex,
   primaryPageForIndex,
   primaryPageFromRouteName,
   primaryPageIndex,
   primaryRouteForGroup,
   primaryRoutesInGroup,
-  primarySwipeIndex,
   rememberPrimaryGroupRoute,
 } from '@/src/navigation/primaryPages';
 
@@ -76,28 +71,8 @@ describe('primaryPages', () => {
     expect(primaryRouteForGroup('dashboard')).toBe(PRIMARY_GROUP_DEFAULT_ROUTE.dashboard);
   });
 
-  it('maps leaf routes onto the four outer swipe groups', () => {
-    expect(PRIMARY_SWIPE_GROUPS).toEqual(['dashboard', 'accounts', 'commitments', 'activity']);
-    expect(primarySwipeIndex('index')).toBe(0);
-    expect(primarySwipeIndex('accounts')).toBe(1);
-    expect(primarySwipeIndex('categories')).toBe(1);
-    expect(primarySwipeIndex('commitments')).toBe(2);
-    expect(primarySwipeIndex('planned-payments')).toBe(2);
-    expect(primarySwipeIndex('activity')).toBe(3);
+  it('lists the canonical sibling routes for each group', () => {
     expect(primaryRoutesInGroup('accounts')).toEqual(['accounts', 'categories']);
     expect(primaryRoutesInGroup('commitments')).toEqual(['commitments', 'planned-payments']);
-    expect(primaryInnerIndex('accounts')).toBe(0);
-    expect(primaryInnerIndex('categories')).toBe(1);
-    expect(primaryInnerIndex('planned-payments')).toBe(1);
-    expect(primaryInnerIndex('index')).toBe(0);
-    expect(primaryAdjacentSwipeGroup('accounts', 'next')).toBe('commitments');
-    expect(primaryAdjacentSwipeGroup('accounts', 'prev')).toBe('dashboard');
-    expect(primaryAdjacentSwipeGroup('dashboard', 'prev')).toBeUndefined();
-    expect(primaryAdjacentSwipeGroup('activity', 'next')).toBeUndefined();
-    expect(primaryEntryRouteForGroup('accounts', 'next')).toBe('accounts');
-    expect(primaryEntryRouteForGroup('accounts', 'prev')).toBe('categories');
-    expect(primaryEntryRouteForGroup('commitments', 'next')).toBe('commitments');
-    expect(primaryEntryRouteForGroup('commitments', 'prev')).toBe('planned-payments');
-    expect(primaryEntryRouteForGroup('dashboard', 'next')).toBe('index');
   });
 });

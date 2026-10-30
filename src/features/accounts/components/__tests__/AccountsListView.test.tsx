@@ -43,14 +43,6 @@ const mockSections: AccountSectionViewModel[] = [
   },
 ];
 
-const mockChrome = {
-  rightAction: {
-    icon: Icon.Plus,
-    onPress: jest.fn(),
-    accessibilityLabel: 'Add account',
-  },
-};
-
 const requiredViewProps = {
   error: null,
   retry: jest.fn(),
@@ -111,14 +103,12 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
         setIsSearching={jest.fn()}
         accountsForArchiveToggle={[]}
         {...requiredViewProps}
-        chrome={mockChrome as any}
       />,
     );
 
@@ -152,7 +142,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
@@ -160,7 +149,6 @@ describe('AccountsListView', () => {
         accountsForArchiveToggle={[]}
         {...requiredViewProps}
         onToggleSectionSelect={onToggleSectionSelect}
-        chrome={mockChrome as any}
       />,
     );
 
@@ -195,7 +183,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
@@ -206,7 +193,6 @@ describe('AccountsListView', () => {
         selectedAccountIds={new Set(['acc-1' as AccountId])}
         onToggleSectionSelect={onToggleSectionSelect}
         totalSelectableAccounts={1}
-        chrome={mockChrome as any}
       />
     );
     const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
@@ -265,7 +251,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
@@ -287,7 +272,6 @@ describe('AccountsListView', () => {
           ],
         }}
         totalSelectableAccounts={1}
-        chrome={mockChrome as any}
       />,
     );
 
@@ -320,7 +304,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
@@ -332,7 +315,6 @@ describe('AccountsListView', () => {
           activeModal: { type: 'bulkRename' },
           selectedAccountsList: [mockAccount],
         }}
-        chrome={mockChrome as any}
       />,
     );
 
@@ -365,7 +347,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        setActiveTab={jest.fn()}
         searchQuery=""
         isSearching={false}
         onSearchChange={jest.fn()}
@@ -377,7 +358,6 @@ describe('AccountsListView', () => {
           activeModal: { type: 'appearance', account: mockAccount },
           onAppearanceUpdate,
         }}
-        chrome={mockChrome as any}
       />,
     );
 

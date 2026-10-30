@@ -16,8 +16,6 @@ export type PrimaryPageNavigationValue = {
   isTransitioning: boolean;
   scrollEnabled: boolean;
   pageProgress: SharedValue<number>;
-  /** Swipe groups still mounted in the outer pager window (keep scroll/data warm). */
-  keptAliveGroups: ReadonlySet<PrimaryPageGroup>;
   navigateToPage: (routeName: string) => void;
   setPageSwipeLock: (lockId: string, locked: boolean) => void;
 };
@@ -28,7 +26,6 @@ type ScreenNavigationValue = Pick<
   'activeRouteName' | 'navigateToPage' | 'setPageSwipeLock'
 >;
 const ScreenNavigationContext = createContext<ScreenNavigationValue | null>(null);
-const RetainedGroupsContext = createContext<ReadonlySet<PrimaryPageGroup> | null>(null);
 const LiveReadRouteContext = createContext<string | undefined>(undefined);
 const PreparedRoutesContext = createContext<ReadonlySet<string> | undefined>(undefined);
 
@@ -52,15 +49,13 @@ export function PrimaryPageNavigationProvider({
   );
   return (
     <PrimaryPageNavigationContext.Provider value={value}>
-      <RetainedGroupsContext.Provider value={value.keptAliveGroups}>
-        <ScreenNavigationContext.Provider value={screenNavigation}>
-          <LiveReadRouteContext.Provider value={liveRouteName}>
-            <PreparedRoutesContext.Provider value={preparedRoutes}>
-              {children}
-            </PreparedRoutesContext.Provider>
-          </LiveReadRouteContext.Provider>
-        </ScreenNavigationContext.Provider>
-      </RetainedGroupsContext.Provider>
+      <ScreenNavigationContext.Provider value={screenNavigation}>
+        <LiveReadRouteContext.Provider value={liveRouteName}>
+          <PreparedRoutesContext.Provider value={preparedRoutes}>
+            {children}
+          </PreparedRoutesContext.Provider>
+        </LiveReadRouteContext.Provider>
+      </ScreenNavigationContext.Provider>
     </PrimaryPageNavigationContext.Provider>
   );
 }
@@ -73,16 +68,6 @@ export function usePrimaryPagerNavigation(): PrimaryPageNavigationValue | null {
 export function usePrimaryPageNavigation(): ScreenNavigationValue | null {
   return useContext(ScreenNavigationContext);
 }
-/**
- * True while this primary group is focused or still mounted in the pager window.
- * Describes retained UI only. Use usePrimaryPageActive to gate live reads.
- */
-export function usePrimaryPageAlive(group: PrimaryPageGroup): boolean {
-  const isFocused = useIsFocused();
-  const retainedGroups = useContext(RetainedGroupsContext);
-  return isFocused || (retainedGroups?.has(group) ?? false);
-}
-
 /** Live reads belong to the selected group; retained pages keep their last paint. */
 export function usePrimaryPageActive(group: PrimaryPageGroup): boolean {
   const isFocused = useIsFocused();

@@ -4,11 +4,10 @@ import {
   appendMissingPlaceholderTabRoutes,
 } from 'expo-router/build/standard-navigation/appendMissingPlaceholderTabRoutes';
 import { createPrimaryPagerContent } from './PrimaryPagerNavigator.shared';
-import { PrimaryStaticViewport } from './PrimaryStaticViewport';
 import { HomeV2Viewport } from './HomeV2Viewport.web';
 
 export const PrimaryPager = createStandardRouterNavigator(
-  createPrimaryPagerContent(PrimaryStaticViewport, HomeV2Viewport),
+  createPrimaryPagerContent(HomeV2Viewport),
   TabRouter,
   {
     activityDefaultThreshold: 1,
