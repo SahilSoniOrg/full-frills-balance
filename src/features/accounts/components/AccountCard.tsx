@@ -22,8 +22,10 @@ import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAcc
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { MotiView } from 'moti';
+import { usePressScale } from '@/src/components/core/PressScaleTouchable';
 import { withOpacity } from '@/src/utils/color-math';
 
 interface AccountCardProps {
@@ -52,6 +54,8 @@ function AccountCardBase({
   isSelectionModeActive = false,
 }: AccountCardProps) {
   const { theme } = useTheme();
+  const [isPressed, setIsPressed] = useState(false);
+  const cardMotion = usePressScale('subtle');
   const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat({ loading: isLoading });
   const workplaceCurrencyCode = account.workplaceCurrencyCode ?? account.currencyCode;
@@ -96,240 +100,263 @@ function AccountCardBase({
     onPress: openAccount,
     onLongPress: selectAccount,
     delayLongPress: LIST_SELECTION_LONG_PRESS_MS,
-    pressScale: 'subtle' as const,
+    pressScale: 'none' as const,
+    activeOpacity: 1,
+    onPressIn: () => {
+      setIsPressed(true);
+      cardMotion.handlePressIn();
+    },
+    onPressOut: () => {
+      setIsPressed(false);
+      cardMotion.handlePressOut();
+    },
   };
 
   return (
-    <View
-      style={[
-        styles.touchableWrapper,
-        {
-          marginBottom: Spacing.md,
-          marginLeft: Math.max(account.depth, 0) * Spacing.sm,
-          opacity: account.isArchived ? Opacity.medium : account.depth > 0 ? 0.9 : 1,
-        },
-      ]}
+    <MotiView
+      animate={{ ...cardMotion.animate, opacity: isPressed ? Opacity.heavy : 1 }}
+      transition={cardMotion.transition}
     >
-      <AppCard
-        testID="account-card"
-        elevation="sm"
-        paddingSize="none"
-        radius="r2"
-        background={surfaceColor}
-        style={styles.cardContainer}
+      <View
+        style={[
+          styles.touchableWrapper,
+          {
+            marginBottom: Spacing.md,
+            marginLeft: Math.max(account.depth, 0) * Spacing.sm,
+            opacity: account.isArchived ? Opacity.medium : account.depth > 0 ? 0.9 : 1,
+          },
+        ]}
       >
-        <Box
-          testID="account-card-primary-panel"
-          unsafe_backgroundRaw={account.accountColor}
-          paddingHorizontal="lg"
-          paddingTop="md"
-          paddingBottom="sm"
-          style={{ position: 'relative', overflow: 'hidden' }}
+        <AppCard
+          testID="account-card"
+          elevation="sm"
+          paddingSize="none"
+          radius="r2"
+          background={surfaceColor}
+          style={styles.cardContainer}
         >
-          <Column gap="sm">
-            <Row align="center" justify="space-between">
-              <PressScaleTouchable
-                {...cardPressProps}
-                testID="account-card-open"
-                accessibilityRole="button"
-                accessibilityLabel={cardAccessibilityLabel}
-                accessibilityState={{ selected: isSelected }}
-                style={styles.cardPressFill}
-              >
-                <Row gap="sm" align="center" style={{ minWidth: 0 }}>
-                  <View
-                    style={[
-                      styles.categoryIconFrame,
-                      {
-                        borderColor: account.categoryColor,
-                        backgroundColor: categoryIconBg,
-                      },
-                    ]}
-                  >
-                    <View style={styles.identityIcon}>
-                      {isSelectionModeActive || isSelected ? (
-                        <View
-                          testID="account-card-selection-indicator"
-                          accessibilityRole="checkbox"
-                          accessibilityLabel={`${account.name} selected`}
-                          accessibilityState={{ checked: isSelected }}
-                        >
-                          <SelectionIndicator
-                            selected={isSelected}
-                            borderColor={resolvedTextColor}
+          <Box
+            testID="account-card-primary-panel"
+            unsafe_backgroundRaw={account.accountColor}
+            paddingHorizontal="lg"
+            paddingTop="md"
+            paddingBottom="sm"
+            style={{ position: 'relative', overflow: 'hidden' }}
+          >
+            <Column gap="sm">
+              <Row align="center" justify="space-between">
+                <PressScaleTouchable
+                  {...cardPressProps}
+                  testID="account-card-open"
+                  accessibilityRole="button"
+                  accessibilityLabel={cardAccessibilityLabel}
+                  accessibilityState={{ selected: isSelected }}
+                  style={styles.cardPressFill}
+                >
+                  <Row gap="sm" align="center" style={{ minWidth: 0 }}>
+                    <View
+                      style={[
+                        styles.categoryIconFrame,
+                        {
+                          borderColor: account.categoryColor,
+                          backgroundColor: categoryIconBg,
+                        },
+                      ]}
+                    >
+                      <View style={styles.identityIcon}>
+                        {isSelectionModeActive || isSelected ? (
+                          <View
+                            testID="account-card-selection-indicator"
+                            accessibilityRole="checkbox"
+                            accessibilityLabel={`${account.name} selected`}
+                            accessibilityState={{ checked: isSelected }}
+                          >
+                            <SelectionIndicator
+                              selected={isSelected}
+                              borderColor={resolvedTextColor}
+                            />
+                          </View>
+                        ) : (
+                          <IvyIcon
+                            name={account.icon}
+                            label={account.name}
+                            color={account.textColor}
+                            iconColor={account.textColor}
+                            style={{ backgroundColor: 'transparent' }}
+                            size={Size.avatarSm}
                           />
-                        </View>
-                      ) : (
-                        <IvyIcon
-                          name={account.icon}
-                          label={account.name}
-                          color={account.textColor}
-                          iconColor={account.textColor}
-                          style={{ backgroundColor: 'transparent' }}
-                          size={Size.avatarSm}
-                        />
-                      )}
+                        )}
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <AppText variant="body" weight="bold" style={{ color: resolvedTextColor }}>
-                      {account.name}
-                    </AppText>
-                    {account.parentName ? (
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText variant="body" weight="bold" style={{ color: resolvedTextColor }}>
+                        {account.name}
+                      </AppText>
+                      {account.parentName ? (
+                        <AppText
+                          variant="caption"
+                          style={{ color: withOpacity(resolvedTextColor, Opacity.heavy) }}
+                        >
+                          in {account.parentName}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    {account.isArchived ? <ArchivedAccountIndicator /> : null}
+                  </Row>
+                </PressScaleTouchable>
+
+                <Row gap="xs" align="center" testID="account-card-header-actions">
+                  {reconciledDateText && (
+                    <View
+                      testID="account-card-reconciled-badge"
+                      style={[
+                        styles.reconciledBadge,
+                        { backgroundColor: withOpacity(theme.pureInverse, Opacity.soft) },
+                      ]}
+                    >
+                      <AppIcon
+                        name={Icon.ShieldCheck}
+                        color={resolvedTextColor}
+                        size={Size.iconXs}
+                      />
                       <AppText
                         variant="caption"
-                        style={{ color: withOpacity(resolvedTextColor, Opacity.heavy) }}
+                        style={{
+                          opacity: Opacity.heavy,
+                          color: resolvedTextColor,
+                          fontSize: Typography.sizes.xs,
+                          lineHeight: 12,
+                        }}
                       >
-                        in {account.parentName}
+                        {reconciledDateText}
                       </AppText>
-                    ) : null}
-                  </View>
-                  {account.isArchived ? <ArchivedAccountIndicator /> : null}
+                    </View>
+                  )}
+                  {account.hasChildren && (
+                    <IconButton
+                      name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
+                      size={Size.iconSm}
+                      style={styles.actionButton}
+                      variant="clear"
+                      onPress={() => onCollapse?.(account.id)}
+                      iconColor={resolvedTextColor}
+                      accessibilityLabel={
+                        account.isExpanded
+                          ? `Collapse sub-accounts for ${account.name}`
+                          : `Expand sub-accounts for ${account.name}`
+                      }
+                      accessibilityState={{ expanded: account.isExpanded }}
+                    />
+                  )}
+                </Row>
+              </Row>
+
+              <PressScaleTouchable {...cardPressProps} accessible={false} focusable={false}>
+                <Row
+                  testID="account-card-amount-row"
+                  align="center"
+                  style={[styles.amountRow, onActionPress && styles.amountWithActions]}
+                >
+                  <Column align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
+                    <FitText
+                      variant="title"
+                      fontRole="numeric"
+                      weight="semibold"
+                      tabular
+                      align="center"
+                      maxFontSize={Typography.roles.title.fontSize}
+                      minFontSize={Typography.sizes.xl}
+                      lineHeightRatio={
+                        Typography.roles.title.lineHeight / Typography.roles.title.fontSize
+                      }
+                      style={{ color: resolvedTextColor }}
+                    >
+                      {formatMoney(account.balance, account.currencyCode)}
+                    </FitText>
+                    {account.workplaceBalance !== undefined &&
+                      account.currencyCode !== workplaceCurrencyCode && (
+                        <AppText
+                          variant="bodySmall"
+                          weight="medium"
+                          style={{ color: resolvedTextColor }}
+                        >
+                          ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
+                        </AppText>
+                      )}
+                  </Column>
                 </Row>
               </PressScaleTouchable>
+            </Column>
+            {onActionPress && !isSelectionModeActive ? (
+              <View
+                testID="account-card-amount-actions"
+                style={[styles.actionButton, styles.overflowAction]}
+              >
+                <IconButton
+                  name={Icon.More}
+                  size={Size.iconSm}
+                  style={styles.actionButton}
+                  variant="clear"
+                  onPress={() => onActionPress(account)}
+                  iconColor={resolvedTextColor}
+                  accessibilityLabel={`Actions for ${account.name}`}
+                />
+              </View>
+            ) : null}
+          </Box>
 
-              <Row gap="xs" align="center" testID="account-card-header-actions">
-                {reconciledDateText && (
-                  <View
-                    testID="account-card-reconciled-badge"
-                    style={[
-                      styles.reconciledBadge,
-                      { backgroundColor: withOpacity(theme.pureInverse, Opacity.soft) },
-                    ]}
-                  >
-                    <AppIcon name={Icon.ShieldCheck} color={resolvedTextColor} size={Size.iconXs} />
-                    <AppText
-                      variant="caption"
-                      style={{
-                        opacity: Opacity.heavy,
-                        color: resolvedTextColor,
-                        fontSize: Typography.sizes.xs,
-                        lineHeight: 12,
-                      }}
-                    >
-                      {reconciledDateText}
-                    </AppText>
-                  </View>
-                )}
-                {account.hasChildren && (
-                  <IconButton
-                    name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
-                    size={Size.iconSm}
-                    style={styles.actionButton}
-                    variant="clear"
-                    onPress={() => onCollapse?.(account.id)}
-                    iconColor={resolvedTextColor}
-                    accessibilityLabel={
-                      account.isExpanded
-                        ? `Collapse sub-accounts for ${account.name}`
-                        : `Expand sub-accounts for ${account.name}`
-                    }
-                    accessibilityState={{ expanded: account.isExpanded }}
-                  />
-                )}
-              </Row>
-            </Row>
-
+          {account.showMonthlyStats && (
             <PressScaleTouchable {...cardPressProps} accessible={false} focusable={false}>
               <Row
-                testID="account-card-amount-row"
+                paddingHorizontal="lg"
+                paddingVertical="sm"
                 align="center"
-                style={[styles.amountRow, onActionPress && styles.amountWithActions]}
+                justify="space-between"
               >
-                <Column align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
-                  <FitText
-                    variant="title"
-                    fontRole="numeric"
-                    weight="semibold"
-                    tabular
-                    align="center"
-                    maxFontSize={Typography.roles.title.fontSize}
-                    minFontSize={Typography.sizes.xl}
-                    lineHeightRatio={
-                      Typography.roles.title.lineHeight / Typography.roles.title.fontSize
-                    }
-                    style={{ color: resolvedTextColor }}
+                <Column align="center" flex={1}>
+                  <AppText
+                    variant="caption"
+                    weight="medium"
+                    color="secondary"
+                    style={{ marginBottom: Spacing.xs }}
                   >
-                    {formatMoney(account.balance, account.currencyCode)}
-                  </FitText>
-                  {account.workplaceBalance !== undefined &&
-                    account.currencyCode !== workplaceCurrencyCode && (
-                      <AppText
-                        variant="bodySmall"
-                        weight="medium"
-                        style={{ color: resolvedTextColor }}
-                      >
-                        ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
-                      </AppText>
-                    )}
+                    {stats.leftLabel}
+                  </AppText>
+                  <AppText variant="bodySmall" weight="semibold">
+                    {formatMoney(stats.leftAmount, account.currencyCode)}
+                  </AppText>
+                </Column>
+
+                <Box width={BorderWidth.thin} height={Size.md} background={dividerColor} />
+
+                <Column align="center" flex={1}>
+                  <AppText
+                    variant="caption"
+                    weight="medium"
+                    color="secondary"
+                    style={{ marginBottom: Spacing.xs }}
+                  >
+                    {stats.rightLabel}
+                  </AppText>
+                  <AppText variant="bodySmall" weight="semibold">
+                    {formatMoney(stats.rightAmount, account.currencyCode)}
+                  </AppText>
                 </Column>
               </Row>
             </PressScaleTouchable>
-          </Column>
-          {onActionPress && !isSelectionModeActive ? (
+          )}
+          {isSelected ? (
             <View
-              testID="account-card-amount-actions"
-              style={[styles.actionButton, styles.overflowAction]}
-            >
-              <IconButton
-                name={Icon.More}
-                size={Size.iconSm}
-                style={styles.actionButton}
-                variant="clear"
-                onPress={() => onActionPress(account)}
-                iconColor={resolvedTextColor}
-                accessibilityLabel={`Actions for ${account.name}`}
-              />
-            </View>
+              testID="account-card-selection-outline"
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.selectionOutline, { borderColor: theme.primary }]}
+            />
           ) : null}
-        </Box>
-
-        {account.showMonthlyStats && (
-          <PressScaleTouchable {...cardPressProps} accessible={false} focusable={false}>
-            <Row paddingHorizontal="lg" paddingVertical="sm" align="center" justify="space-between">
-              <Column align="center" flex={1}>
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  color="secondary"
-                  style={{ marginBottom: Spacing.xs }}
-                >
-                  {stats.leftLabel}
-                </AppText>
-                <AppText variant="bodySmall" weight="semibold">
-                  {formatMoney(stats.leftAmount, account.currencyCode)}
-                </AppText>
-              </Column>
-
-              <Box width={BorderWidth.thin} height={Size.md} background={dividerColor} />
-
-              <Column align="center" flex={1}>
-                <AppText
-                  variant="caption"
-                  weight="medium"
-                  color="secondary"
-                  style={{ marginBottom: Spacing.xs }}
-                >
-                  {stats.rightLabel}
-                </AppText>
-                <AppText variant="bodySmall" weight="semibold">
-                  {formatMoney(stats.rightAmount, account.currencyCode)}
-                </AppText>
-              </Column>
-            </Row>
-          </PressScaleTouchable>
-        )}
-        {isSelected ? (
-          <View
-            testID="account-card-selection-outline"
-            pointerEvents="none"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.selectionOutline, { borderColor: theme.primary }]}
-          />
-        ) : null}
-      </AppCard>
-    </View>
+        </AppCard>
+      </View>
+    </MotiView>
   );
 }
 
