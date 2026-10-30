@@ -29,13 +29,21 @@ type ScreenNavigationValue = Pick<
 >;
 const ScreenNavigationContext = createContext<ScreenNavigationValue | null>(null);
 const RetainedGroupsContext = createContext<ReadonlySet<PrimaryPageGroup> | null>(null);
+const LiveReadRouteContext = createContext<string | undefined>(undefined);
+const PreparedRoutesContext = createContext<ReadonlySet<string> | undefined>(undefined);
 
 export function PrimaryPageNavigationProvider({
   value,
   children,
+  liveRouteName,
+  preparedRoutes,
 }: {
   value: PrimaryPageNavigationValue;
   children: ReactNode;
+  /** V2 advances read ownership after the content pager settles. */
+  liveRouteName?: string;
+  /** V2 idle-prepared neighbors. An empty set suspends reads while the shell is inactive. */
+  preparedRoutes?: ReadonlySet<string>;
 }) {
   const { activeRouteName, navigateToPage, setPageSwipeLock } = value;
   const screenNavigation = useMemo(
@@ -46,7 +54,11 @@ export function PrimaryPageNavigationProvider({
     <PrimaryPageNavigationContext.Provider value={value}>
       <RetainedGroupsContext.Provider value={value.keptAliveGroups}>
         <ScreenNavigationContext.Provider value={screenNavigation}>
-          {children}
+          <LiveReadRouteContext.Provider value={liveRouteName}>
+            <PreparedRoutesContext.Provider value={preparedRoutes}>
+              {children}
+            </PreparedRoutesContext.Provider>
+          </LiveReadRouteContext.Provider>
         </ScreenNavigationContext.Provider>
       </RetainedGroupsContext.Provider>
     </PrimaryPageNavigationContext.Provider>
@@ -75,10 +87,31 @@ export function usePrimaryPageAlive(group: PrimaryPageGroup): boolean {
 export function usePrimaryPageActive(group: PrimaryPageGroup): boolean {
   const isFocused = useIsFocused();
   const navigation = usePrimaryPageNavigation();
+  const liveRoute = useContext(LiveReadRouteContext);
+  const preparedRoutes = useContext(PreparedRoutesContext);
+  if (preparedRoutes) {
+    return [...preparedRoutes].some(route => primaryPageFromRouteName(route)?.group === group);
+  }
   return (
     isFocused &&
-    (!navigation || primaryPageFromRouteName(navigation.activeRouteName)?.group === group)
+    (!navigation ||
+      primaryPageFromRouteName(liveRoute ?? navigation.activeRouteName)?.group === group)
   );
+}
+
+/** Exact-leaf read ownership for siblings sharing a group provider. */
+export function usePrimaryLeafActive(routeName: string): boolean {
+  const isFocused = useIsFocused();
+  const navigation = usePrimaryPageNavigation();
+  const liveRoute = useContext(LiveReadRouteContext);
+  return isFocused && (!navigation || (liveRoute ?? navigation.activeRouteName) === routeName);
+}
+
+/** Allows a retained neighbor to prepare its first paint before the next swipe. */
+export function usePrimaryLeafPrepared(routeName: string): boolean {
+  const active = usePrimaryLeafActive(routeName);
+  const preparedRoutes = useContext(PreparedRoutesContext);
+  return preparedRoutes ? preparedRoutes.has(routeName) : active;
 }
 
 /** Reserve paging while a child recognizer is deciding or handling a touch. */

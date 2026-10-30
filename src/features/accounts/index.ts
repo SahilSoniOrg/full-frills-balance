@@ -8,3 +8,4 @@ export { default as AccountManagementScreen } from './screens/AccountManagementS
 export { AccountsGroupPager } from './components/AccountsGroupPager';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';
 export { AccountsGroupProvider } from './AccountsGroupProvider';
+export { AccountsPagerLeaf } from './components/AccountsPagerLeaf';

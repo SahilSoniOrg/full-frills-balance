@@ -47,8 +47,10 @@ export type {
 
 export function useAccountsListViewModel(
   activeTab: AccountsListTab = 'accounts',
+  enabled = true,
 ): AccountsListViewModel {
-  const isFocused = useIsFocused();
+  const routeFocused = useIsFocused();
+  const isFocused = routeFocused && enabled;
   const { theme, onContrast } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();

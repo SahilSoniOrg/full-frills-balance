@@ -11,6 +11,8 @@ import {
 import { useIsFocused } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { usePublishTabChrome } from './PersistentTabChrome';
+import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
@@ -43,14 +45,17 @@ function leftFromChrome(
 export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChromeProps) {
   const navigation = usePrimaryNavigation();
   const isFocused = useIsFocused();
+  const leafRoute = usePublishTabChrome(chrome.kind === 'tab' ? chrome : null);
+  const pageNavigation = usePrimaryPageNavigation();
+  const isActiveLeaf = !leafRoute || pageNavigation?.activeRouteName === leafRoute;
   const isPrimaryTabRoot = !!navigation && chrome.kind === 'tab';
   const reportSelectionMode = navigation?.reportSelectionMode;
 
   useLayoutEffect(() => {
-    if (isPrimaryTabRoot && isFocused) {
+    if (isPrimaryTabRoot && isFocused && isActiveLeaf) {
       reportSelectionMode?.(chrome.selectionMode ?? false);
     }
-  }, [chrome.selectionMode, isFocused, isPrimaryTabRoot, reportSelectionMode]);
+  }, [chrome.selectionMode, isFocused, isPrimaryTabRoot, isActiveLeaf, reportSelectionMode]);
 
   const edges: ScreenProps['edges'] =
     rest.edges ?? (chrome.kind === 'nav' ? ['top', 'bottom'] : ['top']);
@@ -59,10 +64,10 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
   return (
     <Screen
       {...rest}
-      edges={edges}
-      title={chrome.screenTitle}
-      left={leftFromChrome(chrome, isPrimaryTabRoot)}
-      headerActions={chrome.headerActions}
+      edges={leafRoute ? edges.filter(edge => edge !== 'top') : edges}
+      title={leafRoute ? undefined : chrome.screenTitle}
+      left={leafRoute ? undefined : leftFromChrome(chrome, isPrimaryTabRoot)}
+      headerActions={leafRoute ? undefined : chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
       headerStyle={chrome.headerStyle}
     >

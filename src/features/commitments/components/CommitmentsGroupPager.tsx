@@ -29,7 +29,7 @@ export type CommitmentsTab = 'budgets' | 'planned';
 /**
  * Plans parent: fixed chrome + AppTabs, inner pager for Budgets ↔ Planned.
  */
-export function CommitmentsGroupPager() {
+export function CommitmentsGroupPager({ tapOnly = false }: { tapOnly?: boolean }) {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const pageNavigation = usePrimaryPageNavigation();
   const isActive = usePrimaryPageActive('commitments');
@@ -132,6 +132,7 @@ export function CommitmentsGroupPager() {
         />
       </Box>
       <GroupInnerPager
+        tapOnly={tapOnly}
         group="commitments"
         pageCount={2}
         index={innerIndex}

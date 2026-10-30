@@ -25,7 +25,7 @@ import { Spacing } from '@/src/constants';
 /**
  * Accounts parent: fixed chrome + AppTabs, inner pager for Accounts ↔ Categories.
  */
-export function AccountsGroupPager() {
+export function AccountsGroupPager({ tapOnly = false }: { tapOnly?: boolean }) {
   const pageNavigation = usePrimaryPageNavigation();
   const activeRouteName = pageNavigation?.activeRouteName ?? 'accounts';
   // While this shell stays mounted off-screen, ignore other groups' routes —
@@ -115,6 +115,7 @@ export function AccountsGroupPager() {
         />
       </View>
       <GroupInnerPager
+        tapOnly={tapOnly}
         group="accounts"
         pageCount={2}
         index={innerIndex}
