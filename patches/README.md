@@ -44,3 +44,20 @@ drawer. The published package always animates on native
 unset follows the system setting. The app passes `useReducedMotion()`, so the
 Appearance toggle applies too. The patch is applied by Bun through
 `patchedDependencies`; recheck it when upgrading the package or `expo-router`.
+
+## ExpoModulesCore / Swift compiler crash
+
+`expo-modules-core@58.0.26.patch` removes the redundant `as any Error` cast
+from the failure pattern inside the consuming Result switch in
+`AsyncFunctionDefinition.build`. The failure value already conforms to Error;
+promise rejection and noncopyable success-value ownership remain unchanged.
+
+The original pattern crashes Swift's SILGen when ExpoModulesCore is compiled
+from source. This was reproduced locally with Xcode 27.2 / Swift 6.4.2; removing
+the cast lets the minimal reproducer compile. References:
+[Expo #52231](https://github.com/expo/expo/issues/52231) and
+[Swift #93625](https://github.com/swiftlang/swift/issues/93625).
+
+Bun applies the patch through `patchedDependencies`. Keep it with `bun.lock`;
+recheck and remove it when an ExpoModulesCore upgrade includes the workaround
+or the supported compiler no longer reproduces the crash.
