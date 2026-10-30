@@ -56,15 +56,13 @@ ClockWheel and GlyphCarousel share `useScrollSettlement`:
 
 ## Primary page navigation
 
-The native outer pager has four groups: Dashboard, Accounts, Plans, Activity. Accounts/Categories and Budgets/Planned Payments use nested native pagers with stationary headers and subtab controls. All six leaves remain canonical router routes. Bottom-bar taps restore the remembered sibling; swiping into a group selects the sibling nearest the entry direction.
+Home has one six-leaf native pager: Dashboard, Accounts, Categories, Budgets, Planned Payments, Activity. The header and bottom bar remain stationary and blend with native page progress. Accounts/Categories and Budgets/Planned Payments use static subtabs inside their page panes; there are no nested horizontal pagers or boundary handoff strips. Paired header titles also offer an explicit menu. Web retains explicit navigation controls without emulating native swipes.
 
-Outer and inner pagers share swipe permission: focus, app activity, keyboard, app lock, screen reader, workplace switching, selection mode, drawer visibility, and screen-owned overlay locks. Inner pagers also require their group to be active. Losing permission resets an interrupted drag to its committed route. Programmatic tab navigation remains available; the Reduce Motion preference skips its automatic page travel while preserving user-driven swipe navigation.
+Paging permission accounts for navigator focus, app activity, keyboard, lock, screen reader, workplace switching, selection mode, drawer visibility and screen-owned overlay locks. Losing permission restores the committed page without animation. Reduce Motion skips automatic page travel while direct finger-driven navigation remains available.
 
-Boundary gestures use 28-point edge overlay strips on the inner pager (not a GestureDetector wrap around PagerView — that blocked iOS paging on the outer strip). They require a successful outward drag beyond 48 points and reject the opposite direction and vertical movement. The closed drawer opens from its 32-point leading edge on non-Dashboard pages. On Dashboard, iOS also listens for native pager leading overscroll (at 14% of page width) and opens the drawer; Android widens drawer hitSlop to the full page, relying on the native pager to yield the leading-direction swipe at page zero. The iOS overscroll path triggers a separate drawer spring rather than a finger-tracked reveal. An open drawer disables paging.
+The closed drawer opens only from the header trigger. An open drawer can be swiped closed and disables paging. Chart and row interactions continue to reserve paging through `setPageSwipeLock`; this JavaScript-mediated reservation still needs device arbitration checks.
 
-The native pager exposes no RNGH native gesture: wrapping it prevented iOS paging. Chart pans and swipe-removal recognizers reserve paging through `setPageSwipeLock` when recognition begins and release on finalization or unmount. This is a JavaScript-mediated reservation, not a proven native arbitration relationship. Hierarchy management is presented in a blocking overlay and uses the screen's overlay lock.
-
-Device acceptance remains required for nested boundary gestures versus the drawer, chart/row ownership, interruption, vertical scrolling near edges, accessibility, and reduced motion. No device results are claimed for these changes.
+Native recognizer behavior, interruptions, accessibility and destination readiness need device validation. See `docs/home-v2/implementation.md` for the current architecture and manual checks.
 
 ## Prior verification for the October 7 gesture fixes
 

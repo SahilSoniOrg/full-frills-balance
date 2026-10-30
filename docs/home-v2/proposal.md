@@ -1,6 +1,6 @@
 # Home V2 exploration
 
-Status: interaction direction approved and native candidate implemented with a saved settings toggle. See [activation, implementation scope and manual checks](implementation.md). All six existing pages remain. No tests, builds, or new runtime measurements were run. Page bodies in the app currently retain their real existing designs.
+Historical proposal: this records the investigation and rollout choices before V1 was removed. File paths below identify the code inspected at that time, including components that have since been deleted. The current single-layout implementation and manual checks are documented in [implementation.md](implementation.md).
 
 ## Decision
 
