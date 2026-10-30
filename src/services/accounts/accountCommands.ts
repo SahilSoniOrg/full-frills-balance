@@ -34,15 +34,10 @@ export interface CreateAccountCommandInput {
   /** Custom accent color (hex). Empty/omitted = derive from account type. */
   color?: string;
   initialBalance?: number;
-  /** @deprecated Ordinary creation always appends within its sibling list. */
-  orderNum?: number;
   parentAccountId?: AccountId | null;
   workplaceId: WorkplaceId;
   metadata?: Partial<SerializedAccountMetadataPayload>;
 }
-
-/** @deprecated Use CreateAccountCommandInput; kept for existing service typings. */
-export type CreateAccountData = CreateAccountCommandInput;
 
 export async function createAccount(
   workplaceId: WorkplaceId,

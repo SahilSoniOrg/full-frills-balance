@@ -224,7 +224,8 @@ describe('account commands (integration)', () => {
       name: 'Second',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      orderNum: 0,
+      // Simulate an untyped caller passing the removed creation option.
+      ...{ orderNum: 0 },
       workplaceId: WP,
     });
 

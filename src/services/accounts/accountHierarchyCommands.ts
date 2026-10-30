@@ -11,7 +11,7 @@ import type { AccountPersistenceInput } from '@/src/data/repositories/account/ty
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
-import { CreateAccountData } from '@/src/services/accounts/accountCommands';
+import type { CreateAccountCommandInput } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,
   assertParentHasNoTransactions,
@@ -38,7 +38,7 @@ const STALE_TREE_ERROR = 'Account tree changed; staged changes are no longer cur
 
 export type AccountDetailsUpdate = Partial<
   Pick<
-    CreateAccountData,
+    CreateAccountCommandInput,
     | 'name'
     | 'accountType'
     | 'accountSubtype'
