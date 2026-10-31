@@ -2,7 +2,6 @@ import { AppSafeAreaProvider } from '@/src/design-system/SafeArea';
 import { TabsLayout } from '@/src/features/app/TabsLayout';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, type ViewProps } from 'react-native';
-import type { ReactNode } from 'react';
 import type { PrimaryNavigationContextValue } from '@/src/navigation/primaryNavigation';
 import { toast } from '@/src/utils/alerts';
 
@@ -11,52 +10,54 @@ jest.mock('@/src/utils/alerts', () => ({ toast: { info: jest.fn() } }));
 let mockBottomInset = 24;
 let mockKeyboardVisible = false;
 const mockNavigateToTab = jest.fn();
-const mockEmit = jest.fn(() => ({ defaultPrevented: false }));
+const mockEmit = jest.fn(
+  (_event: { type: string; target: string; canPreventDefault?: boolean }) => ({
+    defaultPrevented: false,
+  }),
+);
 const mockNavigation: {
   current?: PrimaryNavigationContextValue;
   focus?: (routeName: string) => void;
 } = {};
 
-jest.mock('expo-router', () => {
-  const { Fragment } = jest.requireActual<typeof import('react')>('react');
-  const tabsMock = ({
-    tabBar,
-    children,
-    screenListeners,
-  }: {
-    tabBar: (props: unknown) => ReactNode;
-    children: ReactNode;
-    screenListeners:
-      { focus: () => void } | ((props: { route: { name: string } }) => { focus: () => void });
-  }) => {
-    mockNavigation.focus = name => {
-      const listeners =
-        typeof screenListeners === 'function'
-          ? screenListeners({ route: { name } })
-          : screenListeners;
-      listeners.focus();
-    };
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
+// Exercise shell state and real tab controls without mounting native pages.
+jest.mock('@/src/features/navigation/PrimaryPagerNavigator', () => {
+  const { PrimaryTabBar } = jest.requireActual('@/src/features/navigation/PrimaryTabBar');
+  const { usePrimaryNavigation } = jest.requireActual('@/src/navigation/primaryNavigation');
+  const { useSharedValue } = jest.requireMock('react-native-reanimated');
+  const PrimaryPager = ({ onAddAction }: { onAddAction: () => void }) => {
+    const navigation = usePrimaryNavigation();
+    mockNavigation.focus = navigation.reportActiveRoute;
+    const pageProgress = useSharedValue(0);
     return (
-      <Fragment>
-        {children}
-        {tabBar({
-          state: {
-            index: 0,
-            routes: ['index', 'accounts', 'commitments', 'activity'].map(name => ({
-              name,
-              key: name,
-            })),
-          },
-          emitter: { emit: mockEmit },
-          navigateToTab: mockNavigateToTab,
-        })}
-      </Fragment>
+      <PrimaryTabBar
+        routes={[
+          'index',
+          'accounts',
+          'categories',
+          'commitments',
+          'planned-payments',
+          'activity',
+        ].map(name => ({ name, key: name }))}
+        activeRouteName={navigation.activeRouteName}
+        emitTabPress={(key: string) =>
+          mockEmit({ type: 'tabPress', target: key, canPreventDefault: true }).defaultPrevented
+        }
+        emitTabLongPress={(key: string) => mockEmit({ type: 'tabLongPress', target: key })}
+        onNavigateToPage={mockNavigateToTab}
+        isSwitching={false}
+        isTransitioning={false}
+        pageProgress={pageProgress}
+        onAddAction={onAddAction}
+      />
     );
   };
-  tabsMock.Screen = function screenMock() {
+  PrimaryPager.Screen = function MockPagerScreen() {
     return null;
   };
-  return { Tabs: tabsMock, useRouter: () => ({ push: jest.fn() }) };
+  return { PrimaryPager };
 });
 
 jest.mock('react-native-safe-area-context', () => ({

@@ -34,6 +34,7 @@ export function usePlannedPayments(workplaceId: WorkplaceId, enabled = true) {
     () => (enabled ? plannedPaymentReadService.observeListData(workplaceId) : EMPTY),
     [enabled, workplaceId, now],
     null,
+    { keepPreviousData: false },
   );
   const { journals: plannedJournals } = useJournals(
     workplaceId,

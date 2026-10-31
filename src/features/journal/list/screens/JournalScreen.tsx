@@ -18,7 +18,7 @@ import {
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
   const isActive = usePrimaryPageActive('activity');
-  const pageNavigation = usePrimaryPageNavigation();
+  const setPageSwipeLock = usePrimaryPageNavigation()?.setPageSwipeLock;
 
   const journalList = useJournalList(
     {
@@ -36,9 +36,9 @@ function JournalScreen() {
     journalList.datePicker.visible || journalList.modals.activeModal !== null;
   useEffect(() => {
     const lockId = 'activity-overlay';
-    pageNavigation?.setPageSwipeLock(lockId, isBlockingOverlayOpen);
-    return () => pageNavigation?.setPageSwipeLock(lockId, false);
-  }, [isBlockingOverlayOpen, pageNavigation?.setPageSwipeLock]);
+    setPageSwipeLock?.(lockId, isBlockingOverlayOpen);
+    return () => setPageSwipeLock?.(lockId, false);
+  }, [isBlockingOverlayOpen, setPageSwipeLock]);
 
   const csvExport = journalList.list.csvExport;
 

@@ -160,8 +160,10 @@ describe('SubAccountListModal', () => {
 
   it('hides share bars in privacy mode', () => {
     function EnablePrivacy() {
-      const { togglePrivacyMode } = usePrivacyScope();
-      useEffect(() => togglePrivacyMode(), [togglePrivacyMode]);
+      const { isPrivacyMode, togglePrivacyMode } = usePrivacyScope();
+      useEffect(() => {
+        if (!isPrivacyMode) togglePrivacyMode();
+      }, [isPrivacyMode, togglePrivacyMode]);
       return null;
     }
 

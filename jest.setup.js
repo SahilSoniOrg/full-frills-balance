@@ -314,6 +314,12 @@ jest.mock('react-native-reanimated', () => {
       };
       return shared;
     }),
+    useDerivedValue: jest.fn(fn => ({
+      get value() {
+        return fn();
+      },
+      get: () => fn(),
+    })),
     useAnimatedStyle: jest.fn(fn => {
       try {
         return typeof fn === 'function' ? fn() : {};

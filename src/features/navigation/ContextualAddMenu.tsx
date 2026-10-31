@@ -110,12 +110,12 @@ export function ContextualAddMenu({
   const { width, height, fontScale } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
-  const pageNavigation = usePrimaryPageNavigation();
+  const setPageSwipeLock = usePrimaryPageNavigation()?.setPageSwipeLock;
   useEffect(() => {
     const lockId = 'contextual-add-menu';
-    pageNavigation?.setPageSwipeLock(lockId, open);
-    return () => pageNavigation?.setPageSwipeLock(lockId, false);
-  }, [open, pageNavigation?.setPageSwipeLock]);
+    setPageSwipeLock?.(lockId, open);
+    return () => setPageSwipeLock?.(lockId, false);
+  }, [open, setPageSwipeLock]);
   const actions = MENU_ACTIONS[primaryTab];
   const isJournalTab = primaryTab === 'dashboard' || primaryTab === 'activity';
   const tabLabel = PRIMARY_TABS.find(item => item.tab === primaryTab)?.label ?? 'this screen';

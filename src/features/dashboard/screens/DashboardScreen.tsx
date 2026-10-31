@@ -44,7 +44,7 @@ function trackDashboardFirstPaint() {
 function DashboardScreen() {
   const isFocused = useIsFocused();
   const isActive = usePrimaryPageActive('dashboard');
-  const pageNavigation = usePrimaryPageNavigation();
+  const setPageSwipeLock = usePrimaryPageNavigation()?.setPageSwipeLock;
   const vm = useDashboardViewModel();
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
@@ -58,9 +58,9 @@ function DashboardScreen() {
     vm.explanationModalState.visible || vm.legendModalState.selectedItem !== null;
   useEffect(() => {
     const lockId = 'dashboard-sheet';
-    pageNavigation?.setPageSwipeLock(lockId, isBlockingSheetOpen);
-    return () => pageNavigation?.setPageSwipeLock(lockId, false);
-  }, [isBlockingSheetOpen, pageNavigation?.setPageSwipeLock]);
+    setPageSwipeLock?.(lockId, isBlockingSheetOpen);
+    return () => setPageSwipeLock?.(lockId, false);
+  }, [isBlockingSheetOpen, setPageSwipeLock]);
 
   const notificationCount = (insights?.length || 0) + supplementalInsights.length;
 

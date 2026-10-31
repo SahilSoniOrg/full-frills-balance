@@ -14,22 +14,6 @@ jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: () => true,
 }));
 
-jest.mock('react-native-gesture-handler', () => ({
-  Gesture: {
-    Pan: () => {
-      const gesture = {
-        activeOffsetX: () => gesture,
-        failOffsetY: () => gesture,
-        onUpdate: () => gesture,
-        onEnd: () => gesture,
-        onFinalize: () => gesture,
-      };
-      return gesture;
-    },
-  },
-  GestureDetector: ({ children }: { children: React.ReactNode }) => children,
-}));
-
 const accounts: AccountFields[] = [
   {
     id: asAccountId('category-food'),
