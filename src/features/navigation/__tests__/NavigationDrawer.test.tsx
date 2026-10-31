@@ -92,7 +92,17 @@ jest.mock('@/src/utils/navigation', () => ({
   },
 }));
 
-function renderDrawer({ visible = true, canOpen = true, route = 'index' } = {}) {
+function renderDrawer({
+  visible = true,
+  canOpen = true,
+  route = 'index',
+  permission = canOpen,
+}: {
+  visible?: boolean;
+  canOpen?: boolean;
+  route?: string;
+  permission?: boolean;
+} = {}) {
   const onClose = jest.fn();
   const onOpen = jest.fn();
   render(
@@ -105,6 +115,7 @@ function renderDrawer({ visible = true, canOpen = true, route = 'index' } = {}) 
         closeDrawer: onClose,
         userName: 'Test User',
         activeRouteName: route,
+        drawerSwipePermission: permission,
       }}
     >
       <NavigationDrawer>{null}</NavigationDrawer>
@@ -164,6 +175,26 @@ describe('NavigationDrawer shell', () => {
     expect(mockDrawerProps?.swipeEnabled).toBe(false);
   });
 
+  it('uses shared pager blockers for opening, but keeps drawer closing available', () => {
+    renderDrawer({ visible: false, permission: false });
+    expect(mockDrawerProps?.swipeEnabled).toBe(false);
+    renderDrawer({ visible: true, permission: false });
+    expect(mockDrawerProps?.swipeEnabled).toBe(true);
+  });
+
+  it('keeps both opening and closing swipes disabled on web', () => {
+    const previousOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
+    try {
+      renderDrawer({ visible: false });
+      expect(mockDrawerProps?.swipeEnabled).toBe(false);
+      renderDrawer({ visible: true });
+      expect(mockDrawerProps?.swipeEnabled).toBe(false);
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, get: () => previousOS });
+    }
+  });
+
   it('accepts left swipes to close from any primary page', () => {
     renderDrawer({ route: 'accounts' });
     expect(mockDrawerProps?.swipeEnabled).toBe(true);
@@ -190,6 +221,7 @@ describe('NavigationDrawer shell', () => {
           closeDrawer: jest.fn(),
           userName: 'Test User',
           activeRouteName: 'index',
+          drawerSwipePermission: true,
         }}
       >
         <NavigationDrawer>{null}</NavigationDrawer>
@@ -222,6 +254,7 @@ describe('NavigationDrawer shell', () => {
             closeDrawer: jest.fn(),
             userName: 'Test User',
             activeRouteName: 'index',
+            drawerSwipePermission: true,
           }}
         >
           <NavigationDrawer>{null}</NavigationDrawer>

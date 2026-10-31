@@ -5,7 +5,7 @@ import {
   primaryPageFromRouteName,
   type PrimaryPageGroup,
 } from '@/src/navigation/primaryPages';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useLayoutEffect } from 'react';
 
 export type PrimaryTab = PrimaryPageGroup;
 
@@ -57,6 +57,9 @@ export type PrimaryNavigationContextValue = {
   userName: string;
   activeRouteName?: string;
   reportActiveRoute?: (routeName: string) => void;
+  /** Pager reports whether a closed-drawer opening swipe may claim touches. */
+  reportDrawerSwipePermission?: (allowed: boolean) => void;
+  drawerSwipePermission?: boolean;
 };
 
 const PrimaryNavigationContext = createContext<PrimaryNavigationContextValue | undefined>(
@@ -75,4 +78,13 @@ export function useHasMultipleWorkplaces() {
 
 export function usePrimaryNavigation() {
   return useContext(PrimaryNavigationContext);
+}
+
+/** Publish before touches resume, and revoke permission when the pager leaves. */
+export function useReportDrawerSwipePermission(allowed: boolean) {
+  const reportPermission = usePrimaryNavigation()?.reportDrawerSwipePermission;
+  useLayoutEffect(() => {
+    reportPermission?.(allowed);
+    return () => reportPermission?.(false);
+  }, [allowed, reportPermission]);
 }

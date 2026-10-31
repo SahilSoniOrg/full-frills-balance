@@ -1,6 +1,7 @@
 import {
   useObservable,
   useObservableWithEnrichment,
+  useWorkplaceObservable,
   type UseObservableResult,
 } from '@/src/hooks/useObservable';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
@@ -8,6 +9,83 @@ import { BehaviorSubject, defer, EMPTY, of, Subject, throwError } from 'rxjs';
 import { WorkplaceId } from '@/src/types/ids';
 
 describe('useObservable', () => {
+  it('uses the new workplace cache seed immediately and subscribes once per workplace', () => {
+    const source = new Subject<string>();
+    const factory = jest.fn(() => source);
+    const seeds = jest.fn((workplace: string) => `${workplace} cache`);
+    const frames: { workplace: string; data: string }[] = [];
+    const { result, rerender } = renderHook(
+      ({ workplace }: { workplace: string }) => {
+        const value = useWorkplaceObservable(workplace, factory, [workplace], () =>
+          seeds(workplace),
+        );
+        frames.push({ workplace, data: value.data });
+        return value;
+      },
+      { initialProps: { workplace: 'one' } },
+    );
+    expect(factory).toHaveBeenCalledTimes(1);
+    rerender({ workplace: 'two' });
+    expect(result.current.data).toBe('two cache');
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(
+      frames.filter(frame => frame.workplace === 'two').every(frame => frame.data === 'two cache'),
+    ).toBe(true);
+    expect(seeds.mock.calls.map(([workplace]) => workplace)).toEqual(['one', 'two']);
+  });
+
+  it('resets workplace identity even when the caller omits it from refresh dependencies', () => {
+    const first = new Subject<string>();
+    const second = new Subject<string>();
+    const { result, rerender } = renderHook(
+      ({ workplace }: { workplace: string }) =>
+        useWorkplaceObservable(
+          workplace,
+          () => (workplace === 'one' ? first : second),
+          [],
+          null as string | null,
+        ),
+      { initialProps: { workplace: 'one' } },
+    );
+    act(() => first.next('first row'));
+    rerender({ workplace: 'two' });
+    expect(result.current.data).toBeNull();
+    expect(result.current.isLoading).toBe(true);
+    expect(first.observed).toBe(false);
+    expect(second.observed).toBe(true);
+  });
+
+  it('clears on workplace changes, ignores old source emissions, and retains data on same-workplace refresh', async () => {
+    const first = new Subject<string>();
+    const second = new Subject<string>();
+    let source = first;
+    const { result, rerender } = renderHook(
+      ({ workplace, refresh }: { workplace: string; refresh: number }) =>
+        useWorkplaceObservable(
+          workplace,
+          () => source,
+          [workplace, refresh],
+          null as string | null,
+        ),
+      { initialProps: { workplace: 'one', refresh: 0 } },
+    );
+
+    act(() => first.next('first workplace row'));
+    await waitFor(() => expect(result.current.data).toBe('first workplace row'));
+
+    rerender({ workplace: 'one', refresh: 1 });
+    expect(result.current.data).toBe('first workplace row');
+    expect(first.observed).toBe(true);
+
+    source = second;
+    rerender({ workplace: 'two', refresh: 0 });
+    expect(result.current.data).toBeNull();
+    act(() => first.next('stale row'));
+    expect(result.current.data).toBeNull();
+    act(() => second.next('second workplace row'));
+    await waitFor(() => expect(result.current.data).toBe('second workplace row'));
+  });
+
   it('keeps mounted-screen data while paused and catches up when focused again', () => {
     const source = new BehaviorSubject(1);
     const { result, rerender, unmount } = renderHook<

@@ -61,6 +61,11 @@ export interface UseObservableOptions {
   keepPreviousData?: boolean;
 }
 
+export interface UseScopedObservableOptions extends UseObservableOptions {
+  /** Clear data when this identity changes, while retaining it for other dependency changes. */
+  resetKey?: unknown;
+}
+
 /**
  * Hook to subscribe to an observable and manage its state
  *
@@ -73,7 +78,7 @@ export function useObservable<T>(
   observableFactory: () => Observable<T>,
   deps: DependencyList,
   initialValue: T | (() => T),
-  options: UseObservableOptions = {},
+  options: UseScopedObservableOptions = {},
 ): UseObservableResult<T> {
   const factoryRef = useRef(observableFactory);
   useLayoutEffect(() => {
@@ -82,12 +87,21 @@ export function useObservable<T>(
 
   const stableFactory = useCallback(() => factoryRef.current(), []);
 
-  // Compute the absolute initial value (handles factory functions for cache lookups)
-  const [resolvedInitialValue] = useState<T>(() => {
-    return typeof initialValue === 'function' ? (initialValue as () => T)() : initialValue;
-  });
+  // Cache seeds belong to an identity, not to the lifetime of the mounted screen.
+  const resolveInitialValue = () =>
+    typeof initialValue === 'function' ? (initialValue as () => T)() : initialValue;
+  const [initialSeed, setInitialSeed] = useState(() => ({
+    key: options.resetKey,
+    value: resolveInitialValue(),
+  }));
+  let resolvedInitialValue = initialSeed.value;
+  if (!Object.is(initialSeed.key, options.resetKey)) {
+    resolvedInitialValue = resolveInitialValue();
+    setInitialSeed({ key: options.resetKey, value: resolvedInitialValue });
+  }
 
   const [data, setData] = useState<T>(resolvedInitialValue);
+  const [dataIdentity, setDataIdentity] = useState(() => options.resetKey);
   const dataRef = useRef(data);
   useLayoutEffect(() => {
     dataRef.current = data;
@@ -112,15 +126,23 @@ export function useObservable<T>(
     optionsRef.current = options;
   });
 
-  const depsRevision = useDependencyRevision(deps, () => setError(null));
+  const depsRevision = useDependencyRevision([options.resetKey, ...deps], () => setError(null));
+
+  // Hide the prior identity's value during the render before the replacement
+  // subscription effect runs. This prevents one frame of cross-workplace rows.
+  const identityChanged = !Object.is(dataIdentity, options.resetKey);
+  const visibleData = identityChanged ? resolvedInitialValue : data;
 
   useEffect(() => {
     let isActive = true;
-    const { keepPreviousData = true } = optionsRef.current;
+    const { keepPreviousData = true, resetKey } = optionsRef.current;
+    const resetIdentityChanged = !Object.is(dataIdentity, resetKey);
 
-    if (!keepPreviousData) {
+    if (resetIdentityChanged || !keepPreviousData) {
+      setDataIdentity(() => resetKey);
+      dataRef.current = resolvedInitialValue;
       setData(resolvedInitialValue);
-      setIsLoading(true);
+      setIsLoading(resetIdentityChanged ? isPlaceholderInitial(resolvedInitialValue) : true);
     } else if (
       dataRef.current === resolvedInitialValue &&
       isPlaceholderInitial(resolvedInitialValue)
@@ -149,9 +171,28 @@ export function useObservable<T>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, depsRevision, resolvedInitialValue, retryVersion]);
+    // Identity/seed changes are represented by depsRevision. Depending on them
+    // separately would subscribe once before the revision update and once after.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stableFactory, depsRevision, retryVersion]);
 
-  return { data, isLoading, error, version, retry };
+  return {
+    data: visibleData,
+    isLoading: identityChanged ? isPlaceholderInitial(resolvedInitialValue) : isLoading,
+    error: identityChanged ? null : error,
+    version,
+    retry,
+  };
+}
+
+/** Workplace-scoped observable that clears rows only when the workplace changes. */
+export function useWorkplaceObservable<T>(
+  workplaceId: unknown,
+  observableFactory: () => Observable<T>,
+  deps: DependencyList,
+  initialValue: T | (() => T),
+): UseObservableResult<T> {
+  return useObservable(observableFactory, deps, initialValue, { resetKey: workplaceId });
 }
 
 /**

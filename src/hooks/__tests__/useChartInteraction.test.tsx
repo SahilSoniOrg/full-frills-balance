@@ -6,9 +6,6 @@ import {
 import { panGestures, tapGestures } from '@/src/testing/gestureMock';
 import { useChartInteraction } from '../useChartInteraction';
 
-jest.mock('react-native-gesture-handler', () => ({
-  Gesture: jest.requireActual('@/src/testing/gestureMock').Gesture,
-}));
 jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
 
 beforeEach(() => {

@@ -1,4 +1,4 @@
-import { useObservable } from '@/src/hooks/useObservable';
+import { useWorkplaceObservable } from '@/src/hooks/useObservable';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -30,11 +30,11 @@ export function usePlannedPayments(workplaceId: WorkplaceId, enabled = true) {
     isLoading,
     error,
     retry,
-  } = useObservable<PlannedPaymentListData | null>(
+  } = useWorkplaceObservable<PlannedPaymentListData | null>(
+    workplaceId,
     () => (enabled ? plannedPaymentReadService.observeListData(workplaceId) : EMPTY),
     [enabled, workplaceId, now],
     null,
-    { keepPreviousData: false },
   );
   const { journals: plannedJournals } = useJournals(
     workplaceId,

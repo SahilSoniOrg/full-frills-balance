@@ -1,4 +1,4 @@
-/** Callback-level gesture harness. Native recognizer arbitration still needs device tests. */
+/** Callback-level harness only; it does not model native recognizer arbitration or timing. */
 export type GestureTestEvent = {
   x?: number;
   y?: number;

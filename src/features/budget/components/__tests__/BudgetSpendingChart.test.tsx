@@ -8,13 +8,6 @@ import { panGestures, tapGestures } from '@/src/testing/gestureMock';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 
-jest.mock('react-native-gesture-handler', () => ({
-  GestureDetector: jest.requireActual('react-native').View,
-  ScrollView: jest.requireActual('react-native').ScrollView,
-  Swipeable: jest.requireActual('react-native').View,
-  GestureHandlerRootView: jest.requireActual('react-native').View,
-  Gesture: jest.requireActual('@/src/testing/gestureMock').Gesture,
-}));
 jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
 
 function render(ui: ReactElement) {

@@ -7,7 +7,10 @@ import { AccountsGroupProvider } from '@/src/features/accounts';
 import { PrimaryTabBar } from './PrimaryTabBar';
 import type { ContextualAddAction } from './ContextualAddMenu';
 import type { PrimaryPagerPage, PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
-import { usePrimaryNavigation } from '@/src/navigation/primaryNavigation';
+import {
+  usePrimaryNavigation,
+  useReportDrawerSwipePermission,
+} from '@/src/navigation/primaryNavigation';
 import {
   PRIMARY_PAGES,
   primaryPageIndex,
@@ -231,6 +234,8 @@ export function createPrimaryPagerContent(
       !primaryNavigation?.selectionModeActive &&
       !primaryNavigation?.drawerVisible &&
       pageSwipeLocks.size === 0;
+
+    useReportDrawerSwipePermission(scrollEnabled);
 
     const viewportProps: PrimaryPagerViewportProps = {
       pages,

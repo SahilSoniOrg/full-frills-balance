@@ -19,29 +19,24 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
 
       # --ignore-scripts skips the litert-lm postinstall, which downloads
       # macOS-only iOS frameworks and has no purpose on a Linux runner.
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Architecture guardrails
-        run: bun run check:architecture
-
       - name: Production E2E exclusion check
         run: bun run check:production-e2e-bundle
 
-      - name: Typecheck
-        run: bunx tsc --noEmit
+      - name: Verification
+        id: verification
+        run: bun run verify
 
-      - name: Unit tests
-        run: bunx jest --ci --coverage --maxWorkers=2
-
-      # Runs even if tests fail so a lint warning never masks a test failure.
+      # Keep lint visible when another verification step fails.
       - name: Lint
-        if: ${{ !cancelled() }}
-        run: bunx expo lint
+        if: ${{ !cancelled() && steps.verification.outcome != 'success' }}
+        run: bun run lint
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

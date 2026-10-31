@@ -4,10 +4,6 @@ import { withTiming } from 'react-native-reanimated';
 import { panGestures } from '@/src/testing/gestureMock';
 import { SwipeToRemove } from '../SwipeToRemove';
 
-jest.mock('react-native-gesture-handler', () => ({
-  Gesture: jest.requireActual('@/src/testing/gestureMock').Gesture,
-  GestureDetector: ({ children }: { children: React.ReactNode }) => children,
-}));
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: () => ({ theme: {} }) }));
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
 jest.mock('../AppIcon', () => ({ AppIcon: () => null }));

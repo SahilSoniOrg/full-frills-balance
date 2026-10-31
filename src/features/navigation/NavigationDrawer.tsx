@@ -140,7 +140,11 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     icon: parseIconName(workplace.activeWorkplace.icon, Icon.Briefcase),
   };
   const isSwitching = workplace.isSwitchingWorkplace;
-  const canSwipeOpen = primaryNav.activeRouteName === 'index' && !primaryNav.selectionModeActive;
+  const canSwipeOpen =
+    Platform.OS !== 'web' &&
+    primaryNav.activeRouteName === 'index' &&
+    !primaryNav.selectionModeActive &&
+    primaryNav.drawerSwipePermission === true;
   const error = workplace.workplaceSwitchError;
   const router = useRouter();
   const { theme } = useTheme();
@@ -210,6 +214,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
 
   const renderDrawerContent = () => (
     <View
+      testID="navigation-drawer-surface"
       style={styles.surface}
       accessibilityViewIsModal={drawerVisible}
       accessibilityElementsHidden={isSwitching}
@@ -487,7 +492,11 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
           if (drawerVisible) closeDrawer();
         }}
         drawerType="front"
-        swipeEnabled={(drawerVisible || canSwipeOpen) && !selectorOpen && !isSwitching}
+        // Closing remains available whenever the drawer itself can accept gestures;
+        // pager blockers apply only to opening from the underlying page.
+        swipeEnabled={
+          Platform.OS !== 'web' && (drawerVisible || canSwipeOpen) && !selectorOpen && !isSwitching
+        }
         // iOS needs an edge-only opening gesture to coexist with the native pager.
         swipeEdgeWidth={drawerVisible || Platform.OS === 'android' ? width : 32}
         configureGestureHandler={gesture => {

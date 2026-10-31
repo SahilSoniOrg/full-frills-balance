@@ -6,10 +6,6 @@ import { AccountType } from '@/src/types/enums';
 import { panGestures } from '@/src/testing/gestureMock';
 import { AccountManagementTreeRow } from '../AccountManagementTreeRow';
 
-jest.mock('react-native-gesture-handler', () => ({
-  Gesture: jest.requireActual('@/src/testing/gestureMock').Gesture,
-  GestureDetector: ({ children }: { children: React.ReactNode }) => children,
-}));
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
 
 function Fixture({

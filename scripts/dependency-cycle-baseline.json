@@ -4,7 +4,6 @@
     "src/data/models/Account.ts -> src/data/models/AccountMetadata.ts",
     "src/data/models/Account.ts -> src/data/models/Transaction.ts",
     "src/data/models/Transaction.ts -> src/data/models/Journal.ts",
-    "src/data/models/Budget.ts -> src/data/models/BudgetScope.ts",
-    "src/services/import/canonicalImportBuilder.ts -> src/services/import/phases/transactionSynthesizer.ts"
+    "src/data/models/Budget.ts -> src/data/models/BudgetScope.ts"
   ]
 }

@@ -321,11 +321,7 @@ jest.mock('react-native-reanimated', () => {
       get: () => fn(),
     })),
     useAnimatedStyle: jest.fn(fn => {
-      try {
-        return typeof fn === 'function' ? fn() : {};
-      } catch {
-        return {};
-      }
+      return typeof fn === 'function' ? fn() : {};
     }),
     useAnimatedGestureHandler: jest.fn(handlers => ({})),
     useAnimatedScrollHandler: jest.fn(fn => ({})),

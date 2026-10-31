@@ -18,6 +18,7 @@ export function TabsLayout() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectionModeActive, setSelectionModeActive] = useState(false);
   const [activeRouteName, setActiveRouteName] = useState('index');
+  const [drawerSwipePermission, setDrawerSwipePermission] = useState(false);
   const displayName = userName || 'User';
 
   const closeDrawer = useCallback(() => setDrawerVisible(false), []);
@@ -68,6 +69,8 @@ export function TabsLayout() {
           userName: displayName,
           activeRouteName,
           reportActiveRoute,
+          drawerSwipePermission,
+          reportDrawerSwipePermission: setDrawerSwipePermission,
         }}
       >
         <NavigationDrawer>

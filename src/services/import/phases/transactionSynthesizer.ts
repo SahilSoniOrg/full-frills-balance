@@ -6,7 +6,7 @@ import type {
   CanonicalJournal,
   CanonicalTransaction,
 } from '@/src/types/importContracts';
-import type { ImportIssue, ImportTransactionInput } from '../canonicalImportBuilder';
+import type { ImportIssue, ImportTransactionInput } from '../importTypes';
 
 export function synthesizeTransactions(params: {
   rawTransactions: ImportTransactionInput[];

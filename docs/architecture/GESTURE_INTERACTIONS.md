@@ -60,7 +60,7 @@ Home has one six-leaf native pager: Dashboard, Accounts, Categories, Budgets, Pl
 
 Paging permission accounts for navigator focus, app activity, keyboard, lock, screen reader, workplace switching, selection mode, drawer visibility and screen-owned overlay locks. Losing permission restores the committed page without animation. Reduce Motion skips automatic page travel while direct finger-driven navigation remains available.
 
-The closed drawer opens only from the header trigger. An open drawer can be swiped closed and disables paging. Chart and row interactions continue to reserve paging through `setPageSwipeLock`; this JavaScript-mediated reservation still needs device arbitration checks.
+On native, the closed drawer can open by swiping right on Dashboard (full width on Android, the left 32-point edge on iOS). The pager publishes its current gesture permission to the shell, so focus, app state, keyboard, lock, screen reader, workplace switching, selection, and child swipe reservations block both opening and paging. An open drawer can still be swiped closed while paging is disabled. The avatar trigger remains an explicit opening control. Web uses explicit controls and does not enable drawer or page swipe gestures. Chart and row interactions continue to reserve paging through `setPageSwipeLock`; this JavaScript-mediated reservation still needs device arbitration checks.
 
 Native recognizer behavior, interruptions, accessibility and destination readiness need device validation. See `docs/home-v2/implementation.md` for the current architecture and manual checks.
 
