@@ -6,6 +6,7 @@ import { AuditAction } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
+import { map, type Observable } from 'rxjs';
 
 interface ExchangeRateCacheInput {
   toCurrency: string;
@@ -81,6 +82,10 @@ class ExchangeRateRepository {
 
   observeAll() {
     return observeQueryWithModelChanges(this.collection.query());
+  }
+
+  observeChanges(): Observable<void> {
+    return this.collection.changes.pipe(map(() => undefined));
   }
 
   observeLatestRates(fromCurrency: string) {

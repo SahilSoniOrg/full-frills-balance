@@ -7,12 +7,20 @@ import {
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import { filter, map, type Observable } from 'rxjs';
 import Transaction from '@/src/data/models/Transaction';
 import { rawSqlExecutor } from './raw/RawSqlExecutor';
 
 export class BalanceSnapshotRepository {
   private get snapshots() {
     return database.collections.get<BalanceSnapshot>('balance_snapshots');
+  }
+
+  observeChangesForWorkplace(workplaceId: WorkplaceId): Observable<void> {
+    return this.snapshots.changes.pipe(
+      filter(changes => changes.some(change => change.record.workplaceId === workplaceId)),
+      map(() => undefined),
+    );
   }
 
   async findLatestForAccount(

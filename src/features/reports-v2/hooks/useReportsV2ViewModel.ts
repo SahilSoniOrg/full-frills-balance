@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Observable } from 'rxjs';
 import { asAccountId, asWorkplaceId, type AccountId } from '@/src/types/ids';
 import { formatPeriodLabel, periodRangeForPreset } from '@/src/features/reports-v2/helpers';
 import type {
@@ -29,8 +30,10 @@ const FILTER_SETTLE_DELAY_MS = 220;
 
 export interface UseReportsV2ViewModelOptions {
   engine: ReportsV2QueryEngine;
+  inputChanges?: Observable<unknown>;
   workplaceId: string;
   targetCurrency: string;
+  refreshVersion?: number;
   timeZone?: string;
   initialSection?: ReportsV2SectionId;
   initialPeriodPreset?: ReportsV2PeriodPreset;
@@ -53,8 +56,10 @@ export interface UseReportsV2ViewModelOptions {
 
 export function useReportsV2ViewModel({
   engine,
+  inputChanges,
   workplaceId,
   targetCurrency,
+  refreshVersion,
   timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   initialSection = 'overview',
   initialPeriodPreset = 'month',
@@ -82,6 +87,7 @@ export function useReportsV2ViewModel({
   const [result, setResult] = useState<ReportsV2Result | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isFetchingMissingRates, setIsFetchingMissingRates] = useState(false);
+  const [inputRevision, setInputRevision] = useState(0);
   const runSequence = useRef(0);
   const hasLoaded = useRef(false);
   const scheduledRun = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +98,27 @@ export function useReportsV2ViewModel({
     initialAccountIdsKey ? initialAccountIdsKey.split('\u001f').map(asAccountId) : [],
   );
   const [includeArchivedAccounts, setIncludeArchivedAccounts] = useState(true);
+
+  useEffect(() => {
+    if (!inputChanges) return;
+
+    let hasReceivedInitialValue = false;
+    const subscription = inputChanges.subscribe({
+      next: () => {
+        if (!hasReceivedInitialValue) {
+          hasReceivedInitialValue = true;
+          return;
+        }
+        setInputRevision(revision => revision + 1);
+      },
+      error: cause => {
+        setError(cause instanceof Error ? cause : new Error('Unable to monitor report inputs.'));
+        setState('error');
+      },
+    });
+
+    return () => subscription.unsubscribe();
+  }, [inputChanges]);
 
   useEffect(() => {
     if (initialPeriodPreset === 'all-time' || initialPeriodPreset === 'custom') return;
@@ -182,8 +209,7 @@ export function useReportsV2ViewModel({
     const nextState = hasLoaded.current ? 'refreshing' : 'loading';
     hasLoaded.current = true;
 
-    // Invalidate an in-flight query as soon as the user changes a filter. This
-    // keeps a late response from replacing the screen with the wrong query.
+    // Invalidate in-flight work when the query or its persisted inputs change.
     const sequence = ++runSequence.current;
     setState(nextState);
     setError(null);
@@ -203,7 +229,7 @@ export function useReportsV2ViewModel({
       clearTimeout(timer);
       scheduledRun.current = null;
     };
-  }, [cancelScheduledRun, query, runQuery]);
+  }, [cancelScheduledRun, inputRevision, query, refreshVersion, runQuery]);
 
   const runImmediately = useCallback(
     (nextState: 'loading' | 'refreshing') => {

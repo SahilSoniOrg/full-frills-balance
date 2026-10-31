@@ -169,6 +169,12 @@ export class BudgetRepository {
     );
   }
 
+  observeAllScopes(workplaceId: WorkplaceId) {
+    return observeQueryWithModelChanges(
+      this.budgetScopes.query(Q.where('workplace_id', workplaceId)),
+    );
+  }
+
   async getScopes(workplaceId: WorkplaceId, budgetId: BudgetId): Promise<BudgetScope[]> {
     return await this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))

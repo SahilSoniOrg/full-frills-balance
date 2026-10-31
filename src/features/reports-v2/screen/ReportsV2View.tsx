@@ -19,6 +19,7 @@ import type { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
+import type { Observable } from 'rxjs';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { REPORTS_V2_SECTIONS } from '../helpers';
@@ -37,10 +38,19 @@ interface ReportsV2ViewProps {
   engine: ReportsV2QueryEngine;
   workplaceId: string;
   targetCurrency: string;
+  inputChanges?: Observable<unknown>;
+  refreshVersion?: number;
   chrome: ScreenNavChrome;
 }
 
-export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: ReportsV2ViewProps) {
+export function ReportsV2View({
+  engine,
+  workplaceId,
+  targetCurrency,
+  inputChanges,
+  refreshVersion,
+  chrome,
+}: ReportsV2ViewProps) {
   const { theme } = useTheme();
   const { accounts } = useAccounts(asWorkplaceId(workplaceId));
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
@@ -71,8 +81,10 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
   );
   const vm = useReportsV2ViewModel({
     engine,
+    inputChanges,
     workplaceId,
     targetCurrency,
+    refreshVersion,
     onRequestCustomRange: openDatePicker,
     onRequestAccountScope: openAccountPicker,
     onJournalDrilldown: handleJournalDrilldown,

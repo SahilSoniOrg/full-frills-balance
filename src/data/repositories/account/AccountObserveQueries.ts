@@ -141,6 +141,10 @@ export class AccountObserveQueries {
     );
   }
 
+  observeMetadataForWorkplace(workplaceId: WorkplaceId): Observable<AccountMetadata[]> {
+    return observeQueryWithModelChanges(this.metadata.query(Q.where('workplace_id', workplaceId)));
+  }
+
   observeByIdsWithDeleted(
     workplaceId: WorkplaceId,
     accountIds: AccountId[],
