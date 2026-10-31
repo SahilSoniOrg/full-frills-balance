@@ -1,0 +1,28 @@
+diff --git a/ios/PagerView.swift b/ios/PagerView.swift
+index a4a850af33bb517422a7f7e7dc5a14482ce76ae8..f3ea848ff5d9184f7582c8bb711e47d359178ae3 100644
+--- a/ios/PagerView.swift
++++ b/ios/PagerView.swift
+@@ -45,6 +45,23 @@ struct PagerView: View {
+         collectionView.showsVerticalScrollIndicator = false
+         collectionView.showsHorizontalScrollIndicator = false
+ 
++        // A native TabView otherwise wins against enclosing RNGH pans before
++        // their direction/edge constraints resolve (for example, a drawer).
++        // Wait until handlers are attached before establishing UIKit priority.
++        DispatchQueue.main.async { [weak collectionView] in
++          guard let collectionView,
++                let handlerPanClass = NSClassFromString("RNBetterPanGestureRecognizer") else { return }
++          var ancestor = collectionView.superview
++          while let view = ancestor {
++            for recognizer in view.gestureRecognizers ?? [] {
++              if recognizer.isKind(of: handlerPanClass) {
++                collectionView.panGestureRecognizer.require(toFail: recognizer)
++              }
++            }
++            ancestor = view.superview
++          }
++        }
++
+         // The vertical pager rotates this horizontal scroll view by 90 degrees.
+         // Native edge effects would rotate with it and cover the page sideways.
+         if isVertical, #available(iOS 26.0, *) {

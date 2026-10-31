@@ -45,6 +45,21 @@ unset follows the system setting. The app passes `useReducedMotion()`, so the
 Appearance toggle applies too. The patch is applied by Bun through
 `patchedDependencies`; recheck it when upgrading the package or `expo-router`.
 
+## Pager / enclosing drawer gestures on iOS
+
+`react-native-pager-view@9.0.7.patch` makes the iOS pager's collection-view
+pan wait for enclosing React Native Gesture Handler pans to fail. Without
+that UIKit dependency, the native pager claims Dashboard edge swipes before
+the drawer can activate. Dashboard now permits right-swipe opening across the
+full page on native platforms. The drawer's direction and enabled constraints
+decide when paging can proceed; vertical list scrolling keeps its own
+recognizer. This native patch changes only iOS.
+
+The dependency is installed after gesture handlers attach, and reapplied when
+SwiftUI recreates the pager. It relies on RNGH's `RNBetterPanGestureRecognizer`
+class name; recheck this patch when upgrading the pager or RNGH. Bun applies it
+through `patchedDependencies`. A native iOS rebuild is required.
+
 ## ExpoModulesCore / Swift compiler crash
 
 `expo-modules-core@58.0.26.patch` removes the redundant `as any Error` cast

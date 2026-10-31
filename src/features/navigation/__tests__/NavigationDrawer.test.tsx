@@ -208,7 +208,7 @@ describe('NavigationDrawer shell', () => {
     });
   });
 
-  it('keeps closed-drawer hitSlop edge-only on iOS Dashboard so native paging stays reliable', () => {
+  it('uses full-width closed-drawer hitSlop on iOS Dashboard', () => {
     const pan = { config: {} };
 
     render(
@@ -229,7 +229,7 @@ describe('NavigationDrawer shell', () => {
     );
 
     expect(Platform.OS).toBe('ios');
-    expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
+    expect(mockDrawerProps?.swipeEdgeWidth).toBeGreaterThan(32);
     mockDrawerProps?.configureGestureHandler?.(pan as never);
     expect(pan.config).toEqual({
       activeOffsetXStart: undefined,

@@ -497,8 +497,9 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
         swipeEnabled={
           Platform.OS !== 'web' && (drawerVisible || canSwipeOpen) && !selectorOpen && !isSwitching
         }
-        // iOS needs an edge-only opening gesture to coexist with the native pager.
-        swipeEdgeWidth={drawerVisible || Platform.OS === 'android' ? width : 32}
+        // Opening is Dashboard-only; its right swipe can start anywhere.
+        // The native pager yields to this pan until its direction is resolved.
+        swipeEdgeWidth={width}
         configureGestureHandler={gesture => {
           // These native config fields work with the drawer's builder gesture
           // and its public callback type, without deprecated gesture aliases.
