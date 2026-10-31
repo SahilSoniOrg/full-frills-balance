@@ -8,7 +8,7 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Cache Warmup Imports
 import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
@@ -34,6 +34,7 @@ import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImport
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useAppReady();
+  const didTrackAppOpen = useRef(false);
 
   // Register audit revert handlers once on cold start (idempotent).
   runAppBootstrapSideEffects();
@@ -73,6 +74,42 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     return () => earlyFx.abort();
   }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
+  // App-open analytics and device identity are app-lifetime work. Keep them out
+  // of the workplace-scoped stabilization effect below.
+  useEffect(() => {
+    if (!isAppReady || didTrackAppOpen.current) return;
+
+    let isActive = true;
+    let telemetryTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    const cancelInitialIdle = runAfterInteractions(() => {
+      if (!isActive || didTrackAppOpen.current) return;
+      telemetryTimeoutId = setTimeout(() => {
+        if (!isActive || didTrackAppOpen.current) return;
+        didTrackAppOpen.current = true;
+
+        analytics.delayedInitializePostHog();
+        analytics.track('app_opened', {
+          version: Application.nativeApplicationVersion || AppConfig.appVersion,
+          app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
+          build: Application.nativeBuildVersion || '1',
+          app_build: Application.nativeBuildVersion || '1',
+        });
+
+        const anonId = ensureAnonymizedId(preferences.device.anonymizedId);
+        if (anonId !== preferences.device.anonymizedId) {
+          preferences.device.setAnonymizedId(anonId);
+        }
+        analytics.identify(anonId);
+      }, 3000);
+    });
+
+    return () => {
+      isActive = false;
+      cancelInitialIdle();
+      if (telemetryTimeoutId) clearTimeout(telemetryTimeoutId);
+    };
+  }, [isAppReady]);
+
   // Background stabilization tasks - run once the app is ready and idle
   useEffect(() => {
     if (!isAppReady) return;
@@ -95,22 +132,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             `[Bootstrap] Running delayed background tasks for workplace ${workplaceId}...`,
           );
 
-          // 3. Lazy Analytics & Identity
-          analytics.delayedInitializePostHog();
-          analytics.track('app_opened', {
-            version: Application.nativeApplicationVersion || AppConfig.appVersion,
-            app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
-            build: Application.nativeBuildVersion || '1',
-            app_build: Application.nativeBuildVersion || '1',
-          });
-
-          const anonId = ensureAnonymizedId(preferences.device.anonymizedId);
-          if (anonId !== preferences.device.anonymizedId) {
-            preferences.device.setAnonymizedId(anonId);
-          }
-          analytics.identify(anonId);
-
-          // 4. Stabilization
+          // Workplace-scoped stabilization
           const {
             notificationCadence,
             notificationHour: notifHour,
