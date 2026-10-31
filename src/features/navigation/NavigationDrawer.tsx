@@ -28,6 +28,7 @@ import { Drawer } from 'react-native-drawer-layout';
 import {
   AccessibilityInfo,
   BackHandler,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -139,6 +140,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     icon: parseIconName(workplace.activeWorkplace.icon, Icon.Briefcase),
   };
   const isSwitching = workplace.isSwitchingWorkplace;
+  const canSwipeOpen = primaryNav.activeRouteName === 'index' && !primaryNav.selectionModeActive;
   const error = workplace.workplaceSwitchError;
   const router = useRouter();
   const { theme } = useTheme();
@@ -485,14 +487,17 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
           if (drawerVisible) closeDrawer();
         }}
         drawerType="front"
-        swipeEnabled={drawerVisible && !selectorOpen && !isSwitching}
-        swipeEdgeWidth={width}
+        swipeEnabled={(drawerVisible || canSwipeOpen) && !selectorOpen && !isSwitching}
+        // iOS needs an edge-only opening gesture to coexist with the native pager.
+        swipeEdgeWidth={drawerVisible || Platform.OS === 'android' ? width : 32}
         configureGestureHandler={gesture => {
           // These native config fields work with the drawer's builder gesture
           // and its public callback type, without deprecated gesture aliases.
           Object.assign(gesture.config, {
-            activeOffsetXStart: -20,
-            failOffsetXEnd: 20,
+            activeOffsetXStart: drawerVisible ? -20 : undefined,
+            activeOffsetXEnd: drawerVisible ? undefined : 20,
+            failOffsetXStart: drawerVisible ? undefined : -20,
+            failOffsetXEnd: drawerVisible ? 20 : undefined,
           });
           return gesture;
         }}

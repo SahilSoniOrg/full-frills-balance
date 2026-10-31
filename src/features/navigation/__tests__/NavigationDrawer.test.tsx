@@ -11,6 +11,7 @@ let mockDrawerProps: DrawerProps | undefined;
 const mockSetWorkplaceId = jest.fn().mockResolvedValue(undefined);
 const mockPush = jest.fn();
 let mockSwitchError: string | null = null;
+let mockIsSwitching = false;
 
 jest.mock('react-native-drawer-layout', () => {
   const { createElement, Fragment } = jest.requireActual<typeof import('react')>('react');
@@ -64,7 +65,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({
     workplaceId: 'home',
     activeWorkplace: { id: 'home', name: 'Personal workplace', icon: 'briefcase' },
-    isSwitchingWorkplace: false,
+    isSwitchingWorkplace: mockIsSwitching,
     workplaceSwitchError: mockSwitchError,
     setWorkplaceId: mockSetWorkplaceId,
   }),
@@ -91,7 +92,7 @@ jest.mock('@/src/utils/navigation', () => ({
   },
 }));
 
-function renderDrawer({ visible = true, canOpen = true } = {}) {
+function renderDrawer({ visible = true, canOpen = true, route = 'index' } = {}) {
   const onClose = jest.fn();
   const onOpen = jest.fn();
   render(
@@ -103,6 +104,7 @@ function renderDrawer({ visible = true, canOpen = true } = {}) {
         openDrawer: onOpen,
         closeDrawer: onClose,
         userName: 'Test User',
+        activeRouteName: route,
       }}
     >
       <NavigationDrawer>{null}</NavigationDrawer>
@@ -114,6 +116,7 @@ function renderDrawer({ visible = true, canOpen = true } = {}) {
 describe('NavigationDrawer shell', () => {
   beforeEach(() => {
     mockSwitchError = null;
+    mockIsSwitching = false;
     jest.clearAllMocks();
   });
 
@@ -145,14 +148,37 @@ describe('NavigationDrawer shell', () => {
     expect(mockDrawerProps?.swipeEnabled).toBe(false);
   });
 
+  it.each(['accounts', 'categories', 'commitments', 'planned-payments', 'activity'])(
+    'leaves swipes on %s to the pager when the drawer is closed',
+    route => {
+      renderDrawer({ visible: false, route });
+      expect(mockDrawerProps?.swipeEnabled).toBe(false);
+    },
+  );
+
+  it('disables opening and closing swipes while switching workplaces', () => {
+    mockIsSwitching = true;
+    renderDrawer({ visible: false });
+    expect(mockDrawerProps?.swipeEnabled).toBe(false);
+    renderDrawer();
+    expect(mockDrawerProps?.swipeEnabled).toBe(false);
+  });
+
+  it('accepts left swipes to close from any primary page', () => {
+    renderDrawer({ route: 'accounts' });
+    expect(mockDrawerProps?.swipeEnabled).toBe(true);
+    const pan = { config: {} };
+    mockDrawerProps?.configureGestureHandler?.(pan as never);
+    expect(pan.config).toEqual({
+      activeOffsetXStart: -20,
+      activeOffsetXEnd: undefined,
+      failOffsetXStart: undefined,
+      failOffsetXEnd: 20,
+    });
+  });
+
   it('keeps closed-drawer hitSlop edge-only on iOS Dashboard so native paging stays reliable', () => {
-    const activeOffsetX = jest.fn(function (this: { config: object }) {
-      return this;
-    });
-    const failOffsetX = jest.fn(function (this: { config: object }) {
-      return this;
-    });
-    const pan = { activeOffsetX, failOffsetX };
+    const pan = { config: {} };
 
     render(
       <PrimaryNavigationProvider
@@ -173,8 +199,12 @@ describe('NavigationDrawer shell', () => {
     expect(Platform.OS).toBe('ios');
     expect(mockDrawerProps?.swipeEdgeWidth).toBe(32);
     mockDrawerProps?.configureGestureHandler?.(pan as never);
-    expect(activeOffsetX).toHaveBeenCalledWith(20);
-    expect(failOffsetX).toHaveBeenCalledWith(-20);
+    expect(pan.config).toEqual({
+      activeOffsetXStart: undefined,
+      activeOffsetXEnd: 20,
+      failOffsetXStart: -20,
+      failOffsetXEnd: undefined,
+    });
   });
 
   it('uses full-width closed-drawer hitSlop on Android Dashboard', () => {
@@ -229,6 +259,7 @@ describe('NavigationDrawer shell', () => {
 describe('NavigationDrawer workplace selector', () => {
   beforeEach(() => {
     mockSwitchError = null;
+    mockIsSwitching = false;
     jest.clearAllMocks();
   });
 
