@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-export const PRESS_SCALE = Scale.press;
 const PRESS_IN_DURATION_MS = 100;
 const PRESS_OUT_DURATION_MS = 150;
 

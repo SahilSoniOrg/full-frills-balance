@@ -3,11 +3,9 @@ import {
   normalizeLegacyPrimaryRoute,
   PRIMARY_GROUP_DEFAULT_ROUTE,
   PRIMARY_PAGES,
-  primaryPageForIndex,
   primaryPageFromRouteName,
   primaryPageIndex,
   primaryRouteForGroup,
-  primaryRoutesInGroup,
   rememberPrimaryGroupRoute,
 } from '@/src/navigation/primaryPages';
 
@@ -26,7 +24,6 @@ describe('primaryPages', () => {
       'activity',
     ]);
     expect(primaryPageIndex('planned-payments')).toBe(4);
-    expect(primaryPageForIndex(2)?.id).toBe('categories');
     expect(primaryPageFromRouteName('commitments')?.group).toBe('commitments');
   });
 
@@ -69,10 +66,5 @@ describe('primaryPages', () => {
   it('ignores remember calls for unknown routes', () => {
     rememberPrimaryGroupRoute('not-a-primary-page');
     expect(primaryRouteForGroup('dashboard')).toBe(PRIMARY_GROUP_DEFAULT_ROUTE.dashboard);
-  });
-
-  it('lists the canonical sibling routes for each group', () => {
-    expect(primaryRoutesInGroup('accounts')).toEqual(['accounts', 'categories']);
-    expect(primaryRoutesInGroup('commitments')).toEqual(['commitments', 'planned-payments']);
   });
 });

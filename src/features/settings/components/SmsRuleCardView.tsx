@@ -35,10 +35,6 @@ export function getActionLabel(rule: PlainSmsRule) {
   return 'Auto-post';
 }
 
-export function getConditionSummary(rule: PlainSmsRule) {
-  return getConditionSummaryFromConditions(rule, getConditions(rule));
-}
-
 export function getConditionSummaryFromConditions(
   rule: PlainSmsRule,
   conditions: SmsRuleCondition[],

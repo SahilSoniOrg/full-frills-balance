@@ -4,8 +4,10 @@ import {
   appendMissingPlaceholderTabRoutes,
 } from 'expo-router/build/standard-navigation/appendMissingPlaceholderTabRoutes';
 import { createPrimaryPagerContent } from './PrimaryPagerNavigator.shared';
-import { HomeV2Viewport } from './HomeV2Viewport.web';
+import { HomeV2Viewport } from './HomeV2Viewport';
 
+// TabRouter creates routes on demand. Placeholders keep every page addressable;
+// idle neighbor preparation must PRELOAD them to obtain renderable descriptors.
 export const PrimaryPager = createStandardRouterNavigator(
   createPrimaryPagerContent(HomeV2Viewport),
   TabRouter,

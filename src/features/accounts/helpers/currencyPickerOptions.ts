@@ -40,14 +40,6 @@ function sortByName(left: PlainCurrency, right: PlainCurrency) {
   return left.name.localeCompare(right.name) || left.code.localeCompare(right.code);
 }
 
-function matchesQuery(row: CurrencyPickerRow, query: string) {
-  return (
-    row.name.toLowerCase().includes(query) ||
-    row.code.toLowerCase().includes(query) ||
-    row.symbol.toLowerCase().includes(query)
-  );
-}
-
 /** Popular (selected pinned) + remaining currencies by name. */
 export function toCurrencyPickerSections(
   currencies: readonly PlainCurrency[],
@@ -73,16 +65,6 @@ export function toCurrencyPickerSections(
     ...(popular.length ? [{ title: copy.popularCurrencies, data: popular }] : []),
     ...(rest.length ? [{ title: copy.allCurrencies, data: rest }] : []),
   ];
-}
-
-export function filterCurrencyPickerSections(
-  sections: readonly CurrencyPickerSection[],
-  searchQuery: string,
-): CurrencyPickerSection[] {
-  const query = searchQuery.trim().toLowerCase();
-  if (!query) return [...sections];
-  const data = sections.flatMap(section => section.data).filter(row => matchesQuery(row, query));
-  return data.length ? [{ title: '', data }] : [];
 }
 
 /** Prefer live currency metadata, then static symbol tables, then the code itself. */

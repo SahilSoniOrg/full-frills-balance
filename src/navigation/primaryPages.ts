@@ -95,14 +95,6 @@ export function primaryPageIndex(routeName?: string): number {
   return PRIMARY_PAGES.findIndex(page => page.routeName === routeName);
 }
 
-export function primaryPageForIndex(index: number): PrimaryPage | undefined {
-  return PRIMARY_PAGES[index];
-}
-
-export function primaryRoutesInGroup(group: PrimaryPageGroup): readonly string[] {
-  return PRIMARY_PAGES.filter(page => page.group === group).map(page => page.routeName);
-}
-
 export type LegacyPrimaryRoute = {
   routeName: string;
   params?: Record<string, unknown>;

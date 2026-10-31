@@ -1,4 +1,5 @@
-import { usePressScale, PRESS_SCALE } from '@/src/components/core/PressScaleTouchable';
+import { Scale } from '@/src/constants/design-tokens';
+import { usePressScale } from '@/src/components/core/PressScaleTouchable';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { act, renderHook } from '@testing-library/react-native';
 
@@ -19,7 +20,7 @@ describe('usePressScale', () => {
     act(() => {
       result.current.handlePressIn();
     });
-    expect(result.current.animate.scale).toBe(PRESS_SCALE);
+    expect(result.current.animate.scale).toBe(Scale.press);
     expect(result.current.transition.duration).toBe(100);
 
     act(() => {

@@ -1,5 +1,4 @@
 import {
-  filterCurrencyPickerSections,
   POPULAR_CURRENCY_CODES,
   resolveCurrencySymbol,
   toCurrencyPickerSections,
@@ -26,15 +25,6 @@ describe('toCurrencyPickerSections', () => {
       symbol: '֏',
     });
     expect(sections[1].data.map(row => row.id)).toEqual(['AFN']);
-  });
-});
-
-describe('filterCurrencyPickerSections', () => {
-  it('flattens matches across sections', () => {
-    const sections = toCurrencyPickerSections(currencies, 'USD');
-    expect(filterCurrencyPickerSections(sections, '֏').flatMap(s => s.data.map(r => r.id))).toEqual(
-      ['AMD'],
-    );
   });
 });
 

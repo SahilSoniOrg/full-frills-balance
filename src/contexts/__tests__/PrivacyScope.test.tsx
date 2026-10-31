@@ -24,6 +24,22 @@ describe('PrivacyScopeProvider', () => {
     preferences.privacy.setIsPrivacyMode(false);
   });
 
+  it.each([false, true])('marks only differences from global privacy (%s)', globalMode => {
+    const { result } = renderHook(() => usePrivacyScope(), { wrapper: wrap(globalMode) });
+    expect(result.current.isPrivacyOverridden).toBe(false);
+    act(() => result.current.togglePrivacyMode());
+    expect(result.current.isPrivacyOverridden).toBe(true);
+    act(() => preferences.privacy.setIsPrivacyMode(!globalMode));
+    expect(result.current.isPrivacyOverridden).toBe(false);
+    expect(result.current.isPrivacyMode).toBe(!globalMode);
+    act(() => preferences.privacy.setIsPrivacyMode(globalMode));
+    expect(result.current.isPrivacyOverridden).toBe(true);
+    expect(result.current.isPrivacyMode).toBe(!globalMode);
+    act(() => result.current.togglePrivacyMode());
+    expect(result.current.isPrivacyOverridden).toBe(false);
+    expect(result.current.isPrivacyMode).toBe(globalMode);
+  });
+
   it('mirrors global privacy prefs when there is no override', () => {
     const { result, rerender } = renderHook(() => useEffectivePrivacyMode(), {
       wrapper: wrap(false),

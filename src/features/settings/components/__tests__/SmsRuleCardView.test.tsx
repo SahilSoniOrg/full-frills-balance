@@ -1,4 +1,8 @@
-import { getActionLabel, getConditionSummary, getConditions } from '../SmsRuleCardView';
+import {
+  getActionLabel,
+  getConditionSummaryFromConditions,
+  getConditions,
+} from '../SmsRuleCardView';
 import type { PlainSmsRule } from '@/src/types/plainDtos';
 
 const baseRule = {
@@ -24,11 +28,15 @@ describe('SmsRuleCardView presentation helpers', () => {
       { field: 'merchant', value: 'Cafe' },
       { field: 'direction', value: 'debit' },
     ]);
-    expect(getConditionSummary(rule)).toBe('Merchant contains "Cafe" • Direction is debit');
+    expect(getConditionSummaryFromConditions(rule, getConditions(rule))).toBe(
+      'Merchant contains "Cafe" • Direction is debit',
+    );
   });
 
   it('preserves legacy rule summaries and action dispositions', () => {
-    expect(getConditionSummary(baseRule)).toBe('Regex: BANK / payment');
+    expect(getConditionSummaryFromConditions(baseRule, getConditions(baseRule))).toBe(
+      'Regex: BANK / payment',
+    );
     expect(getActionLabel({ ...baseRule, actionsJson: '{"disposition":"ignore"}' })).toBe('Ignore');
     expect(getActionLabel({ ...baseRule, actionsJson: '{"disposition":"review"}' })).toBe('Review');
   });
@@ -42,6 +50,8 @@ describe('SmsRuleCardView presentation helpers', () => {
 
     expect(getConditions(rule)).toEqual([]);
     expect(getActionLabel(rule)).toBe('Auto-post');
-    expect(getConditionSummary(rule)).toBe('Regex: BANK / payment');
+    expect(getConditionSummaryFromConditions(rule, getConditions(rule))).toBe(
+      'Regex: BANK / payment',
+    );
   });
 });
