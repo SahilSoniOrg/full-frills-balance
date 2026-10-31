@@ -3,7 +3,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
+import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import { formatDate } from '@/src/utils/dateUtils';
 import { StyleSheet, View } from 'react-native';
 

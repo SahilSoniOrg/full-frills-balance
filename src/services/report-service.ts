@@ -6,7 +6,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,
-} from '@/src/services/reports/heatmapCalculators';
+} from '@/src/services/report-visualizations/heatmapCalculators';
 import { calculateHistoryFromDeltas } from '@/src/services/reports/historyCalculators';
 import {
   loadAccountPeriodReportingDeltas,
@@ -22,7 +22,7 @@ import type {
   SankeyLink,
   SankeyNode,
 } from '@/src/services/reports/reportSnapshot';
-import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
+import { calculateSankeyDataFromSummaries } from '@/src/services/report-visualizations/sankeyCalculator';
 import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {

@@ -11,7 +11,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
 import { CategoryBreakdown, ExpenseCategory } from '@/src/services/reports/reportSnapshot';
 import { calculateReportSummary } from '@/src/services/reports/reportSummary';
-import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
+import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';

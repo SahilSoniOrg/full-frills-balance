@@ -1,5 +1,9 @@
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
+import type {
+  SankeyData,
+  SankeyLink,
+  SankeyNode,
+} from '@/src/services/report-visualizations/types';
 import {
   SankeyGraph,
   SankeyLink as D3SankeyLink,

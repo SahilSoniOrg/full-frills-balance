@@ -26,6 +26,7 @@ type FactInput = {
   amount: number;
   journalId?: string;
   journalDate?: number;
+  transactionDate?: number;
   semanticType?: SemanticType;
   journalDisplayType?: JournalDisplayType;
 };
@@ -54,6 +55,7 @@ function fact(input: FactInput): ReportingFact {
     journalId,
     transactionId: asTransactionId(`${journalId}-transaction`),
     journalDate: input.journalDate ?? Date.UTC(2026, 0, 5, 12),
+    transactionDate: input.transactionDate ?? input.journalDate ?? Date.UTC(2026, 0, 5, 12),
     journalStatus: JournalStatus.POSTED,
     accountId,
     accountName: input.accountName,

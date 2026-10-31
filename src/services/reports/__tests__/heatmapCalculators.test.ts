@@ -1,9 +1,9 @@
 import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,
-} from '@/src/services/reports/heatmapCalculators';
-import { AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId, JournalId } from '@/src/types/ids';
+} from '@/src/services/report-visualizations/heatmapCalculators';
+import { TransactionType } from '@/src/types/enums';
+import { JournalId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 
 describe('heatmapCalculators', () => {
@@ -11,16 +11,12 @@ describe('heatmapCalculators', () => {
     const points = calculateSpendingHeatmapFromTransactions([
       {
         journalId: 'journal-1' as JournalId,
-        accountId: 'account-1' as AccountId,
-        accountType: AccountType.ASSET,
         transactionType: TransactionType.DEBIT,
         transactionDate: dayjs('2026-01-05T12:00:00').valueOf(),
         amount: 10,
       },
       {
         journalId: 'journal-2' as JournalId,
-        accountId: 'account-1' as AccountId,
-        accountType: AccountType.ASSET,
         transactionType: TransactionType.DEBIT,
         transactionDate: dayjs('2026-01-11T12:00:00').valueOf(),
         amount: 20,

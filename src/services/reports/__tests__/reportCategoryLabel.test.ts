@@ -1,4 +1,4 @@
-import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
+import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import { AppConfig } from '@/src/constants/app-config';
 
 describe('formatCategoryLabel', () => {

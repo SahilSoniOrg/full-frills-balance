@@ -190,6 +190,7 @@ function toReportingFact(
     journalId: journal.id,
     transactionId: transaction.id,
     journalDate: journal.journalDate,
+    transactionDate: transaction.transactionDate,
     journalStatus: journal.status,
     accountId: account.id,
     accountName: account.name,

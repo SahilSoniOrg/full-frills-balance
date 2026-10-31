@@ -1,5 +1,9 @@
 import { AccountSubtype } from '@/src/types/enums';
 import type { AccountId, JournalId } from '@/src/types/ids';
+import {
+  buildReportVisualizations,
+  type ReportVisualizationsBySection,
+} from './reportVisualizations';
 import { calculateBudgetPerformance } from './calculators/planning/budgetPerformanceCalculator';
 import { calculateDebtReport } from './calculators/planning/debtCalculator';
 import { calculateForecast } from './calculators/planning/forecastCalculator';
@@ -104,20 +108,37 @@ function countRow(
   };
 }
 
-export function buildSections(
-  query: ReportQuery,
-  overview: ReturnType<typeof calculateOverview> | undefined,
-  cashFlow: ReturnType<typeof calculateCashFlow> | undefined,
-  spending: ReturnType<typeof calculateSpending> | undefined,
-  income: ReturnType<typeof calculateIncome> | undefined,
-  netWorth: ReturnType<typeof calculateNetWorth> | undefined,
-  budget: ReturnType<typeof calculateBudgetPerformance> | undefined,
-  debt: ReturnType<typeof calculateDebtReport> | undefined,
-  forecast: ReturnType<typeof calculateForecast> | undefined,
-  health: ReturnType<typeof calculateReportHealth> | undefined,
-  additionalWarnings: readonly ReportWarning[] = [],
-  requestedSections: ReadonlySet<ReportSectionId> = requestedReportSections(query),
-): { sections: ReportSection[]; measures: Record<string, ReportMeasure> } {
+interface BuildSectionsInput {
+  query: ReportQuery;
+  overview?: ReturnType<typeof calculateOverview>;
+  cashFlow?: ReturnType<typeof calculateCashFlow>;
+  spending?: ReturnType<typeof calculateSpending>;
+  income?: ReturnType<typeof calculateIncome>;
+  netWorth?: ReturnType<typeof calculateNetWorth>;
+  budget?: ReturnType<typeof calculateBudgetPerformance>;
+  debt?: ReturnType<typeof calculateDebtReport>;
+  forecast?: ReturnType<typeof calculateForecast>;
+  health?: ReturnType<typeof calculateReportHealth>;
+  additionalWarnings?: readonly ReportWarning[];
+  requestedSections?: ReadonlySet<ReportSectionId>;
+  visualizations: ReportVisualizationsBySection;
+}
+
+export function buildSections({
+  query,
+  overview,
+  cashFlow,
+  spending,
+  income,
+  netWorth,
+  budget,
+  debt,
+  forecast,
+  health,
+  additionalWarnings = [],
+  requestedSections = requestedReportSections(query),
+  visualizations,
+}: BuildSectionsInput): { sections: ReportSection[]; measures: Record<string, ReportMeasure> } {
   const currency = query.targetCurrency;
   const measures: Record<string, ReportMeasure> = {};
   const sections: ReportSection[] = [];
@@ -181,6 +202,7 @@ export function buildSections(
             },
           ],
         },
+        ...visualizations.overview,
       ],
       rows: overview.topSpendingCategories.map(item =>
         row(item.key, item.label, item.netExpense, currency, item.percentage, item.accountIds),
@@ -281,6 +303,7 @@ export function buildSections(
             },
           ],
         },
+        ...visualizations.spending,
       ],
       rows: spending.bySubtype.map(item =>
         row(item.key, item.label, item.netExpense, currency, item.percentage, item.accountIds),
@@ -668,8 +691,8 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
           closingBalances: cashBalances.closingBalances,
         })
       : undefined;
-    const spending = wants('spending') ? calculateSpending(baseInput) : undefined;
-    const income = wants('income') ? calculateIncome(baseInput) : undefined;
+    const spending = wants('spending', 'overview') ? calculateSpending(baseInput) : undefined;
+    const income = wants('income', 'overview') ? calculateIncome(baseInput) : undefined;
     const netWorth = wants('net-worth')
       ? calculateNetWorth({
           ...baseInput,
@@ -699,8 +722,15 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       ...opening.warnings,
       ...closing.warnings,
     ];
-    const built = buildSections(
-      queryForCalculators,
+    const visualizations = buildReportVisualizations({
+      query: queryForCalculators,
+      requestedSections: sections,
+      facts: currentFacts,
+      income,
+      spending,
+    });
+    const built = buildSections({
+      query: queryForCalculators,
       overview,
       cashFlow,
       spending,
@@ -711,8 +741,9 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       forecast,
       health,
       additionalWarnings,
-      sections,
-    );
+      requestedSections: sections,
+      visualizations,
+    });
     return {
       kind: REPORT_KINDS.OVERVIEW,
       query,

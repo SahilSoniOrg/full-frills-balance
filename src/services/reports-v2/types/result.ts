@@ -2,6 +2,7 @@ import type { AccountId, JournalId } from '@/src/types/ids';
 import type { ReportQuery } from './query';
 import type { ReportPeriod } from './period';
 import type { CountMeasure, MoneyMeasure, PercentageMeasure, ReportMeasure } from './measure';
+import type { HeatmapPoint, SankeyData } from '@/src/services/report-visualizations/types';
 
 export const REPORT_KINDS = {
   OVERVIEW: 'OVERVIEW',
@@ -70,6 +71,15 @@ export interface ReportSeries {
 
 export type ReportVisualization =
   | {
+      readonly kind: 'SANKEY';
+      readonly data: SankeyData;
+    }
+  | {
+      readonly kind: 'HEATMAP' | 'CALENDAR_HEATMAP';
+      readonly points: readonly HeatmapPoint[];
+      readonly currencyCode: string;
+    }
+  | {
       readonly kind: 'LINE' | 'BAR' | 'STACKED_BAR';
       readonly series: readonly ReportSeries[];
     }
@@ -79,6 +89,11 @@ export type ReportVisualization =
       readonly changes: readonly ReportMetric[];
       readonly closing: MoneyMeasure;
     };
+
+export type ReportTrendVisualization = Extract<
+  ReportVisualization,
+  { readonly kind: 'LINE' | 'BAR' | 'STACKED_BAR' | 'WATERFALL' }
+>;
 
 export interface ReportBreakdownRow {
   readonly id: string;

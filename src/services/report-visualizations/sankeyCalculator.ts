@@ -1,36 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { formatCategoryLabel } from '@/src/services/reports/reportCategoryLabel';
-import type { CategoryBreakdown } from '@/src/services/reports/reportTypes';
+import { formatCategoryLabel } from './reportCategoryLabel';
 import { roundToPrecision } from '@/src/utils/money';
+import type { SankeyData, SankeyLink, SankeyNode, SankeySummary } from './types';
 
-export interface SankeyNode {
-  id: string;
-  name: string;
-  color?: string;
-  /** Share of total inflow (0–100). Omitted for the hub node. */
-  percentOfIncome?: number;
-}
-
-export interface SankeyLink {
-  source: string;
-  target: string;
-  value: number;
-}
-
-export interface SankeySummary {
-  totalIncome: number;
-  totalExpense: number;
-  surplus: number;
-  deficit: number;
-}
-
-export interface SankeyData {
-  nodes: SankeyNode[];
-  links: SankeyLink[];
-  summary: SankeySummary;
-}
-
-type CategoryBreakdownAmount = Pick<CategoryBreakdown, 'category' | 'amount'>;
+type CategoryBreakdownAmount = { category: string; amount: number };
 
 const EMPTY_SUMMARY: SankeySummary = {
   totalIncome: 0,

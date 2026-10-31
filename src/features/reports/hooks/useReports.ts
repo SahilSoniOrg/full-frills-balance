@@ -11,7 +11,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
-import { emptySankeyData } from '@/src/services/reports/sankeyCalculator';
+import { emptySankeyData } from '@/src/services/report-visualizations/sankeyCalculator';
 import { getPreviousEquivalentReportRange } from '@/src/services/reports/reportPeriods';
 import { wealthService } from '@/src/services/wealth-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';

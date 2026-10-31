@@ -10,7 +10,11 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/reportSnapshot';
+import type {
+  SankeyData,
+  SankeyLink,
+  SankeyNode,
+} from '@/src/services/report-visualizations/types';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 

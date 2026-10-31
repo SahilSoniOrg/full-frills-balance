@@ -4,7 +4,7 @@ import { Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
+import type { HeatmapPoint } from '@/src/services/report-visualizations/types';
 import dayjs from 'dayjs';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -14,7 +14,7 @@ import { ChartTooltip } from './ChartTooltip';
 
 /** Selection tooltips: MoneyText (RN overlay). Host under PrivacyScopeProvider. */
 interface CalendarHeatmapProps {
-  data: HeatmapPoint[];
+  data: readonly HeatmapPoint[];
   height?: number;
   width?: number;
   title?: string;

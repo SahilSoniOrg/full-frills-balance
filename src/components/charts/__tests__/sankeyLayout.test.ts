@@ -4,7 +4,7 @@ import {
   resolveSankeyChartHeight,
   sankeyRibbonPath,
 } from '@/src/components/charts/sankeyLayout';
-import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
+import { calculateSankeyDataFromSummaries } from '@/src/services/report-visualizations/sankeyCalculator';
 
 describe('sankeyLayout', () => {
   it('lays out income, hub, and expense nodes in three columns', () => {

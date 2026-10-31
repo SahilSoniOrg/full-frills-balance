@@ -1,30 +1,16 @@
-import { TransactionType } from '@/src/types/enums';
 import { AppConfig } from '@/src/constants/app-config';
 import { roundToPrecision } from '@/src/utils/money';
-
 import dayjs from 'dayjs';
-import { ConvertedReportTransaction } from './reportTypes';
-import { JournalId } from '@/src/types/ids';
-
-export interface HeatmapPoint {
-  x: number; // Day of week (0-6)
-  y: number; // Row index (absolute week number)
-  value: number;
-  label?: string; // Optional label (e.g. day of month)
-  monthLabel?: string; // Optional month label (e.g. "Jan") for rows
-  timestamp?: number; // Exact date/time for this point
-  periodEndTimestamp?: number; // Inclusive end for calendar buckets that span multiple days
-  journalIds?: JournalId[]; // Transactions represented by a spending heatmap cell
-}
-
-export interface IncomeVsExpenseHistoryPoint {
-  startDate: number;
-  endDate?: number;
-  expense: number;
-}
+import type { JournalId } from '@/src/types/ids';
+import { TransactionType } from '@/src/types/enums';
+import type {
+  HeatmapPoint,
+  IncomeVsExpenseHistoryPoint,
+  SpendingHeatmapTransaction,
+} from './types';
 
 export function calculateSpendingHeatmapFromTransactions(
-  transactions: ConvertedReportTransaction[],
+  transactions: readonly SpendingHeatmapTransaction[],
   precision: number = AppConfig.constants.precision,
 ): HeatmapPoint[] {
   const densityMap = new Map<string, number>();
@@ -59,7 +45,7 @@ export function calculateSpendingHeatmapFromTransactions(
 }
 
 export function calculateCalendarHeatmapFromHistory(
-  history: IncomeVsExpenseHistoryPoint[],
+  history: readonly IncomeVsExpenseHistoryPoint[],
 ): HeatmapPoint[] {
   if (history.length === 0) return [];
   const startWeek = dayjs(history[0].startDate).startOf('week').valueOf();

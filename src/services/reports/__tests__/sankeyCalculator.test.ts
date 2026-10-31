@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { calculateSankeyDataFromSummaries } from '@/src/services/reports/sankeyCalculator';
+import { calculateSankeyDataFromSummaries } from '@/src/services/report-visualizations/sankeyCalculator';
 
 describe('calculateSankeyDataFromSummaries', () => {
   it('maps income and expense categories with human-readable labels', () => {

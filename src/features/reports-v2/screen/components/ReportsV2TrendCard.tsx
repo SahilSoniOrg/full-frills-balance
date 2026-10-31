@@ -9,7 +9,7 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ReportVisualization } from '@/src/services/reports-v2/types/result';
+import type { ReportTrendVisualization } from '@/src/services/reports-v2/types/result';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
@@ -29,7 +29,7 @@ export function ReportsV2TrendCard({
   dataNotes,
 }: {
   sectionId: string;
-  visualization: ReportVisualization;
+  visualization: ReportTrendVisualization;
   context: ReportsV2ExplanationContext;
   dataNotes: readonly string[];
 }) {

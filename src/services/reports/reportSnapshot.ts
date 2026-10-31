@@ -1,5 +1,9 @@
-import { HeatmapPoint } from '@/src/services/reports/heatmapCalculators';
-import { SankeyData, SankeyLink, SankeyNode } from '@/src/services/reports/sankeyCalculator';
+import type {
+  HeatmapPoint,
+  SankeyData,
+  SankeyLink,
+  SankeyNode,
+} from '@/src/services/report-visualizations/types';
 import type { CategoryBreakdown } from '@/src/services/reports/reportTypes';
 import { AccountId } from '@/src/types/ids';
 

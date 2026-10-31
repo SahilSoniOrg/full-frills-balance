@@ -24,6 +24,8 @@ export interface ReportingFact {
   readonly journalId: JournalId;
   readonly transactionId: TransactionId;
   readonly journalDate: number;
+  /** Original transaction timestamp, used by time-of-day reporting visuals. */
+  readonly transactionDate: number;
   readonly journalStatus: JournalStatus;
 
   readonly accountId: AccountId;

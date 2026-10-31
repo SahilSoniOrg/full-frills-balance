@@ -1,7 +1,7 @@
 import { ReportOverviewTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { NetWorthTrendWidget } from '@/src/features/reports/components/widgets/NetWorthTrendWidget';
 import { IncomeExpenseBalanceWidget } from '@/src/features/reports/components/widgets/IncomeExpenseBalanceWidget';
-import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/MoneyFlowWidget';
+import { MoneyFlowWidget } from '@/src/components/reports/MoneyFlowWidget';
 import { ReportSummaryCard } from '@/src/features/reports/components/ReportSummaryCard';
 import { Icon } from '@/src/components/core';
 import { DetailDisclosure } from '@/src/components/shared/DetailDisclosure';

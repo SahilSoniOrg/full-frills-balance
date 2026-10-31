@@ -45,9 +45,9 @@ describe('Reports V2 result rows', () => {
       comparison: 'NONE',
       granularity: 'AUTO',
     } as unknown as ReportQuery;
-    const result = buildSections(
+    const result = buildSections({
       query,
-      {
+      overview: {
         grossIncome: 0,
         netIncome: 0,
         netExpense: 0,
@@ -57,7 +57,7 @@ describe('Reports V2 result rows', () => {
         topSpendingCategories: [],
         comparison: null,
       } as never,
-      {
+      cashFlow: {
         cashInflows: 0,
         cashOutflows: 0,
         netCashFlow: 0,
@@ -66,7 +66,7 @@ describe('Reports V2 result rows', () => {
         buckets: [],
         bySubtype: [],
       } as never,
-      {
+      spending: {
         grossExpense: 0,
         refunds: 0,
         netExpense: 0,
@@ -75,7 +75,7 @@ describe('Reports V2 result rows', () => {
         buckets: [],
         bySubtype: [],
       } as never,
-      {
+      income: {
         grossIncome: 0,
         incomeReversals: 0,
         netIncome: 0,
@@ -83,12 +83,12 @@ describe('Reports V2 result rows', () => {
         buckets: [],
         bySubtype: [],
       } as never,
-      { closing: null, change: { netWorth: 0 }, history: [] } as never,
-      {
+      netWorth: { closing: null, change: { netWorth: 0 }, history: [] } as never,
+      budget: {
         totals: { budgetedAmount: 0, actualNetExpense: 0, plannedNetExpense: 0 },
         budgets: [],
       } as never,
-      {
+      debt: {
         totals: {
           openingBalance: 0,
           closingBalance: 0,
@@ -98,13 +98,17 @@ describe('Reports V2 result rows', () => {
         },
         accounts: [],
       } as never,
-      {
+      forecast: {
         totals: { plannedInflow: 0, plannedOutflow: 0, endingProjectedBalance: 0 },
         timeline: [],
         upcoming: [],
       } as never,
-      { summary: { errorCount: 0, warningCount: 0, infoCount: 0 }, diagnostics: [] } as never,
-    );
+      health: {
+        summary: { errorCount: 0, warningCount: 0, infoCount: 0 },
+        diagnostics: [],
+      } as never,
+      visualizations: { overview: [], spending: [] },
+    });
 
     expect(
       result.sections
@@ -202,19 +206,20 @@ describe('Reports V2 result rows', () => {
       upcoming: [],
     };
 
-    const result = buildSections(
+    const result = buildSections({
       query,
-      emptyOverview as never,
-      emptyCashFlow as never,
-      emptySpending as never,
-      emptyIncome as never,
-      emptyNetWorth as never,
-      emptyBudget as never,
-      emptyDebt as never,
-      emptyForecast as never,
-      health as never,
+      overview: emptyOverview as never,
+      cashFlow: emptyCashFlow as never,
+      spending: emptySpending as never,
+      income: emptyIncome as never,
+      netWorth: emptyNetWorth as never,
+      budget: emptyBudget as never,
+      debt: emptyDebt as never,
+      forecast: emptyForecast as never,
+      health: health as never,
       additionalWarnings,
-    );
+      visualizations: { overview: [], spending: [] },
+    });
     const healthRow = result.sections.find(section => section.id === 'health')?.rows?.[0];
     const healthWarnings = result.sections
       .find(section => section.id === 'health')
@@ -235,11 +240,9 @@ describe('Reports V2 result rows', () => {
       sections: ['spending'],
     } as unknown as ReportQuery;
 
-    const result = buildSections(
+    const result = buildSections({
       query,
-      undefined,
-      undefined,
-      {
+      spending: {
         grossExpense: 10,
         refunds: 0,
         netExpense: 10,
@@ -248,13 +251,8 @@ describe('Reports V2 result rows', () => {
         buckets: [],
         bySubtype: [],
       } as never,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    );
+      visualizations: { overview: [], spending: [] },
+    });
 
     expect(result.sections.map(section => section.id)).toEqual(['spending']);
     expect(result.measures).toEqual(
