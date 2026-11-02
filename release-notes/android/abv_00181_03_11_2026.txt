@@ -1,0 +1,15 @@
+New release 🚀
+
+A quick tune-up with smoother gestures and minor fixes.
+
+---
+
+Also in this update:
+
+* Sidebar gesture: You can swipe right anywhere on the Dashboard to open the menu, rather than having to grab the screen edge.
+* Reports: Reports now refresh automatically as soon as you record transactions or update budgets.
+* Gesture polish: Swiping between pages stays paused while menus, sheets, or date pickers are open.
+
+---
+
+Under the hood, consolidated reporting calculations and cleaner startup tasks.
