@@ -1,4 +1,5 @@
 ---
+name: commit-message-staged
 description: Propose clean conventional commit message for staged changes
 ---
 

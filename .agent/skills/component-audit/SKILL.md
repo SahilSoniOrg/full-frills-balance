@@ -1,4 +1,5 @@
 ---
+name: component-audit
 description: Component architecture audit for targeted React Native UI areas
 ---
 

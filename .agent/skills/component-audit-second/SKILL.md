@@ -1,4 +1,5 @@
 ---
+name: component-audit-second
 description: End-to-end component architecture audit for entropy reduction in Expo RN
 ---
 

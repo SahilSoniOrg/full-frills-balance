@@ -1,4 +1,5 @@
 ---
+name: audit-codebase
 description: Periodic architecture and reliability audit for Expo + WatermelonDB codebase
 ---
 

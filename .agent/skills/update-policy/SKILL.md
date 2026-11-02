@@ -1,4 +1,5 @@
 ---
+name: update-policy
 description: Safely update and roll back the remote app-version policy
 ---
 

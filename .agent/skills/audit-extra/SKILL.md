@@ -1,4 +1,5 @@
 ---
+name: audit-extra
 description: Comprehensive systems architecture and local-first reliability audit
 ---
 

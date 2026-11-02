@@ -1,4 +1,5 @@
 ---
+name: audit-rules
 description: Keep agent rules lean; rank pruning and consolidation opportunities
 ---
 

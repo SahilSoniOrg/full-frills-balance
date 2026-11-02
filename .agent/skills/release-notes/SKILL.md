@@ -1,4 +1,5 @@
 ---
+name: release-notes
 description: Propose and write user-centric release notes for app releases
 ---
 
