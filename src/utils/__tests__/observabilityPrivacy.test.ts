@@ -126,10 +126,11 @@ describe('observability privacy boundary', () => {
       }),
     ).toEqual({ feature: 'account', action: 'create', count: 2 });
     expect(
-      sanitizeAnalyticsProperties('user_screen_view', {
+      sanitizeAnalyticsProperties('$screen', {
         screen: '/PrivateMerchant',
       }),
     ).toEqual({ screen: 'other' });
+    expect(sanitizeAnalyticsProperties('user_screen_view', { screen: 'hub' })).toBeNull();
   });
 
   it('keeps only approved app context and pseudonymous generated workplace IDs', () => {
@@ -163,6 +164,31 @@ describe('observability privacy boundary', () => {
     expect(
       sanitizeAnalyticsProperties('privacy_policy_acknowledged', {
         policy_version: PRIVATE_MARKER,
+      }),
+    ).toEqual({});
+  });
+
+  it('allows the explicit install event and transaction conversion labels', () => {
+    expect(
+      sanitizeAnalyticsProperties('app_installed', {
+        version: '2.4.1',
+        build: '181',
+        private_note: PRIVATE_MARKER,
+      }),
+    ).toEqual({ version: '2.4.1', build: '181' });
+    expect(
+      sanitizeAnalyticsProperties('conversion', {
+        conversion_event: 'transaction_created',
+        timestamp: 1_760_000_000_000,
+      }),
+    ).toEqual({ conversion_event: 'transaction_created', timestamp: 1_760_000_000_000 });
+  });
+
+  it('allows the restored onboarding completion event without extra properties', () => {
+    expect(
+      sanitizeAnalyticsProperties('onboarding_complete', {
+        private_note: PRIVATE_MARKER,
+        amount: 500,
       }),
     ).toEqual({});
   });

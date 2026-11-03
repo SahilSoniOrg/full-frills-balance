@@ -41,7 +41,9 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
     'permission_denied',
     'timeout',
     'unknown',
+    'background',
   ]),
+  end_reason: new Set(['inactivity', 'background']),
   scope: new Set(['all', 'journal', 'account', 'budget', 'planned_payment', 'category']),
   tab: new Set(['overview', 'accounts', 'activity', 'insights', 'reports', 'settings']),
   timeframe: new Set(['week', 'month', 'quarter', 'year', 'all']),
@@ -59,13 +61,12 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   ]),
   interactionType: new Set(['press', 'select', 'zoom', 'scroll', 'toggle']),
   chartName: new Set(['cash_flow', 'spending', 'income', 'net_worth', 'safe_to_spend']),
-  metric: new Set([
-    'JournalList.LoadTime',
-    'ExchangeRateService.fetchNetwork',
-    'time_to_interactive',
-  ]),
   unit: new Set(['ms', 's', 'count']),
-  conversion_event: new Set(['onboarding_completed', 'first_transaction_created']),
+  conversion_event: new Set([
+    'onboarding_completed',
+    'first_transaction_created',
+    'transaction_created',
+  ]),
   engagement_type: new Set(['session', 'screen', 'feature']),
   entity_type: new Set(['journal', 'budget', 'account', 'planned_payment']),
   issueType: new Set(['missing_account', 'unbalanced_journal', 'missing_currency']),
@@ -134,6 +135,13 @@ const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<st
 };
 
 const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
+  app_installed: {
+    version: 'version',
+    app_version: 'version',
+    build: 'version',
+    app_build: 'version',
+    install_age_ms: 'duration',
+  },
   app_opened: {
     version: 'version',
     app_version: 'version',
@@ -141,6 +149,7 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
     app_build: 'version',
   },
   privacy_policy_acknowledged: { policy_version: 'version' },
+  onboarding_complete: {},
   integrity_issue: { table: 'token', issueType: 'token' },
   journal_balance_checked: { unbalanced_count: 'count', journals_checked: 'count' },
   unbalanced_journals_prompt_answered: { choice: 'token' },
@@ -149,7 +158,14 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
   entrypoint_opened: { screen: 'token', entrypoint: 'token' },
   entrypoint_selected: { screen: 'token', entrypoint: 'token', target: 'token' },
   session_start: {},
-  session_end: { session_duration_ms: 'duration', session_duration_min: 'count' },
+  session_end: {
+    session_duration_ms: 'duration',
+    session_duration_min: 'count',
+    end_reason: 'token',
+  },
+  app_backgrounded: {},
+  app_foregrounded: {},
+  analytics_event_dropped: { event_name: 'token' },
   app_error: { name: 'token' },
   app_cold_start: {
     splash_hidden_ms: 'duration',
@@ -162,7 +178,7 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
     dwell_time_sec: 'duration',
     next_screen: 'token',
   },
-  screen_view: {
+  $screen: {
     screen: 'token',
     previous_screen: 'token',
     flow: 'token',
@@ -172,12 +188,6 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
     is_modal: 'boolean',
     segment_count: 'count',
     previous_screen_dwell_ms: 'duration',
-  },
-  user_screen_view: {
-    screen: 'token',
-    screen_type: 'token',
-    flow_context: 'token',
-    is_modal: 'boolean',
   },
   first_paint: { duration_ms: 'duration', is_cold_boot: 'boolean' },
   conversion: { conversion_event: 'token', timestamp: 'duration' },
@@ -222,6 +232,16 @@ const FEATURE_ACTIONS: Record<string, ReadonlySet<string>> = Object.fromEntries(
   ]),
 );
 
+export function isAnalyticsEventDeclared(eventName: string): boolean {
+  if (SAFE_ANALYTICS_EVENT_NAMES.has(eventName)) return true;
+  if (!eventName.startsWith('feature_')) return false;
+  const name = eventName.slice('feature_'.length);
+  return Object.keys(FEATURE_ACTIONS).some(feature => {
+    const prefix = `${feature}_`;
+    return name.startsWith(prefix) && FEATURE_ACTIONS[feature].has(name.slice(prefix.length));
+  });
+}
+
 for (const [feature, schema] of Object.entries(FEATURE_EVENT_SCHEMAS)) {
   for (const key of Object.keys(schema)) {
     if (FEATURE_FIELD_ENUMS[feature]?.[key] || !ENUM_VALUES_WITH_DESIGN_TOKENS[key]) continue;
@@ -265,6 +285,9 @@ function validProperty(
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
   }
   if (typeof value !== 'string' || value.length > 64) return false;
+  if (key === 'metric') return /^[A-Za-z][A-Za-z0-9_. ]{0,63}$/.test(value);
+  if (key === 'event_name' && _eventName === 'analytics_event_dropped')
+    return /^[a-z][a-z0-9_]{0,63}$/.test(value);
   if (kind === 'currency') return /^[A-Z]{3}$/.test(value) && CURRENCY_CODES.has(value);
   if (kind === 'version') return safeVersion(value) !== undefined;
   if (['fromId', 'toId'].includes(key)) return safeGeneratedId(value);
@@ -633,7 +656,9 @@ function sanitizeSentryEnvelope(event: ErrorEvent | TransactionEvent) {
       : undefined,
     logger: event.logger === 'javascript' || event.logger === 'native' ? event.logger : undefined,
     environment:
-      event.environment === 'production' || event.environment === 'development'
+      event.environment === 'production' ||
+      event.environment === 'development' ||
+      event.environment === 'preview'
         ? event.environment
         : undefined,
     release: safeVersion(event.release),
@@ -852,7 +877,7 @@ function sanitizeSentryTags(tags: ErrorEvent['tags']): ErrorEvent['tags'] {
   if (!tags) return undefined;
   const result: Record<string, string> = {};
   const environment = tags.environment;
-  if (environment === 'production' || environment === 'development')
+  if (environment === 'production' || environment === 'development' || environment === 'preview')
     result.environment = environment;
   const variant = tags['app.variant'];
   if (variant === 'production' || variant === 'development' || variant === 'preview')

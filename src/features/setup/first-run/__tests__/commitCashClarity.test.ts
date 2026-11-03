@@ -1,6 +1,7 @@
 import { finishDeviceSetup } from '../../setupFinishers';
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import { commitCashClarity } from '../commitCashClarity';
+import { preferences } from '@/src/services/preferences';
 import { draftAccountId, starterCategoryId } from '../mapToWorkplaceOutput';
 import dayjs from 'dayjs';
 import { calculateNextOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
@@ -50,8 +51,22 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
   upsertPlannedPaymentByName: (...args: unknown[]) => mockUpsertPayment(...args),
 }));
 
+const mockTrack = jest.fn();
+const mockTrackConversion = jest.fn();
+jest.mock('@/src/services/analytics', () => ({
+  analytics: {
+    track: (...args: unknown[]) => mockTrack(...args),
+    trackConversion: (...args: unknown[]) => mockTrackConversion(...args),
+  },
+}));
+
 jest.mock('@/src/services/preferences', () => ({
-  preferences: { device: { setActiveWorkplaceId: jest.fn() } },
+  preferences: {
+    device: {
+      deviceRegistered: false,
+      setActiveWorkplaceId: jest.fn(),
+    },
+  },
 }));
 
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -76,6 +91,7 @@ jest.mock('../pendingWorkplace', () => ({
 describe('commitCashClarity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (preferences.device as unknown as { deviceRegistered: boolean }).deviceRegistered = false;
     mockFinishWorkplaceSetup.mockResolvedValue('workplace-op');
     mockGetWorkplace.mockResolvedValue(undefined);
   });
@@ -299,6 +315,27 @@ describe('commitCashClarity', () => {
     expect(finishDeviceSetup).toHaveBeenCalledWith({
       displayName: { value: 'Sahil', source: 'user_entered' },
     });
+  });
+
+  it('records onboarding completion once for a new device', async () => {
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+    ]);
+    await commitCashClarity(draft({ displayName: 'Sahil' }));
+
+    expect(mockTrack).toHaveBeenCalledWith('onboarding_complete');
+    expect(mockTrackConversion).toHaveBeenCalledWith('onboarding_completed');
+  });
+
+  it('does not re-record onboarding for an already registered device', async () => {
+    (preferences.device as unknown as { deviceRegistered: boolean }).deviceRegistered = true;
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+    ]);
+    await commitCashClarity(draft({ displayName: 'Sahil' }));
+
+    expect(mockTrack).not.toHaveBeenCalledWith('onboarding_complete');
+    expect(mockTrackConversion).not.toHaveBeenCalled();
   });
 
   it('does not create a workplace without a name', async () => {

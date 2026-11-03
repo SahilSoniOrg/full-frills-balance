@@ -64,16 +64,6 @@ export function useTelemetry() {
 
       // Update activity for session tracking
       analytics.updateActivity();
-
-      // Track user flow progression
-      if (meta.flowContext) {
-        analytics.trackUserInteraction('screen_view', {
-          screen: screenName,
-          previous_screen: previousScreen || 'none',
-          flow: meta.flowContext,
-          type: meta.screenType,
-        });
-      }
     }
   }, [pathname, segments]);
 }

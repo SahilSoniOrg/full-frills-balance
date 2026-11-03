@@ -3,6 +3,7 @@ import { logger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
+import { analytics } from '@/src/services/analytics';
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
@@ -42,7 +43,9 @@ export function useAppForegroundMaintenance() {
 
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       const prev = appStateRef.current;
+      if (prev !== 'background' && nextState === 'background') analytics.onAppBackground();
       if (prev.match(/inactive|background/) && nextState === 'active') {
+        analytics.onAppForeground();
         scheduleFlush();
       }
       appStateRef.current = nextState;

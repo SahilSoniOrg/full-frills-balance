@@ -1,6 +1,7 @@
 import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
+import { analytics } from '@/src/services/analytics';
 import {
   getOpeningBalancesAccountId,
   isSystemAccount,
@@ -72,6 +73,7 @@ export function commitCashClarity(draft: CashClarityDraft): Promise<WorkplaceId>
 async function commitCashClarityNow(draft: CashClarityDraft): Promise<WorkplaceId> {
   const displayName = draft.displayName?.trim() ?? '';
   if (!displayName) throw new Error('Could not save your name.');
+  const wasDeviceRegistered = preferences.device.deviceRegistered;
 
   const workplace = mapDraftToWorkplaceOutput(draft);
   const needsPayFrom =
@@ -226,6 +228,10 @@ async function commitCashClarityNow(draft: CashClarityDraft): Promise<WorkplaceI
     displayName: { value: displayName, source: 'user_entered' },
   });
   preferences.device.setActiveWorkplaceId(workplaceId);
+  if (!wasDeviceRegistered) {
+    analytics.track('onboarding_complete');
+    analytics.trackConversion('onboarding_completed');
+  }
   clearPendingCashClarityWorkplaceId();
   clearSetupDraft();
   return workplaceId;

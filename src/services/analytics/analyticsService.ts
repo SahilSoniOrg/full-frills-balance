@@ -14,8 +14,12 @@ import PostHog from 'posthog-react-native';
 import {
   getGlobalProperties,
   navigationIntegration,
-  POSTHOG_API_KEY,
+  RESOLVED_POSTHOG_API_KEY,
   POSTHOG_HOST,
+  SENTRY_DSN,
+  SENTRY_DIST,
+  SENTRY_RELEASE,
+  BUILD_TYPE,
   type AnalyticsProperties,
 } from './analyticsConfig';
 import { FeatureEventMap, KnownFeature } from './featureEventCatalog';
@@ -23,8 +27,9 @@ import { FeatureEventMap, KnownFeature } from './featureEventCatalog';
 export class AnalyticsService {
   private _posthog: PostHog | null = null;
   private _initialized = false;
-  private sessionStartTime: number = Date.now();
+  private sessionStartTime = 0;
   private sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastDroppedEventSignal = 0;
 
   // Sentry 7.11 strips JS privacy hooks from native initialization. Native crash reports
   // can retain exception text and crash-memory strings, so only sanitized JS reporting
@@ -71,13 +76,13 @@ export class AnalyticsService {
     if (this._posthog) return;
 
     const isPosthogEnabled =
-      typeof POSTHOG_API_KEY === 'string' &&
-      POSTHOG_API_KEY.trim().length > 0 &&
+      typeof RESOLVED_POSTHOG_API_KEY === 'string' &&
+      RESOLVED_POSTHOG_API_KEY.trim().length > 0 &&
       AppConfig.features.enablePostHog;
 
     if (isPosthogEnabled) {
       try {
-        this._posthog = new PostHog(POSTHOG_API_KEY, {
+        this._posthog = new PostHog(RESOLVED_POSTHOG_API_KEY, {
           host: POSTHOG_HOST,
           disabled: !isPosthogEnabled,
           errorTracking: { autocapture: false, exceptionSteps: { enabled: false } },
@@ -96,7 +101,8 @@ export class AnalyticsService {
 
         if (__DEV__) {
           logger.info('[Analytics] PostHog client ready (debug mode)');
-        } else {
+        }
+        if (!__DEV__ || AppConfig.features.enablePostHog) {
           logger.info('[Analytics] PostHog client ready');
           this.startSessionTracking();
         }
@@ -119,11 +125,14 @@ export class AnalyticsService {
 
     try {
       Sentry.init({
-        dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+        dsn: SENTRY_DSN,
         enabled: true,
         debug: false,
         ...AnalyticsService.SENTRY_OPTIONS,
-        tracesSampleRate: 1.0,
+        tracesSampleRate: __DEV__ ? 1.0 : 0.15,
+        release: SENTRY_RELEASE,
+        dist: SENTRY_DIST,
+        environment: BUILD_TYPE,
         integrations: [navigationIntegration, Sentry.reactNativeTracingIntegration()],
         beforeSend: event => sanitizeSentryErrorEvent(event),
         beforeSendTransaction: event => sanitizeSentryTransactionEvent(event),
@@ -148,6 +157,7 @@ export class AnalyticsService {
     if (!this._posthog) return false;
     const safeProperties = sanitizeAnalyticsProperties(eventName, props);
     if (safeProperties === null) {
+      this.signalDroppedEvent(eventName);
       if (__DEV__) {
         logger.warn(`[Analytics] Dropped undeclared or invalid event: ${eventName}`);
       }
@@ -184,12 +194,21 @@ export class AnalyticsService {
     }
   }
 
+  async flush() {
+    if (!this._posthog) return;
+    try {
+      await this._posthog.flush();
+    } catch (error) {
+      logger.warn('[Analytics] PostHog flush failed', { error });
+    }
+  }
+
   /**
    * Track a screen view
    */
   screen(screenName: string, props?: Record<string, string | number | boolean>) {
     if (!this._posthog) return;
-    const safeProperties = sanitizeAnalyticsProperties('screen_view', {
+    const safeProperties = sanitizeAnalyticsProperties('$screen', {
       ...props,
       screen: screenName,
     });
@@ -233,11 +252,52 @@ export class AnalyticsService {
   }
 
   private endSession() {
+    if (!this.sessionStartTime) return;
     const sessionDuration = Date.now() - this.sessionStartTime;
     this.track('session_end', {
       session_duration_ms: sessionDuration,
       session_duration_min: Math.round(sessionDuration / (1000 * 60)),
+      end_reason: 'inactivity',
     });
+    this.sessionStartTime = 0;
+    this.sessionTimeoutTimer = null;
+  }
+
+  onAppBackground() {
+    if (!this._posthog) return;
+    this.track('app_backgrounded');
+    this.endSessionWithReason('background');
+    void this._posthog.flush().catch(() => undefined);
+  }
+
+  onAppForeground() {
+    if (!this._posthog) return;
+    this.track('app_foregrounded');
+    this.startSessionTracking();
+  }
+
+  private endSessionWithReason(reason: 'background') {
+    if (!this.sessionStartTime) return;
+    const sessionDuration = Date.now() - this.sessionStartTime;
+    this.track('session_end', {
+      session_duration_ms: sessionDuration,
+      session_duration_min: Math.round(sessionDuration / 60000),
+      end_reason: reason,
+    });
+    this.sessionStartTime = 0;
+    if (this.sessionTimeoutTimer) clearTimeout(this.sessionTimeoutTimer);
+    this.sessionTimeoutTimer = null;
+  }
+
+  private signalDroppedEvent(eventName: string) {
+    if (!this._posthog || Date.now() - this.lastDroppedEventSignal < 60_000) return;
+    const safeName = /^[a-z][a-z0-9_]{0,63}$/.test(eventName) ? eventName : 'unknown';
+    this.lastDroppedEventSignal = Date.now();
+    try {
+      this._posthog.capture('analytics_event_dropped', { event_name: safeName });
+    } catch {
+      // Drop reporting must never interfere with application behavior.
+    }
   }
 
   updateActivity() {
@@ -245,6 +305,10 @@ export class AnalyticsService {
     // active session to keep alive, and scheduling a timer only leaks work in
     // non-analytics environments (including Jest).
     if (!this._posthog) return;
+    if (!this.sessionStartTime) {
+      this.startSessionTracking();
+      return;
+    }
     this.setupSessionTimeout();
   }
 

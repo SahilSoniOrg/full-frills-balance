@@ -9,8 +9,19 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
-export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 export const BUILD_TYPE = readAppVariant();
+const variantSentryDsn =
+  BUILD_TYPE === 'development'
+    ? process.env.EXPO_PUBLIC_SENTRY_DSN_DEVELOPMENT
+    : BUILD_TYPE === 'preview'
+      ? process.env.EXPO_PUBLIC_SENTRY_DSN_PREVIEW
+      : process.env.EXPO_PUBLIC_SENTRY_DSN_PRODUCTION;
+// PostHog uses one project across build variants; segment with app_variant/build_type properties.
+export const RESOLVED_POSTHOG_API_KEY = POSTHOG_API_KEY;
+export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
+export const SENTRY_DSN = variantSentryDsn || process.env.EXPO_PUBLIC_SENTRY_DSN || '';
+export const SENTRY_RELEASE = `in.sahilsoni.fullfrillsbalance@${Application.nativeApplicationVersion || AppConfig.appVersion}+${Application.nativeBuildVersion || '1'}`;
+export const SENTRY_DIST = Application.nativeBuildVersion || '1';
 
 export type AnalyticsProperty =
   | string

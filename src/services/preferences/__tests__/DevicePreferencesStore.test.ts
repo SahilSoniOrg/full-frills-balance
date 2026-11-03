@@ -86,7 +86,28 @@ describe('DevicePreferencesStore', () => {
       areSmsReviewNotificationsEnabled: true,
       showSmsNotificationDetails: false,
       reduceMotion: false,
+      hasTrackedInstall: false,
     });
+  });
+
+  it('treats existing installs with a telemetry id as already tracked', () => {
+    mockMemory.set(
+      'full_frills_balance_device_preferences',
+      JSON.stringify({ anonymizedId: 'anon_existing_install' }),
+    );
+
+    const store = new DevicePreferencesStore();
+
+    expect(store.hasTrackedInstall).toBe(true);
+  });
+
+  it('keeps fresh installs eligible for install tracking', () => {
+    const store = new DevicePreferencesStore();
+
+    expect(store.hasTrackedInstall).toBe(false);
+
+    store.setHasTrackedInstall(true);
+    expect(new DevicePreferencesStore().hasTrackedInstall).toBe(true);
   });
 
   it('persists reduceMotion updates', () => {

@@ -15,6 +15,8 @@ export interface DevicePreferences {
   showSmsNotificationDetails: boolean;
   /** In-app reduce-motion for this install (ORs with system AccessibilityInfo). */
   reduceMotion: boolean;
+  /** True once the first-open install event has been persisted to analytics. */
+  hasTrackedInstall: boolean;
 }
 
 export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
@@ -27,6 +29,7 @@ export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
   areSmsReviewNotificationsEnabled: true,
   showSmsNotificationDetails: false,
   reduceMotion: false,
+  hasTrackedInstall: false,
 };
 
 export const DEVICE_PREFERENCE_KEYS = [
@@ -39,6 +42,7 @@ export const DEVICE_PREFERENCE_KEYS = [
   'areSmsReviewNotificationsEnabled',
   'showSmsNotificationDetails',
   'reduceMotion',
+  'hasTrackedInstall',
 ] as const;
 
 export type DevicePreferenceKey = (typeof DEVICE_PREFERENCE_KEYS)[number];

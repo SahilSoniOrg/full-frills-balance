@@ -12,6 +12,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { purgeLocalAiCachesOnce } from '@/src/features/app/purgeLocalAiCaches';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
+import { analytics } from '@/src/services/analytics';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/contexts/app-shell/appReady', () => ({ useAppReady: jest.fn() }));
@@ -25,6 +26,7 @@ jest.mock('@/src/features/app/purgeLocalAiCaches', () => ({
 jest.mock('@/src/services/analytics', () => ({
   analytics: {
     delayedInitializePostHog: jest.fn(),
+    flush: jest.fn().mockResolvedValue(undefined),
     identify: jest.fn(),
     track: jest.fn(),
     syncActiveWorkplace: jest.fn(),
@@ -81,7 +83,9 @@ jest.mock('@/src/services/preferences', () => ({
   preferences: {
     device: {
       anonymizedId: 'anonymous-test-id' as string | undefined,
+      hasTrackedInstall: false,
       setAnonymizedId: jest.fn(),
+      setHasTrackedInstall: jest.fn(),
       getSnapshot: () => ({ isSmsImportEnabled: false }),
     },
     getSnapshot: () => ({
@@ -101,7 +105,9 @@ jest.mock('@/src/utils/scheduler', () => ({
 
 const devicePrefs = preferences.device as unknown as {
   anonymizedId: string | undefined;
+  hasTrackedInstall: boolean;
   setAnonymizedId: jest.Mock;
+  setHasTrackedInstall: jest.Mock;
 };
 
 describe('useAppBootstrap generation safety', () => {
@@ -111,6 +117,7 @@ describe('useAppBootstrap generation safety', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     devicePrefs.anonymizedId = 'anonymous-test-id';
+    devicePrefs.hasTrackedInstall = false;
     (useAppReady as jest.Mock).mockReturnValue({ isAppReady: true, setDataHydrated });
   });
 
@@ -219,5 +226,34 @@ describe('useAppBootstrap generation safety', () => {
     });
 
     expect(devicePrefs.setAnonymizedId).toHaveBeenCalledWith(expect.stringMatching(/^dev_/));
+  });
+
+  it('records app_installed once and persists the install flag', async () => {
+    (analytics.track as jest.Mock).mockReturnValue(true);
+
+    renderHook(() => useAppBootstrap('workplace-a' as WorkplaceId, 'USD'));
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(analytics.track).toHaveBeenCalledWith('app_installed', expect.any(Object));
+    expect(devicePrefs.setHasTrackedInstall).toHaveBeenCalledWith(true);
+  });
+
+  it('does not repeat app_installed after the install flag is set', async () => {
+    devicePrefs.hasTrackedInstall = true;
+    (analytics.track as jest.Mock).mockReturnValue(true);
+
+    renderHook(() => useAppBootstrap('workplace-a' as WorkplaceId, 'USD'));
+
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(analytics.track).not.toHaveBeenCalledWith('app_installed', expect.anything());
+    expect(devicePrefs.setHasTrackedInstall).not.toHaveBeenCalled();
   });
 });

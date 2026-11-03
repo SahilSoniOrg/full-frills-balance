@@ -101,6 +101,14 @@ export class DevicePreferencesStore {
     this.update({ reduceMotion });
   }
 
+  get hasTrackedInstall(): boolean {
+    return this.preferences.hasTrackedInstall;
+  }
+
+  setHasTrackedInstall(hasTrackedInstall: boolean): void {
+    this.update({ hasTrackedInstall });
+  }
+
   clear(): void {
     this.preferences = { ...DEFAULT_DEVICE_PREFERENCES };
     this.subject.next(this.preferences);
@@ -131,8 +139,16 @@ export class DevicePreferencesStore {
       return { ...DEFAULT_DEVICE_PREFERENCES };
     }
     const value = input as Record<string, unknown>;
+    // Installs that already have a telemetry id predate explicit install
+    // tracking. Treat them as counted so an app upgrade is not reported as a
+    // brand-new install; only genuinely fresh installs start false.
     return {
       ...DEFAULT_DEVICE_PREFERENCES,
+      ...(typeof value.hasTrackedInstall === 'boolean'
+        ? { hasTrackedInstall: value.hasTrackedInstall }
+        : typeof value.anonymizedId === 'string'
+          ? { hasTrackedInstall: true }
+          : {}),
       ...(typeof value.deviceRegistered === 'boolean'
         ? { deviceRegistered: value.deviceRegistered }
         : typeof value.onboardingCompleted === 'boolean'

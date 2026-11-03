@@ -80,33 +80,50 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     if (!isAppReady || didTrackAppOpen.current) return;
 
     let isActive = true;
-    let telemetryTimeoutId: ReturnType<typeof setTimeout> | undefined;
-    const cancelInitialIdle = runAfterInteractions(() => {
-      if (!isActive || didTrackAppOpen.current) return;
-      telemetryTimeoutId = setTimeout(() => {
-        if (!isActive || didTrackAppOpen.current) return;
-        didTrackAppOpen.current = true;
-
+    didTrackAppOpen.current = true;
+    const trackInitialEvents = async () => {
+      try {
         analytics.delayedInitializePostHog();
-        analytics.track('app_opened', {
+        const versionProperties = {
           version: Application.nativeApplicationVersion || AppConfig.appVersion,
           app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
           build: Application.nativeBuildVersion || '1',
           app_build: Application.nativeBuildVersion || '1',
-        });
-
+        };
         const anonId = ensureAnonymizedId(preferences.device.anonymizedId);
         if (anonId !== preferences.device.anonymizedId) {
           preferences.device.setAnonymizedId(anonId);
         }
         analytics.identify(anonId);
-      }, 3000);
-    });
+        analytics.track('app_opened', versionProperties);
+
+        // Native lifecycle capture is disabled for privacy, so record the first
+        // open of each install explicitly. Persist only after the event is
+        // accepted so a disabled/offline PostHog client retries on next launch.
+        if (!preferences.device.hasTrackedInstall) {
+          let installAgeMs: number | undefined;
+          try {
+            const installedAt = await Application.getInstallationTimeAsync();
+            if (installedAt) installAgeMs = Math.max(0, Date.now() - installedAt.getTime());
+          } catch {
+            // Attribution is optional; installation age must not block the event.
+          }
+          if (!isActive) return;
+          const accepted = analytics.track('app_installed', {
+            ...versionProperties,
+            ...(installAgeMs !== undefined ? { install_age_ms: installAgeMs } : {}),
+          });
+          if (accepted) preferences.device.setHasTrackedInstall(true);
+        }
+        await analytics.flush();
+      } catch {
+        // Analytics is best-effort and must not interrupt app startup.
+      }
+    };
+    void trackInitialEvents();
 
     return () => {
       isActive = false;
-      cancelInitialIdle();
-      if (telemetryTimeoutId) clearTimeout(telemetryTimeoutId);
     };
   }, [isAppReady]);
 
