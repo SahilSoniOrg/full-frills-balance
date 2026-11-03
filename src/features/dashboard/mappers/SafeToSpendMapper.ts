@@ -17,6 +17,8 @@ interface SafeToSpendMapperInput {
   asOf?: number;
   generatedAt?: number;
   quality?: SafeToSpendDashboard['quality'];
+  staleReason?: SafeToSpendDashboard['staleReason'];
+  latestActiveJournalAt?: number | null;
   snapshotAgeMs?: number;
   summary: SafeToSpendDashboard['summary'];
   report: SafeToSpendDashboard['report'];
@@ -117,6 +119,8 @@ export function mapSafeToSpendViewModel(
     asOf: result.asOf,
     generatedAt: result.generatedAt,
     quality: result.quality,
+    staleReason: result.staleReason,
+    latestActiveJournalAt: result.latestActiveJournalAt,
     snapshotAgeMs: result.snapshotAgeMs,
     safeToSpend,
     shortfall,

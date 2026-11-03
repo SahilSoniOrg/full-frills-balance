@@ -28,6 +28,7 @@ import { preferences } from '@/src/services/preferences';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import type { UnvaluedStartingBalance } from './types';
+import { latestActiveJournalAt } from '@/src/services/simulation/booksFreshness';
 import { observeForecastDateBasis, type ForecastDateBasis } from './forecastDateBasis';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
@@ -60,6 +61,13 @@ export type SafeToSpendInputSnapshot = {
   startOfToday: dayjs.Dayjs;
   lookbackDate: number;
   asOf: number;
+  /** Newest posted or reversed journal date included in this calculation. */
+  latestActiveJournalAt: number | null;
+  /**
+   * Same-day identity of the inputs already in memory. Null when a spot rate
+   * can still change the number, in which case the full pass always runs.
+   */
+  reuseKey: string | null;
 };
 
 export type SafeToSpendInputOutcome =
@@ -69,7 +77,9 @@ export type SafeToSpendInputOutcome =
       workplaceId: WorkplaceId;
       asOf: number;
       horizonDays: number;
+      latestActiveJournalAt: number | null;
     }
+  | { kind: 'unchanged' }
   | {
       kind: 'refreshing';
       defaultCurrencyCode: string;
@@ -91,7 +101,71 @@ type LedgerReactiveBundle = {
   defaultCurrencyCode: string;
   workplaceId: WorkplaceId;
   dateBasis: ForecastDateBasis;
+  journals: Journal[];
+  activeCount: number;
 };
+
+export type SafeToSpendReuseGate = {
+  key: string | null;
+  startOfToday: number | null;
+  horizonDays: number | null;
+};
+
+function updatedAtMs(value: Date | number | null | undefined): number {
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : 0;
+  }
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function revision(rows: readonly { updatedAt?: Date | number | null }[]): string {
+  let max = 0;
+  for (const row of rows) {
+    const at = updatedAtMs(row.updatedAt);
+    if (at > max) max = at;
+  }
+  return `${rows.length}:${max}`;
+}
+
+/**
+ * Identity of a same-day calculation. The latest journal date is the tag; the
+ * revision stamps catch an edit that does not move that date. Foreign-currency
+ * books return null so a spot-rate update still runs the full pass.
+ */
+function calculationReuseKey(input: {
+  startOfToday: number;
+  horizonDays: number;
+  currency: string;
+  latestActiveJournalAt: number | null;
+  activeCount: number;
+  journals: readonly { updatedAt?: Date | number | null }[];
+  accounts: readonly { updatedAt?: Date | number | null }[];
+  budgets: readonly { updatedAt?: Date | number | null }[];
+  plannedPayments: readonly { updatedAt?: Date | number | null }[];
+  plannedJournals: readonly { updatedAt?: Date | number | null }[];
+  liquidAccounts: readonly { currencyCode?: string | null }[];
+}): string | null {
+  if (
+    input.liquidAccounts.some(
+      account => account.currencyCode != null && account.currencyCode !== input.currency,
+    )
+  ) {
+    return null;
+  }
+  return [
+    input.startOfToday,
+    input.horizonDays,
+    input.currency,
+    input.latestActiveJournalAt ?? '',
+    input.activeCount,
+    revision(input.journals),
+    revision(input.accounts),
+    revision(input.budgets),
+    revision(input.plannedPayments),
+    revision(input.plannedJournals),
+  ].join('|');
+}
 
 function mapLedgerBundle(bundle: LedgerReactiveBundle): LedgerReactiveBundle & {
   liquidAssets: Account[];
@@ -127,6 +201,7 @@ export function observeSafeToSpendInputSnapshot(
   workplaceId: WorkplaceId,
   defaultCurrencyCode: string,
   dateBasisSource?: Observable<ForecastDateBasis>,
+  reuse: SafeToSpendReuseGate = { key: null, startOfToday: null, horizonDays: null },
 ): Observable<SafeToSpendInputOutcome> {
   let hasObservedBasis = dateBasisSource !== undefined;
   return combineLatest([
@@ -143,8 +218,14 @@ export function observeSafeToSpendInputSnapshot(
         asOf: dateBasis.asOf,
         horizonDays: safeToSpendDays,
       };
-      const invalidation$ = hasObservedBasis ? of(refreshing) : EMPTY;
+      const dayOrHorizonMoved =
+        reuse.startOfToday !== dateBasis.startOfToday || reuse.horizonDays !== safeToSpendDays;
+      const invalidation$ =
+        hasObservedBasis && (reuse.key === null || dayOrHorizonMoved) ? of(refreshing) : EMPTY;
       hasObservedBasis = true;
+      // Only the first bundle after a same-day restart can reuse. A later ledger
+      // emission, even hours afterward, still acquires a fresh cutoff.
+      let allowReuse = reuse.key !== null && !dayOrHorizonMoved;
       return merge(
         invalidation$,
         combineLatest([
@@ -164,10 +245,10 @@ export function observeSafeToSpendInputSnapshot(
           Observable<PlannedPayment[]>,
           Observable<Journal[]>,
           Observable<number>,
-          Observable<unknown>,
+          Observable<Journal[]>,
         ]).pipe(
           firstFastDebounce(Animation.observeDebounce),
-          map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
+          map(([allAccounts, budgets, plannedPayments, plannedJournals, activeCount, journals]) => {
             const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
             const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
             return {
@@ -181,9 +262,15 @@ export function observeSafeToSpendInputSnapshot(
               defaultCurrencyCode,
               workplaceId,
               dateBasis,
+              journals,
+              activeCount,
             };
           }),
-          map(bundle => ({ kind: 'bundle' as const, bundle })),
+          map(bundle => {
+            const reuseThis = allowReuse;
+            allowReuse = false;
+            return { kind: 'bundle' as const, bundle, reuseThis };
+          }),
           // Only ledger emissions reset the retry count, so a persistently failing source settles
           // on `failed` until the next date-basis or horizon change resubscribes it.
           retry({ count: 2, delay: 100, resetOnSuccess: true }),
@@ -202,6 +289,20 @@ export function observeSafeToSpendInputSnapshot(
       const now = dayjs(asOf);
       const startOfToday = now.startOf('day');
       const lookbackDate = startOfToday.subtract(mapped.safeToSpendDays, 'day').valueOf();
+      const taggedJournalAt = latestActiveJournalAt(mapped.journals);
+      const reuseKey = calculationReuseKey({
+        startOfToday: startOfToday.valueOf(),
+        horizonDays: mapped.safeToSpendDays,
+        currency: mapped.defaultCurrencyCode,
+        latestActiveJournalAt: taggedJournalAt,
+        activeCount: mapped.activeCount,
+        journals: mapped.journals,
+        accounts: mapped.allAccounts,
+        budgets: mapped.budgets,
+        plannedPayments: mapped.plannedPayments,
+        plannedJournals: mapped.plannedJournals,
+        liquidAccounts: [...mapped.liquidAssets, ...mapped.liquidLiabilities],
+      });
       if (mapped.liquidAssets.length === 0) {
         return of({
           kind: 'empty' as const,
@@ -209,7 +310,11 @@ export function observeSafeToSpendInputSnapshot(
           workplaceId,
           asOf,
           horizonDays: mapped.safeToSpendDays,
+          latestActiveJournalAt: taggedJournalAt,
         });
+      }
+      if (emission.reuseThis && reuseKey !== null && reuse.key === reuseKey) {
+        return of({ kind: 'unchanged' as const });
       }
 
       const history$ = from(
@@ -367,6 +472,8 @@ export function observeSafeToSpendInputSnapshot(
             startOfToday,
             lookbackDate,
             asOf,
+            latestActiveJournalAt: taggedJournalAt,
+            reuseKey,
           };
 
           return { kind: 'ready' as const, snapshot };

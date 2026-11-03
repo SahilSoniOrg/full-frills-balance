@@ -1,4 +1,4 @@
-import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, JournalStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
@@ -30,7 +30,7 @@ import {
   mockLiquidCashAsset,
 } from './stsReadModelFixtures';
 import { BehaviorSubject, defer, firstValueFrom, of, Subject, throwError } from 'rxjs';
-import { filter, take, timeout } from 'rxjs/operators';
+import { filter, skip, take, timeout } from 'rxjs/operators';
 import { afterEach } from '@jest/globals';
 import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
@@ -164,6 +164,125 @@ describe('SafeToSpendReadModel', () => {
       }
       expect(basisHarness.timers.size).toBe(0);
       expect(basisHarness.foregroundActive()).toBe(false);
+    });
+
+    it('reuses the last projection on a same-day foreground when the tagged books have not moved', async () => {
+      const basisHarness = createForecastDateBasisTestHarness();
+      jest.spyOn(Date, 'now').mockImplementation(() => basisHarness.dependencies.now());
+      const realObserveDateBasis = forecastDateBasis.observeForecastDateBasis;
+      jest
+        .spyOn(forecastDateBasis, 'observeForecastDateBasis')
+        .mockImplementation(() => realObserveDateBasis(basisHarness.dependencies));
+      const cash = mockLiquidCashAsset();
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'cash', balance: 1000 },
+      ]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async ({ startingBalances }) => {
+          const balance = startingBalances.get('cash');
+          return {
+            ...emptySimResult,
+            simulationResult: {
+              summary: { safeToSpend: balance, shortfall: 0, trajectoryMinBalance: balance },
+              projections: [],
+            },
+          };
+        },
+      );
+      const stream = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE).watch();
+      try {
+        const ready = await firstValueFrom(
+          stream.pipe(
+            filter(result => result.quality === 'ready' && result.summary.safeToSpend === 1000),
+            timeout({ first: 1000 }),
+          ),
+        );
+        expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
+        expect(cashFlowSimulationService.simulate).toHaveBeenCalledTimes(1);
+
+        const next = firstValueFrom(stream.pipe(skip(1), take(1), timeout({ first: 1000 })));
+        basisHarness.advanceNow(60 * 60 * 1000);
+        basisHarness.invokeForeground();
+        const reused = await next;
+        expect(reused.quality).toBe('ready');
+        expect(reused.staleReason).toBeUndefined();
+        expect(reused.asOf).toBe(ready.asOf);
+        expect(reused.summary.safeToSpend).toBe(1000);
+        expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
+        expect(cashFlowSimulationService.simulate).toHaveBeenCalledTimes(1);
+      } finally {
+        safeToSpendReadModel.clearCache();
+      }
+    });
+
+    it('recalculates when a journal is edited without moving the newest journal date', async () => {
+      const basisHarness = createForecastDateBasisTestHarness();
+      jest.spyOn(Date, 'now').mockImplementation(() => basisHarness.dependencies.now());
+      const realObserveDateBasis = forecastDateBasis.observeForecastDateBasis;
+      jest
+        .spyOn(forecastDateBasis, 'observeForecastDateBasis')
+        .mockImplementation(() => realObserveDateBasis(basisHarness.dependencies));
+      const journalDate = dayjs(basisHarness.dependencies.now()).subtract(1, 'day').valueOf();
+      const journals$ = new BehaviorSubject([
+        {
+          status: JournalStatus.POSTED,
+          journalDate,
+          updatedAt: new Date(journalDate),
+        },
+      ]);
+      (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(journals$);
+      const cash = mockLiquidCashAsset();
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'cash', balance: 1000 },
+      ]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async ({ startingBalances }) => {
+          const balance = startingBalances.get('cash');
+          return {
+            ...emptySimResult,
+            simulationResult: {
+              summary: { safeToSpend: balance, shortfall: 0, trajectoryMinBalance: balance },
+              projections: [],
+            },
+          };
+        },
+      );
+      const stream = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE).watch();
+      try {
+        const ready = await firstValueFrom(
+          stream.pipe(
+            filter(result => result.quality === 'ready'),
+            timeout({ first: 1000 }),
+          ),
+        );
+        expect(ready.latestActiveJournalAt).toBe(journalDate);
+        expect(cashFlowSimulationService.simulate).toHaveBeenCalledTimes(1);
+
+        basisHarness.advanceNow(1);
+        const recalculated = firstValueFrom(
+          stream.pipe(
+            filter(
+              result => result.quality === 'ready' && result.generatedAt !== ready.generatedAt,
+            ),
+            timeout({ first: 1500 }),
+          ),
+        );
+        journals$.next([
+          {
+            status: JournalStatus.POSTED,
+            journalDate,
+            updatedAt: new Date(basisHarness.dependencies.now()),
+          },
+        ]);
+        const next = await recalculated;
+        expect(next.latestActiveJournalAt).toBe(journalDate);
+        expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(2);
+        expect(cashFlowSimulationService.simulate).toHaveBeenCalledTimes(2);
+      } finally {
+        safeToSpendReadModel.clearCache();
+      }
     });
 
     it('invalidates the previous currency before a deferred replacement acquisition completes', done => {

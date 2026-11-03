@@ -7,16 +7,26 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
 import { useWindowDimensions } from 'react-native';
+import type { SafeToSpendAmountTone } from '@/src/features/dashboard/safeToSpendNotices';
 
 /** Smallest the hero amount shrinks to before it would rather stay legible. */
 const HERO_MIN_FONT_SIZE = 36;
 
+const AMOUNT_TONE_COLOR = {
+  shortfall: 'error',
+  uncertain: 'warning',
+  incomplete: 'secondary',
+  available: 'success',
+  neutral: undefined,
+} as const;
+
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
-  isPositiveSafeToSpend: boolean;
   amount: number;
   /** Some balances could not be converted: show the amount as approximate, not as a verdict. */
   incomplete?: boolean;
+  /** Hero color. Callers decide this once; the header does not learn each reason. */
+  tone?: SafeToSpendAmountTone;
   currencyCode: string;
   loading?: boolean;
   infoDisabled?: boolean;
@@ -26,9 +36,9 @@ interface SafeToSpendHeaderProps {
 
 export const SafeToSpendHeader = ({
   isOverCommitted,
-  isPositiveSafeToSpend,
   amount,
   incomplete = false,
+  tone = 'neutral',
   currencyCode,
   loading = false,
   infoDisabled = false,
@@ -51,15 +61,7 @@ export const SafeToSpendHeader = ({
       maxFontSize={amountFontSize}
       minFontSize={HERO_MIN_FONT_SIZE}
       lineHeightRatio={Typography.lineHeights.tight}
-      color={
-        isOverCommitted
-          ? 'error'
-          : incomplete
-            ? 'secondary'
-            : isPositiveSafeToSpend
-              ? 'success'
-              : undefined
-      }
+      color={AMOUNT_TONE_COLOR[tone]}
       weight="semibold"
     >
       {formatSts(amount, currencyCode, incomplete ? { prefix: '≈ ' } : undefined)}

@@ -8,9 +8,9 @@ jest.mock('@/src/hooks/use-reduced-motion', () => ({
 
 const props = {
   isOverCommitted: false,
-  isPositiveSafeToSpend: true,
   amount: 42_000,
   currencyCode: 'INR',
+  tone: 'available' as const,
   onInfoPress: jest.fn(),
 };
 
@@ -34,6 +34,14 @@ describe('SafeToSpendHeader', () => {
   it('renders the amount while loading without Moti settle', () => {
     render(<SafeToSpendHeader {...props} loading />);
     expect(screen.getByTestId('safe-to-spend-amount')).toBeTruthy();
+  });
+
+  it('does not present a stale amount as available cash', () => {
+    const { rerender } = render(<SafeToSpendHeader {...props} />);
+    const colorOf = () => JSON.stringify(screen.getByTestId('safe-to-spend-amount').props.style);
+    const ready = colorOf();
+    rerender(<SafeToSpendHeader {...props} tone="uncertain" />);
+    expect(colorOf()).not.toBe(ready);
   });
 
   it('marks the amount approximate when some balances could not be converted', () => {

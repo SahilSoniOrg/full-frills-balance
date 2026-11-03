@@ -119,6 +119,8 @@ export function DashboardScreenView({
           asOf: safeToSpendData?.asOf,
           generatedAt: safeToSpendData?.generatedAt,
           quality: safeToSpendData?.quality,
+          staleReason: safeToSpendData?.staleReason,
+          latestActiveJournalAt: safeToSpendData?.latestActiveJournalAt,
           snapshotAgeMs: safeToSpendData?.snapshotAgeMs,
           totalLiquidAssets: safeToSpendData?.totalLiquidAssets ?? 0,
           report: displayReport,

@@ -168,6 +168,8 @@ export const AppConfig = {
   defaults: {
     reportDays: 30,
     safeToSpendDays: 30,
+    /** Newest posted transaction this old, or older, means Safe to Spend is low confidence. */
+    safeToSpendLowConfidenceAfterDays: 3,
     chartTickCount: 5,
     safeToSpendDaysCap: 99,
     reportMonthlyBucketThresholdDays: 60,

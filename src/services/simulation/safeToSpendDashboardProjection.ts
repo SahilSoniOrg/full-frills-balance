@@ -51,10 +51,16 @@ type SafeToSpendSummary = Pick<
     safeDaysCount: number | null | undefined;
   };
 
+/** Why a stale forecast is on screen. Decided where `quality` is set, not by the card. */
+export type SafeToSpendStaleReason = 'saved' | 'failed';
+
 /** Payload from `safeToSpend.forWorkplace(id).watch()` — dashboard + chart. */
 export interface SafeToSpendDashboard {
   /** Availability of the latest projection. Empty financial data remains `ready`. */
   quality?: 'ready' | 'stale' | 'unavailable';
+  staleReason?: SafeToSpendStaleReason;
+  /** Newest posted or reversed journal date included in this calculation. */
+  latestActiveJournalAt?: number | null;
   projectionError?: string;
   workplaceId: WorkplaceId;
   asOf: number;
@@ -222,6 +228,7 @@ export function assembleSafeToSpendDashboard(input: {
   safeDaysCount: number | null | undefined;
   hasUnvaluedEntries?: boolean;
   unvaluedStartingBalances?: UnvaluedStartingBalance[];
+  latestActiveJournalAt?: number | null;
 }): SafeToSpendDashboard {
   const {
     runResult,
@@ -236,10 +243,12 @@ export function assembleSafeToSpendDashboard(input: {
     safeDaysCount,
     hasUnvaluedEntries = false,
     unvaluedStartingBalances = [],
+    latestActiveJournalAt = null,
   } = input;
 
   return {
     quality: 'ready',
+    latestActiveJournalAt,
     workplaceId,
     asOf,
     generatedAt,
@@ -362,6 +371,7 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     safeDaysCount,
     hasUnvaluedEntries,
     unvaluedStartingBalances,
+    latestActiveJournalAt: snapshot.latestActiveJournalAt,
   });
 }
 
@@ -372,6 +382,7 @@ export function createEmptySafeToSpendDashboard(
     asOf: number;
     horizonDays: number;
     quality: 'ready' | 'stale' | 'unavailable';
+    latestActiveJournalAt?: number | null;
   },
 ): SafeToSpendDashboard {
   const zeroExplanation: SafeToSpendExplanation = {

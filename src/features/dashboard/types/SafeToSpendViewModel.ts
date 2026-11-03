@@ -28,6 +28,9 @@ export interface SafeToSpendViewModel {
   asOf?: number;
   generatedAt?: number;
   quality?: 'ready' | 'stale' | 'unavailable';
+  staleReason?: 'saved' | 'failed';
+  /** Newest posted or reversed journal date included in this calculation. */
+  latestActiveJournalAt?: number | null;
   snapshotAgeMs?: number;
   currencyCode: string;
   // Raw Totals

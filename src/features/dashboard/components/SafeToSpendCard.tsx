@@ -1,4 +1,5 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText, Icon } from '@/src/components/core';
+import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
@@ -12,6 +13,10 @@ import { SafeToSpendChart } from './SafeToSpendChart';
 import { SafeToSpendCardLayout } from './SafeToSpendCardLayout';
 import { SafeToSpendHeader } from './SafeToSpendHeader';
 import { SafeToSpendForecastDetails } from './SafeToSpendForecastDetails';
+import {
+  safeToSpendAmountTone,
+  safeToSpendNotices,
+} from '@/src/features/dashboard/safeToSpendNotices';
 
 export interface SafeToSpendCardProps {
   projection: SafeToSpendProjection;
@@ -48,6 +53,18 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     isLoading: vmLoading,
   } = viewModel;
   const quality = viewModel.quality ?? 'ready';
+  const notices = safeToSpendNotices({
+    quality,
+    staleReason: viewModel.staleReason,
+    latestActiveJournalAt: viewModel.latestActiveJournalAt,
+  });
+  const amountTone = safeToSpendAmountTone({
+    isOverCommitted,
+    isPositiveSafeToSpend,
+    quality,
+    latestActiveJournalAt: viewModel.latestActiveJournalAt,
+    incomplete: Boolean(viewModel.hasUnvaluedEntries),
+  });
 
   const loading = isLoading ?? vmLoading;
   const hasBreakdownData = effectiveTotal > 0;
@@ -97,9 +114,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     ) : (
       <SafeToSpendHeader
         isOverCommitted={isOverCommitted}
-        isPositiveSafeToSpend={isPositiveSafeToSpend}
         amount={isOverCommitted ? shortfall : safeToSpend}
         incomplete={Boolean(viewModel.hasUnvaluedEntries)}
+        tone={amountTone}
         currencyCode={currencyCode}
         loading={loading}
         infoDisabled={!detailsReady}
@@ -113,13 +130,17 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       <SafeToSpendCardLayout
         summary={header}
         warning={
-          hasForecastIssue ? (
+          hasForecastIssue || notices.length > 0 ? (
             <>
-              {quality === 'stale' ? (
-                <AppText color="secondary">
-                  {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
-                </AppText>
-              ) : null}
+              {notices.map(notice => (
+                <NoticeBanner
+                  key={notice.id}
+                  testID={notice.id}
+                  tone="warning"
+                  icon={Icon.Alert}
+                  message={notice.message}
+                />
+              ))}
               {/* Provenance explains stale or partial forecasts, not a missing rate. */}
               {quality !== 'ready' ? <SafeToSpendForecastDetails viewModel={viewModel} /> : null}
               {viewModel.hasUnvaluedEntries ? (

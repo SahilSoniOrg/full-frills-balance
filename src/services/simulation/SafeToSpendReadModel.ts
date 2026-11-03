@@ -2,7 +2,10 @@ import {
   createEmptySafeToSpendDashboard,
   projectSafeToSpendDashboardFromSnapshot,
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
-import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
+import {
+  observeSafeToSpendInputSnapshot,
+  type SafeToSpendReuseGate,
+} from '@/src/services/simulation/safeToSpendInputAcquisition';
 import { persistSafeToSpendSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import {
   reactiveCacheCoordinator,
@@ -127,9 +130,20 @@ export class SafeToSpendReadModel {
     invalidateImmediately = false,
   ): Observable<SafeToSpendDashboard> {
     let lastSuccessful: SafeToSpendDashboard | undefined;
+    const reuse: SafeToSpendReuseGate = { key: null, startOfToday: null, horizonDays: null };
+    const clearReuse = () => {
+      reuse.key = null;
+      reuse.startOfToday = null;
+      reuse.horizonDays = null;
+    };
     const failureSnapshot = (staleError: string, unavailableError: string): SafeToSpendDashboard =>
       lastSuccessful
-        ? { ...lastSuccessful, quality: 'stale', projectionError: staleError }
+        ? {
+            ...lastSuccessful,
+            quality: 'stale',
+            staleReason: 'failed',
+            projectionError: staleError,
+          }
         : {
             ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
               workplaceId,
@@ -144,12 +158,21 @@ export class SafeToSpendReadModel {
       workplaceId,
       defaultCurrencyCode,
       invalidateImmediately ? observeForecastDateBasis() : undefined,
+      reuse,
     ).pipe(
       switchMap(outcome => {
+        if (outcome.kind === 'unchanged') {
+          return of(lastSuccessful ?? failureSnapshot('Input refresh failed', 'Input unavailable'));
+        }
         if (outcome.kind === 'refreshing') {
           return of(
             lastSuccessful
-              ? { ...lastSuccessful, quality: 'stale' as const, projectionError: undefined }
+              ? {
+                  ...lastSuccessful,
+                  quality: 'stale' as const,
+                  staleReason: 'saved' as const,
+                  projectionError: undefined,
+                }
               : {
                   ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
                     workplaceId: outcome.workplaceId,
@@ -163,16 +186,19 @@ export class SafeToSpendReadModel {
         }
         if (outcome.kind === 'empty') {
           lastSuccessful = undefined;
+          clearReuse();
           return of({
             ...createEmptySafeToSpendDashboard(outcome.defaultCurrencyCode, {
               workplaceId: outcome.workplaceId,
               asOf: outcome.asOf,
               horizonDays: outcome.horizonDays,
               quality: 'ready',
+              latestActiveJournalAt: outcome.latestActiveJournalAt,
             }),
           });
         }
         if (outcome.kind === 'failed') {
+          clearReuse();
           return of(failureSnapshot('Input refresh failed', 'Input unavailable'));
         }
 
@@ -195,10 +221,18 @@ export class SafeToSpendReadModel {
           tap(result => {
             const ready = { ...result, quality: 'ready' as const };
             lastSuccessful = ready;
+            if (outcome.snapshot.reuseKey) {
+              reuse.key = outcome.snapshot.reuseKey;
+              reuse.startOfToday = outcome.snapshot.startOfToday.valueOf();
+              reuse.horizonDays = outcome.snapshot.safeToSpendDays;
+            } else {
+              clearReuse();
+            }
             persistSafeToSpendSnapshot(workplaceId, ready);
           }),
           map(result => ({ ...result, quality: 'ready' as const })),
           catchError(err => {
+            clearReuse();
             logger.error(
               `[SafeToSpendReadModel] Projection failed (Workplace: ${workplaceId}):`,
               err,
@@ -208,6 +242,7 @@ export class SafeToSpendReadModel {
         );
       }),
       catchError(err => {
+        clearReuse();
         logger.error(
           `[SafeToSpendReadModel] Error in simulation pipeline (Workplace: ${workplaceId}):`,
           err,

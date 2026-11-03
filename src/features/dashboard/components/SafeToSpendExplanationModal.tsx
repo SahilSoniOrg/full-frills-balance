@@ -66,7 +66,7 @@ export const SafeToSpendExplanationModal = ({
     isLoading,
     explanation,
     asOf,
-    quality,
+    staleReason,
   } = viewModel;
 
   const formulaDays = viewModel.safeToSpendDays;
@@ -169,7 +169,11 @@ export const SafeToSpendExplanationModal = ({
           <AppText variant="caption" color="secondary" style={styles.introText}>
             {[
               constraint.horizon(explanation.horizonDays),
-              quality === 'stale' ? constraint.staleNote : null,
+              staleReason === 'saved'
+                ? constraint.staleNote
+                : staleReason === 'failed'
+                  ? AppConfig.strings.dashboard.safeToSpendUi.forecastStale
+                  : null,
             ]
               .filter(Boolean)
               .join(' ')}

@@ -233,6 +233,8 @@ export const UI_STRINGS = {
       incompleteEstimateWarning:
         'Some amounts could not be included. This estimate may be incomplete.',
     },
+    lowConfidenceWarning: (days: number) =>
+      `Low confidence. The last transaction is ${days} days old, so this number may be missing recent activity.`,
     safeToSpendProvenance: {
       basedOn: (date: string, days: number, updatedAt?: string) =>
         `Based on ${date} · ${days}-day forecast${updatedAt ? ` · updated ${updatedAt}` : ''}`,

@@ -25,6 +25,7 @@ export function restoreSafeToSpendPaintSnapshot(
     ...snapshot,
     workplaceId: (metadata?.workplaceId ?? snapshot.workplaceId) as WorkplaceId,
     quality: 'stale',
+    staleReason: 'saved',
     ...(age === undefined ? {} : { snapshotAgeMs: age }),
     snapshotKind: 'paint',
   };
