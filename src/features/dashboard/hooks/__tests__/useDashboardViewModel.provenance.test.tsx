@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react-native';
 import { useDashboardViewModel } from '../useDashboardViewModel';
 import { SafeToSpendCard } from '@/src/features/dashboard/components/SafeToSpendCard';
+import { SafeToSpendExplanationModal } from '@/src/features/dashboard/components/SafeToSpendExplanationModal';
 import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { AppConfig } from '@/src/constants';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -13,6 +14,23 @@ let mockCached: unknown;
 let mockAppReady = { isInitialized: true, isAppReady: true };
 let mockObservableFactory: (() => unknown) | undefined;
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useWorkplace: () => mockWorkplace }));
+jest.mock('@/src/components/overlays/ModalSurface', () => {
+  const { ModalSurface: Actual } = jest.requireActual<
+    typeof import('@/src/components/overlays/ModalSurface')
+  >('@/src/components/overlays/ModalSurface');
+  return {
+    ModalSurface: (props: Parameters<typeof Actual>[0]) => (
+      <Actual {...props} useNativeModal={false} />
+    ),
+  };
+});
+jest.mock('@/src/components/shared/moneyFormat', () => ({
+  useMoneyFormat: () => (amount: number) => `USD ${amount.toFixed(2)}`,
+  useStsMoneyFormat:
+    () =>
+    (amount: number, _currency: string, options: { prefix?: string } = {}) =>
+      `${options.prefix ?? ''}USD ${amount.toFixed(2)}`,
+}));
 jest.mock('@/src/contexts/app-shell/appReady', () => ({
   ...jest.requireActual('@/src/contexts/app-shell/appReady'),
   useAppReady: () => mockAppReady,
@@ -183,16 +201,25 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
       { isLoading: false, currencyCode: stale.currencyCode },
     );
     render(
-      <SafeToSpendCard
-        projection={stale.projection}
-        viewModel={vm}
-        detailsReady={false}
-        onInfoPress={() => undefined}
-        onLegendPress={() => undefined}
-      />,
+      <>
+        <SafeToSpendCard
+          projection={stale.projection}
+          viewModel={vm}
+          detailsReady={false}
+          onInfoPress={() => undefined}
+          onLegendPress={() => undefined}
+        />
+        <SafeToSpendExplanationModal
+          visible
+          onClose={() => undefined}
+          viewModel={vm}
+          expandedSection={null}
+          setExpandedSection={() => undefined}
+        />
+      </>,
     );
     const provenance = AppConfig.strings.dashboard.safeToSpendProvenance;
-    expect(screen.getByText(provenance.savedAgo(2, 0))).toBeTruthy();
-    expect(screen.getByText(provenance.basedOn(formatDate(savedAt - 1000), 30))).toBeTruthy();
+    expect(screen.getAllByText(provenance.savedAgo(2, 0))).toHaveLength(1);
+    expect(screen.getAllByText(provenance.basedOn(formatDate(savedAt - 1000), 30))).toHaveLength(1);
   });
 });

@@ -1,9 +1,13 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
+import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { useMoneyFormat, useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppText, ListGroup, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { safeToSpendNotices } from '@/src/features/dashboard/safeToSpendNotices';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatDate } from '@/src/utils/dateUtils';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -70,7 +74,13 @@ export const SafeToSpendExplanationModal = ({
   } = viewModel;
 
   const formulaDays = viewModel.safeToSpendDays;
+  const { workplaceId } = useWorkplace();
   const { theme } = useTheme();
+  const notices = safeToSpendNotices({
+    quality: viewModel.quality ?? 'ready',
+    staleReason,
+    latestActiveJournalAt: viewModel.latestActiveJournalAt,
+  });
   const formatSts = useStsMoneyFormat(isLoading);
   const formatMoney = useMoneyFormat({ loading: isLoading });
 
@@ -87,6 +97,7 @@ export const SafeToSpendExplanationModal = ({
         },
         forecastDetails: {
           marginBottom: Spacing.lg,
+          gap: Spacing.xs,
         },
         card: {
           marginBottom: Spacing.xl,
@@ -145,6 +156,44 @@ export const SafeToSpendExplanationModal = ({
       onClose={onClose}
       accessibilityCloseLabel="Close safe-to-spend info"
     >
+      {notices.length > 0 ||
+      asOf !== undefined ||
+      viewModel.snapshotAgeMs !== undefined ||
+      viewModel.hasUnvaluedEntries ? (
+        <View style={styles.forecastDetails}>
+          {notices.map(notice => (
+            <AppText key={notice.id} testID={notice.id} variant="caption" color="warning">
+              {notice.message}
+            </AppText>
+          ))}
+          {asOf !== undefined || viewModel.snapshotAgeMs !== undefined ? (
+            <SafeToSpendForecastDetails viewModel={viewModel} />
+          ) : null}
+          {viewModel.hasUnvaluedEntries ? (
+            <IncompleteFxWarning
+              testID="safe-to-spend-incomplete-warning"
+              message={AppConfig.strings.dashboard.safeToSpendUi.incompleteEstimateWarning}
+              onPress={() => {
+                onClose();
+                showIncompleteFxDetails({
+                  context: 'safe-to-spend',
+                  workplaceId,
+                  currencyCode,
+                  unvaluedStartingBalances: (viewModel.unvaluedStartingBalances ?? []).map(
+                    balance => ({
+                      accountId: balance.accountId,
+                      accountName: balance.accountName,
+                      fromCurrency: balance.fromCurrency,
+                      toCurrency: balance.toCurrency,
+                      amountLabel: formatMoney(balance.amount, balance.fromCurrency),
+                    }),
+                  ),
+                });
+              }}
+            />
+          ) : null}
+        </View>
+      ) : null}
       <AppText variant="body" color="secondary" style={styles.introText}>
         {info.intro}
       </AppText>
@@ -157,26 +206,11 @@ export const SafeToSpendExplanationModal = ({
         {info.unlocks}
       </AppText>
 
-      {asOf !== undefined || viewModel.snapshotAgeMs !== undefined ? (
-        <View style={styles.forecastDetails}>
-          <SafeToSpendForecastDetails viewModel={viewModel} />
-        </View>
-      ) : null}
-
       {explanation && (
         <AppCard paddingSize="lg" elevation="sm" style={styles.card}>
           <AppText variant="subheading">{constraint.title}</AppText>
           <AppText variant="caption" color="secondary" style={styles.introText}>
-            {[
-              constraint.horizon(explanation.horizonDays),
-              staleReason === 'saved'
-                ? constraint.staleNote
-                : staleReason === 'failed'
-                  ? AppConfig.strings.dashboard.safeToSpendUi.forecastStale
-                  : null,
-            ]
-              .filter(Boolean)
-              .join(' ')}
+            {constraint.horizon(explanation.horizonDays)}
           </AppText>
           <ListGroup variant="plain" dividerInset="none">
             <ListRow

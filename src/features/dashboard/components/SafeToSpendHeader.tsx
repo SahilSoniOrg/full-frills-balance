@@ -84,7 +84,13 @@ export const SafeToSpendHeader = ({
           name={Icon.HelpCircle}
           variant="clear"
           size={Size.sm}
-          iconColor={isOverCommitted ? theme.error : theme.textSecondary}
+          iconColor={
+            isOverCommitted
+              ? theme.error
+              : tone === 'uncertain' || tone === 'incomplete'
+                ? theme.warning
+                : theme.textSecondary
+          }
           onPress={onInfoPress}
           disabled={infoDisabled}
           accessibilityLabel="Open safe-to-spend calculation info"

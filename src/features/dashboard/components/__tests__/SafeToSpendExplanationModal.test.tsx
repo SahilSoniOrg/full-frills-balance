@@ -9,6 +9,7 @@ import { AppConfig } from '@/src/constants';
 import { ONBOARDING_STRINGS } from '@/src/constants/copy/domains/onboardingStrings';
 import { formatDate } from '@/src/utils/dateUtils';
 import { render, screen } from '@/src/utils/test-utils';
+import dayjs from 'dayjs';
 
 jest.mock('@/src/components/overlays/ModalSurface', () => {
   const { ModalSurface: Actual } = jest.requireActual<
@@ -21,6 +22,10 @@ jest.mock('@/src/components/overlays/ModalSurface', () => {
   };
 });
 
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({ workplaceId: 'test-workplace' }),
+}));
+
 jest.mock('@/src/components/shared/moneyFormat', () => ({
   useMoneyFormat: () => (amount: number) => `USD ${amount.toFixed(2)}`,
   useStsMoneyFormat:
@@ -30,7 +35,10 @@ jest.mock('@/src/components/shared/moneyFormat', () => ({
 }));
 
 describe('SafeToSpendExplanationModal dated explanation', () => {
-  const renderExplanation = (cash: number) => {
+  const renderExplanation = (
+    cash: number,
+    extra: Partial<ReturnType<typeof mapSafeToSpendViewModel>> = {},
+  ) => {
     const asOf = new Date(2026, 8, 30, 9).getTime();
     const flows: Flow[] = [
       {
@@ -110,7 +118,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       <SafeToSpendExplanationModal
         visible
         onClose={() => undefined}
-        viewModel={viewModel}
+        viewModel={{ ...viewModel, ...extra }}
         expandedSection={null}
         setExpandedSection={() => undefined}
       />,
@@ -150,6 +158,31 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
     expect(copyText).not.toMatch(
       /left over|\+ ?(expected )?income|incoming money|before next payday/i,
     );
+  });
+
+  it('puts quiet books, a saved forecast, and a missing rate in the info sheet', () => {
+    renderExplanation(1000, {
+      quality: 'stale',
+      staleReason: 'saved',
+      latestActiveJournalAt: dayjs().startOf('day').subtract(5, 'day').valueOf(),
+      snapshotAgeMs: 7_200_000,
+      hasUnvaluedEntries: true,
+      unvaluedStartingBalances: [],
+    });
+
+    expect(screen.getByText(AppConfig.strings.dashboard.lowConfidenceWarning(5))).toBeTruthy();
+    expect(
+      screen.getByText(AppConfig.strings.dashboard.safeToSpendConstraint.staleNote),
+    ).toBeTruthy();
+    expect(screen.getByText(/Based on/)).toBeTruthy();
+    expect(
+      screen.getByText(AppConfig.strings.dashboard.safeToSpendProvenance.savedAgo(2, 0)),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: /Some amounts could not be included\. This estimate may be incomplete\. Review details/,
+      }),
+    ).toBeTruthy();
   });
 
   it('shows a negative low point as a shortfall, not floored to zero', () => {

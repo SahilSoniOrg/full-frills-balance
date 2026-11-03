@@ -70,7 +70,8 @@ describe('SafeToSpendCard availability', () => {
     expect(onLegendPress).toHaveBeenCalledWith('committed');
   });
 
-  it('keeps stale and incomplete valuation warnings alongside the breakdown', () => {
+  it('keeps the breakdown and opens info when the forecast needs explaining', () => {
+    const onInfoPress = jest.fn();
     render(
       <SafeToSpendCard
         projection={projection}
@@ -80,25 +81,29 @@ describe('SafeToSpendCard availability', () => {
           staleReason: 'saved',
           hasUnvaluedEntries: true,
           asOf: Date.UTC(2026, 9, 2),
+          latestActiveJournalAt: dayjs().startOf('day').subtract(5, 'day').valueOf(),
         }}
-        onInfoPress={jest.fn()}
+        detailsReady={false}
+        onInfoPress={onInfoPress}
         onLegendPress={jest.fn()}
       />,
     );
     expect(
-      screen.getByText(AppConfig.strings.dashboard.safeToSpendConstraint.staleNote),
-    ).toBeTruthy();
-    expect(screen.getByTestId('safe-to-spend-stale-warning')).toBeTruthy();
+      screen.queryByText(AppConfig.strings.dashboard.safeToSpendConstraint.staleNote),
+    ).toBeNull();
+    expect(screen.queryByText(AppConfig.strings.dashboard.lowConfidenceWarning(5))).toBeNull();
+    expect(screen.queryByText(/Based on/)).toBeNull();
     expect(
-      screen.getByRole('button', {
-        name: /Some amounts could not be included\. This estimate may be incomplete\. Review details/,
+      screen.queryByRole('button', {
+        name: /Some amounts could not be included/,
       }),
-    ).toBeTruthy();
-    expect(screen.getByText(/Based on/)).toBeTruthy();
+    ).toBeNull();
     expect(screen.getByTestId('safe-to-spend-breakdown-metrics')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Open safe-to-spend calculation info' }));
+    expect(onInfoPress).toHaveBeenCalled();
   });
 
-  it('marks the amount low confidence when the newest transaction is at least three days old', () => {
+  it('leaves the card quiet when the newest transaction is at least three days old', () => {
     render(
       <SafeToSpendCard
         projection={projection}
@@ -110,8 +115,11 @@ describe('SafeToSpendCard availability', () => {
         onLegendPress={jest.fn()}
       />,
     );
-    expect(screen.getByText(AppConfig.strings.dashboard.lowConfidenceWarning(5))).toBeTruthy();
-    expect(screen.getByTestId('safe-to-spend-low-confidence')).toBeTruthy();
+    expect(screen.queryByText(AppConfig.strings.dashboard.lowConfidenceWarning(5))).toBeNull();
+    expect(screen.queryByTestId('safe-to-spend-low-confidence')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Open safe-to-spend calculation info' }),
+    ).toBeTruthy();
   });
 
   it('keeps confidence when the newest transaction is under three days old', () => {
@@ -129,17 +137,20 @@ describe('SafeToSpendCard availability', () => {
     expect(screen.queryByTestId('safe-to-spend-low-confidence')).toBeNull();
   });
 
-  it('warns that a failed refresh left the last forecast on screen', () => {
+  it('keeps a failed refresh off the card and leaves info open', () => {
+    const onInfoPress = jest.fn();
     render(
       <SafeToSpendCard
         projection={projection}
         viewModel={{ ...viewModel, quality: 'stale', staleReason: 'failed' }}
-        onInfoPress={jest.fn()}
+        detailsReady={false}
+        onInfoPress={onInfoPress}
         onLegendPress={jest.fn()}
       />,
     );
-    expect(screen.getByTestId('safe-to-spend-stale-warning')).toBeTruthy();
-    expect(screen.getByText(AppConfig.strings.dashboard.safeToSpendUi.forecastStale)).toBeTruthy();
+    expect(screen.queryByText(AppConfig.strings.dashboard.safeToSpendUi.forecastStale)).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Open safe-to-spend calculation info' }));
+    expect(onInfoPress).toHaveBeenCalled();
   });
 
   it('shows the projection and breakdown together without a disclosure', () => {
