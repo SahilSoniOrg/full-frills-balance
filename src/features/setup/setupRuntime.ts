@@ -53,7 +53,9 @@ export function resolveSetupJourney(
   return (
     resolveOptionalJourney(params) ??
     (draft && isSetupJourneyId(draft.journeyId) ? draft.journeyId : undefined) ??
-    (preferences.device.deviceRegistered ? 'empty_device_workplace' : undefined)
+    (preferences.device.deviceRegistered && !preferences.device.activeWorkplaceId
+      ? 'empty_device_workplace'
+      : undefined)
   );
 }
 

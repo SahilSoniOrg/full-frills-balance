@@ -51,7 +51,15 @@ export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution 
   }
 
   if (!deviceClaimed) return { kind: 'setup', journeyId: 'first_run' };
-  if (workplaceIds.length === 0) return { kind: 'setup', journeyId: 'empty_device_workplace' };
+  // A restore finish can clear Setup before workplace discovery emits the new
+  // row. The active id is the published workplace; don't start currency setup
+  // over a book that already exists.
+  if (workplaceIds.length === 0) {
+    if (activeWorkplaceId) {
+      return { kind: 'open', workplaceId: activeWorkplaceId, persistAsActive: false };
+    }
+    return { kind: 'setup', journeyId: 'empty_device_workplace' };
+  }
 
   if (activeWorkplaceId && workplaceIds.includes(activeWorkplaceId)) {
     return { kind: 'open', workplaceId: activeWorkplaceId, persistAsActive: false };

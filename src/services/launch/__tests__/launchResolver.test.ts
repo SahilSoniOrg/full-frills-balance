@@ -8,6 +8,7 @@ describe('resolveLaunch', () => {
   it.each([
     [false, [], undefined, { kind: 'setup', journeyId: 'first_run' }],
     [true, [], undefined, { kind: 'setup', journeyId: 'empty_device_workplace' }],
+    [true, [], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }],
     [true, [wp1], undefined, { kind: 'open', workplaceId: wp1, persistAsActive: true }],
     [true, [wp1, wp2], undefined, { kind: 'picker' }],
     [true, [wp1], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }],

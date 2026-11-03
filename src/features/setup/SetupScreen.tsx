@@ -9,6 +9,7 @@ import {
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
+import { preferences } from '@/src/services/preferences';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -578,6 +579,9 @@ function SetupScreen() {
   }
   const journeyId = resolveSetupJourney({ mode, journey }, journeyOverride);
   if (!journeyId) {
+    if (preferences.device.activeWorkplaceId) {
+      return <Redirect href="/(tabs)" />;
+    }
     return <Redirect href={{ pathname: '/onboarding', params: { journey: 'first_run' } }} />;
   }
   return (

@@ -17,6 +17,7 @@ import {
   shouldRenderSetupGateChildren,
 } from '@/src/features/setup';
 import { useTheme } from '@/src/hooks/use-theme';
+import { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
 import { resolveLaunchGate } from '@/src/services/launch/launchResolver';
@@ -190,6 +191,10 @@ export function LaunchCoordinatorProvider({
   );
   const discovery = useWorkplaceDiscovery(isInitialized, retryToken);
   const [failedPointerRepairId, setFailedPointerRepairId] = useState<WorkplaceId | null>(null);
+  const [probedWorkplace, setProbedWorkplace] = useState<{
+    id: WorkplaceId;
+    workplace: PlainWorkplace | null;
+  } | null>(null);
   const resolution = useMemo(() => {
     const retry = () => {
       setFailedPointerRepairId(null);
@@ -208,10 +213,16 @@ export function LaunchCoordinatorProvider({
     }
     if (next.kind !== 'open') return next;
     const workplace = discovery.workplaces.find(item => item.id === next.workplaceId);
-    if (!workplace) {
-      return { kind: 'loading' as const, retry };
+    if (workplace) return { ...next, workplace };
+    const probe = probedWorkplace?.id === next.workplaceId ? probedWorkplace : undefined;
+    if (probe?.workplace) return { ...next, workplace: probe.workplace };
+    if (probe && !probe.workplace) {
+      if (discovery.workplaces.length === 0) {
+        return { kind: 'setup' as const, journeyId: 'empty_device_workplace' as const };
+      }
+      return { kind: 'picker' as const, workplaces: discovery.workplaces };
     }
-    return { ...next, workplace };
+    return { kind: 'loading' as const, retry };
   }, [
     activeWorkplaceId,
     deviceClaimed,
@@ -220,6 +231,31 @@ export function LaunchCoordinatorProvider({
     discovery.loading,
     discovery.workplaces,
     isInitialized,
+    probedWorkplace,
+  ]);
+
+  useEffect(() => {
+    if (!isInitialized || discovery.loading || discovery.error || !activeWorkplaceId) return;
+    if (discovery.workplaces.some(workplace => workplace.id === activeWorkplaceId)) return;
+    if (probedWorkplace?.id === activeWorkplaceId) return;
+    let cancelled = false;
+    void workplaceService.getWorkplace(activeWorkplaceId).then(found => {
+      if (cancelled) return;
+      setProbedWorkplace({
+        id: activeWorkplaceId,
+        workplace: found ? toPlainWorkplace(found) : null,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeWorkplaceId,
+    discovery.error,
+    discovery.loading,
+    discovery.workplaces,
+    isInitialized,
+    probedWorkplace,
   ]);
 
   const state = useMemo<LaunchCoordinatorState>(() => {
