@@ -11,12 +11,13 @@ import {
   presentPlannedListOccurrenceTiming,
 } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import dayjs from 'dayjs';
-import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export interface PlannedPaymentCardProps {
   occurrence: PlannedPaymentListOccurrence;
+  /** The list's grouping clock, so overdue rows and Record buttons always agree with their group. */
+  now: number;
   onPress: () => void;
   onRecord?: () => void;
   canRecord?: boolean;
@@ -26,6 +27,7 @@ export interface PlannedPaymentCardProps {
 }
 function PlannedPaymentCardComponent({
   occurrence,
+  now,
   onPress,
   onRecord,
   canRecord = occurrence.canRecord,
@@ -39,7 +41,6 @@ function PlannedPaymentCardComponent({
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const strings = AppConfig.strings.plannedListRedesign;
   const item = occurrence.payment;
-  const now = getNow();
   const { isOverdue, isDueSoon } = presentPlannedListOccurrenceTiming(occurrence.date, now);
   const daysLate = isOverdue
     ? Math.abs(dayjs(occurrence.date).startOf('day').diff(dayjs(now).startOf('day'), 'day'))

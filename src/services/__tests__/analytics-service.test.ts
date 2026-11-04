@@ -45,7 +45,7 @@ describe('AnalyticsService', () => {
 
       expect(analytics.track(eventName, input)).toBe(expected !== null);
       if (expected === null) {
-        expect(capture).not.toHaveBeenCalled();
+        expect(capture.mock.calls.map(([name]) => name)).toEqual(['analytics_event_dropped']);
       } else {
         expect(capture).toHaveBeenCalledWith(eventName, expected);
       }
@@ -98,6 +98,7 @@ describe('AnalyticsService', () => {
     });
 
     expect(capture.mock.calls).toEqual([
+      ['session_start', {}],
       [
         'feature_account_create',
         { feature: 'account', action: 'create', account_type: 'ASSET', currency: 'USD' },

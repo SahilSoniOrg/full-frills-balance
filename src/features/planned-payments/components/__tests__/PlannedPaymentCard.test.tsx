@@ -62,7 +62,14 @@ function renderCard(
   onRecord = jest.fn(),
 ) {
   return {
-    ...render(<PlannedPaymentCard occurrence={occurrence} onPress={onPress} onRecord={onRecord} />),
+    ...render(
+      <PlannedPaymentCard
+        occurrence={occurrence}
+        now={Date.now()}
+        onPress={onPress}
+        onRecord={onRecord}
+      />,
+    ),
     onPress,
     onRecord,
   };
@@ -120,6 +127,7 @@ describe('PlannedPaymentCard rendered row', () => {
   it('uses whole currency units in the list row and compact overdue action', () => {
     const { getByRole, getByText } = render(
       <PlannedPaymentCard
+        now={Date.now()}
         occurrence={makeOccurrence({ dueDay: 1, amount: 725.25, currencyCode: 'EUR' })}
         onPress={jest.fn()}
         onRecord={jest.fn()}
@@ -186,6 +194,7 @@ describe('PlannedPaymentCard rendered row', () => {
     const onRecord = jest.fn();
     const { getByText, getByRole } = render(
       <PlannedPaymentCard
+        now={Date.now()}
         occurrence={makeOccurrence({
           dueDay: 1,
           status: PlannedPaymentStatus.COMPLETED,
@@ -206,6 +215,7 @@ describe('PlannedPaymentCard rendered row', () => {
     preferences.privacy.setIsPrivacyMode(true);
     const { getByRole, getAllByText, queryByText } = render(
       <PlannedPaymentCard
+        now={Date.now()}
         occurrence={makeOccurrence({ dueDay: 1, amount: 725.25, currencyCode: 'EUR' })}
         onPress={jest.fn()}
         onRecord={jest.fn()}
@@ -221,6 +231,7 @@ describe('PlannedPaymentCard rendered row', () => {
   it('does not expose Record for an occurrence marked ineligible', () => {
     const { queryByText } = render(
       <PlannedPaymentCard
+        now={Date.now()}
         occurrence={makeOccurrence({ dueDay: 1, canRecord: false })}
         onPress={jest.fn()}
         onRecord={jest.fn()}

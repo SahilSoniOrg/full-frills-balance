@@ -108,6 +108,11 @@ export class WorkplaceService {
     return await workplaceRepository.find(id);
   }
 
+  async findPlainWorkplace(id: WorkplaceId): Promise<PlainWorkplace | null> {
+    const workplace = await workplaceRepository.find(id);
+    return workplace ? toPlainWorkplace(workplace) : null;
+  }
+
   /** Asset/liability vs income/expense counts. Restore UI reads this only through loadRestoreSummary. */
   async getPublishedBookStats(workplaceId: WorkplaceId): Promise<{
     readonly accounts: number;

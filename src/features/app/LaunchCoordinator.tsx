@@ -17,7 +17,6 @@ import {
   shouldRenderSetupGateChildren,
 } from '@/src/features/setup';
 import { useTheme } from '@/src/hooks/use-theme';
-import { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
 import { resolveLaunchGate } from '@/src/services/launch/launchResolver';
@@ -239,12 +238,9 @@ export function LaunchCoordinatorProvider({
     if (discovery.workplaces.some(workplace => workplace.id === activeWorkplaceId)) return;
     if (probedWorkplace?.id === activeWorkplaceId) return;
     let cancelled = false;
-    void workplaceService.getWorkplace(activeWorkplaceId).then(found => {
+    void workplaceService.findPlainWorkplace(activeWorkplaceId).then(workplace => {
       if (cancelled) return;
-      setProbedWorkplace({
-        id: activeWorkplaceId,
-        workplace: found ? toPlainWorkplace(found) : null,
-      });
+      setProbedWorkplace({ id: activeWorkplaceId, workplace });
     });
     return () => {
       cancelled = true;

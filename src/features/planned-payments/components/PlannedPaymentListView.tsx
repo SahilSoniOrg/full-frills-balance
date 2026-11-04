@@ -293,6 +293,7 @@ export function PlannedPaymentListView({
         return (
           <PlannedPaymentCard
             occurrence={occurrence}
+            now={listData.today}
             onPress={() => onItemPress(occurrence.payment)}
             onRecord={() =>
               occurrence.payment.journalOnly
