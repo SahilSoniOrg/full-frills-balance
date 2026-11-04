@@ -132,17 +132,17 @@ export class SmsExtractor implements TransactionExtractor {
   private extractAccountSource(body: string): string | undefined {
     // Matches prefixes like "a/c", "card ending", "conta ****1234", "akaunti 0150****123"
     const sourceRegex =
-      /(?:a\/c|acct|acc|account|conta|akaunti|rek|rekening|card|cartao)\s*(?:no\.?|ending|final)?\s*[:\-]?\s*(?:(?:\d*[*xX.-]+)(\d{3,6})|(\d{3,6}))|by\s+(UPI)|([xX*.]{2,}[\s\-]?\d{3,6})/i;
+      /(?:a\/c|acct|acc|account|conta|akaunti|rek|rekening|card|cartao)\s*(?:no\.?|ending|final)?\s*[:\-]?\s*(?:(?:\d*[*xX.-]+)(\d{3,})|(\d{3,}))|by\s+(UPI)|([xX*.]{2,}[\s\-]?\d{3,})/i;
     const match = body.match(sourceRegex);
     if (!match) return undefined;
 
     const matchedDigits = match[1] || match[2];
     if (matchedDigits) {
       const isCard = /card|cartao/i.test(match[0]);
-      return `${isCard ? 'Card' : 'A/c'} ${matchedDigits}`;
+      return `${isCard ? 'Card' : 'A/c'} ${matchedDigits.slice(-6)}`;
     }
     if (match[3]) return 'UPI';
-    if (match[4]) return `A/c ${match[4].replace(/[^0-9]/g, '')}`;
+    if (match[4]) return `A/c ${match[4].replace(/[^0-9]/g, '').slice(-6)}`;
     return undefined;
   }
 

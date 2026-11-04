@@ -67,14 +67,12 @@ function resolveRuleAccounts(
   if (!counterpartyId && item.parsedMerchant) {
     const isCredit = item.direction === 'credit';
     const compatibleAccounts = accounts.filter(account => {
-      if (isCredit) {
-        return account.accountType !== AccountType.EXPENSE;
-      }
-      return account.accountType !== AccountType.INCOME;
+      return account.accountType === (isCredit ? AccountType.INCOME : AccountType.EXPENSE);
     });
     const normalizedMerchant = normalizeForMatch(item.parsedMerchant);
     const bestAccount = compatibleAccounts.find(account => {
       const name = normalizeForMatch(account.name);
+      if (!normalizedMerchant || !name) return false;
       return name.includes(normalizedMerchant) || normalizedMerchant.includes(name);
     });
     if (bestAccount && bestAccount.id !== bankAccountId) {
