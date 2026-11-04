@@ -234,7 +234,7 @@ class ReactiveDataService {
         observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts)),
         observeWorkplaceJournalMeta(workplaceId),
         observeWorkplaceActiveTransactionCount(workplaceId),
-        exchangeRateRepository.observeAll(),
+        exchangeRateRepository.observeRevision(),
       ]).pipe(
         firstFastDebounce(Animation.dataRefreshDebounce),
         switchMap(async ([plainAccounts]) => {

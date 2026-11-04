@@ -32,7 +32,10 @@ export function observeReportInputChanges(workplaceId: WorkplaceId): Observable<
       balanceSnapshotRepository.observeChangesForWorkplace(workplaceId),
       // Historical conversion can depend on line→journal and journal→report
       // quotes, so filtering only by the report currency could miss a quote.
-      exchangeRateRepository.observeChanges(),
+      exchangeRateRepository.observeRevision().pipe(
+        skip(1),
+        map(() => undefined),
+      ),
     ).pipe(firstFastDebounce(Animation.dataRefreshDebounce)),
   ).pipe(startWith(undefined));
 }

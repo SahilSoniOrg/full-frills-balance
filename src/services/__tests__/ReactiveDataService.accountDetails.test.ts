@@ -25,7 +25,7 @@ jest.mock('@/src/services/reactive/reactiveWorkplaceObserves', () => ({
   clearReactiveWorkplaceAccountsAndJournalMetaCache: jest.fn(),
 }));
 jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
-  exchangeRateRepository: { observeAll: () => mockOf([]) },
+  exchangeRateRepository: { observeRevision: () => mockOf(0) },
 }));
 
 const workplaceId = 'workplace-details' as WorkplaceId;

@@ -4,6 +4,7 @@ import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepo
 import { map } from 'rxjs/operators';
 import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 import { resetDatabase } from '@/src/testing/resetDatabase';
+import type { WorkplaceId } from '@/src/types/ids';
 
 describe('ExchangeRateRepository historical rates', () => {
   beforeEach(async () => {
@@ -46,6 +47,51 @@ describe('ExchangeRateRepository historical rates', () => {
     });
   });
 
+  it('replaces the previous provider sheet instead of appending another copy', async () => {
+    const requestedDate = Date.UTC(2024, 2, 3);
+    await exchangeRateRepository.cacheHistoricalRate({
+      fromCurrency: 'EUR',
+      toCurrency: 'USD',
+      rate: 1.08,
+      requestedDate,
+      effectiveDate: requestedDate,
+      source: 'exchangerate-api.com',
+    });
+    await exchangeRateRepository.cacheManualRates(
+      'workplace-1' as WorkplaceId,
+      [{ fromCurrency: 'EUR', toCurrency: 'GBP', rate: 0.8 }],
+      'correlation-1',
+    );
+    await exchangeRateRepository.cacheRatesBatch('USD', [{ toCurrency: 'EUR', rate: 0.9 }]);
+    await exchangeRateRepository.cacheRatesBatch(
+      'EUR',
+      [{ toCurrency: 'USD', rate: 1.1 }],
+      'other',
+    );
+
+    await exchangeRateRepository.cacheRatesBatch('EUR', [
+      { toCurrency: 'USD', rate: 1.2 },
+      { toCurrency: 'JPY', rate: 160 },
+    ]);
+    await exchangeRateRepository.cacheRatesBatch('EUR', [
+      { toCurrency: 'USD', rate: 1.3 },
+      { toCurrency: 'JPY', rate: 161 },
+    ]);
+
+    const rows = await database.collections.get<ExchangeRate>('exchange_rates').query().fetch();
+    const summary = rows
+      .map(row => `${row.fromCurrency}>${row.toCurrency}:${row.rate}:${row.source}`)
+      .sort();
+    expect(summary).toEqual([
+      'EUR>GBP:0.8:manual',
+      'EUR>JPY:161:exchangerate-api.com',
+      'EUR>USD:1.08:exchangerate-api.com',
+      'EUR>USD:1.1:other',
+      'EUR>USD:1.3:exchangerate-api.com',
+      'USD>EUR:0.9:exchangerate-api.com',
+    ]);
+  });
+
   it('re-emits rate observers when an existing historical rate is corrected', async () => {
     const requestedDate = Date.UTC(2024, 2, 3);
     const input = {
@@ -57,20 +103,18 @@ describe('ExchangeRateRepository historical rates', () => {
     };
     await exchangeRateRepository.cacheHistoricalRate({ ...input, rate: 1.08 });
 
-    const allRates = observeAfterInitial(
-      exchangeRateRepository.observeAll().pipe(map(rates => rates[0]?.rate)),
-    );
+    const revisions = observeAfterInitial(exchangeRateRepository.observeRevision());
     const latestRates = observeAfterInitial(
       exchangeRateRepository
         .observeLatestRates('EUR')
         .pipe(map(rates => rates.find(rate => rate.toCurrency === 'USD')?.rate)),
     );
-    await Promise.all([allRates.initial, latestRates.initial]);
+    await Promise.all([revisions.initial, latestRates.initial]);
 
     await exchangeRateRepository.cacheHistoricalRate({ ...input, rate: 1.09 });
 
-    await expect(Promise.all([allRates.nextValue, latestRates.nextValue])).resolves.toEqual([
-      1.09, 1.09,
+    await expect(Promise.all([revisions.nextValue, latestRates.nextValue])).resolves.toEqual([
+      1, 1.09,
     ]);
   });
 });

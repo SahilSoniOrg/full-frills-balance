@@ -1,4 +1,4 @@
-import { NEVER, Observable, Subject, of } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, Subject, of } from 'rxjs';
 
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
@@ -23,7 +23,7 @@ jest.mock('@/src/services/reactive/reactiveWorkplaceObserves', () => ({
   observeWorkplaceJournalMeta: jest.fn(),
 }));
 jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
-  exchangeRateRepository: { observeAll: jest.fn() },
+  exchangeRateRepository: { observeRevision: jest.fn() },
 }));
 jest.mock('@/src/data/repositories/account/AccountListMetricsQueries', () => ({
   accountListMetricsQueries: { getAccountListItemsRaw: jest.fn() },
@@ -44,7 +44,7 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances);
     (observeWorkplaceJournalMeta as jest.Mock).mockReturnValue(NEVER);
     (observeWorkplaceActiveTransactionCount as jest.Mock).mockReturnValue(NEVER);
-    (exchangeRateRepository.observeAll as jest.Mock).mockReturnValue(NEVER);
+    (exchangeRateRepository.observeRevision as jest.Mock).mockReturnValue(NEVER);
     (accountListMetricsQueries.getAccountListItemsRaw as jest.Mock).mockResolvedValue([]);
     (currencyReadService.getAllPrecisions as jest.Mock).mockResolvedValue(new Map());
     (balanceHierarchyAggregator.aggregateBalances as jest.Mock).mockResolvedValue(undefined);
@@ -83,6 +83,34 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     expect(secondTeardown).toHaveBeenCalledTimes(1);
   });
 
+  it('recalculates when exchange rates change without any account change', async () => {
+    const workplaceId = 'workplace-one' as WorkplaceId;
+    const revision$ = new BehaviorSubject(0);
+    (observeWorkplaceAccounts as jest.Mock).mockReturnValue(of([]));
+    (observeWorkplaceJournalMeta as jest.Mock).mockReturnValue(of([]));
+    (observeWorkplaceActiveTransactionCount as jest.Mock).mockReturnValue(of(0));
+    (exchangeRateRepository.observeRevision as jest.Mock).mockReturnValue(revision$);
+    (wealthService.calculateSummary as jest.Mock).mockResolvedValue({ netWorth: 0 });
+
+    const emissions: unknown[] = [];
+    const subscription = observeAggregatedAccountBalances('USD', workplaceId).subscribe(value =>
+      emissions.push(value),
+    );
+    const waitForEmissions = async (count: number) => {
+      for (let attempts = 0; attempts < 100 && emissions.length < count; attempts += 1) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    };
+
+    await waitForEmissions(1);
+    revision$.next(1);
+    await waitForEmissions(2);
+    subscription.unsubscribe();
+
+    expect(emissions).toHaveLength(2);
+    expect(accountListMetricsQueries.getAccountListItemsRaw).toHaveBeenCalledTimes(2);
+  });
+
   it('does not emit a stale balance result when disposed during an async calculation', async () => {
     const workplaceId = 'workplace-one' as WorkplaceId;
     const accounts$ = new Subject<[]>();
@@ -94,7 +122,7 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     (observeWorkplaceAccounts as jest.Mock).mockReturnValue(accounts$);
     (observeWorkplaceJournalMeta as jest.Mock).mockReturnValue(of([]));
     (observeWorkplaceActiveTransactionCount as jest.Mock).mockReturnValue(of(0));
-    (exchangeRateRepository.observeAll as jest.Mock).mockReturnValue(of([]));
+    (exchangeRateRepository.observeRevision as jest.Mock).mockReturnValue(of(0));
     (wealthService.calculateSummary as jest.Mock).mockReturnValue(wealthPromise);
     const calculateSummary = wealthService.calculateSummary as jest.Mock;
 

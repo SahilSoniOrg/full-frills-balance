@@ -671,5 +671,34 @@ describe('ExchangeRateService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/USD'));
     });
+
+    it('does not refetch or rewrite a base whose stored sheet is still fresh', async () => {
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockImplementation(
+        async (base: string) =>
+          base === 'USD'
+            ? [
+                {
+                  rate: 83,
+                  effectiveDate: Date.now() - 1000,
+                  fromCurrency: 'USD',
+                  toCurrency: 'INR',
+                },
+              ]
+            : [],
+      );
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { USD: 0.012 } }),
+      });
+
+      await service.refreshSpotBasesInBackground(['USD', 'INR']);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/INR'));
+      expect(exchangeRateRepository.cacheRatesBatch).toHaveBeenCalledTimes(1);
+      expect(exchangeRateRepository.cacheRatesBatch).toHaveBeenCalledWith('INR', expect.anything());
+      await expect(service.getRate('USD', 'INR')).resolves.toBe(83);
+    });
   });
 });

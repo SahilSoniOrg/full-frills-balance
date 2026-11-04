@@ -284,6 +284,16 @@ export class ExchangeRateService {
     return age < CACHE_DURATION_MS;
   }
 
+  private hasFreshSheet(fromCurrency: string): boolean {
+    const sheet = this.memoryCache.get(fromCurrency);
+    return sheet !== undefined && this.isRateFresh(sheet.timestamp);
+  }
+
+  private async hydrateFromStore(fromCurrency: string): Promise<Record<string, number> | null> {
+    const records = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
+    return records.length > 0 ? this.hydrateMemoryFromRecords(fromCurrency, records) : null;
+  }
+
   private hydrateMemoryFromRecords(
     fromCurrency: string,
     records: { toCurrency: string; rate: number; effectiveDate?: number }[],
@@ -342,14 +352,10 @@ export class ExchangeRateService {
     requestPromise = (async () => {
       try {
         if (!forceRefresh) {
-          const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
-          if (cachedRecords.length > 0) {
-            const cachedRates = this.hydrateMemoryFromRecords(fromCurrency, cachedRecords);
-            const hydrated = this.memoryCache.get(fromCurrency);
-            if (hydrated && this.isRateFresh(hydrated.timestamp)) return cachedRates;
-
-            // Keep E2E deterministic and offline; production refreshes stale quotes below.
-            if (isE2eOfflineMode()) return cachedRates;
+          const cachedRates = await this.hydrateFromStore(fromCurrency);
+          // Keep E2E deterministic and offline; production refreshes stale quotes below.
+          if (cachedRates && (this.hasFreshSheet(fromCurrency) || isE2eOfflineMode())) {
+            return cachedRates;
           }
 
           // Detox waits for in-flight fetch(); E2E first-load must not hit the API.
@@ -431,10 +437,8 @@ export class ExchangeRateService {
           error,
         });
 
-        const staleRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
-        if (staleRecords.length > 0) {
-          return this.hydrateMemoryFromRecords(fromCurrency, staleRecords);
-        }
+        const staleRates = await this.hydrateFromStore(fromCurrency);
+        if (staleRates) return staleRates;
         if (cachedMemory) return cachedMemory.rates;
 
         throw error || new Error(`Failed to fetch rates for ${fromCurrency}`);
@@ -464,10 +468,8 @@ export class ExchangeRateService {
     const currencyCode = baseCurrency.toUpperCase();
 
     try {
-      const memCached = this.memoryCache.get(currencyCode);
-      if (memCached && this.isRateFresh(memCached.timestamp)) {
-        return; // Already fresh
-      }
+      if (!this.memoryCache.has(currencyCode)) await this.hydrateFromStore(currencyCode);
+      if (this.hasFreshSheet(currencyCode)) return;
 
       await this.fetchRatesForBase(currencyCode, true);
       // A successful sheet fetch re-opens missing-quote retries for this base.

@@ -6,7 +6,7 @@ import { AuditAction } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
-import { map, type Observable } from 'rxjs';
+import { scan, startWith, type Observable } from 'rxjs';
 
 interface ExchangeRateCacheInput {
   toCurrency: string;
@@ -80,12 +80,12 @@ class ExchangeRateRepository {
     return this.collection.query(Q.where('effective_date', Q.gte(cutoff))).fetch();
   }
 
-  observeAll() {
-    return observeQueryWithModelChanges(this.collection.query());
-  }
-
-  observeChanges(): Observable<void> {
-    return this.collection.changes.pipe(map(() => undefined));
+  /** Each write emits a new value so `distinctUntilChanged` consumers never swallow a rate change. */
+  observeRevision(): Observable<number> {
+    return this.collection.changes.pipe(
+      scan(revision => revision + 1, 0),
+      startWith(0),
+    );
   }
 
   observeLatestRates(fromCurrency: string) {
@@ -107,15 +107,26 @@ class ExchangeRateRepository {
 
     await database.write(async () => {
       const now = Date.now();
-      const operations = rates.map(r =>
-        this.collection.prepareCreate(record => {
-          record.fromCurrency = fromCurrency;
-          record.toCurrency = r.toCurrency;
-          record.rate = r.rate;
-          record.effectiveDate = now;
-          record.source = source;
-        }),
-      );
+      // Readers only want the newest sheet; keeping every sync made the table grow per launch.
+      const supersededSheet = await this.collection
+        .query(
+          Q.where('from_currency', fromCurrency),
+          Q.where('source', source),
+          Q.where('requested_date', null),
+        )
+        .fetch();
+      const operations = [
+        ...supersededSheet.map(record => record.prepareDestroyPermanently()),
+        ...rates.map(r =>
+          this.collection.prepareCreate(record => {
+            record.fromCurrency = fromCurrency;
+            record.toCurrency = r.toCurrency;
+            record.rate = r.rate;
+            record.effectiveDate = now;
+            record.source = source;
+          }),
+        ),
+      ];
 
       await database.batch(operations);
     });

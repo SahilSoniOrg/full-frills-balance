@@ -73,7 +73,7 @@ export function observeAggregatedAccountBalances(
         observeWorkplaceAccounts(workplaceId).pipe(map(snapshotAccountObservation)),
         observeWorkplaceJournalMeta(workplaceId),
         observeWorkplaceActiveTransactionCount(workplaceId),
-        exchangeRateRepository.observeAll(),
+        exchangeRateRepository.observeRevision(),
       ]).pipe(
         firstFastDebounce(Animation.dataRefreshDebounce),
         distinctUntilChanged((prev, curr) => {
