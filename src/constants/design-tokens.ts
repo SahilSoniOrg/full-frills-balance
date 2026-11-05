@@ -495,6 +495,16 @@ export const IvyPalette = {
   yellow: '#F5D018',
 } as const;
 
+/** Categorical phrase identities. Red is reserved for phrases beyond the allowed six. */
+export const MatcherPhraseColors = [
+  DeepSpacePalette.mint,
+  DeepSpacePalette.blue,
+  DeepSpacePalette.purple,
+  DeepSpacePalette.orange,
+  IvyPalette.yellow,
+  '#22D3EE', // Cyan keeps the sixth phrase distinct from mint and blue.
+] as const;
+
 // Backwards compatibility for now (though we should migrate away from direct Palette usage)
 // We alias Palette to DeepSpacePalette as it is the current default
 export const Palette = DeepSpacePalette;

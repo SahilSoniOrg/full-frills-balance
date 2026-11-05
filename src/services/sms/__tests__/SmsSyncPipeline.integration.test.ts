@@ -8,7 +8,7 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
-import * as recognitionRefresh from '@/src/services/sms/refreshSmsRecognition';
+import * as accountingWriteSession from '@/src/data/repositories/AccountingWriteSession';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { preferences } from '@/src/services/preferences';
 import Journal from '@/src/data/models/Journal';
@@ -1264,12 +1264,16 @@ describe('SmsSyncPipeline integration', () => {
         workplaceId: SMS_TEST_WORKPLACE,
       });
       await addAutoPostRule(sms);
-      const original = recognitionRefresh.withRecognitionWrite;
+      const original = accountingWriteSession.runAccountingWriteSession;
+      let matcherSaved = false;
       const writeSpy = jest
-        .spyOn(recognitionRefresh, 'withRecognitionWrite')
-        .mockImplementation(async (workplaceId, work) => {
-          await addMatcher(savings.id);
-          return original(workplaceId, work);
+        .spyOn(accountingWriteSession, 'runAccountingWriteSession')
+        .mockImplementation(async work => {
+          if (!matcherSaved) {
+            matcherSaved = true;
+            await addMatcher(savings.id);
+          }
+          return original(work);
         });
 
       try {
@@ -1298,12 +1302,16 @@ describe('SmsSyncPipeline integration', () => {
         currencyCode: 'INR',
         workplaceId: SMS_TEST_WORKPLACE,
       });
-      const original = recognitionRefresh.withRecognitionWrite;
+      const original = accountingWriteSession.runAccountingWriteSession;
+      let matcherSaved = false;
       const writeSpy = jest
-        .spyOn(recognitionRefresh, 'withRecognitionWrite')
-        .mockImplementation(async (workplaceId, work) => {
-          await addMatcher(savings.id);
-          return original(workplaceId, work);
+        .spyOn(accountingWriteSession, 'runAccountingWriteSession')
+        .mockImplementation(async work => {
+          if (!matcherSaved) {
+            matcherSaved = true;
+            await addMatcher(savings.id);
+          }
+          return original(work);
         });
       try {
         await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);

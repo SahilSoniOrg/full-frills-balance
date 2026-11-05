@@ -10,17 +10,17 @@ import type {
 import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMatcherEligibility';
 import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { toTransactionDirection } from '@/src/services/ledger/SmsParser';
-import {
-  resolveAccountFlowRoles,
-  type AccountFlowRoles,
-} from '@/src/services/sms/recognition/accountFlowRoles';
-import { checkRuleCompatibility } from '@/src/services/sms/recognition/accountRuleCompatibility';
+import type { AccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
+import { resolveAccountRuleRecognition } from '@/src/services/sms/recognition/accountRuleCompatibility';
 import { summarizeSmsRecognition } from '@/src/services/sms/recognition/smsRecognitionSummary';
 
 export interface TransactionInboxImportOptions {
   mode?: 'simple' | 'split' | 'advanced';
-  /** Fresh recognition, or a stored summary when outcomes are no longer available. */
-  recognition?: SmsAccountRecognition | SmsRecognitionSummary;
+}
+
+export interface TransactionInboxImportDecision extends TransactionInboxImportOptions {
+  /** Fresh matcher results are required for every manual import decision. */
+  recognition: SmsAccountRecognition;
 }
 
 export interface TransactionInboxImportNavigation {
@@ -32,7 +32,7 @@ export interface TransactionInboxImportNavigation {
 
 export interface TransactionInboxImportPlan {
   navigation: TransactionInboxImportNavigation;
-  recognition?: SmsRecognitionSummary;
+  recognition: SmsRecognitionSummary;
 }
 
 function normalizeForMatch(value?: string): string {
@@ -43,7 +43,7 @@ function resolveRuleAccounts(
   item: TransactionInboxItem,
   accounts: AccountFields[],
   matchedRule: PlainSmsRule | null,
-  recognition?: Pick<SmsAccountRecognition, 'status' | 'accountIds'>,
+  recognition: Pick<SmsAccountRecognition, 'status' | 'accountIds'>,
 ): { bankAccountId?: AccountId; counterpartyId?: AccountId } {
   let bankAccountId = matchedRule?.sourceAccountId;
   let counterpartyId = matchedRule?.categoryAccountId;
@@ -52,12 +52,12 @@ function resolveRuleAccounts(
   if (counterpartyId === EMPTY_ACCOUNT_ID) counterpartyId = undefined;
 
   const uniqueRecognizedAccountId =
-    recognition?.status === 'recognized' && recognition.accountIds.length === 1
+    recognition.status === 'recognized' && recognition.accountIds.length === 1
       ? recognition.accountIds[0]
       : undefined;
   const recognitionBlocksFuzzyFallback =
-    recognition?.status === 'indeterminate' ||
-    (recognition?.status === 'recognized' && recognition.accountIds.length > 1);
+    recognition.status === 'indeterminate' ||
+    (recognition.status === 'recognized' && recognition.accountIds.length > 1);
 
   if (!bankAccountId && uniqueRecognizedAccountId) {
     bankAccountId = uniqueRecognizedAccountId;
@@ -130,18 +130,6 @@ function namedAccount(id?: AccountId | null): AccountId | undefined {
   return id && id !== EMPTY_ACCOUNT_ID ? id : undefined;
 }
 
-function toAccountRecognition(
-  recognition: SmsAccountRecognition | SmsRecognitionSummary,
-): SmsAccountRecognition {
-  if ('outcomes' in recognition) return recognition;
-  return {
-    status: recognition.status,
-    accountIds: [...recognition.accountIds],
-    outcomes: [],
-    ...(recognition.flows?.length ? { flows: recognition.flows } : {}),
-  };
-}
-
 function explicitRuleAccounts(matchedRule: PlainSmsRule | null): ExplicitRuleAccounts {
   return {
     sourceAccountId: namedAccount(matchedRule?.sourceAccountId),
@@ -151,7 +139,7 @@ function explicitRuleAccounts(matchedRule: PlainSmsRule | null): ExplicitRuleAcc
 
 /**
  * Places an already-resolved flow and an explicit rule mapping on journal legs.
- * Contradictions are whatever `checkRuleCompatibility` already returned.
+ * Rule compatibility is resolved before adapting the roles to journal legs.
  */
 function mapResolvedFlowAccounts(
   direction: TransactionDirection,
@@ -212,37 +200,35 @@ export function prepareTransactionInboxImport(
   item: TransactionInboxItem,
   accounts: AccountFields[],
   matchedRule: PlainSmsRule | null,
-  options?: TransactionInboxImportOptions,
+  options: TransactionInboxImportDecision,
 ): TransactionInboxImportPlan {
   const financialLeaves = getEligibleMatcherAccountIds(accounts);
   const isBalanceSheetLeg = (id?: AccountId) => {
     const account = accounts.find(candidate => candidate.id === id);
     return !!account && isBalanceSheetAccount(account.accountType);
   };
-  const recognition = options?.recognition ? toAccountRecognition(options.recognition) : undefined;
+  const recognition = options.recognition;
   const direction = toTransactionDirection(item.direction);
   const ruleAccounts = explicitRuleAccounts(matchedRule);
   const hasRuleAccounts = !!(ruleAccounts.sourceAccountId || ruleAccounts.categoryAccountId);
-  const compatibility =
-    recognition && hasRuleAccounts
-      ? checkRuleCompatibility(recognition, ruleAccounts, id => financialLeaves.has(id), direction)
-      : undefined;
-  const recognitionSummary = recognition
-    ? summarizeSmsRecognition(recognition, compatibility)
-    : undefined;
+  const resolution = resolveAccountRuleRecognition(
+    recognition,
+    hasRuleAccounts ? ruleAccounts : undefined,
+    id => financialLeaves.has(id),
+    direction,
+  );
+  const compatibility = resolution.compatibility;
+  const recognitionSummary = summarizeSmsRecognition(recognition, compatibility);
 
   let selectedAccounts: ImportAccountRoles;
-  if (!recognition) {
-    const { bankAccountId, counterpartyId } = resolveRuleAccounts(item, accounts, matchedRule);
-    selectedAccounts = orientBankAndCounterparty(item.direction, bankAccountId, counterpartyId);
-  } else if (recognition.flows?.length) {
+  if (recognition.flows?.length) {
     selectedAccounts = mapResolvedFlowAccounts(
       direction,
       ruleAccounts,
-      resolveAccountFlowRoles(recognition),
+      resolution.flowRoles,
       compatibility,
     );
-  } else if (recognitionSummary?.hold || recognitionSummary?.status === 'indeterminate') {
+  } else if (recognitionSummary.hold || recognitionSummary.status === 'indeterminate') {
     selectedAccounts = {};
   } else {
     const { bankAccountId, counterpartyId } = resolveRuleAccounts(
@@ -257,7 +243,7 @@ export function prepareTransactionInboxImport(
   const type: 'expense' | 'income' | 'transfer' =
     isBalanceSheetLeg(sourceAccountId) && isBalanceSheetLeg(destinationAccountId)
       ? 'transfer'
-      : recognition?.flows?.length && (sourceAccountId || destinationAccountId)
+      : recognition.flows?.length && (sourceAccountId || destinationAccountId)
         ? !!destinationAccountId && financialLeaves.has(destinationAccountId)
           ? 'income'
           : 'expense'
@@ -275,7 +261,7 @@ export function prepareTransactionInboxImport(
         : item.channel === 'voice'
           ? `Spoken transcript: ${item.rawBody}`
           : `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`,
-    ...(options?.mode ? { mode: options.mode } : {}),
+    ...(options.mode ? { mode: options.mode } : {}),
   };
 
   if (sourceAccountId) params.sourceAccountId = sourceAccountId;
@@ -288,15 +274,6 @@ export function prepareTransactionInboxImport(
       initialDate: new Date(item.inputDate).toISOString(),
       params,
     },
-    ...(recognitionSummary ? { recognition: recognitionSummary } : {}),
+    recognition: recognitionSummary,
   };
-}
-
-export function buildTransactionInboxImportNavigation(
-  item: TransactionInboxItem,
-  accounts: AccountFields[],
-  matchedRule: PlainSmsRule | null,
-  options?: TransactionInboxImportOptions,
-): TransactionInboxImportNavigation {
-  return prepareTransactionInboxImport(item, accounts, matchedRule, options).navigation;
 }

@@ -8,7 +8,7 @@ import {
   saveAccountMatcher,
 } from '@/src/services/accounts/accountMatcherCommands';
 import { loadAccountMatcherDiscovery } from '@/src/services/accounts/accountMatcherDiscoveryQueries';
-import { loadAccountMatcherEvidence } from '@/src/services/accounts/accountMatcherEvidenceQueries';
+import { loadAccountMatcherPageData } from '@/src/services/accounts/accountMatcherEvidenceQueries';
 import { loadAccountMatcherPreviewData } from '@/src/services/accounts/accountMatcherPreviewQueries';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import {
@@ -169,7 +169,7 @@ describe('account matcher evidence query (integration)', () => {
       );
     });
 
-    const data = await loadAccountMatcherEvidence(WP, account.id);
+    const data = await loadAccountMatcherPageData(WP, account.id);
     expect(data.evidence.map(message => message.deviceSourceId)).toEqual(
       expect.arrayContaining(['device-source-body', 'device-source-missing-body']),
     );
@@ -188,12 +188,12 @@ describe('account matcher evidence query (integration)', () => {
         'device-source-other-workplace',
       ]),
     );
-    const newestOnly = await loadAccountMatcherEvidence(WP, account.id, 1);
+    const newestOnly = await loadAccountMatcherPageData(WP, account.id, 1);
     expect(newestOnly.evidence.map(message => message.deviceSourceId)).toEqual([
       'device-source-missing-body',
     ]);
     expect(projectedBody.id).toBeTruthy();
-    const preview = await loadAccountMatcherPreviewData(WP);
+    const preview = await loadAccountMatcherPreviewData(WP, account.id);
     const previewMessage = preview.messages.find(
       message => message.deviceSourceId === 'device-source-body',
     );

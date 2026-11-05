@@ -41,6 +41,7 @@ export const AppConfig = {
     sms: {
       maxSenderMatchLength: 100,
       maxBodyMatchLength: 1000,
+      maxAccountMatcherFragments: 6,
       maxStoredProcessedIds: 1000,
       previewBodyChars: 100,
       duplicateDetection: {
@@ -66,6 +67,7 @@ export const AppConfig = {
   },
 
   features: {
+    accountMatchers: true,
     enableSentry: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     debug: {

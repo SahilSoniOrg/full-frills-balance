@@ -4,7 +4,8 @@ import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import type { AccountId } from '@/src/types/ids';
 import { buildSmsMatchData, RuleMatcher } from '@/src/utils/sms/RuleMatcher';
-import { checkRuleCompatibility } from '@/src/services/sms/recognition/accountRuleCompatibility';
+import { resolveAccountRuleRecognition } from '@/src/services/sms/recognition/accountRuleCompatibility';
+import type { AccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import type { SmsAccountRecognition } from '@/src/types/accountMatcher';
 
 /** Rule priority and compatibility. Journal construction stays in decideSms. */
@@ -14,6 +15,7 @@ export interface AutoPostRuleAnalysis {
   sourceAccountId?: AccountId;
   categoryAccountId?: AccountId;
   hold?: 'contradictory' | 'indeterminate';
+  flowRoles?: AccountFlowRoles;
   /** Set only when the matched rule has everything required to post. */
   currencyCode?: string;
 }
@@ -48,18 +50,21 @@ export function analyzeAutoPost(
 
       const sourceAccountId = definition.actions.sourceAccountId;
       const categoryAccountId = definition.actions.categoryAccountId;
+      let flowRoles: AccountFlowRoles | undefined;
 
       if (
         recognition &&
         (recognition.flows?.length ||
           (definition.actions.disposition === 'auto_post' && allowAutoPost))
       ) {
-        const compatibility = checkRuleCompatibility(
+        const resolution = resolveAccountRuleRecognition(
           recognition,
           { sourceAccountId, categoryAccountId },
           isFinancialLeaf,
           toTransactionDirection(parsed.type),
         );
+        const compatibility = resolution.compatibility;
+        flowRoles = resolution.flowRoles;
         if (compatibility === 'contradictory' || compatibility === 'indeterminate') {
           return {
             disposition: 'review',
@@ -67,6 +72,7 @@ export function analyzeAutoPost(
             sourceAccountId,
             categoryAccountId,
             hold: compatibility,
+            flowRoles,
           };
         }
       }
@@ -77,6 +83,7 @@ export function analyzeAutoPost(
           ruleId: rule.id,
           sourceAccountId,
           categoryAccountId,
+          ...(flowRoles ? { flowRoles } : {}),
         };
       }
 
@@ -90,6 +97,7 @@ export function analyzeAutoPost(
           sourceAccountId,
           categoryAccountId,
           currencyCode,
+          ...(flowRoles ? { flowRoles } : {}),
         };
       }
     }

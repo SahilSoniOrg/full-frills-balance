@@ -8,6 +8,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { logger } from '@/src/utils/logger';
 import { BehaviorSubject } from 'rxjs';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 
 import { projectRecognition } from './pipeline/smsDecision';
 import { loadSmsDecisionContext } from './pipeline/smsDecisionContext';
@@ -16,50 +17,13 @@ const BATCH_SIZE = 200;
 
 export type RecognitionRefreshState = 'ready' | 'updating' | 'failed';
 
-/**
- * Serializes recognition writes for one workplace.
- * The serial advances on every acquisition and every idle fence, so a refresh can
- * tell that a scan committed after it loaded context.
- */
-class RecognitionLock {
-  lockSerial = 0;
-  private reserved = 0;
-  private chain: Promise<void> = Promise.resolve();
-
-  /** Watermark an idle lock. Returns null when a scan or refresh write is queued. */
-  claimIdleFence(): number | null {
-    if (this.reserved > 0) return null;
-    this.lockSerial += 1;
-    return this.lockSerial;
-  }
-
-  run<T>(task: (serial: number) => Promise<T>): Promise<T> {
-    this.reserved += 1;
-    const execute = this.chain.then(async () => {
-      this.lockSerial += 1;
-      const serial = this.lockSerial;
-      try {
-        return await task(serial);
-      } finally {
-        this.reserved -= 1;
-      }
-    });
-    this.chain = execute.then(
-      () => undefined,
-      () => undefined,
-    );
-    return execute;
-  }
-}
-
 type WorkplaceRecognition = {
   generation: number;
   activeMutations: number;
-  lock: RecognitionLock;
   state?: BehaviorSubject<RecognitionRefreshState>;
 };
 
-/** Generation, overlapping matcher edits, publish state, and the recognition-write lock. */
+/** Generation and overlapping matcher edits, with one published refresh state. */
 class RecognitionCoordinator {
   private readonly workplaces = new Map<WorkplaceId, WorkplaceRecognition>();
 
@@ -69,7 +33,6 @@ class RecognitionCoordinator {
       slot = {
         generation: 0,
         activeMutations: 0,
-        lock: new RecognitionLock(),
       };
       this.workplaces.set(workplaceId, slot);
     }
@@ -90,22 +53,6 @@ class RecognitionCoordinator {
       );
     }
     return slot.state;
-  }
-
-  claimIdleFence(workplaceId: WorkplaceId): number | null {
-    return this.ensure(workplaceId).lock.claimIdleFence();
-  }
-
-  async waitForIdleFence(workplaceId: WorkplaceId): Promise<number> {
-    const lock = this.ensure(workplaceId).lock;
-    await lock.run(async () => undefined);
-    const serial = lock.claimIdleFence();
-    if (serial === null) return this.waitForIdleFence(workplaceId);
-    return serial;
-  }
-
-  exclusive<T>(workplaceId: WorkplaceId, task: (serial: number) => Promise<T>): Promise<T> {
-    return this.ensure(workplaceId).lock.run(task);
   }
 }
 
@@ -157,17 +104,6 @@ export function withRecognitionRefresh<T>(
   });
 }
 
-/**
- * Holds the workplace recognition lock around a scan's recognition write.
- * Does not start a full-inbox refresh; only an interrupted refresh does that.
- */
-export function withRecognitionWrite<T>(
-  workplaceId: WorkplaceId,
-  write: () => Promise<T>,
-): Promise<T> {
-  return recognitionCoordinator.exclusive(workplaceId, () => write());
-}
-
 /** Stored parse fields for hint projection. Refresh does not re-parse the message. */
 function storedSmsForRecognition(record: InboxRecordSnapshot): {
   message: SmsMessage;
@@ -217,78 +153,48 @@ export async function refreshSmsRecognition(
   preferences.workplace.update(workplaceId, { accountMatcherRefreshPending: true });
   recognitionCoordinator.state(workplaceId).next('updating');
   let total = 0;
-  const resumeIfInterrupted = async (): Promise<number> => {
-    if (isCurrent()) await refreshSmsRecognitionBestEffort(workplaceId);
-    return total;
-  };
   try {
-    // Fence an idle lock, then load. The load does not hold the lock, so a scan can
-    // commit; a serial change afterwards means this context is already stale.
-    const serialAtLoad =
-      recognitionCoordinator.claimIdleFence(workplaceId) ??
-      (await recognitionCoordinator.waitForIdleFence(workplaceId));
-    const context = await loadSmsDecisionContext(workplaceId);
-    if (!isCurrent()) return total;
-    if (slot.lock.lockSerial !== serialAtLoad) return resumeIfInterrupted();
-
     let cursor: string | undefined;
-    let expectedSerial = serialAtLoad;
-    do {
+    while (true) {
       if (!isCurrent()) return total;
-      if (slot.lock.lockSerial !== expectedSerial) return resumeIfInterrupted();
-      const page = await transactionInboxRepository.findPendingSmsPage(
-        workplaceId,
-        cursor,
-        batchSize,
-      );
-      cursor = page.nextCursor;
-      const updates = page.records.flatMap(record => {
-        if (record.parseStatus !== InboxParseStatus.PARSED) return [];
-        // Recognition is stored on the device inbox row, so a record without
-        // deviceInboxId cannot be updated.
-        if (!record.deviceInboxId) return [];
-        const { message, parsed } = storedSmsForRecognition(record);
-        const projection = projectRecognition(message, parsed, context);
-        // An ignore rule suggests nothing. Keep stored hints; refresh does not change disposition.
-        const suggestions = projection.suggestedAccounts ?? {
-          sourceAccountId: record.suggestedSourceAccountId,
-          categoryAccountId: record.suggestedCategoryAccountId,
-        };
-        return [
-          {
-            deviceInboxId: record.deviceInboxId,
-            recognition: projection.recognition,
-            ...suggestions,
-          },
-        ];
+      const result = await runAccountingWriteSession(async session => {
+        if (!isCurrent()) return null;
+        // Context, page, projection, and staged updates share the database's one writer.
+        const [context, page] = await Promise.all([
+          loadSmsDecisionContext(workplaceId),
+          transactionInboxRepository.findPendingSmsPage(workplaceId, cursor, batchSize),
+        ]);
+        if (!isCurrent()) return null;
+        const updates = page.records.flatMap(record => {
+          if (record.parseStatus !== InboxParseStatus.PARSED || !record.deviceInboxId) return [];
+          const { message, parsed } = storedSmsForRecognition(record);
+          const projection = projectRecognition(message, parsed, context);
+          // Ignore rules have no new suggestions; preserve existing hints.
+          const suggestions = projection.suggestedAccounts ?? {
+            sourceAccountId: record.suggestedSourceAccountId,
+            categoryAccountId: record.suggestedCategoryAccountId,
+          };
+          return [
+            {
+              deviceInboxId: record.deviceInboxId,
+              recognition: projection.recognition,
+              ...suggestions,
+            },
+          ];
+        });
+        await deviceSmsInboxRepository.stagePendingRecognitionUpdates(
+          session,
+          workplaceId,
+          updates,
+          isCurrent,
+        );
+        return { count: updates.length, nextCursor: page.nextCursor };
       });
-      if (!isCurrent()) return total;
-      // Re-check under the lock; the inbox writer repeats the guard before its batch.
-      const writeSerial = await recognitionCoordinator.exclusive(workplaceId, async serial => {
-        if (!isCurrent() || serial !== expectedSerial + 1) return null;
-        return serial;
-      });
-      if (!isCurrent()) return total;
-      if (writeSerial === null) return resumeIfInterrupted();
-      // Checked again inside the inbox write so a scan that committed after this
-      // lock check can still reject the pre-scan batch.
-      let guard: boolean | undefined;
-      await deviceSmsInboxRepository.updatePendingRecognition(workplaceId, updates, () => {
-        guard = slot.generation === generation && slot.lock.lockSerial === writeSerial;
-        return guard;
-      });
-      if (!isCurrent()) return total;
-      if (guard === false) return resumeIfInterrupted();
-      total += updates.length;
-      // A scan that waited for this write runs before we continue. Later pages would
-      // still be the pre-scan projection, so reload. The last page already committed
-      // before that scan, and the scan does not start another full refresh.
-      if (slot.lock.lockSerial !== writeSerial) {
-        if (cursor) return resumeIfInterrupted();
-        break;
-      }
-      expectedSerial = writeSerial;
-    } while (cursor);
+      if (!isCurrent() || !result) return total;
+      total += result.count;
+      cursor = result.nextCursor;
+      if (!cursor) break;
+    }
 
     if (isCurrent()) {
       preferences.workplace.update(workplaceId, { accountMatcherRefreshPending: false });

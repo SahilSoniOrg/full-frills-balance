@@ -31,10 +31,14 @@ import { StyleSheet, View } from 'react-native';
 import { AccountFormOverlays } from './AccountFormOverlays';
 import { CurrencySideControl } from './CurrencySideControl';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
+import { accountMatcherStrings as matcherCopy } from '@/src/constants/copy/domains/accountMatcherStrings';
+import { AppNavigation } from '@/src/utils/navigation';
+import { shouldShowAccountMatchersSection } from '../helpers/accountMatcherSectionPolicy';
 
 export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
   const entity = vm.isCategory ? 'category' : 'account';
+  const accountId = vm.accountId;
   const { accentColor, categoryColor } = resolveAccountAppearance(
     { accountType: vm.accountType, color: vm.selectedColor },
     theme,
@@ -248,6 +252,23 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         <SectionLabel label={copy.optional} />
       </View>
       <ListGroup variant="plain">
+        {accountId &&
+        !vm.isLoading &&
+        shouldShowAccountMatchersSection({
+          featureEnabled: AppConfig.features.accountMatchers,
+          isEditMode: vm.isEditMode,
+          isParent: vm.isParent,
+          isCategory: vm.isCategory,
+          accountType: vm.accountType,
+        }) ? (
+          <FormRow
+            icon={Icon.MessageSquare}
+            title={matcherCopy.sectionTitle}
+            subtitle={matcherCopy.accountEntryHint}
+            onPress={() => AppNavigation.toAccountMatchers(accountId)}
+            testID="account-sms-recognition"
+          />
+        ) : null}
         <FormRow
           icon={Icon.Hierarchy}
           title={vm.isCategory ? copy.categoryParent : copy.parent}

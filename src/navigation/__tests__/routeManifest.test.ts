@@ -24,4 +24,12 @@ describe('route manifest', () => {
     expect(fallback?.resolveName?.({ filterMode: 'accounts' })).toBe('accounts');
     expect(fallback?.resolveName?.({})).toBe('accounts');
   });
+
+  it('returns account matcher management to Accounts on a workplace switch', () => {
+    expect(workplaceSwitchFallback('account-matchers')?.name).toBe('accounts');
+    expect(ROUTE_MANIFEST.find(route => route.name === 'account-matchers')).toMatchObject({
+      presentation: 'detail',
+      isModal: false,
+    });
+  });
 });

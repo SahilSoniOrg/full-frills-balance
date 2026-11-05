@@ -53,6 +53,7 @@ const composerRoutes = [
   ['journal-entry', 'journal', 'transaction_creation'],
   ['onboarding', 'onboarding', 'cash_clarity_setup'],
   ['account-creation', 'account', 'account_setup'],
+  ['account-matcher-editor', 'account', 'account_matcher_configuration'],
   ['category-creation', 'account', 'category_setup'],
   ['planned-payment-form', 'commitments', 'commitment_configuration'],
   ['budget-edit', 'budget', 'budget_configuration'],
@@ -83,6 +84,7 @@ const detailRoutes = [
   ],
   ['settings', 'settings', 'preferences_hub', false],
   ['account-details', 'account', 'account_drilldown', false, { name: 'accounts' }],
+  ['account-matchers', 'account', 'account_matcher_management', false, { name: 'accounts' }],
   ['journal-details', 'journal', 'transaction_review', false, { name: 'activity' }],
   [
     'planned-payment-details',

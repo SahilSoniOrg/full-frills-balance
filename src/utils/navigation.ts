@@ -37,7 +37,15 @@ function isRemovedAccountRoute(
   route: { name: string; params?: object },
   accountId: AccountId,
 ): boolean {
-  if (!['account-details', 'account-creation', 'category-creation'].includes(route.name))
+  if (
+    ![
+      'account-details',
+      'account-creation',
+      'category-creation',
+      'account-matchers',
+      'account-matcher-editor',
+    ].includes(route.name)
+  )
     return false;
   const id = route.params && 'accountId' in route.params ? route.params.accountId : undefined;
   return id === accountId || (Array.isArray(id) && id.includes(accountId));
@@ -93,6 +101,26 @@ export const AppNavigation = {
 
   toWorkplaceCreation: () => {
     router.push({ pathname: '/onboarding', params: { journey: 'create_workplace' } });
+  },
+
+  toAccountMatchers: (accountId: AccountId, workplaceId?: string) => {
+    router.push(
+      buildRoute('/account-matchers', {
+        accountId,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  toAccountMatcherEditor: (accountId: AccountId, matcherId?: string, proposalKey?: string) => {
+    router.push(
+      buildRoute('/account-matcher-editor', {
+        accountId,
+        matcherId,
+        proposalKey,
+        workplaceId: launchWorkplaceId(),
+      }),
+    );
   },
 
   toSetupJourney: (journey: SetupJourneyId) => {

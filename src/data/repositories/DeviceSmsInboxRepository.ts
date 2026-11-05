@@ -125,19 +125,19 @@ export class DeviceSmsInboxRepository {
     return (await this.inbox.query(Q.where('id', id)).fetch())[0] ?? null;
   }
 
-  /** Replaces only recognition and suggestions on still-pending Workplace review states. */
-  async updatePendingRecognition(
+  /** Stages recognition and suggestions on still-pending Workplace review states. */
+  async stagePendingRecognitionUpdates(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     updates: readonly SmsRecognitionReviewUpdate[],
     shouldApply: () => boolean = () => true,
   ): Promise<void> {
     if (!updates.length) return;
     const byId = new Map(updates.map(update => [update.deviceInboxId, update]));
-    await database.write(async () => {
-      if (!shouldApply()) return;
-      const records = await this.inbox.query(Q.where('id', Q.oneOf([...byId.keys()]))).fetch();
-      if (!shouldApply()) return;
-      const operations = records.flatMap(record => {
+    const records = await this.inbox.query(Q.where('id', Q.oneOf([...byId.keys()]))).fetch();
+    stageModelWrite(session, () => {
+      if (!shouldApply()) return [];
+      return records.flatMap(record => {
         const update = byId.get(record.id);
         if (!update) return [];
         const states = safeParseJSON<Record<string, SmsWorkplaceReviewState>>(
@@ -170,7 +170,6 @@ export class DeviceSmsInboxRepository {
           }),
         ];
       });
-      if (operations.length) await database.batch(...operations);
     });
   }
 

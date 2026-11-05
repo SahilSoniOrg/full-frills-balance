@@ -4,7 +4,7 @@ import { InboxParseStatus } from '@/src/types/enums';
 import { smsService } from '@/src/services/sms-service';
 import {
   prepareTransactionInboxImport,
-  TransactionInboxImportOptions,
+  type TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { SmsAccountRecognition } from '@/src/types/accountMatcher';
@@ -31,7 +31,11 @@ export function useTransactionInboxImport({
   return useCallback(
     async (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => {
       let matchedRule: Awaited<ReturnType<typeof smsService.getMatchingRule>> = null;
-      let recognition: SmsAccountRecognition | undefined;
+      let recognition: SmsAccountRecognition = {
+        status: 'indeterminate',
+        accountIds: [],
+        outcomes: [],
+      };
       try {
         const parsedTx: ParsedTransaction = {
           id: item.deviceSourceId,

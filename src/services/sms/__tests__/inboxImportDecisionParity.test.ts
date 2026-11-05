@@ -7,7 +7,7 @@ import type { AccountId } from '@/src/types/ids';
 import type { TransactionInboxItem } from '@/src/types/domainJournal';
 import { decideSms } from '../pipeline/smsDecision';
 import { recognizeSmsAccounts } from '../recognition/accountMatcherEvaluator';
-import { buildTransactionInboxImportNavigation } from '../transactionInboxImport';
+import { prepareTransactionInboxImport } from '../transactionInboxImport';
 import {
   inboxImportDecisionParityCases,
   parityMessage,
@@ -105,9 +105,9 @@ describe('inbox import and decideSms account parity', () => {
     }
 
     const fromDecision = journalLegs(fixture.direction, decision.suggestedAccounts);
-    const navigation = buildTransactionInboxImportNavigation(inboxItem(fixture), accounts, rule, {
+    const navigation = prepareTransactionInboxImport(inboxItem(fixture), accounts, rule, {
       recognition,
-    });
+    }).navigation;
     const fromImport = {
       sourceAccountId: navigation.params.sourceAccountId,
       destinationAccountId: navigation.params.destinationAccountId,

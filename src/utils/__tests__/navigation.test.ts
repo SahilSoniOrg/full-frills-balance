@@ -250,6 +250,44 @@ describe('account form navigation', () => {
   });
 });
 
+describe('account matcher navigation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('opens account-scoped management with the launch workplace', () => {
+    AppNavigation.toAccountMatchers(asAccountId('account-1'));
+    AppNavigation.toAccountMatchers(asAccountId('account-1'), 'explicit-wp');
+    expect(router.push).toHaveBeenNthCalledWith(
+      1,
+      '/account-matchers?accountId=account-1&workplaceId=active-wp',
+    );
+    expect(router.push).toHaveBeenNthCalledWith(
+      2,
+      '/account-matchers?accountId=account-1&workplaceId=explicit-wp',
+    );
+  });
+
+  it('opens a new matcher or an existing matcher in the account editor route', () => {
+    AppNavigation.toAccountMatcherEditor(asAccountId('account-1'));
+    AppNavigation.toAccountMatcherEditor(asAccountId('account-1'), 'matcher-1');
+    AppNavigation.toAccountMatcherEditor(asAccountId('account-1'), undefined, 'proposal-1');
+
+    expect(router.push).toHaveBeenNthCalledWith(
+      1,
+      '/account-matcher-editor?accountId=account-1&workplaceId=active-wp',
+    );
+    expect(router.push).toHaveBeenNthCalledWith(
+      2,
+      '/account-matcher-editor?accountId=account-1&matcherId=matcher-1&workplaceId=active-wp',
+    );
+    expect(router.push).toHaveBeenNthCalledWith(
+      3,
+      '/account-matcher-editor?accountId=account-1&proposalKey=proposal-1&workplaceId=active-wp',
+    );
+  });
+});
+
 describe('navigation after account removal', () => {
   const removedId = asAccountId('removed-group');
   const list = {

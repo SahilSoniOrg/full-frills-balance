@@ -1,30 +1,39 @@
 import {
   refreshSmsRecognition,
   recognitionRefreshState,
+  markRecognitionRefreshNeeded,
   withRecognitionRefresh,
   withRecognitionRefreshWhen,
-  withRecognitionWrite,
 } from '../refreshSmsRecognition';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
 import { loadSmsDecisionContext } from '../pipeline/smsDecisionContext';
 import { projectRecognition } from '../pipeline/smsDecision';
-import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import { asWorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
+import type { SmsRecognitionReviewUpdate } from '@/src/data/repositories/DeviceSmsInboxRepository';
+
+const mockRunAccountingWriteSession = jest.fn((work: (session: never) => Promise<unknown>) =>
+  work({} as never),
+);
 
 jest.mock('@/src/data/repositories/TransactionInboxRepository', () => ({
   transactionInboxRepository: { findPendingSmsPage: jest.fn() },
 }));
 jest.mock('@/src/data/repositories/DeviceSmsInboxRepository', () => ({
-  deviceSmsInboxRepository: { updatePendingRecognition: jest.fn() },
+  deviceSmsInboxRepository: { stagePendingRecognitionUpdates: jest.fn() },
+}));
+jest.mock('@/src/data/repositories/AccountingWriteSession', () => ({
+  runAccountingWriteSession: (work: (session: never) => Promise<unknown>) =>
+    mockRunAccountingWriteSession(work),
 }));
 jest.mock('../pipeline/smsDecisionContext', () => ({ loadSmsDecisionContext: jest.fn() }));
 jest.mock('../pipeline/smsDecision', () => ({ projectRecognition: jest.fn() }));
 
 const workplace = asWorkplaceId('refresh-workplace');
 const page = jest.mocked(transactionInboxRepository.findPendingSmsPage);
-const update = jest.mocked(deviceSmsInboxRepository.updatePendingRecognition);
+const stage = jest.mocked(deviceSmsInboxRepository.stagePendingRecognitionUpdates);
+const stagedUpdates: SmsRecognitionReviewUpdate[][] = [];
 const context = jest.mocked(loadSmsDecisionContext);
 const projection = jest.mocked(projectRecognition);
 const record = (id: string) => ({
@@ -37,12 +46,16 @@ const record = (id: string) => ({
 describe('refreshSmsRecognition', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    mockRunAccountingWriteSession.mockImplementation(work => work({} as never));
     context.mockResolvedValue({} as never);
     projection.mockReturnValue({
       recognition: { status: 'none', accountIds: [], matcherIds: [] },
       suggestedAccounts: {},
     });
-    update.mockResolvedValue(undefined);
+    stagedUpdates.length = 0;
+    stage.mockImplementation(async (_session, _workplaceId, updates, shouldApply) => {
+      if (shouldApply?.()) stagedUpdates.push([...updates]);
+    });
   });
 
   it('processes every page, including an empty page of pending messages', async () => {
@@ -52,7 +65,7 @@ describe('refreshSmsRecognition', () => {
       .mockResolvedValueOnce({ records: [record('5')] as never, nextCursor: undefined });
     expect(await refreshSmsRecognition(workplace, 2)).toBe(2);
     expect(page.mock.calls.map(call => call[1])).toEqual([undefined, '2', '4']);
-    expect(update.mock.calls.map(call => call[1].length)).toEqual([1, 0, 1]);
+    expect(stage.mock.calls.map(call => call[2].length)).toEqual([1, 0, 1]);
     expect(recognitionRefreshState(workplace).value).toBe('ready');
   });
 
@@ -69,8 +82,8 @@ describe('refreshSmsRecognition', () => {
     await refreshSmsRecognition(workplace);
     release({} as never);
     await old;
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(update.mock.calls[0][1][0].deviceInboxId).toBe('new');
+    expect(stage).toHaveBeenCalledTimes(1);
+    expect(stage.mock.calls[0][2][0].deviceInboxId).toBe('new');
   });
 
   it('keeps a durable pending marker after failure and clears it after a successful retry', async () => {
@@ -130,10 +143,10 @@ describe('refreshSmsRecognition', () => {
 
     expect(await refreshSmsRecognition(workplace)).toBe(1);
     expect(projection).toHaveBeenCalledTimes(1);
-    expect(update.mock.calls[0][1].map(item => item.deviceInboxId)).toEqual(['kept']);
+    expect(stage.mock.calls[0][2].map(item => item.deviceInboxId)).toEqual(['kept']);
   });
 
-  it('does not apply a pre-scan recognition batch after a scan commits pending recognition', async () => {
+  it('stops a page after recognition is invalidated and refreshes from the new context', async () => {
     const staleRecognition = {
       status: 'none' as const,
       accountIds: [],
@@ -144,7 +157,6 @@ describe('refreshSmsRecognition', () => {
       accountIds: [],
       matcherIds: ['from-scan'],
     };
-    const recognitionById = new Map<string, SmsRecognitionSummary>();
     context.mockResolvedValue({ phase: 'after' } as never);
     context.mockResolvedValueOnce({ phase: 'before' } as never);
     projection.mockImplementation((_message, _parsed, decisionContext) => ({
@@ -156,26 +168,19 @@ describe('refreshSmsRecognition', () => {
     }));
     page.mockResolvedValue({ records: [record('row-1')] as never, nextCursor: undefined });
     page.mockImplementationOnce(async () => {
-      await withRecognitionWrite(workplace, async () => {
-        recognitionById.set('row-1', scanRecognition);
-      });
+      markRecognitionRefreshNeeded(workplace);
       return { records: [record('row-1')] as never, nextCursor: undefined };
-    });
-    update.mockImplementation(async (_workplaceId, updates, shouldApply) => {
-      if (shouldApply && !shouldApply()) return;
-      for (const item of updates) recognitionById.set(item.deviceInboxId, item.recognition);
     });
 
     await refreshSmsRecognition(workplace);
+    await refreshSmsRecognition(workplace);
 
     expect(projection.mock.calls.map(call => (call[2] as { phase?: string }).phase)).toEqual([
-      'before',
       'after',
     ]);
-    expect(update.mock.calls.flatMap(call => call[1].map(item => item.recognition))).toEqual([
+    expect(stagedUpdates.flatMap(updates => updates.map(item => item.recognition))).toEqual([
       scanRecognition,
     ]);
-    expect(recognitionById.get('row-1')).toEqual(scanRecognition);
     expect(recognitionRefreshState(workplace).value).toBe('ready');
     expect(preferences.workplace.getSnapshot(workplace).accountMatcherRefreshPending).toBe(false);
   });
@@ -186,6 +191,6 @@ describe('refreshSmsRecognition', () => {
       .mockResolvedValueOnce({ records: first as never, nextCursor: 'cursor' })
       .mockResolvedValueOnce({ records: [record('older')] as never, nextCursor: undefined });
     expect(await refreshSmsRecognition(workplace)).toBe(201);
-    expect(update.mock.calls[1][1][0].deviceInboxId).toBe('older');
+    expect(stage.mock.calls[1][2][0].deviceInboxId).toBe('older');
   });
 });

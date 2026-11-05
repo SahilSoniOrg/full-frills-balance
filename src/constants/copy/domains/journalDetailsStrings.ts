@@ -95,6 +95,7 @@ export const journalDetailsStrings = {
   accountHint: 'Account hint',
   merchant: 'Merchant',
   reference: 'Reference',
+  date: 'Date',
   legendMark: (label: string) => `● ${label}`,
   inbox: 'Open in SMS inbox',
   hiddenSms: 'Message hidden in privacy mode',

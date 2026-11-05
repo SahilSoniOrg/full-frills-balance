@@ -50,7 +50,7 @@ function suggestedAccountsFor(
       ? recognition.accountIds[0]
       : undefined;
   if (recognition.flows?.length) {
-    const roles = resolveAccountFlowRoles(recognition);
+    const roles = rule?.flowRoles ?? resolveAccountFlowRoles(recognition);
     const knownDirection = parsed.type === 'debit' || parsed.type === 'credit';
     // These fields store the parser-primary financial leg and its counterparty,
     // rather than the actual outgoing/incoming legs used by journal navigation.

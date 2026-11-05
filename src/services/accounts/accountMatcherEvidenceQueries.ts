@@ -1,10 +1,19 @@
+import type AccountMatcher from '@/src/data/models/AccountMatcher';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import type { AccountMatcherDiscoveryMessage } from '@/src/services/sms/recognition/accountMatcherDiscovery';
-import type { AccountId, WorkplaceId } from '@/src/types/ids';
-import { combineLatest, map, skip } from 'rxjs';
-import { projectAccountMatcherMembership } from './accountMatcherMembership';
+import type { AccountMatcherSnapshot, SmsRecognitionSummary } from '@/src/types/accountMatcher';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import type { PlainAccount } from '@/src/types/plainDtos';
+import { combineLatest, map, merge, skip } from 'rxjs';
+import {
+  projectAccountMatcherMembership,
+  type AccountMatcherMessage,
+} from './accountMatcherMembership';
 
 export const ACCOUNT_MATCHER_EVIDENCE_LIMIT = 200;
 
@@ -14,49 +23,141 @@ export interface AccountMatcherEvidenceData {
   latestLinkTime: number;
 }
 
+export interface AccountMatcherLinkedJournal {
+  id: JournalId;
+  description?: string;
+  journalDate: number;
+}
+
 /**
- * Reads linked SMS using current journal lines. It intentionally ignores inbox account hints and
- * derives every Account association from non-deleted transactions in this Workplace.
+ * Canonical bounded snapshot for matcher management and editing. Older linked SMS
+ * and recent inbox SMS are projected together so every view sees the same evidence.
  */
-export async function loadAccountMatcherEvidence(
+export interface AccountMatcherPageData extends AccountMatcherEvidenceData {
+  accounts: PlainAccount[];
+  messages: AccountMatcherMessage[];
+  matchers: AccountMatcherSnapshot[];
+  journalsById: ReadonlyMap<JournalId, AccountMatcherLinkedJournal>;
+  /** Includes unavailable links so a restored journal can invalidate the view. */
+  journalIds: JournalId[];
+  inspectedCount: number;
+  inspectedDates: { start: number; end: number } | null;
+  recentRecognitions: SmsRecognitionSummary[];
+}
+
+function toSnapshot(matcher: AccountMatcher): AccountMatcherSnapshot {
+  return {
+    id: matcher.id,
+    accountId: matcher.accountId,
+    definitionJson: matcher.definitionJson,
+    conditionsKey: matcher.conditionsKey,
+    isEnabled: matcher.isEnabled,
+  };
+}
+
+/** One bounded read set for the matcher screen and editor. */
+export async function loadAccountMatcherPageData(
   workplaceId: WorkplaceId,
   accountId: AccountId,
   limit = ACCOUNT_MATCHER_EVIDENCE_LIMIT,
-): Promise<AccountMatcherEvidenceData> {
-  const [targetMessages, recentMessages, accounts] = await Promise.all([
+): Promise<AccountMatcherPageData> {
+  const [linked, recent, accounts] = await Promise.all([
     transactionInboxRepository.findRecentLinkedToAccount(workplaceId, accountId, limit),
     transactionInboxRepository.findRecentSms(workplaceId, limit),
     accountQueries.findAll(workplaceId),
   ]);
-  const messagesById = new Map(
-    [...targetMessages, ...recentMessages].map(message => [message.id, message]),
-  );
-  const projected = await projectAccountMatcherMembership(
+
+  const bySource = new Map<string, (typeof linked)[number]>();
+  for (const message of [...linked, ...recent]) {
+    const source = message.deviceSourceId || message.id;
+    if (!bySource.has(source)) bySource.set(source, message);
+  }
+  const messages = await projectAccountMatcherMembership(
     workplaceId,
-    [...messagesById.values()],
+    [...bySource.values()].sort((left, right) => right.inputDate - left.inputDate),
     accounts,
   );
-  const projectedById = new Map(projected.map(message => [message.id, message]));
-  const evidence = targetMessages
-    .map(message => projectedById.get(message.id)!)
-    .filter(message => message.linkedAccountIds.includes(accountId));
-  const comparisonMessages = recentMessages
-    .map(message => projectedById.get(message.id)!)
-    .filter(message => message.linkedAccountIds.length > 0);
+  const messagesBySource = new Map(
+    messages.map(message => [message.deviceSourceId || message.id, message]),
+  );
+  const evidence = linked
+    .map(message => messagesBySource.get(message.deviceSourceId || message.id))
+    .filter((message): message is (typeof messages)[number] =>
+      Boolean(message?.linkedAccountIds.includes(accountId)),
+    );
+  const comparisonMessages = recent
+    .map(message => messagesBySource.get(message.deviceSourceId || message.id))
+    .filter((message): message is (typeof messages)[number] =>
+      Boolean(message?.linkedAccountIds.length),
+    );
   const latestLinkTime = Math.max(
     0,
     ...evidence.map(message => message.processedAt ?? message.lastScannedAt ?? message.inputDate),
   );
-  return { evidence, comparisonMessages, latestLinkTime };
+
+  const journalIds = [
+    ...new Set(
+      messages.flatMap(message => (message.linkedJournalId ? [message.linkedJournalId] : [])),
+    ),
+  ];
+  const [journals, matchers] = await Promise.all([
+    journalIds.length
+      ? journalQueryRepository.findByIds(workplaceId, journalIds)
+      : Promise.resolve([]),
+    accounts.length
+      ? accountMatcherRepository.findAllByAccountIds(
+          workplaceId,
+          accounts.map(account => account.id),
+        )
+      : Promise.resolve([]),
+  ]);
+  const journalsById = new Map(
+    journals.map(journal => [
+      journal.id,
+      { id: journal.id, description: journal.description, journalDate: journal.journalDate },
+    ]),
+  );
+
+  const recentSources = new Set(recent.map(message => message.deviceSourceId || message.id));
+  const recentRecognitions = messages.flatMap(message =>
+    recentSources.has(message.deviceSourceId || message.id) && message.recognition
+      ? [message.recognition]
+      : [],
+  );
+  const dates = messages.map(message => message.inputDate).filter(Number.isFinite);
+
+  return {
+    accounts,
+    messages,
+    matchers: matchers.map(toSnapshot),
+    evidence,
+    comparisonMessages,
+    latestLinkTime,
+    journalsById,
+    journalIds,
+    inspectedCount: messages.length,
+    inspectedDates: dates.length ? { start: Math.min(...dates), end: Math.max(...dates) } : null,
+    recentRecognitions,
+  };
 }
 
-/** Signals evidence changes without loading historical SMS or transaction models. */
-export function observeAccountMatcherEvidenceChanges(workplaceId: WorkplaceId) {
-  const transactions = transactionObserveQueries.observeMatcherDiscoveryChanges(workplaceId);
-  const links = transactionInboxRepository.observeMatcherDiscoveryEvidence(workplaceId);
-  const accounts = accountQueries.observeAll(workplaceId);
-  return combineLatest([transactions, links, accounts]).pipe(
+/** Invalidation signals only; subscribing never materializes full SMS history. */
+export function observeAccountMatcherEvidenceChanges(
+  workplaceId: WorkplaceId,
+  journalIds: readonly JournalId[] = [],
+) {
+  const evidence = combineLatest([
+    transactionObserveQueries.observeMatcherDiscoveryChanges(workplaceId),
+    transactionInboxRepository.observeMatcherDiscoveryEvidence(workplaceId),
+    accountQueries.observeAll(workplaceId),
+  ]).pipe(
     skip(1),
     map(() => undefined),
   );
+  if (!journalIds.length) return evidence;
+  const journals = journalObserveQueries.observeByIdsWithDeleted(workplaceId, [...journalIds]).pipe(
+    skip(1),
+    map(() => undefined),
+  );
+  return merge(evidence, journals);
 }

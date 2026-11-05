@@ -2,9 +2,12 @@ import Account from '@/src/data/models/Account';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import type { AccountId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
-import { buildTransactionInboxImportNavigation } from '@/src/services/sms/transactionInboxImport';
+import {
+  prepareTransactionInboxImport,
+  type TransactionInboxImportOptions,
+} from '@/src/services/sms/transactionInboxImport';
 import { EMPTY_ACCOUNT_ID, asAccountId } from '@/src/types/ids';
-import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
+import type { SmsAccountRecognition, SmsRecognitionSummary } from '@/src/types/accountMatcher';
 
 const item: TransactionInboxItem = {
   id: 'inbox-1',
@@ -25,9 +28,32 @@ const item: TransactionInboxItem = {
 const account = (id: string, name: string, description?: string) =>
   ({ id, name, description, accountType: 'ASSET', currencyCode: 'INR' }) as Account;
 
-describe('buildTransactionInboxImportNavigation', () => {
+function prepareNavigation(
+  inbox: TransactionInboxItem,
+  accounts: Account[],
+  rule: TransactionAutoPostRule | null,
+  options: TransactionInboxImportOptions & {
+    recognition?: SmsAccountRecognition | SmsRecognitionSummary;
+  } = {},
+) {
+  const input = options.recognition;
+  const recognition: SmsAccountRecognition = input
+    ? 'outcomes' in input
+      ? input
+      : {
+          status: input.status,
+          accountIds: [...input.accountIds],
+          outcomes: [],
+          ...(input.flows?.length ? { flows: input.flows } : {}),
+        }
+    : { status: 'none', accountIds: [], outcomes: [] };
+  return prepareTransactionInboxImport(inbox, accounts, rule, { ...options, recognition })
+    .navigation;
+}
+
+describe('prepareNavigation', () => {
   it('leaves both accounts unset when a rule conflicts with recognition', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       [account('card', 'Card 1990'), account('savings', 'Savings')],
       { sourceAccountId: 'card', categoryAccountId: 'food' } as TransactionAutoPostRule,
@@ -77,14 +103,12 @@ describe('buildTransactionInboxImportNavigation', () => {
   ])(
     'preserves currency and treats a $label as the journal type',
     ({ inbox, accounts, rule, expected }) => {
-      expect(buildTransactionInboxImportNavigation(inbox, accounts, rule).params).toMatchObject(
-        expected,
-      );
+      expect(prepareNavigation(inbox, accounts, rule).params).toMatchObject(expected);
     },
   );
 
   it('uses rule mappings and expands description placeholders', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       [account('bank-1', 'Card 1990'), account('merchant-1', 'Coffee Shop')],
       {
@@ -139,17 +163,14 @@ describe('buildTransactionInboxImportNavigation', () => {
       expected: { description: 'Expense via SMS', notes: '' },
     },
   ])('falls back for $label', ({ inbox, accounts, expected }) => {
-    const navigation = buildTransactionInboxImportNavigation(inbox, accounts, null);
+    const navigation = prepareNavigation(inbox, accounts, null);
     expect(navigation.params).toMatchObject(expected);
   });
 
   it('passes mode option when provided', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      item,
-      [account('bank-1', 'Card 1990')],
-      null,
-      { mode: 'split' },
-    );
+    const navigation = prepareNavigation(item, [account('bank-1', 'Card 1990')], null, {
+      mode: 'split',
+    });
 
     expect(navigation.params.mode).toBe('split');
   });
@@ -178,14 +199,14 @@ describe('buildTransactionInboxImportNavigation', () => {
       } as Account,
     ];
 
-    const navigation = buildTransactionInboxImportNavigation(expenseItem, accounts, null);
+    const navigation = prepareNavigation(expenseItem, accounts, null);
 
     expect(navigation.params.destinationAccountId).not.toBe('inc-interest');
     expect(navigation.params.type).toBe('expense');
   });
 
   it('prefers a unique recognized account over fuzzy parsed account matching', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       [account('fuzzy-bank', 'Card 1990'), account('recognized-bank', 'Savings')],
       null,
@@ -202,7 +223,7 @@ describe('buildTransactionInboxImportNavigation', () => {
   });
 
   it('uses recognition when the matched rule leaves its source account empty', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       [account('fuzzy-bank', 'Card 1990'), account('recognized-bank', 'Savings')],
       {
@@ -222,18 +243,13 @@ describe('buildTransactionInboxImportNavigation', () => {
   });
 
   it('does not preselect a fuzzy account when multiple accounts are recognized', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      item,
-      [account('fuzzy-bank', 'Card 1990')],
-      null,
-      {
-        recognition: {
-          status: 'recognized',
-          accountIds: ['cash', 'savings'] as AccountId[],
-          matcherIds: ['matcher-cash', 'matcher-savings'],
-        },
+    const navigation = prepareNavigation(item, [account('fuzzy-bank', 'Card 1990')], null, {
+      recognition: {
+        status: 'recognized',
+        accountIds: ['cash', 'savings'] as AccountId[],
+        matcherIds: ['matcher-cash', 'matcher-savings'],
       },
-    );
+    });
 
     expect(navigation.params.sourceAccountId).toBeUndefined();
   });
@@ -252,27 +268,22 @@ describe('declared account flows on manual SMS import', () => {
   const recognition = (
     flows: NonNullable<SmsRecognitionSummary['flows']>,
     otherAccounts: AccountId[] = [],
-  ): SmsRecognitionSummary => ({
+  ): SmsAccountRecognition => ({
     status: 'recognized',
     accountIds: [...new Set([...flows.map(entry => entry.accountId), ...otherAccounts])],
-    matcherIds: ['flow-matcher'],
+    outcomes: [],
     flows,
   });
 
   it.each(['debit', 'credit', 'unknown'] as const)(
     'prefills a declared transfer independently of SMS direction %s',
     direction => {
-      const navigation = buildTransactionInboxImportNavigation(
-        { ...item, direction },
-        accounts,
-        null,
-        {
-          recognition: recognition([
-            { accountId: paying, flow: 'outgoing' },
-            { accountId: receiving, flow: 'incoming' },
-          ]),
-        },
-      );
+      const navigation = prepareNavigation({ ...item, direction }, accounts, null, {
+        recognition: recognition([
+          { accountId: paying, flow: 'outgoing' },
+          { accountId: receiving, flow: 'incoming' },
+        ]),
+      });
       expect(navigation.params).toMatchObject({
         type: 'transfer',
         sourceAccountId: paying,
@@ -282,7 +293,7 @@ describe('declared account flows on manual SMS import', () => {
   );
 
   it('places a single incoming account on the receiving leg despite a debit SMS', () => {
-    const navigation = buildTransactionInboxImportNavigation(item, accounts, null, {
+    const navigation = prepareNavigation(item, accounts, null, {
       recognition: recognition([{ accountId: receiving, flow: 'incoming' }]),
     });
     expect(navigation.params.type).toBe('income');
@@ -291,7 +302,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('leaves an Either account unresolved instead of filling it through fuzzy matching', () => {
-    const navigation = buildTransactionInboxImportNavigation(item, accounts, null, {
+    const navigation = prepareNavigation(item, accounts, null, {
       recognition: recognition([{ accountId: receiving, flow: 'incoming' }], [paying]),
     });
     expect(navigation.params.destinationAccountId).toBe(receiving);
@@ -299,7 +310,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('keeps a compatible rule pair on the legs a declared flow confirms', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       accounts,
       { sourceAccountId: paying, categoryAccountId: receiving } as TransactionAutoPostRule,
@@ -313,7 +324,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('does not fill a declared account the rule does not name', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       accounts,
       { sourceAccountId: paying, categoryAccountId: EMPTY_ACCOUNT_ID } as TransactionAutoPostRule,
@@ -324,7 +335,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('does not choose between a rule and a contradictory declared account role', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       accounts,
       { sourceAccountId: receiving, categoryAccountId: paying } as TransactionAutoPostRule,
@@ -335,7 +346,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('does not orient a configured rule pair when SMS direction is unknown', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       { ...item, direction: 'unknown' },
       accounts,
       { sourceAccountId: paying, categoryAccountId: receiving } as TransactionAutoPostRule,
@@ -346,7 +357,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('does not hide an Either candidate that contradicts the configured rule pair', () => {
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       accounts,
       { sourceAccountId: extra, categoryAccountId: receiving } as TransactionAutoPostRule,
@@ -368,7 +379,7 @@ describe('declared account flows on manual SMS import', () => {
   ] satisfies NonNullable<SmsRecognitionSummary['flows']>[])(
     'leaves conflicting flow declarations for manual resolution',
     (...flows) => {
-      const navigation = buildTransactionInboxImportNavigation(item, accounts, null, {
+      const navigation = prepareNavigation(item, accounts, null, {
         recognition: recognition(flows),
       });
       expect(navigation.params.sourceAccountId).toBeUndefined();
@@ -378,7 +389,7 @@ describe('declared account flows on manual SMS import', () => {
 
   it('does not treat a recognized equity account as a confirmed financial leg', () => {
     const equity = asAccountId('equity');
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       { ...item, parsedMerchant: undefined, parsedAccountSource: undefined },
       [{ ...account(equity, 'Opening balance'), accountType: 'EQUITY' } as Account],
       null,
@@ -399,7 +410,7 @@ describe('declared account flows on manual SMS import', () => {
   it('does not confirm a transfer when equity is the only recognized account', () => {
     const equity = asAccountId('equity');
     const bank = asAccountId('bank');
-    const navigation = buildTransactionInboxImportNavigation(
+    const navigation = prepareNavigation(
       item,
       [
         account(bank, 'Bank'),
@@ -421,7 +432,7 @@ describe('declared account flows on manual SMS import', () => {
   });
 
   it('does not hide an unresolved third candidate behind a declared transfer pair', () => {
-    const navigation = buildTransactionInboxImportNavigation(item, accounts, null, {
+    const navigation = prepareNavigation(item, accounts, null, {
       recognition: recognition(
         [
           { accountId: paying, flow: 'outgoing' },

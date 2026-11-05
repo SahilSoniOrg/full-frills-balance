@@ -63,6 +63,8 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   currencyPrecision: number;
   heroTitle: string;
   isEditMode: boolean;
+  accountId: AccountId | undefined;
+  isAccountDeleted: boolean;
   isCategory: boolean;
   accountName: string;
   setAccountName: (value: string) => void;
@@ -329,6 +331,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         ? copy.newKind(kind.kindLabel.toLowerCase())
         : heroTitle,
     isEditMode,
+    accountId,
+    isAccountDeleted: Boolean(isEditMode && !isAccountLoading && !existingAccount),
     isCategory: core.isCategory,
     accountName: core.accountName,
     setAccountName: core.setAccountName,
