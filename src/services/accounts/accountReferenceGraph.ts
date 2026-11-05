@@ -8,6 +8,7 @@
 
 import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
@@ -31,8 +32,9 @@ export type AccountReferenceDeletePolicy = 'block' | 'allow' | 'owned';
  * Import policy for the site.
  * - salvage: missing ids become placeholder Accounts (`missingAccountIds`)
  * - sanitize: missing ids are cleared on rules (`rulePatches`); not salvaged
+ * - reject: missing ids remain validation errors and must be dropped by the importer
  */
-export type AccountReferenceImportPolicy = 'salvage' | 'sanitize';
+export type AccountReferenceImportPolicy = 'salvage' | 'sanitize' | 'reject';
 
 export type AccountReferenceSiteKey =
   | 'account.parentAccountId'
@@ -45,7 +47,8 @@ export type AccountReferenceSiteKey =
   | 'plannedPayment.toAccountId'
   | 'balanceSnapshot.accountId'
   | 'transactionAutoPostRule.sourceAccountId'
-  | 'transactionAutoPostRule.categoryAccountId';
+  | 'transactionAutoPostRule.categoryAccountId'
+  | 'accountMatcher.accountId';
 
 export type AccountReferenceSite = {
   key: AccountReferenceSiteKey;
@@ -65,7 +68,7 @@ export type AccountReferenceSite = {
 export type AccountImportBatchDto = {
   /** Account ids in the batch — soft-deleted still count as present. */
   accountIds: readonly string[];
-  /** Account FK occurrences from salvage sites (adapter walks inventory). */
+  /** Account FK occurrences from salvage/reject sites (adapter walks inventory). */
   refs: readonly AccountImportRef[];
   /** SMS auto-post rules — sanitize path (not salvage). */
   rules: readonly AccountImportRuleRef[];
@@ -226,6 +229,16 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'sanitize',
+  },
+  {
+    key: 'accountMatcher.accountId',
+    table: 'account_matchers',
+    field: 'accountId',
+    column: 'account_id',
+    cardinality: 'scalar',
+    mergeBehavior: 'retarget',
+    deletePolicy: 'owned',
+    importPolicy: 'reject',
   },
 ];
 
@@ -462,19 +475,27 @@ export async function assertNoLiveAccountReferences(
   accountIds: AccountId[],
 ): Promise<void> {
   const violations = await Promise.all(
-    [...new Set(accountIds)].map(async accountId => ({
-      accountId,
-      blockers: await deleteBlockers(workplaceId, accountId),
-    })),
+    [...new Set(accountIds)].map(async accountId => {
+      const [blockers, matchers] = await Promise.all([
+        deleteBlockers(workplaceId, accountId),
+        accountMatcherRepository.findAllByAccountIds(workplaceId, [accountId]),
+      ]);
+      return { accountId, blockers, matcherCount: matchers.length };
+    }),
   );
 
-  const remaining = violations.filter(({ blockers }) => blockers.length > 0);
+  const remaining = violations.filter(
+    ({ blockers, matcherCount }) => blockers.length > 0 || matcherCount > 0,
+  );
   if (remaining.length === 0) return;
 
   const details = remaining
     .map(
-      ({ accountId, blockers }) =>
-        `${accountId}: ${blockers.map(blocker => blocker.code).join(', ')}`,
+      ({ accountId, blockers, matcherCount }) =>
+        `${accountId}: ${[
+          ...blockers.map(blocker => blocker.code),
+          ...(matcherCount > 0 ? ['account_matchers'] : []),
+        ].join(', ')}`,
     )
     .join('; ');
   throw new Error(`Account merge left live references to source account(s): ${details}`);

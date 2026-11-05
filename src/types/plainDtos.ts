@@ -12,6 +12,7 @@ import {
   TransactionDirection,
 } from '@/src/types/enums';
 import type { AuditActor } from '@/src/types/auditEvents';
+import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
 
 /** Absent mode preserves legacy amount-currency conversion behavior. */
 export type PlannedPaymentFxMode = 'automatic' | 'fixed' | 'manual';
@@ -183,6 +184,7 @@ export interface PlainInboxRecord {
   duplicateConfidence?: number;
   parseConfidence?: number;
   parseReason?: string;
+  recognition?: SmsRecognitionSummary;
   metadataJson?: string;
 }
 

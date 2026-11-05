@@ -1,3 +1,4 @@
+import { withAccountRecognitionRefresh } from '@/src/services/accounts/accountRecognitionRefresh';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
@@ -19,7 +20,7 @@ export function formatAccountDeleteBlockersError(
   );
 }
 
-export async function deleteAccount(
+async function deleteAccountCore(
   accountId: AccountId,
   workplaceId: WorkplaceId,
   auditOptions: {
@@ -31,45 +32,41 @@ export async function deleteAccount(
   const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) return;
 
-  await accountWriteRepository.delete(
-    workplaceId,
-    account,
-    {
-      extraOps: (currentAccount, deletedAt) => [
-        auditRepository.prepareLog(
-          {
-            entityType: 'account',
-            entityId: currentAccount.id,
-            eventType: 'account.deleted',
-            revertsLogId: auditOptions.revertsLogId,
-            action: AuditAction.DELETE,
-            changes: {
-              before: {
-                name: currentAccount.name,
-                deletedAt: currentAccount.deletedAt,
-              },
-              after: { deletedAt },
+  await accountWriteRepository.delete(workplaceId, account, {
+    extraOps: (currentAccount, deletedAt) => [
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: currentAccount.id,
+          eventType: 'account.deleted',
+          revertsLogId: auditOptions.revertsLogId,
+          action: AuditAction.DELETE,
+          changes: {
+            before: {
+              name: currentAccount.name,
+              deletedAt: currentAccount.deletedAt,
             },
+            after: { deletedAt },
           },
-          workplaceId,
-        ),
-      ],
-      validateCurrent: async (currentAccount, metadata) => {
-        if (auditOptions.expectedCurrent) {
-          assertAccountAuditSnapshot(
-            currentAccount,
-            metadata,
-            auditOptions.expectedCurrent,
-            auditOptions.ignoredExpectedFields,
-          );
-        }
-        const blockers = await deleteBlockers(workplaceId, currentAccount.id);
-        if (blockers.length > 0) {
-          throw formatAccountDeleteBlockersError(currentAccount.name, blockers);
-        }
-      },
+        },
+        workplaceId,
+      ),
+    ],
+    validateCurrent: async (currentAccount, metadata) => {
+      if (auditOptions.expectedCurrent) {
+        assertAccountAuditSnapshot(
+          currentAccount,
+          metadata,
+          auditOptions.expectedCurrent,
+          auditOptions.ignoredExpectedFields,
+        );
+      }
+      const blockers = await deleteBlockers(workplaceId, currentAccount.id);
+      if (blockers.length > 0) {
+        throw formatAccountDeleteBlockersError(currentAccount.name, blockers);
+      }
     },
-  );
+  });
 
   analytics.trackFeatureUsage('account', 'delete', {
     account_type: account.accountType,
@@ -77,7 +74,7 @@ export async function deleteAccount(
   });
 }
 
-export async function recoverAccount(
+async function recoverAccountCore(
   accountId: AccountId,
   workplaceId: WorkplaceId,
   auditOptions: { revertsLogId?: string; expectedCurrent?: Record<string, unknown> } = {},
@@ -85,35 +82,37 @@ export async function recoverAccount(
   const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
   if (!account) return;
 
-  await accountWriteRepository.recover(
-    workplaceId,
-    account,
-    {
-      extraOps: (currentAccount, restoredAt) => [
-        auditRepository.prepareLog(
-          {
-            entityType: 'account',
-            entityId: accountId,
-            eventType: 'account.restored',
-            revertsLogId: auditOptions.revertsLogId,
-            action: AuditAction.UPDATE,
-            changes: {
-              before: { deletedAt: currentAccount.deletedAt },
-              after: { action: 'RECOVERED', deletedAt: undefined, restoredAt },
-            },
+  await accountWriteRepository.recover(workplaceId, account, {
+    extraOps: (currentAccount, restoredAt) => [
+      auditRepository.prepareLog(
+        {
+          entityType: 'account',
+          entityId: accountId,
+          eventType: 'account.restored',
+          revertsLogId: auditOptions.revertsLogId,
+          action: AuditAction.UPDATE,
+          changes: {
+            before: { deletedAt: currentAccount.deletedAt },
+            after: { action: 'RECOVERED', deletedAt: undefined, restoredAt },
           },
-          workplaceId,
-        ),
-      ],
-      validateCurrent: (currentAccount, metadata) => {
-        if (auditOptions.expectedCurrent) {
-          assertAccountAuditSnapshot(currentAccount, metadata, auditOptions.expectedCurrent);
-        }
-      },
+        },
+        workplaceId,
+      ),
+    ],
+    validateCurrent: (currentAccount, metadata) => {
+      if (auditOptions.expectedCurrent) {
+        assertAccountAuditSnapshot(currentAccount, metadata, auditOptions.expectedCurrent);
+      }
     },
-  );
+  });
 
   analytics.trackFeatureUsage('account', 'recover', {
     account_type: account.accountType,
   });
 }
+
+export const deleteAccount = (...args: Parameters<typeof deleteAccountCore>) =>
+  withAccountRecognitionRefresh(args[1], () => deleteAccountCore(...args));
+
+export const recoverAccount = (...args: Parameters<typeof recoverAccountCore>) =>
+  withAccountRecognitionRefresh(args[1], () => recoverAccountCore(...args));

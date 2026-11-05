@@ -1,3 +1,5 @@
+import { matcherEligibilityChanged } from '@/src/services/accounts/accountMatcherEligibility';
+import { withAccountRecognitionRefreshIf } from '@/src/services/accounts/accountRecognitionRefresh';
 import Account from '@/src/data/models/Account';
 import { AccountSubtype, AccountType, JournalStatus } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -39,7 +41,7 @@ export interface CreateAccountCommandInput {
   metadata?: Partial<SerializedAccountMetadataPayload>;
 }
 
-export async function createAccount(
+async function createAccountCore(
   workplaceId: WorkplaceId,
   input: CreateAccountCommandInput,
 ): Promise<Account> {
@@ -143,3 +145,12 @@ export async function createAccount(
 
   return account;
 }
+
+export const createAccount = (...args: Parameters<typeof createAccountCore>) =>
+  withAccountRecognitionRefreshIf(
+    args[0],
+    matcherEligibilityChanged(
+      args[1].parentAccountId ? { parentAccountId: args[1].parentAccountId } : {},
+    ),
+    () => createAccountCore(...args),
+  );

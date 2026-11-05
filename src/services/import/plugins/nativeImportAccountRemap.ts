@@ -6,6 +6,7 @@ import {
   CanonicalAccount,
   CanonicalAccountMetadata,
   CanonicalBalanceSnapshot,
+  CanonicalAccountMatcher,
   CanonicalBudget,
   CanonicalBudgetScope,
   CanonicalPlannedPayment,
@@ -27,6 +28,15 @@ import {
   syncRuleActionsFromColumns,
 } from '@/src/utils/sms/ruleActionsAccountIds';
 import { logger } from '@/src/utils/logger';
+import {
+  conditionsKeyFor,
+  parseStoredMatcherDefinition,
+  validateAccountMatcherDefinition,
+} from '@/src/services/sms/recognition/accountMatcherDefinition';
+import {
+  unionSuppressions,
+  type AccountMatcherSuppression,
+} from '@/src/services/preferences/workplaceTypes';
 
 export type NativeImportAccountSources = {
   accounts: CanonicalAccount[];
@@ -37,6 +47,7 @@ export type NativeImportAccountSources = {
   balanceSnapshots?: CanonicalBalanceSnapshot[];
   budgets?: CanonicalBudget[];
   transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  accountMatchers?: CanonicalAccountMatcher[];
   smsAutoPostRules?: CanonicalTransactionAutoPostRule[];
   sms_auto_post_rules?: CanonicalTransactionAutoPostRule[];
 };
@@ -53,7 +64,10 @@ function addRef(
 }
 
 export function autoPostRulesFromData(
-  data: NativeImportAccountSources,
+  data: Pick<
+    NativeImportAccountSources,
+    'transactionAutoPostRules' | 'smsAutoPostRules' | 'sms_auto_post_rules'
+  >,
 ): CanonicalTransactionAutoPostRule[] {
   return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
 }
@@ -70,7 +84,7 @@ export function accountImportBatchFromSources(
   const rules: AccountImportRuleRef[] = [];
 
   for (const site of referenceSites()) {
-    if (site.importPolicy !== 'salvage') continue;
+    if (site.importPolicy === 'sanitize') continue;
 
     switch (site.key) {
       case 'account.parentAccountId':
@@ -119,6 +133,11 @@ export function accountImportBatchFromSources(
       case 'balanceSnapshot.accountId':
         for (const snapshot of data.balanceSnapshots || []) {
           addRef(refs, site.key, snapshot.accountId, snapshot.id);
+        }
+        break;
+      case 'accountMatcher.accountId':
+        for (const matcher of data.accountMatchers || []) {
+          addRef(refs, site.key, matcher.accountId, matcher.id);
         }
         break;
       default:
@@ -246,6 +265,107 @@ export function remapAutoPostRulesForImport(
       updatedAt: parseTimestamp(rule.updatedAt),
     };
   });
+}
+
+export function remapAccountMatchersForImport(
+  matchers: unknown,
+  accountMap: Map<string, AccountId>,
+  nextId: () => string,
+  parseTimestamp: (value?: number | string) => number | undefined,
+): {
+  matchers: CanonicalAccountMatcher[];
+  skippedItems: { id: string; reason: string }[];
+  idMap: Map<string, string>;
+} {
+  const imported: CanonicalAccountMatcher[] = [];
+  const skippedItems: { id: string; reason: string }[] = [];
+  const idMap = new Map<string, string>();
+  if (!Array.isArray(matchers)) {
+    if (matchers !== undefined) {
+      skippedItems.push({ id: 'accountMatchers', reason: 'matcher section is invalid' });
+      logger.warn('[NativePlugin] Dropped invalid account matcher section');
+    }
+    return { matchers: imported, skippedItems, idMap };
+  }
+
+  for (const row of matchers) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      skippedItems.push({ id: 'unknown', reason: 'account matcher row is invalid' });
+      logger.warn('[NativePlugin] Dropped invalid account matcher row');
+      continue;
+    }
+    const matcher = row as CanonicalAccountMatcher;
+    const matcherId = typeof matcher.id === 'string' ? matcher.id : 'unknown';
+    const accountId =
+      typeof matcher.accountId === 'string' ? accountMap.get(matcher.accountId) : undefined;
+    if (!accountId) {
+      skippedItems.push({ id: matcherId, reason: 'owner account was not present in backup' });
+      logger.warn('[NativePlugin] Dropped account matcher with unmapped owner', {
+        matcherId,
+      });
+      continue;
+    }
+
+    const rawDefinition =
+      matcher.definition !== undefined
+        ? matcher.definition
+        : parseStoredMatcherDefinition(matcher.definitionJson);
+    const result = validateAccountMatcherDefinition(rawDefinition);
+    if (!result.valid || !result.definition || typeof matcher.isEnabled !== 'boolean') {
+      skippedItems.push({
+        id: matcherId,
+        reason: 'account matcher definition or state is invalid',
+      });
+      logger.warn('[NativePlugin] Dropped account matcher with invalid definition', {
+        matcherId,
+      });
+      continue;
+    }
+
+    const id = nextId();
+    idMap.set(matcherId, id);
+    imported.push({
+      id,
+      accountId,
+      definitionJson: JSON.stringify(result.definition),
+      conditionsKey: conditionsKeyFor(result.definition),
+      isEnabled: matcher.isEnabled,
+      provenance: matcher.provenance || 'manual',
+      createdAt: parseTimestamp(matcher.createdAt),
+      updatedAt: parseTimestamp(matcher.updatedAt),
+    });
+  }
+
+  return { matchers: imported, skippedItems, idMap };
+}
+
+export function remapAccountMatcherSuppressions(
+  suppressions: unknown,
+  accountMap: Map<string, AccountId>,
+): AccountMatcherSuppression[] {
+  if (!Array.isArray(suppressions)) return [];
+  const mapped: AccountMatcherSuppression[] = [];
+  for (const row of suppressions) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+    const suppression = row as AccountMatcherSuppression;
+    if (
+      typeof suppression.accountId !== 'string' ||
+      typeof suppression.conditionsKey !== 'string' ||
+      suppression.conditionsKey.length === 0 ||
+      (suppression.reason !== 'dismissed' && suppression.reason !== 'forgotten')
+    ) {
+      continue;
+    }
+    const accountId = accountMap.get(suppression.accountId);
+    if (!accountId) {
+      logger.warn('[NativePlugin] Dropped account matcher suppression with unmapped owner', {
+        accountId: suppression.accountId,
+      });
+      continue;
+    }
+    mapped.push({ ...suppression, accountId });
+  }
+  return unionSuppressions(mapped);
 }
 
 /** Remap funding CSV via graph parse/format helpers. */

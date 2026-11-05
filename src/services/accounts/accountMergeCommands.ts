@@ -1,3 +1,4 @@
+import { withAccountRecognitionRefresh } from '@/src/services/accounts/accountRecognitionRefresh';
 import Account from '@/src/data/models/Account';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -7,6 +8,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics';
 import {
@@ -23,6 +25,7 @@ import {
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { generator } from '@/src/data/database/idGenerator';
+import { preferences } from '@/src/services/preferences';
 
 /**
  * Merge rewrite/destroy paths keyed by Account reference site.
@@ -30,7 +33,13 @@ import { generator } from '@/src/data/database/idGenerator';
  * which paths are required.
  */
 type MergePrepareKind =
-  'transactions' | 'plannedPayments' | 'smsRules' | 'budgets' | 'accounts' | 'snapshots';
+  | 'transactions'
+  | 'plannedPayments'
+  | 'smsRules'
+  | 'matchers'
+  | 'budgets'
+  | 'accounts'
+  | 'snapshots';
 
 const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepareKind>> = {
   'account.parentAccountId': 'accounts',
@@ -43,6 +52,7 @@ const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepar
   'balanceSnapshot.accountId': 'snapshots',
   'transactionAutoPostRule.sourceAccountId': 'smsRules',
   'transactionAutoPostRule.categoryAccountId': 'smsRules',
+  'accountMatcher.accountId': 'matchers',
 };
 
 function mergePrepareKindsFromSites(): Set<MergePrepareKind> {
@@ -86,7 +96,7 @@ async function validateMergeEligibility(
  * journal repository checks affected posted journals before any row is written.
  * Reference-site coverage stays driven by the account reference graph.
  */
-export async function mergeAccounts(
+async function mergeAccountsCore(
   workplaceId: WorkplaceId,
   targetAccountId: AccountId,
   sourceAccountIds: AccountId[],
@@ -151,6 +161,17 @@ export async function mergeAccounts(
         ),
       );
     }
+    if (prepareKinds.has('matchers')) {
+      writes.push(
+        accountMatcherRepository.mergeAccountsInSession(
+          session,
+          workplaceId,
+          filteredSourceIds,
+          targetAccountId,
+          correlationId,
+        ),
+      );
+    }
     if (prepareKinds.has('budgets')) {
       writes.push(
         budgetRepository.mergeAccountsInSession(
@@ -184,6 +205,19 @@ export async function mergeAccounts(
     await Promise.all(writes);
   });
 
+  try {
+    preferences.accountMatchers.remapAccounts(workplaceId, filteredSourceIds, targetAccountId);
+  } catch (error) {
+    // MMKV is outside the database transaction. A failed preference write can only
+    // resurface a suggestion; it cannot enable or retarget a persisted matcher.
+    logger.warn('[AccountMergeCommand] Failed to remap matcher suppressions after merge', {
+      error,
+      workplaceId,
+      targetAccountId,
+      sourceAccountIds: filteredSourceIds,
+    });
+  }
+
   rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
 
   try {
@@ -201,3 +235,6 @@ export async function mergeAccounts(
     account_type: targetAccountType,
   });
 }
+
+export const mergeAccounts = (...args: Parameters<typeof mergeAccountsCore>) =>
+  withAccountRecognitionRefresh(args[0], () => mergeAccountsCore(...args));

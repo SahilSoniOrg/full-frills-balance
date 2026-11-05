@@ -2,6 +2,7 @@ import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { ImportFileContext } from '@/src/services/import/types';
 import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
+import { conditionsKeyFor } from '@/src/services/sms/recognition/accountMatcherDefinition';
 
 // Mock ID generator
 jest.mock('@/src/data/database/idGenerator', () => ({
@@ -174,6 +175,98 @@ describe('NativeImportPlugin', () => {
       expect(stats.transactions).toBe(2);
       expect(stats.budgets).toBe(1);
       expect(stats.auditLogs).toBe(1);
+    });
+
+    it('imports optional matcher rows, remaps their owners and suppressions, and drops invalid rows', async () => {
+      const definition = {
+        version: 1 as const,
+        sender: { op: 'contains' as const, value: 'BANK-FORMAT' },
+        body: { kind: 'fragments' as const, fragments: ['credited to'] },
+      };
+      const key = conditionsKeyFor(definition);
+      const matcherBackup = {
+        id: 'matcher-valid',
+        accountId: 'a1',
+        definitionJson: JSON.stringify(definition),
+        conditionsKey: key,
+        isEnabled: false,
+        provenance: 'manual',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-02T00:00:00.000Z',
+      };
+      const nativeData = {
+        ...validNativeData,
+        futureAdditiveKey: { ignored: true },
+        accountMatchers: [
+          matcherBackup,
+          { ...matcherBackup, id: 'matcher-orphan', accountId: 'missing-owner' },
+          { ...matcherBackup, id: 'matcher-invalid', definitionJson: '{not-json' },
+        ],
+        auditLogs: [
+          ...validNativeData.auditLogs,
+          {
+            id: 'matcher-audit',
+            entityType: 'account_matcher',
+            entityId: 'matcher-valid',
+            action: 'UPDATE',
+            changes: JSON.stringify({ after: { accountId: 'a1', matcherId: 'matcher-valid' } }),
+            timestamp: Date.now(),
+          },
+        ],
+        workplacePreferences: {
+          accountMatcherSuppressions: [
+            { accountId: 'a1', conditionsKey: key, reason: 'dismissed' },
+            { accountId: 'missing-owner', conditionsKey: 'ignored', reason: 'forgotten' },
+          ],
+        },
+      };
+
+      const parsed = await nativePlugin.parse({ json: nativeData } as ImportFileContext, {
+        defaultCurrency: 'USD',
+      });
+      lastBatch = batchImportDataFromCanonical(parsed.canonical!);
+      validateImportedData(lastBatch);
+      const mappedAccountId = lastBatch.accounts[0].id;
+      expect(lastBatch.accountMatchers).toHaveLength(1);
+      expect(lastBatch.accountMatchers[0]).toMatchObject({
+        accountId: mappedAccountId,
+        definitionJson: JSON.stringify(definition),
+        conditionsKey: key,
+        isEnabled: false,
+      });
+      expect(lastBatch.accountMatchers[0].id).not.toBe('matcher-valid');
+      expect(lastBatch.accounts).toHaveLength(1);
+      expect(parsed.stats.skippedItems).toHaveLength(2);
+      expect(
+        lastBatch.auditLogs.find(
+          (log: { entityType: string }) => log.entityType === 'account_matcher',
+        )?.entityId,
+      ).toBe(lastBatch.accountMatchers[0].id);
+      expect(parsed.workplacePreferences?.accountMatcherSuppressions).toEqual([
+        { accountId: mappedAccountId, conditionsKey: key, reason: 'dismissed' },
+      ]);
+    });
+
+    it.each([
+      ['a non-array section', { invalid: true }],
+      ['a null row', [null]],
+    ])('skips %s without aborting native restore', async (_description, accountMatchers) => {
+      const stats = await parseImport({
+        json: { ...validNativeData, accountMatchers },
+      } as ImportFileContext);
+
+      expect(lastBatch.accountMatchers).toEqual([]);
+      expect(lastBatch.accounts).toHaveLength(validNativeData.accounts.length);
+      expect(lastBatch.transactions).toHaveLength(validNativeData.transactions.length);
+      expect(stats.skippedItems).toHaveLength(1);
+    });
+
+    it('keeps v2 backups without the optional matcher key importable', async () => {
+      const oldBackup = { ...validNativeData, futureAdditiveKey: true };
+      const stats = await parseImport({ json: oldBackup } as ImportFileContext);
+
+      expect(lastBatch.accountMatchers).toEqual([]);
+      expect(stats.accounts).toBe(1);
     });
 
     it('throws error for missing parsed JSON', async () => {

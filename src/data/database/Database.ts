@@ -6,6 +6,7 @@ import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 
 // Models
 import Account from '@/src/data/models/Account';
+import AccountMatcher from '@/src/data/models/AccountMatcher';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import AuditLog from '@/src/data/models/AuditLog';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
@@ -34,6 +35,7 @@ export const database = new WatermelonDB({
   modelClasses: [
     DeviceSmsInboxRecord,
     Account,
+    AccountMatcher,
     AccountMetadata,
     AuditLog,
     BalanceSnapshot,

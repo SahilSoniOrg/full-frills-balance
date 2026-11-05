@@ -21,6 +21,7 @@ const EXPORT_KEY_BY_TABLE: Record<string, string> = {
   planned_payments: 'plannedPayments',
   journal_metadata: 'journalMetadata',
   transaction_auto_post_rules: 'transactionAutoPostRules',
+  account_matchers: 'accountMatchers',
   transaction_inbox_records: 'transactionInboxRecords',
   balance_snapshots: 'balance_snapshots',
 };

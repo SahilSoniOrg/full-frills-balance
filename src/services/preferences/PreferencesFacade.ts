@@ -2,6 +2,7 @@ import { PreferencesStore } from './PreferencesStore';
 import { DevicePreferencesStore } from './DevicePreferencesStore';
 import { WorkplacePreferencesStore } from './WorkplacePreferencesStore';
 import { InsightPreferences } from './domains/InsightPreferences';
+import { AccountMatcherPreferences } from './domains/AccountMatcherPreferences';
 import { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
 import { PrivacyPreferences } from './domains/PrivacyPreferences';
 import { StsPreferences } from './domains/StsPreferences';
@@ -22,6 +23,7 @@ export type PreferencesFacade = PreferencesStore & {
   readonly privacy: PrivacyPreferences;
   readonly sts: StsPreferences;
   readonly insights: InsightPreferences;
+  readonly accountMatchers: AccountMatcherPreferences;
   readonly journalNav: JournalNavigationPreferences;
   /** Raw Device-bag presence captured before legacy migration runs at startup. */
   readonly rawDeviceBagPresentAtStartup: boolean;
@@ -39,6 +41,7 @@ export class PreferencesFacadeStore extends PreferencesStore implements Preferen
   readonly privacy: PrivacyPreferences;
   readonly sts: StsPreferences;
   readonly insights: InsightPreferences;
+  readonly accountMatchers: AccountMatcherPreferences;
   readonly journalNav: JournalNavigationPreferences;
   rawDeviceBagPresentAtStartup = false;
   private _initializePromise: Promise<UIPreferences> | null = null;
@@ -52,6 +55,7 @@ export class PreferencesFacadeStore extends PreferencesStore implements Preferen
     this.privacy = new PrivacyPreferences(this, this.device);
     this.sts = new StsPreferences(this.workplace, this.device);
     this.insights = new InsightPreferences(this.workplace);
+    this.accountMatchers = new AccountMatcherPreferences(this.workplace);
     this.journalNav = new JournalNavigationPreferences(this.workplace, this.device);
   }
 
@@ -98,4 +102,3 @@ export class PreferencesFacadeStore extends PreferencesStore implements Preferen
     this.workplace.clear();
   }
 }
-

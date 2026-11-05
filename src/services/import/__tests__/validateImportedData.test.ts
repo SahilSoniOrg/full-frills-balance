@@ -7,6 +7,7 @@ import {
   CanonicalTransaction,
 } from '@/src/types/importContracts';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
+import { conditionsKeyFor } from '@/src/services/sms/recognition/accountMatcherDefinition';
 
 function minimalImport(overrides?: {
   journals?: CanonicalJournal[];
@@ -223,5 +224,30 @@ describe('validateImportedData', () => {
     expect(() => validateImportedData(data)).toThrow(
       /budget "budget-1" references missing asset account "missing-asset"/,
     );
+  });
+
+  it('validates imported matcher definitions and their owner references', () => {
+    const definition = { version: 1 as const, sender: { op: 'contains' as const, value: 'BANK' } };
+    const data = minimalImport();
+    data.accountMatchers = [
+      {
+        id: 'matcher-1',
+        accountId: 'acc-1' as AccountId,
+        definitionJson: JSON.stringify(definition),
+        conditionsKey: conditionsKeyFor(definition),
+        isEnabled: true,
+        provenance: 'manual',
+      },
+    ];
+    expect(() => validateImportedData(data)).not.toThrow();
+
+    data.accountMatchers[0].definitionJson = '{invalid';
+    expect(() => validateImportedData(data)).toThrow(
+      /account matcher "matcher-1" has invalid definition/,
+    );
+
+    data.accountMatchers[0].definitionJson = JSON.stringify(definition);
+    data.accountMatchers[0].accountId = 'missing-owner' as AccountId;
+    expect(() => validateImportedData(data)).toThrow(/missing account "missing-owner"/);
   });
 });

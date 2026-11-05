@@ -24,6 +24,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { Q } from '@nozbe/watermelondb';
@@ -32,16 +33,24 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { assertNoLiveAccountReferences } from '@/src/services/accounts/accountReferenceGraph';
 import { resetDatabase } from '@/src/testing/resetDatabase';
+import {
+  saveAccountMatcher,
+  setAccountMatcherEnabled,
+} from '@/src/services/accounts/accountMatcherCommands';
+import { preferences } from '@/src/services/preferences';
+import { conditionsKeyFor } from '@/src/services/sms/recognition/accountMatcherDefinition';
 
 const WP = 'wp-acct-cmd' as WorkplaceId;
 
 describe('account commands (integration)', () => {
   beforeEach(async () => {
     await resetDatabase();
+    preferences.workplace.clear(WP);
   }, 15000);
 
   afterEach(() => {
     jest.restoreAllMocks();
+    preferences.workplace.clear(WP);
   });
 
   it('mergeAccounts rejects incompatible account types', async () => {
@@ -638,6 +647,137 @@ describe('account commands (integration)', () => {
     expect(results.some(result => result.status === 'fulfilled')).toBe(true);
     expect(await accountQueryRepository.find(WP, source.id)).toBeNull();
     expect(await assertNoLiveAccountReferences(WP, [source.id])).toBeUndefined();
+  });
+
+  it('retargets unique source matchers to the target account', async () => {
+    const target = await createAccount(WP, {
+      name: 'Keep',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const source = await createAccount(WP, {
+      name: 'Fold',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const matcher = await saveAccountMatcher(WP, {
+      accountId: source.id,
+      definition: { version: 1, sender: { op: 'contains', value: 'BANK-UNIQUE' } },
+    });
+
+    await mergeAccounts(WP, target.id, [source.id]);
+
+    const retargeted = await accountMatcherRepository.find(WP, matcher.id);
+    expect(retargeted?.accountId).toBe(target.id);
+    expect(retargeted?.isEnabled).toBe(true);
+    await expect(assertNoLiveAccountReferences(WP, [source.id])).resolves.toBeUndefined();
+  });
+
+  it('keeps the target duplicate, earliest creation time, and disables if either copy is disabled', async () => {
+    const target = await createAccount(WP, {
+      name: 'Keep',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const source = await createAccount(WP, {
+      name: 'Fold',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const definition = {
+      version: 1 as const,
+      sender: { op: 'contains' as const, value: 'BANK-DUP' },
+    };
+    const sourceMatcher = await saveAccountMatcher(WP, {
+      accountId: source.id,
+      definition,
+    });
+    await setAccountMatcherEnabled(WP, sourceMatcher.id, false);
+    const targetMatcher = await saveAccountMatcher(WP, {
+      accountId: target.id,
+      definition,
+    });
+    const earliestCreatedAt = sourceMatcher.createdAt.getTime();
+
+    await mergeAccounts(WP, target.id, [source.id]);
+
+    const kept = await accountMatcherRepository.find(WP, targetMatcher.id);
+    expect(kept?.accountId).toBe(target.id);
+    expect(kept?.isEnabled).toBe(false);
+    expect(kept?.createdAt.getTime()).toBe(earliestCreatedAt);
+    expect(await accountMatcherRepository.find(WP, sourceMatcher.id)).toBeNull();
+    const audits = await auditRepository.findByEntity('account_matcher', targetMatcher.id, WP);
+    expect(audits.some(audit => audit.eventType === 'account_matcher.disabled')).toBe(true);
+  });
+
+  it('unions source dismissals onto target without removing an accepted target matcher', async () => {
+    const target = await createAccount(WP, {
+      name: 'Keep',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const source = await createAccount(WP, {
+      name: 'Fold',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const dismissedDefinition = {
+      version: 1 as const,
+      sender: { op: 'contains' as const, value: 'BANK-DISMISSED' },
+    };
+    const acceptedDefinition = {
+      version: 1 as const,
+      sender: { op: 'contains' as const, value: 'BANK-ACCEPTED' },
+    };
+    const existingTargetDismissal = {
+      version: 1 as const,
+      sender: { op: 'contains' as const, value: 'BANK-TARGET-DISMISSED' },
+    };
+    const accepted = await saveAccountMatcher(WP, {
+      accountId: target.id,
+      definition: acceptedDefinition,
+    });
+    preferences.accountMatchers.dismiss(WP, source.id, conditionsKeyFor(dismissedDefinition));
+    preferences.accountMatchers.dismiss(WP, target.id, conditionsKeyFor(existingTargetDismissal));
+
+    await mergeAccounts(WP, target.id, [source.id]);
+
+    expect((await accountMatcherRepository.find(WP, accepted.id))?.accountId).toBe(target.id);
+    expect(preferences.accountMatchers.list(WP, target.id)).toEqual([
+      {
+        accountId: target.id,
+        conditionsKey: conditionsKeyFor(dismissedDefinition),
+        reason: 'dismissed',
+      },
+      {
+        accountId: target.id,
+        conditionsKey: conditionsKeyFor(existingTargetDismissal),
+        reason: 'dismissed',
+      },
+    ]);
+  });
+
+  it('post-merge invariant catches a matcher row left on a source account', async () => {
+    const source = await createAccount(WP, {
+      name: 'Stale source',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    await saveAccountMatcher(WP, {
+      accountId: source.id,
+      definition: { version: 1, sender: { op: 'contains', value: 'BANK-STALE' } },
+    });
+
+    await expect(assertNoLiveAccountReferences(WP, [source.id])).rejects.toThrow(
+      'account_matchers',
+    );
   });
 
   it('applyAccountArchiveChanges archives primary + child in one write', async () => {

@@ -1048,5 +1048,31 @@ export const migrations = schemaMigrations({
       toVersion: 35,
       steps: [unsafeExecuteSql(CREATE_LEDGER_READ_INDEXES_SQL)],
     },
+    {
+      toVersion: 36,
+      steps: [
+        createTable({
+          name: 'account_matchers',
+          columns: [
+            { name: 'account_id', type: 'string', isIndexed: true },
+            { name: 'definition_json', type: 'string' },
+            { name: 'conditions_key', type: 'string', isIndexed: true },
+            { name: 'is_enabled', type: 'boolean' },
+            { name: 'provenance', type: 'string' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+CREATE TRIGGER IF NOT EXISTS trg_account_matchers_workplace_id_check
+BEFORE INSERT ON account_matchers
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on account_matchers');
+END;`),
+      ],
+    },
   ],
 });

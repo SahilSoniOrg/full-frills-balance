@@ -8,6 +8,7 @@ export type WorkplaceDataTableTask = {
 };
 
 export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
+  { name: 'Account Matchers', table: 'account_matchers' },
   { name: 'Accounts', table: 'accounts' },
   { name: 'Journals', table: 'journals' },
   { name: 'Entries', table: 'transactions' },

@@ -21,6 +21,7 @@ import type {
   PlainAccountMetadata,
   PlannedPaymentFxFields,
 } from '@/src/types/plainDtos';
+import type { AccountMatcherDefinitionV1 } from '@/src/types/accountMatcher';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
 export const CANONICAL_IMPORT_VERSION_V1 = 'canonical-import.v1' as const;
@@ -43,6 +44,7 @@ export interface CanonicalImportV1 {
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
   transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
   importMetadata?: CanonicalImportMetadata;
@@ -243,6 +245,19 @@ export interface CanonicalTransactionAutoPostRule {
   updatedAt?: number;
 }
 
+export interface CanonicalAccountMatcher {
+  id: string;
+  accountId: AccountId;
+  definitionJson: string;
+  conditionsKey: string;
+  isEnabled: boolean;
+  provenance: string;
+  createdAt?: number;
+  updatedAt?: number;
+  /** Parsed form accepted by native import adapters and useful to validation callers. */
+  definition?: AccountMatcherDefinitionV1;
+}
+
 export interface CanonicalBalanceSnapshot {
   id: string;
   accountId: AccountId;
@@ -270,6 +285,7 @@ export interface BatchImportData {
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
   transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
+  accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
 }

@@ -3,6 +3,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import {
   assertWritable,
   assertNoLiveAccountReferences,
@@ -44,6 +45,12 @@ jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository', () => ({
   },
 }));
 
+jest.mock('@/src/data/repositories/AccountMatcherRepository', () => ({
+  accountMatcherRepository: {
+    findAllByAccountIds: jest.fn(),
+  },
+}));
+
 jest.mock('@/src/data/repositories/transaction', () => ({
   ...jest.requireActual('@/src/data/repositories/transaction'),
 
@@ -54,9 +61,9 @@ jest.mock('@/src/data/repositories/transaction', () => ({
 
 describe('Account reference graph', () => {
   describe('referenceSites', () => {
-    it('inventories all 11 WatermelonDB Account FK sites from research', () => {
+    it('inventories all 12 WatermelonDB Account FK sites from research', () => {
       const sites = referenceSites();
-      expect(sites).toHaveLength(11);
+      expect(sites).toHaveLength(12);
       expect(sites.map(site => site.key)).toEqual([
         'account.parentAccountId',
         'transaction.accountId',
@@ -69,6 +76,7 @@ describe('Account reference graph', () => {
         'balanceSnapshot.accountId',
         'transactionAutoPostRule.sourceAccountId',
         'transactionAutoPostRule.categoryAccountId',
+        'accountMatcher.accountId',
       ]);
     });
 
@@ -78,6 +86,11 @@ describe('Account reference graph', () => {
       expect(byKey['transactionAutoPostRule.sourceAccountId'].cardinality).toBe('dual');
       expect(byKey['transactionAutoPostRule.categoryAccountId'].cardinality).toBe('dual');
       expect(byKey['transaction.accountId'].cardinality).toBe('scalar');
+      expect(byKey['accountMatcher.accountId']).toMatchObject({
+        mergeBehavior: 'retarget',
+        deletePolicy: 'owned',
+        importPolicy: 'reject',
+      });
     });
 
     it('exposes merge behavior for retarget vs destroy vs none sites', () => {
@@ -166,6 +179,7 @@ describe('Account reference graph', () => {
         transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
       ).mockResolvedValue([]);
       (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
+      (accountMatcherRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     });
 
     it('returns empty when nothing blocks delete', async () => {
@@ -238,6 +252,7 @@ describe('Account reference graph', () => {
         transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
       ).mockResolvedValue([]);
       (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
+      (accountMatcherRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     });
 
     it('resolves when no live references remain', async () => {
@@ -254,6 +269,16 @@ describe('Account reference graph', () => {
       await expect(
         assertNoLiveAccountReferences(workplaceId, ['source-1'] as AccountId[]),
       ).rejects.toThrow('source-1: transactions');
+    });
+
+    it('fails if matcher rows still point at a merged source', async () => {
+      (accountMatcherRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([
+        { id: 'matcher-1' },
+      ]);
+
+      await expect(
+        assertNoLiveAccountReferences(workplaceId, ['source-1'] as AccountId[]),
+      ).rejects.toThrow('source-1: account_matchers');
     });
   });
 
@@ -321,6 +346,16 @@ describe('Account reference graph', () => {
       expect(plan.rulePatches).toEqual([
         { ruleKey: 'rule-only', sourceAccountId: EMPTY_ACCOUNT_ID },
       ]);
+    });
+
+    it('does not salvage matcher owners when the import policy is reject', () => {
+      const plan = importPlan({
+        accountIds: ['acc-1'],
+        refs: [{ siteKey: 'accountMatcher.accountId', accountId: 'matcher-orphan' }],
+        rules: [],
+      });
+
+      expect(plan.missingAccountIds).toEqual([]);
     });
   });
 });

@@ -1,4 +1,5 @@
 import type { AccountId, WorkplaceId, JournalId } from '@/src/types/ids';
+import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import type {
   InboxProcessingStatus,
   InboxParseStatus,
@@ -18,6 +19,7 @@ export interface InboxRecordSnapshot {
   workplaceId: WorkplaceId;
   channel: 'sms' | 'voice';
   deviceSourceId: string;
+  contentDigest?: string;
   senderAddress?: string;
   rawBody?: string;
   inputDate: number;
@@ -37,6 +39,7 @@ export interface InboxRecordSnapshot {
   parseReason?: string;
   suggestedSourceAccountId?: AccountId;
   suggestedCategoryAccountId?: AccountId;
+  recognition?: SmsRecognitionSummary;
   metadataJson?: string;
   firstSeenAt: number;
   lastScannedAt: number;
@@ -47,7 +50,7 @@ export interface InboxRecordSnapshot {
 
 export interface TransactionInboxRecordWriteData extends Omit<
   InboxRecordSnapshot,
-  'id' | 'channel'
+  'id' | 'channel' | 'recognition'
 > {
   channel: 'sms';
   contentDigest?: string;
@@ -61,4 +64,5 @@ export interface SmsWorkplaceReviewState {
   metadataJson?: string;
   sourceAccountId?: AccountId;
   categoryAccountId?: AccountId;
+  recognition?: SmsRecognitionSummary;
 }

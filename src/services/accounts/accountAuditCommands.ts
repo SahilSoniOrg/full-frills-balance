@@ -1,3 +1,8 @@
+import {
+  MATCHER_ELIGIBILITY_FIELDS,
+  matcherEligibilityChanged,
+} from '@/src/services/accounts/accountMatcherEligibility';
+import { withAccountRecognitionRefreshIf } from '@/src/services/accounts/accountRecognitionRefresh';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
@@ -108,7 +113,7 @@ function matchesAccountAuditSnapshotState(
  * Restores only fields changed by this event, checks that those fields have not since
  * changed, and writes the compensating audit entry in the same database batch.
  */
-export async function revertAccountFromAuditState(
+async function revertAccountFromAuditStateCore(
   workplaceId: WorkplaceId,
   accountId: AccountId,
   beforeRaw: AccountAuditState | Record<string, unknown>,
@@ -211,3 +216,20 @@ export async function revertAccountFromAuditState(
 
   return true;
 }
+
+export const revertAccountFromAuditState = (
+  ...args: Parameters<typeof revertAccountFromAuditStateCore>
+) => {
+  const changedFields = args[3]?.changedFields?.length
+    ? args[3].changedFields
+    : Object.keys(args[2]);
+  const eligibilityChange: Partial<Record<(typeof MATCHER_ELIGIBILITY_FIELDS)[number], true>> = {};
+  for (const field of MATCHER_ELIGIBILITY_FIELDS) {
+    if (changedFields.includes(field)) eligibilityChange[field] = true;
+  }
+  return withAccountRecognitionRefreshIf(
+    args[0],
+    matcherEligibilityChanged(eligibilityChange),
+    () => revertAccountFromAuditStateCore(...args),
+  );
+};

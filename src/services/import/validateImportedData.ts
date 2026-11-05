@@ -1,9 +1,18 @@
-import type { BatchImportData, CanonicalAccount } from '@/src/types/importContracts';
+import type {
+  BatchImportData,
+  CanonicalAccount,
+  CanonicalAccountMatcher,
+} from '@/src/types/importContracts';
 import {
   MissingImportedAccountRef,
   missingImportedAccountRefs,
 } from '@/src/services/accounts/accountReferenceGraph';
 import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
+import {
+  conditionsKeyFor,
+  parseStoredMatcherDefinition,
+  validateAccountMatcherDefinition,
+} from '@/src/services/sms/recognition/accountMatcherDefinition';
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   const seen = new Set<string>();
@@ -62,6 +71,7 @@ function validateStructuralRules(data: BatchImportData): void {
   assertUniqueIds('balance snapshot', data.balanceSnapshots ?? []);
   assertUniqueIds('transaction inbox record', data.transactionInboxRecords ?? []);
   assertUniqueIds('transaction auto-post rule', data.transactionAutoPostRules ?? []);
+  assertUniqueIds('account matcher', data.accountMatchers ?? []);
   assertUniqueIds('currency', data.currencies ?? []);
 
   const journalIds = new Set(data.journals.map(journal => journal.id));
@@ -71,6 +81,8 @@ function validateStructuralRules(data: BatchImportData): void {
     (data.plannedPayments ?? []).map(plannedPayment => plannedPayment.id),
   );
   const currencyCodes = new Set((data.currencies ?? []).map(currency => currency.code));
+
+  for (const matcher of data.accountMatchers ?? []) validateAccountMatcher(matcher);
 
   for (const account of data.accounts) {
     if (account.parentAccountId && account.parentAccountId === account.id) {
@@ -163,6 +175,27 @@ function validateStructuralRules(data: BatchImportData): void {
         `Import validation failed: journal "${journal.id}" references missing planned payment "${journal.plannedPaymentId}"`,
       );
     }
+  }
+}
+
+function validateAccountMatcher(matcher: CanonicalAccountMatcher): void {
+  const result = validateAccountMatcherDefinition(
+    parseStoredMatcherDefinition(matcher.definitionJson),
+  );
+  if (!result.valid || !result.definition) {
+    throw new Error(
+      `Import validation failed: account matcher "${matcher.id}" has invalid definition`,
+    );
+  }
+  if (conditionsKeyFor(result.definition) !== matcher.conditionsKey) {
+    throw new Error(
+      `Import validation failed: account matcher "${matcher.id}" has an invalid conditions key`,
+    );
+  }
+  if (typeof matcher.isEnabled !== 'boolean') {
+    throw new Error(
+      `Import validation failed: account matcher "${matcher.id}" has invalid enabled state`,
+    );
   }
 }
 

@@ -118,6 +118,22 @@ export class WorkplacePreferencesStore {
     if ('dismissedPatternIds' in sanitized && !Array.isArray(sanitized.dismissedPatternIds)) {
       sanitized.dismissedPatternIds = [];
     }
+    if ('accountMatcherSuppressions' in sanitized) {
+      const value = sanitized.accountMatcherSuppressions;
+      sanitized.accountMatcherSuppressions = Array.isArray(value)
+        ? value.filter(
+            item =>
+              !!item &&
+              typeof item.accountId === 'string' &&
+              item.accountId.length > 0 &&
+              typeof item.conditionsKey === 'string' &&
+              (item.reason === 'dismissed' || item.reason === 'forgotten'),
+          )
+        : [];
+    }
+    if ('accountMatcherRefreshPending' in sanitized) {
+      sanitized.accountMatcherRefreshPending = sanitized.accountMatcherRefreshPending === true;
+    }
     if ('safeToSpendDays' in sanitized && ![30, 60, 90].includes(sanitized.safeToSpendDays ?? 0)) {
       sanitized.safeToSpendDays = AppConfig.defaults.safeToSpendDays;
     }

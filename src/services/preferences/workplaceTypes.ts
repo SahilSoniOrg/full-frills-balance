@@ -11,7 +11,28 @@ export interface WorkplacePreferences {
   lastUsedSourceAccountId?: AccountId;
   lastUsedDestinationAccountId?: AccountId;
   dismissedPatternIds: string[];
+  accountMatcherSuppressions?: AccountMatcherSuppression[];
+  accountMatcherRefreshPending?: boolean;
   safeToSpendDays: number;
+}
+
+export interface AccountMatcherSuppression {
+  accountId: AccountId;
+  conditionsKey: string;
+  reason: 'dismissed' | 'forgotten';
+}
+
+/** Same account and conditions collapse to one row. Forgotten beats dismissed. */
+export function unionSuppressions(
+  suppressions: readonly AccountMatcherSuppression[],
+): AccountMatcherSuppression[] {
+  const byKey = new Map<string, AccountMatcherSuppression>();
+  for (const suppression of suppressions) {
+    const key = JSON.stringify([suppression.accountId, suppression.conditionsKey]);
+    const existing = byKey.get(key);
+    if (!existing || suppression.reason === 'forgotten') byKey.set(key, suppression);
+  }
+  return [...byKey.values()];
 }
 
 export const DEFAULT_WORKPLACE_PREFERENCES: WorkplacePreferences = {
@@ -25,6 +46,8 @@ export const WORKPLACE_PREFERENCE_KEYS = [
   'lastUsedSourceAccountId',
   'lastUsedDestinationAccountId',
   'dismissedPatternIds',
+  'accountMatcherSuppressions',
+  'accountMatcherRefreshPending',
   'safeToSpendDays',
 ] as const;
 

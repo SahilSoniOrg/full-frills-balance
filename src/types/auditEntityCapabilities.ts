@@ -21,6 +21,7 @@ export const AUDIT_ENTITY_CAPABILITIES = {
   budget: { canView: true, revertHandler: 'budget', canRecreateAfterDelete: true },
   planned_payment: { canView: true, revertHandler: 'planned_payment' },
   transaction_auto_post_rule: { canView: false, revertHandler: 'none' },
+  account_matcher: { canView: false, revertHandler: 'none' },
   transaction_inbox_record: { canView: false, revertHandler: 'none' },
   workplace: { canView: false, revertHandler: 'workplace' },
 } satisfies Record<AuditEntityType, AuditEntityCapabilities>;

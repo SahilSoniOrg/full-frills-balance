@@ -1,5 +1,6 @@
 import type { AccountId, JournalId, TransactionId, WorkplaceId } from './ids';
 import type { AccountType, TransactionType } from './enums';
+import type { SmsRecognitionSummary } from './accountMatcher';
 
 export type TabType = 'expense' | 'income' | 'transfer';
 export type AccountRole = 'source' | 'destination';
@@ -49,6 +50,9 @@ export interface TransactionInboxItem {
   direction: 'debit' | 'credit' | 'unknown';
   parseConfidence?: number;
   parseReason?: string;
+  recognition?: SmsRecognitionSummary;
+  recognitionRefreshState?: 'updating' | 'failed';
+  recognizedAccountNames?: string[];
   linkedJournal?: TransactionLinkedJournalInfo;
   duplicateCandidate?: TransactionDuplicateCandidate;
 }

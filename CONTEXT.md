@@ -39,7 +39,7 @@ The person. Owns identity and chrome that follow them across Devices and Workpla
 _Avoid_: Account (that is a ledger bucket); profile (as a synonym); owner
 
 **Workplace**:
-The tenancy for the books. Journals, ledger accounts, budgets, planned payments, and settings that change meaning or writes (default currency, Safe to Spend horizon, last-used ledger accounts, dismissed insights) belong here. SMS auto-post rules and this Workplace’s consumed-SMS copies belong here; the shared SMS feed does not.
+The tenancy for the books. Journals, ledger accounts, budgets, planned payments, and settings that change meaning or writes (default currency, Safe to Spend horizon, last-used ledger accounts, dismissed insights) belong here. SMS rules, Account matchers, and this Workplace’s consumed-SMS copies belong here; the shared SMS feed does not.
 _Avoid_: User data; workspace; company; books (as the tenancy name)
 
 **Workplace membership**:
@@ -212,6 +212,30 @@ _Avoid_: Hidden; processed (as “gone from this Workplace”)
 Workplace preference: auto-post Elsewhere-consumed messages into this Workplace. Off means auto-post skips them; the User can still post by hand. Two Workplaces may both consume the same SMS.
 _Avoid_: Resurface; show consumed as pending (the feed already shows them)
 
+**SMS rule**:
+A Workplace's confirmed conditions on incoming SMS and the outcome when they match: auto-post, review, or ignore.
+_Avoid_: Auto-post rule (auto-post is one outcome); automation rule; SMS auto-post rule
+
+**Rule suggestion**:
+A proposed SMS rule derived from the User's confirmed postings and corrections. It has no posting authority until the User enables it as an SMS rule.
+_Avoid_: History suggestion; Insight (a Hub observation about money, not a proposed change to message handling)
+
+**Account reference**:
+A bank-account or card mention in one SMS, such as a masked number or visible ending. The mention is evidence in that message; the User can select its text as part of an Account matcher.
+_Avoid_: Account hint; account source (as the domain term)
+
+**Account matcher**:
+User-confirmed conditions on an SMS sender, its text, or both, attached to one leaf asset or liability Account to recognize that Account in messages. It may use a general pattern or a specific Account reference; an SMS rule controls the posting outcome.
+_Avoid_: Account rule; SMS rule (also controls the outcome); Account identifier (too narrow for general patterns)
+
+**Account matcher suggestion**:
+A proposed Account matcher inferred from SMS linked to journals involving an Account, or from SMS the User selects for that Account. It has no authority to assign the Account to future messages until confirmed; previewing the proposal does not activate it.
+_Avoid_: Automatic matcher; SMS rule suggestion (a different proposal)
+
+**Identified account**:
+An Account recognized in one Workplace by confirmed Account matchers. Conflicting account assignments or unresolved source/destination roles require review.
+_Avoid_: Matched account; source account (it may receive money)
+
 **Device SMS listen**:
 Device preference: this install may scan the OS SMS inbox and run auto-post. Default **off** on a fresh Device; the User turns it on. Off is Device-wide — no Workplace can listen independently. OS SMS permission is also Device.
 _Avoid_: Per-Workplace SMS import enabled; workplace participates; scan during Device setup
@@ -268,7 +292,7 @@ A workplace-scoped ledger bucket (asset, liability, equity, income, or expense) 
 _Avoid_: Wallet (as the domain term for any account); category (except for income/expense account types in user-facing copy)
 
 **Archived account**:
-An account marked archived so it is hidden from default account lists and pickers. Still fully live for balances, reporting, posting, and references — archive is a visibility preference, not removal.
+An account marked archived so it is hidden from default account lists and pickers. Still fully live for balances, reporting, posting, references, and SMS recognition — archive is a visibility preference, not removal.
 _Avoid_: Deleted account; inactive account; hidden account (as the canonical term)
 
 **Archive**:

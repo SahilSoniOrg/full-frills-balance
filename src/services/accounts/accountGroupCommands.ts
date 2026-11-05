@@ -1,3 +1,4 @@
+import { withAccountRecognitionRefresh } from '@/src/services/accounts/accountRecognitionRefresh';
 import {
   accountTreeTransactionCoordinator,
   accountWriteRepository,
@@ -14,7 +15,7 @@ import { AuditAction } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 
 /** Remove one container, promoting its direct children without touching their subtrees or journals. */
-export async function disbandAccountGroup(workplaceId: WorkplaceId, accountId: AccountId) {
+async function disbandAccountGroupCore(workplaceId: WorkplaceId, accountId: AccountId) {
   await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const tree = createAccountTreeSnapshot(accounts);
     const group = tree.accountsById.get(accountId);
@@ -111,3 +112,6 @@ export async function disbandAccountGroup(workplaceId: WorkplaceId, accountId: A
     };
   });
 }
+
+export const disbandAccountGroup = (...args: Parameters<typeof disbandAccountGroupCore>) =>
+  withAccountRecognitionRefresh(args[0], () => disbandAccountGroupCore(...args));

@@ -21,6 +21,8 @@ import {
   autoPostRulesFromData,
   buildPlaceholderAccountsForOrphans,
   remapAutoPostRulesForImport,
+  remapAccountMatchersForImport,
+  remapAccountMatcherSuppressions,
   remapFundingAccountIdsCsv,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
@@ -47,6 +49,7 @@ interface NativeImportData {
   budgets?: CanonicalBudget[];
   budgetScopes?: CanonicalBudgetScope[];
   accountMetadata?: CanonicalAccountMetadata[];
+  accountMatchers?: unknown;
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
   // Support both snake_case and camelCase for legacy compatibility
@@ -155,6 +158,7 @@ export const nativePlugin: ImportPlugin = {
     const inboxSources =
       data.transactionInboxRecords || data.smsInboxRecords || data.sms_inbox_records || [];
     const autoPostRuleMap = new Map<string, string>();
+    const accountMatcherMap = new Map<string, string>();
     const inboxRecordMap = new Map<string, string>();
     const auditLogMap = new Map<string, string>();
     const accountCurrencyMap = new Map<string, string>(); // Optimization: avoid .find() in transaction loop
@@ -174,6 +178,14 @@ export const nativePlugin: ImportPlugin = {
     inboxSources.forEach(record => inboxRecordMap.set(record.id, generateId()));
     (data.auditLogs || []).forEach(log => auditLogMap.set(log.id, generateId()));
 
+    const remappedMatchers = remapAccountMatchersForImport(
+      data.accountMatchers,
+      accountMap,
+      generateId,
+      parseTimestamp,
+    );
+    for (const [oldId, newId] of remappedMatchers.idMap) accountMatcherMap.set(oldId, newId);
+
     const auditEntityMaps: AuditImportEntityIdMaps = {
       account: accountMap,
       journal: journalMap,
@@ -182,6 +194,7 @@ export const nativePlugin: ImportPlugin = {
       budget: budgetMap,
       planned_payment: plannedPaymentMap,
       transaction_auto_post_rule: autoPostRuleMap,
+      account_matcher: accountMatcherMap,
       transaction_inbox_record: inboxRecordMap,
       workplace: new Map(),
     };
@@ -192,10 +205,11 @@ export const nativePlugin: ImportPlugin = {
 
       const defaultCurrencyCode = currencyCode || fallbackCurrency; // Fallback if no preferences exist
 
-      // Recover orphaned account FKs by synthesizing placeholder accounts so restore
-      // can succeed without data loss (SMS rules are sanitized separately).
+      // Matcher owners are checked against accountMap above and invalid matchers are
+      // dropped. They are not salvage references, so never pass raw rows to the planner.
+      // Recover other orphaned account FKs by synthesizing placeholder accounts.
       const { placeholderAccounts, plan } = buildPlaceholderAccountsForOrphans({
-        data,
+        data: { ...data, accountMatchers: [] },
         accountMap,
         accountCurrencyMap,
         defaultCurrencyCode,
@@ -405,6 +419,7 @@ export const nativePlugin: ImportPlugin = {
           plan,
           autoPostRuleMap,
         ),
+        accountMatchers: remappedMatchers.matchers,
         transactionInboxRecords: inboxSources.map(inbox => ({
           id: inboxRecordMap.get(inbox.id) ?? generateId(),
           channel: inbox.channel,
@@ -466,10 +481,23 @@ export const nativePlugin: ImportPlugin = {
           },
         },
       });
+      const workplacePreferences = data.workplacePreferences
+        ? {
+            ...data.workplacePreferences,
+            ...(data.workplacePreferences.accountMatcherSuppressions
+              ? {
+                  accountMatcherSuppressions: remapAccountMatcherSuppressions(
+                    data.workplacePreferences.accountMatcherSuppressions,
+                    accountMap,
+                  ),
+                }
+              : {}),
+          }
+        : undefined;
       return {
         canonical,
         preferences: data.preferences,
-        workplacePreferences: data.workplacePreferences,
+        workplacePreferences,
         workplace: {
           name: data.workplace?.name,
           icon: data.workplace?.icon,
@@ -483,6 +511,11 @@ export const nativePlugin: ImportPlugin = {
           auditLogs: data.auditLogs?.length || 0,
           plannedPayments: data.plannedPayments?.length || 0,
           skippedTransactions: 0,
+          skippedItems: remappedMatchers.skippedItems.map(item => ({
+            id: item.id,
+            reason: item.reason,
+            description: 'Account matcher was omitted from the restored backup.',
+          })),
         },
       };
     } catch (error) {

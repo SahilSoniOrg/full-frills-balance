@@ -81,7 +81,7 @@ export function prepareArchiveAuditLogs(
   );
 }
 
-/** Archive/unarchive immediately — standalone command (not bundled with form save). */
+/** Archive/unarchive immediately — standalone command (not bundled with form save). Archived leaves stay matcher-eligible, so this path does not refresh recognition. */
 export async function applyAccountArchiveChanges(
   workplaceId: WorkplaceId,
   changes: AccountArchiveChanges,

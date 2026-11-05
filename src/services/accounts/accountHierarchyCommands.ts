@@ -1,3 +1,8 @@
+import { matcherEligibilityChanged } from '@/src/services/accounts/accountMatcherEligibility';
+import {
+  withAccountRecognitionRefreshIf,
+  withAccountRecognitionRefreshWhen,
+} from '@/src/services/accounts/accountRecognitionRefresh';
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -351,7 +356,7 @@ export function emitAccountUpdateSideEffects(
  * circular-parent, parent-type, and parent-transaction invariants. Owns account
  * hierarchy mutation, audit, and type-change rebuild policy.
  */
-export async function updateAccount(
+async function updateAccountCore(
   workplaceId: WorkplaceId,
   accountId: AccountId,
   updates: AccountDetailsUpdate,
@@ -378,10 +383,11 @@ export async function updateAccount(
  * Atomic form save for details plus optional hierarchy placement. The account,
  * both sibling lists, metadata, and audits commit in one database batch.
  */
-export async function saveAccount(
+async function saveAccountCore(
   workplaceId: WorkplaceId,
   accountId: AccountId,
   updates: AccountSaveUpdate,
+  invalidate: () => void,
 ): Promise<Account> {
   let sideEffectContext: AccountFieldUpdateContext | undefined;
   let sideEffectUpdates: AccountPersistedFieldUpdate = updates;
@@ -399,6 +405,14 @@ export async function saveAccount(
       : account.parentAccountId || undefined;
     const parentChanged = nextParentId !== (account.parentAccountId || undefined);
     const typeChanged = nextType !== account.accountType;
+    if (
+      matcherEligibilityChanged({
+        ...(parentChanged ? { parentAccountId: nextParentId ?? null } : {}),
+        ...(typeChanged ? { accountType: nextType } : {}),
+      })
+    ) {
+      invalidate();
+    }
 
     if (typeChanged && snapshot.getChildren(accountId).length > 0) {
       throw new Error('Cannot change category or type of an account that has sub-accounts.');
@@ -559,10 +573,11 @@ export interface AccountBulkUpdate {
 }
 
 /** Persist one or more structural moves as one atomic tree mutation. */
-export async function moveAccounts(
+async function moveAccountsCore(
   workplaceId: WorkplaceId,
   accountIds: readonly AccountId[],
   destination: { parentId: AccountId | null; siblingIndex: number },
+  invalidate: () => void,
 ): Promise<AccountTreeMoveReceipt> {
   if (!Number.isInteger(destination.siblingIndex) || destination.siblingIndex < 0) {
     throw new Error('Invalid sibling position');
@@ -615,6 +630,15 @@ export async function moveAccounts(
     for (const [changedAccountId, updates] of changes) {
       const changedAccount = accountsById.get(changedAccountId);
       if (!changedAccount) throw new Error('Account not found');
+      if (
+        matcherEligibilityChanged(
+          (changedAccount.parentAccountId || undefined) !== updates.parentAccountId
+            ? { parentAccountId: updates.parentAccountId ?? null }
+            : {},
+        )
+      ) {
+        invalidate();
+      }
       for (const parentAccountId of [
         changedAccount.parentAccountId || undefined,
         updates.parentAccountId,
@@ -696,10 +720,11 @@ export async function moveAccount(
  * inside the transaction so an edit made on stale hierarchy data cannot partially
  * overwrite a newer tree.
  */
-export async function saveAccountTreeDraft(
+async function saveAccountTreeDraftCore(
   workplaceId: WorkplaceId,
   baseline: readonly AccountTreeRowState[],
   placements: ReadonlyMap<AccountId, AccountTreePlacement>,
+  invalidate: () => void,
 ): Promise<void> {
   if (placements.size === 0) return;
 
@@ -770,6 +795,15 @@ export async function saveAccountTreeDraft(
       ) {
         continue;
       }
+      if (
+        matcherEligibilityChanged(
+          current.parentAccountId !== placement.parentAccountId
+            ? { parentAccountId: placement.parentAccountId ?? null }
+            : {},
+        )
+      ) {
+        invalidate();
+      }
       changedAccounts.push(account);
     }
 
@@ -789,9 +823,10 @@ export async function saveAccountTreeDraft(
 }
 
 /** Restore a move only when the affected rows still match its receipt. */
-export async function restoreAccountTreeMove(
+async function restoreAccountTreeMoveCore(
   workplaceId: WorkplaceId,
   receipt: AccountTreeMoveReceipt,
+  invalidate: () => void,
 ): Promise<void> {
   if (receipt.workplaceId !== workplaceId) {
     throw new Error('Account tree receipt belongs to a different workplace');
@@ -827,6 +862,15 @@ export async function restoreAccountTreeMove(
     const beforeTargets = receipt.before.map(target => {
       const account = accountsById.get(target.accountId);
       if (!account) throw new Error('Account tree changed; undo is no longer available');
+      if (
+        matcherEligibilityChanged(
+          (account.parentAccountId || undefined) !== target.parentAccountId
+            ? { parentAccountId: target.parentAccountId ?? null }
+            : {},
+        )
+      ) {
+        invalidate();
+      }
       return { account, target };
     });
 
@@ -853,7 +897,7 @@ export async function restoreAccountTreeMove(
  * Callers use this for bulk UI actions so a failed validation cannot leave a
  * selection half-updated.
  */
-export async function updateAccounts(
+async function updateAccountsCore(
   workplaceId: WorkplaceId,
   requests: AccountBulkUpdate[],
 ): Promise<Account[]> {
@@ -922,3 +966,54 @@ export async function updateAccounts(
 
   return planned.map(({ context }) => context.account);
 }
+
+export const updateAccount = (...args: Parameters<typeof updateAccountCore>) =>
+  withAccountRecognitionRefreshIf(args[0], matcherEligibilityChanged(args[2]), () =>
+    updateAccountCore(...args),
+  );
+
+export function saveAccount(
+  workplaceId: WorkplaceId,
+  accountId: AccountId,
+  updates: AccountSaveUpdate,
+): Promise<Account> {
+  return withAccountRecognitionRefreshWhen(workplaceId, invalidate =>
+    saveAccountCore(workplaceId, accountId, updates, invalidate),
+  );
+}
+
+export function moveAccounts(
+  workplaceId: WorkplaceId,
+  accountIds: readonly AccountId[],
+  destination: { parentId: AccountId | null; siblingIndex: number },
+): Promise<AccountTreeMoveReceipt> {
+  return withAccountRecognitionRefreshWhen(workplaceId, invalidate =>
+    moveAccountsCore(workplaceId, accountIds, destination, invalidate),
+  );
+}
+
+export function saveAccountTreeDraft(
+  workplaceId: WorkplaceId,
+  baseline: readonly AccountTreeRowState[],
+  placements: ReadonlyMap<AccountId, AccountTreePlacement>,
+): Promise<void> {
+  return withAccountRecognitionRefreshWhen(workplaceId, invalidate =>
+    saveAccountTreeDraftCore(workplaceId, baseline, placements, invalidate),
+  );
+}
+
+export function restoreAccountTreeMove(
+  workplaceId: WorkplaceId,
+  receipt: AccountTreeMoveReceipt,
+): Promise<void> {
+  return withAccountRecognitionRefreshWhen(workplaceId, invalidate =>
+    restoreAccountTreeMoveCore(workplaceId, receipt, invalidate),
+  );
+}
+
+export const updateAccounts = (...args: Parameters<typeof updateAccountsCore>) =>
+  withAccountRecognitionRefreshIf(
+    args[0],
+    args[1].some(request => matcherEligibilityChanged(request.updates)),
+    () => updateAccountsCore(...args),
+  );
