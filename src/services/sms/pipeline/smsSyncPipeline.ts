@@ -1,7 +1,4 @@
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import { accountQueryRepository } from '@/src/data/repositories/account';
-import type TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
@@ -16,21 +13,19 @@ import {
   findReferenceDuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
-import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import { preferences } from '@/src/services/preferences';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import {
   computeSmsFingerprint,
   isStoredRedelivery,
   redeliveryFingerprintCandidates,
-  resolveProcessingStatus,
 } from './smsFingerprint';
 import { processScanBatchItem, prepareUpsertInboxRecord } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult, SmsContentReservation } from './types';
 import type { SmsScanOrigin } from '@/src/types/smsInbox';
+import { withRecognitionWrite } from '../refreshSmsRecognition';
+import { loadSmsDecisionContext } from './smsDecisionContext';
 
 export interface SmsScanOptions {
   origin?: SmsScanOrigin;
@@ -116,24 +111,6 @@ export class SmsSyncPipeline {
     return this.processMessages(workplaceId, messages, signal, options.origin ?? 'manual');
   }
 
-  private async resolveRuleSourceCurrencies(
-    workplaceId: WorkplaceId,
-    activeRules: readonly TransactionAutoPostRule[],
-  ): Promise<(sourceAccountId: AccountId) => string | undefined> {
-    const sourceAccountIds = [
-      ...new Set(
-        activeRules
-          .map(rule => smsRuleEngine.getRuleDefinition(rule).actions.sourceAccountId)
-          .filter((id): id is AccountId => !!id),
-      ),
-    ];
-    const sourceAccounts = await accountQueryRepository.findAllByIds(workplaceId, sourceAccountIds);
-    const currencyByAccountId = new Map(
-      sourceAccounts.map(account => [account.id, account.currencyCode]),
-    );
-    return sourceAccountId => currencyByAccountId.get(sourceAccountId);
-  }
-
   private async processMessages(
     workplaceId: WorkplaceId,
     messages: readonly SmsMessage[],
@@ -145,18 +122,6 @@ export class SmsSyncPipeline {
       return 0;
     }
 
-    const activeRules = (
-      await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
-    ).sort((a, b) => smsRuleEngine.getRulePriority(b) - smsRuleEngine.getRulePriority(a));
-    const sourceAccountCurrency = await this.resolveRuleSourceCurrencies(workplaceId, activeRules);
-
-    const processedIds = new Set<string>();
-    const existing = await transactionInboxRepository.findByDeviceSourceIds(
-      workplaceId,
-      messages.map(message => message.id),
-    );
-    const existingMap = new Map(existing.map(record => [record.deviceSourceId, record]));
-
     const parsedMessages = await Promise.all(
       messages.map(async msg => {
         const parsed = await SmsParser.parse(msg);
@@ -164,8 +129,6 @@ export class SmsSyncPipeline {
         return { message: msg, parsed, fingerprint };
       }),
     );
-
-    const messageIds = messages.map(m => m.id);
 
     const referenceNumbers = Array.from(
       new Set(
@@ -176,11 +139,10 @@ export class SmsSyncPipeline {
       ),
     );
 
-    const [journalsById, redeliveredJournals, journalsByReference] = await Promise.all([
-      smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-      findRedeliveredJournals(parsedMessages, workplaceId),
-      smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
-    ]);
+    const journalsByReference = await smsJournalQueries.findJournalsByReferenceNumbers(
+      referenceNumbers,
+      workplaceId,
+    );
 
     const parsedWithAmounts = parsedMessages.filter(
       m => m.parsed.parseStatus === InboxParseStatus.PARSED && m.parsed.amount,
@@ -194,89 +156,20 @@ export class SmsSyncPipeline {
       item => item.parsed.parseStatus !== InboxParseStatus.IGNORED,
     );
 
-    const analysisResults: SmsAnalysisResult[] = await Promise.all(
-      candidateMessages.map(async ({ message, parsed, fingerprint }) => {
-        const existingRecord =
-          existingMap.get(message.id) ??
-          (await transactionInboxRepository.findMatchingSms(
-            workplaceId,
-            prepareUpsertInboxRecord(
-              message,
-              parsed,
-              fingerprint,
-              null,
-              InboxProcessingStatus.PENDING,
-              workplaceId,
-            ),
-          ));
+    const analysisResults: SmsAnalysisResult[] = candidateMessages.map(
+      ({ message, parsed, fingerprint }) => {
         const referenceDuplicate = findReferenceDuplicateMatch(parsed, journalsByReference);
         const duplicate = coalesceActionableDuplicate(
           referenceDuplicate,
           allCandidateJournals.get(message.id) || null,
         );
-        const exactJournal = journalsById.get(message.id) || null;
-        const fingerprintJournal = exactJournal
-          ? null
-          : redeliveredJournals.get(message.id) || null;
-
-        const nextStatus = resolveProcessingStatus({
-          parsed,
-          processedIds,
-          exactJournalId: exactJournal?.id || fingerprintJournal?.id,
-          duplicate,
-          existingStatus: existingRecord?.processingStatus,
-        });
-
-        let autoPost: SmsAnalysisResult['autoPost'] = undefined;
-        let reviewRule: SmsAnalysisResult['reviewRule'] = undefined;
-        let finalStatus = nextStatus;
-        const finalJournalId = exactJournal?.id || fingerprintJournal?.id || undefined;
-
-        if (
-          parsed.parseStatus === InboxParseStatus.PARSED &&
-          nextStatus === InboxProcessingStatus.PENDING
-        ) {
-          const ruleResult = await analyzeAutoPost(
-            message,
-            parsed,
-            activeRules,
-            sourceAccountCurrency,
-            preferences.device.isSmsAutoPostEnabled && !existingRecord?.consumedWorkplaces?.length,
-          );
-          if (ruleResult) {
-            if (ruleResult.disposition === 'ignore') {
-              finalStatus = InboxProcessingStatus.DISMISSED;
-            } else if (ruleResult.disposition === 'review') {
-              reviewRule = {
-                sourceAccountId: ruleResult.sourceAccountId,
-                categoryAccountId: ruleResult.categoryAccountId,
-              };
-            } else if (ruleResult.disposition === 'auto_post' && ruleResult.createData) {
-              reviewRule = {
-                sourceAccountId: ruleResult.sourceAccountId,
-                categoryAccountId: ruleResult.categoryAccountId,
-              };
-              autoPost = {
-                ruleId: ruleResult.ruleId,
-                journalData: ruleResult.createData.journalData,
-              };
-              finalStatus = InboxProcessingStatus.AUTO_POSTED;
-            }
-          }
-        }
-
         return {
           message,
           parsed,
           fingerprint,
-          existingRecord,
           duplicate,
-          exactJournalId: finalJournalId,
-          finalStatus,
-          autoPost,
-          reviewRule,
         };
-      }),
+      },
     );
 
     let importedCount = 0;
@@ -293,84 +186,102 @@ export class SmsSyncPipeline {
       let journalResults: JournalPersistenceResult[] = [];
       let committed = false;
       try {
-        journalResults = await runAccountingWriteSession(async session => {
-          const [latestRecords, latestJournalsById, latestRedeliveredJournals, latestByReference] =
-            await Promise.all([
+        // Acquire the recognition lock before the database writer and hold it through
+        // the batch commit, so a refresh cannot project pre-commit inbox state.
+        journalResults = await withRecognitionWrite(workplaceId, () =>
+          runAccountingWriteSession(async session => {
+            // Decide once inside the serialized writer, using the current rules, matchers,
+            // disposition, and duplicate state for both review hints and auto-posting.
+            const [
+              decisionContext,
+              latestRecords,
+              latestJournalsById,
+              latestRedeliveredJournals,
+              latestByReference,
+            ] = await Promise.all([
+              loadSmsDecisionContext(workplaceId),
               transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
               smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
               findRedeliveredJournals(analysisResults, workplaceId),
               smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
             ]);
-          const latestRecordsByMessageId = new Map(
-            latestRecords.map(record => [record.deviceSourceId, record]),
-          );
-          for (const result of analysisResults) {
-            if (signal?.aborted) throw new SmsScanCancelledError();
-            if (reservedDeviceIds.has(result.message.id)) continue;
-            const latestRecord =
-              latestRecordsByMessageId.get(result.message.id) ??
-              (await transactionInboxRepository.findMatchingSms(
-                workplaceId,
-                prepareUpsertInboxRecord(
-                  result.message,
-                  result.parsed,
-                  result.fingerprint,
-                  null,
-                  InboxProcessingStatus.PENDING,
-                  workplaceId,
-                ),
-              ));
-            const latestJournal =
-              latestJournalsById.get(result.message.id) ??
-              latestRedeliveredJournals.get(result.message.id) ??
-              null;
-            const referenceJournal = result.parsed.referenceNumber
-              ? latestByReference.get(normalizeSmsReferenceNumber(result.parsed.referenceNumber))
-              : undefined;
-            const latestReferenceDuplicate = referenceJournal
-              ? findReferenceDuplicateMatch(
-                  result.parsed,
-                  new Map([
-                    [normalizeSmsReferenceNumber(result.parsed.referenceNumber!), referenceJournal],
-                  ]),
-                )
-              : null;
-
-            const item = await processScanBatchItem({
-              session,
-              result,
-              latestRecord,
-              latestJournal,
-              latestReferenceDuplicate,
-              latestProcessedIds,
-              reservedDeviceIds,
-              reservedContents,
-              reservedReferences,
-              workplaceId,
-              triggeredRuleIds,
-            });
-            await transactionInboxRepository.stageUpsertInSession(
-              session,
-              item.inboxRecord,
-              latestRecord,
-              { correlationId: item.auditCorrelationId },
-              {
-                origin,
-                source: { senderAddress: result.message.address, rawBody: result.message.body },
-                queueReview:
-                  (origin === 'arrival' || origin === 'catch_up') &&
-                  [InboxProcessingStatus.PENDING, InboxProcessingStatus.PARSE_FAILED].includes(
-                    item.inboxRecord.processingStatus,
-                  ),
-                reviewRule: result.reviewRule,
-              },
+            const latestRecordsByMessageId = new Map(
+              latestRecords.map(record => [record.deviceSourceId, record]),
             );
-            if (item.autoPosted) stagedImportedCount += 1;
-            if (item.journalResult) journalResults.push(item.journalResult);
-          }
-          if (signal?.aborted) throw new SmsScanCancelledError();
-          return journalResults;
-        });
+            for (const result of analysisResults) {
+              if (signal?.aborted) throw new SmsScanCancelledError();
+              if (reservedDeviceIds.has(result.message.id)) continue;
+              const latestRecord =
+                latestRecordsByMessageId.get(result.message.id) ??
+                (await transactionInboxRepository.findMatchingSms(
+                  workplaceId,
+                  prepareUpsertInboxRecord(
+                    result.message,
+                    result.parsed,
+                    result.fingerprint,
+                    null,
+                    InboxProcessingStatus.PENDING,
+                    workplaceId,
+                  ),
+                ));
+              const latestJournal =
+                latestJournalsById.get(result.message.id) ??
+                latestRedeliveredJournals.get(result.message.id) ??
+                null;
+              const referenceJournal = result.parsed.referenceNumber
+                ? latestByReference.get(normalizeSmsReferenceNumber(result.parsed.referenceNumber))
+                : undefined;
+              const latestReferenceDuplicate = referenceJournal
+                ? findReferenceDuplicateMatch(
+                    result.parsed,
+                    new Map([
+                      [
+                        normalizeSmsReferenceNumber(result.parsed.referenceNumber!),
+                        referenceJournal,
+                      ],
+                    ]),
+                  )
+                : null;
+
+              const item = await processScanBatchItem({
+                session,
+                result,
+                decisionContext,
+                latestRecord,
+                latestJournal,
+                latestReferenceDuplicate,
+                latestProcessedIds,
+                reservedDeviceIds,
+                reservedContents,
+                reservedReferences,
+                workplaceId,
+                triggeredRuleIds,
+              });
+              await transactionInboxRepository.stageUpsertInSession(
+                session,
+                item.inboxRecord,
+                latestRecord,
+                { correlationId: item.auditCorrelationId },
+                {
+                  origin,
+                  source: { senderAddress: result.message.address, rawBody: result.message.body },
+                  queueReview:
+                    (origin === 'arrival' || origin === 'catch_up') &&
+                    [InboxProcessingStatus.PENDING, InboxProcessingStatus.PARSE_FAILED].includes(
+                      item.inboxRecord.processingStatus,
+                    ),
+                  reviewRule:
+                    item.decision.kind === 'ignore' ? undefined : item.decision.suggestedAccounts,
+                  recognition: item.decision.recognition,
+                },
+              );
+              if (item.autoPosted) stagedImportedCount += 1;
+              if (item.journalResult) journalResults.push(item.journalResult);
+            }
+            if (signal?.aborted) throw new SmsScanCancelledError();
+            return journalResults;
+          }),
+        );
         committed = true;
       } catch (error) {
         if (!(error instanceof SmsScanCancelledError)) throw error;

@@ -8,6 +8,9 @@ import { date, field, readonly } from '@nozbe/watermelondb/decorators';
 
 export default class TransactionInboxRecord extends BaseScopedModel {
   static table = 'transaction_inbox_records';
+  static associations = {
+    journals: { type: 'belongs_to', key: 'linked_journal_id' },
+  } as const;
 
   @field('channel') channel!: TransactionChannel;
   @field('device_source_id') deviceSourceId!: string;
@@ -58,6 +61,7 @@ export function toPlainInboxRecord(record: InboxRecordSnapshot): PlainInboxRecor
     duplicateConfidence: record.duplicateConfidence,
     parseConfidence: record.parseConfidence,
     parseReason: record.parseReason,
+    recognition: record.recognition,
     metadataJson: record.metadataJson,
     consumedWorkplaces: record.consumedWorkplaces,
   };

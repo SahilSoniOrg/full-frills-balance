@@ -70,6 +70,10 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
+jest.mock('@/src/services/accounts/accountMatcherContext', () => ({
+  loadAccountMatcherContext: jest.fn().mockResolvedValue({ matchers: [], eligibleAccountIds: [] }),
+}));
+
 jest.mock('@/src/data/repositories/account', () => ({
   ...jest.requireActual('@/src/data/repositories/account'),
   accountQueryRepository: {
@@ -286,13 +290,9 @@ describe('SmsService Batching', () => {
         return existingRecord;
       }),
     };
-    const initialFetch = jest.fn().mockResolvedValue([]);
-    const finalFetch = jest.fn().mockResolvedValue([existingRecord]);
+    const inWriterFetch = jest.fn().mockResolvedValue([existingRecord]);
     const mockInboxCollection = {
-      query: jest
-        .fn()
-        .mockReturnValueOnce({ fetch: initialFetch })
-        .mockReturnValue({ fetch: finalFetch }),
+      query: jest.fn().mockReturnValue({ fetch: inWriterFetch }),
       prepareCreate: jest.fn(),
     };
     const mockRulesCollection = {
@@ -321,7 +321,8 @@ describe('SmsService Batching', () => {
     await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
 
     expect(database.write).toHaveBeenCalledTimes(1);
-    expect(finalFetch).toHaveBeenCalledTimes(2);
+    // Both reads happen inside the writer: the scoped inbox lookup, then the stage re-read.
+    expect(inWriterFetch).toHaveBeenCalledTimes(2);
     expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
     expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
     expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);

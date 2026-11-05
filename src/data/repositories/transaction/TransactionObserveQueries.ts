@@ -8,6 +8,8 @@ import {
   defer,
   distinctUntilChanged,
   finalize,
+  filter,
+  startWith,
   map,
   shareReplay,
   switchMap,
@@ -118,6 +120,15 @@ export class TransactionObserveQueries {
 
   observeActiveWithColumns(workplaceId: WorkplaceId, columns: string[]): Observable<Transaction[]> {
     return this.transactions.query(...buildActiveClauses(workplaceId)).observeWithColumns(columns);
+  }
+
+  /** Observe invalidations without fetching all historical transaction models. */
+  observeMatcherDiscoveryChanges(workplaceId: WorkplaceId): Observable<void> {
+    return this.transactions.changes.pipe(
+      filter(changes => changes.some(({ record }) => record.workplaceId === workplaceId)),
+      map(() => undefined),
+      startWith(undefined),
+    );
   }
 
   observeByAccountDateRange(

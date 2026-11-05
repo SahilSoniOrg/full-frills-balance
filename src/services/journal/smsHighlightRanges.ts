@@ -1,4 +1,4 @@
-export type SmsHighlightKind = 'amount' | 'account' | 'merchant' | 'reference';
+export type SmsHighlightKind = 'amount' | 'account' | 'merchant' | 'reference' | 'date';
 export interface SmsHighlightRange {
   start: number;
   end: number;
@@ -8,7 +8,13 @@ export interface SmsHighlightRange {
 /** Match extracted values only; identifier ranges take precedence over numeric matches. */
 export function findSmsHighlightRanges(
   rawBody: string,
-  values: { amount?: number; accountHint?: string; merchant?: string; reference?: string },
+  values: {
+    amount?: number;
+    accountHint?: string;
+    merchant?: string;
+    reference?: string;
+    date?: string | readonly string[];
+  },
 ): SmsHighlightRange[] {
   const ranges: SmsHighlightRange[] = [];
   const add = (start: number, end: number, kind: SmsHighlightKind) => {
@@ -28,6 +34,13 @@ export function findSmsHighlightRanges(
     while (start >= 0) {
       add(start, start + value.length, kind);
       start = body.indexOf(needle, start + value.length);
+    }
+  }
+  for (const value of Array.isArray(values.date) ? values.date : values.date ? [values.date] : []) {
+    let start = rawBody.indexOf(value);
+    while (value && start >= 0) {
+      add(start, start + value.length, 'date');
+      start = rawBody.indexOf(value, start + value.length);
     }
   }
   if (values.amount !== undefined && Number.isFinite(values.amount)) {

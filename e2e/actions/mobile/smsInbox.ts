@@ -1,4 +1,4 @@
-import { element, by, waitFor } from 'detox';
+import { element, by, expect, waitFor } from 'detox';
 import { smsInbox } from '../../screens';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { assertVisibleById, assertTextVisible } from '../assertions';
@@ -23,6 +23,10 @@ export async function waitForInboxItem(deviceSourceId: string): Promise<void> {
   await waitFor(element(by.id(smsInbox.item(deviceSourceId))))
     .toExist()
     .withTimeout(LONG_TIMEOUT_MS);
+}
+
+export async function assertInboxItemMissing(deviceSourceId: string): Promise<void> {
+  await expect(element(by.id(smsInbox.item(deviceSourceId)))).not.toExist();
 }
 
 export async function tapCompareDuplicate(deviceSourceId: string): Promise<void> {

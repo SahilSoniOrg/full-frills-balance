@@ -4,6 +4,7 @@ import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src
 type InboxRecordPersistedFields = Omit<
   InboxRecordSnapshot,
   | 'id'
+  | 'contentDigest'
   | 'deviceInboxId'
   | 'consumedWorkplaces'
   | 'suggestedSourceAccountId'
@@ -17,8 +18,8 @@ function inboxPersistedFields(
     workplaceId: source.workplaceId,
     channel: source.channel,
     deviceSourceId: source.deviceSourceId,
-    senderAddress: source.senderAddress,
-    rawBody: source.rawBody,
+    senderAddress: source.senderAddress ?? undefined,
+    rawBody: source.rawBody ?? undefined,
     inputDate: source.inputDate,
     inputFingerprint: source.inputFingerprint,
     parseStatus: source.parseStatus,

@@ -1,14 +1,21 @@
 import { AppConfig } from '@/src/constants';
-import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
+import { AccountType, InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
+import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
+import { createAccount } from '@/src/services/accounts/accountCommands';
+import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
+import * as recognitionRefresh from '@/src/services/sms/refreshSmsRecognition';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { preferences } from '@/src/services/preferences';
 import Journal from '@/src/data/models/Journal';
 import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import type { AccountMatcherFlow } from '@/src/types/accountMatcher';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
 import { storage } from '@/src/utils/storage';
@@ -875,6 +882,517 @@ describe('SmsSyncPipeline integration', () => {
         InboxProcessingStatus.PENDING,
       );
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
+    });
+  });
+
+  describe('account matcher runtime integration', () => {
+    const message = (id: string) => smsMessageFromFixture('swiggyNoRef', { id, date: baseDate });
+
+    async function addMatcher(
+      accountId: string,
+      fragments = ['SWIGGY'],
+      flow?: AccountMatcherFlow,
+    ) {
+      return saveAccountMatcher(SMS_TEST_WORKPLACE, {
+        accountId: accountId as AccountId,
+        definition: {
+          version: 1,
+          body: { kind: 'fragments', fragments },
+          ...(flow ? { flow } : {}),
+        },
+      });
+    }
+
+    async function addAutoPostRule(
+      forMessage: ReturnType<typeof smsMessageFromFixture>,
+      sourceAccountId = cashId,
+      categoryAccountId = expenseId,
+      disposition: 'auto_post' | 'review' | 'ignore' = 'auto_post',
+    ) {
+      return transactionAutoPostRuleRepository.save(
+        {
+          mode: 'regex',
+          senderMatch: forMessage.address,
+          actions: {
+            disposition,
+            ...(disposition === 'ignore'
+              ? {}
+              : {
+                  sourceAccountId: sourceAccountId as AccountId,
+                  categoryAccountId: categoryAccountId as AccountId,
+                }),
+          },
+          isActive: true,
+        },
+        SMS_TEST_WORKPLACE,
+      );
+    }
+
+    it('suggests one recognized account with no applicable rule', async () => {
+      const sms = message('recognition-no-rule');
+      await addMatcher(cashId);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(inbox?.recognition).toMatchObject({
+        status: 'recognized',
+        accountIds: [cashId],
+      });
+    });
+
+    it.each([
+      ['outgoing', InboxProcessingStatus.AUTO_POSTED],
+      ['incoming', InboxProcessingStatus.PENDING],
+    ] as const)('checks the source account flow %s before auto-posting', async (flow, expected) => {
+      const sms = message(`recognition-flow-${flow}`);
+      await addMatcher(cashId, ['SWIGGY'], flow);
+      await addAutoPostRule(sms);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(expected);
+      if (flow === 'incoming') {
+        expect(inbox?.recognition?.hold).toBe('contradictory');
+        expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+        expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
+        expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
+      }
+    });
+
+    it('prefills declared transfer legs without authorizing automatic posting', async () => {
+      const sms = message('recognition-flow-transfer-no-rule');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(cashId, ['SWIGGY'], 'outgoing');
+      await addMatcher(savings.id, ['SWIGGY'], 'incoming');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(inbox?.suggestedCategoryAccountId).toBe(savings.id);
+      expect(inbox?.recognition?.flows).toEqual(
+        expect.arrayContaining([
+          { accountId: cashId, flow: 'outgoing' },
+          { accountId: savings.id, flow: 'incoming' },
+        ]),
+      );
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
+    });
+
+    it('leaves conflicting declared roles for review without preselecting either', async () => {
+      const sms = message('recognition-flow-conflict');
+      await addMatcher(cashId, ['SWIGGY'], 'outgoing');
+      await addMatcher(cashId, ['SWIGGY'], 'incoming');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.recognition?.hold).toBe('contradictory');
+      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+      expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
+    });
+
+    it('does not prefill conflicting roles from a review rule', async () => {
+      const sms = message('recognition-flow-conflict-review-rule');
+      await addMatcher(cashId, ['SWIGGY'], 'incoming');
+      await addAutoPostRule(sms, cashId, expenseId, 'review');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.recognition?.hold).toBe('contradictory');
+      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+      expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
+    });
+
+    it('preserves ignore rules even when declared roles conflict', async () => {
+      const sms = message('recognition-flow-conflict-ignore');
+      await addMatcher(cashId, ['SWIGGY'], 'incoming');
+      await addMatcher(cashId, ['SWIGGY'], 'outgoing');
+      await addAutoPostRule(sms, cashId, expenseId, 'ignore');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
+        InboxProcessingStatus.DISMISSED,
+      );
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
+    });
+
+    it('does not preselect among multiple recognized accounts when no rule applies', async () => {
+      const sms = message('recognition-no-rule-ambiguous');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(cashId);
+      await addMatcher(savings.id);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+      expect(inbox?.recognition?.accountIds).toEqual(expect.arrayContaining([cashId, savings.id]));
+    });
+
+    it('does not suggest an account when recognition is indeterminate and no rule applies', async () => {
+      const sms = message('recognition-indeterminate-no-rule');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await database.write(async () => {
+        await database.batch(
+          accountMatcherRepository.prepareCreate(SMS_TEST_WORKPLACE, {
+            accountId: savings.id,
+            definition: { version: 1, body: { kind: 'regex', pattern: '(' } },
+            conditionsKey: 'broken-regex-no-rule',
+            isEnabled: true,
+            provenance: 'manual',
+          }),
+        );
+      });
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+      expect(inbox?.recognition?.status).toBe('indeterminate');
+      expect(inbox?.recognition?.hold).toBeUndefined();
+    });
+
+    it('keeps an ignore rule ignored when a matcher recognizes an account', async () => {
+      const sms = message('recognition-ignore');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(savings.id);
+      await addAutoPostRule(sms, cashId, expenseId, 'ignore');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
+      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
+      expect(inbox?.recognition?.hold).toBeUndefined();
+    });
+
+    it('keeps a review rule in review and attaches recognition', async () => {
+      const sms = message('recognition-review');
+      await addMatcher(cashId);
+      await addAutoPostRule(sms, cashId, expenseId, 'review');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(inbox?.recognition?.status).toBe('recognized');
+    });
+
+    it('keeps review-rule suggestions visible alongside conflicting recognized candidates', async () => {
+      const sms = message('recognition-review-conflict');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(savings.id);
+      await addAutoPostRule(sms, cashId, expenseId, 'review');
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
+      expect(inbox?.recognition?.hold).toBeUndefined();
+    });
+
+    it('preserves an auto-post rule when no matcher identifies an account', async () => {
+      const sms = message('recognition-no-match');
+      await addAutoPostRule(sms);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(inbox?.recognition).toMatchObject({ status: 'none', accountIds: [] });
+      expect(inbox?.linkedJournalId).toBeTruthy();
+      const transactions = await database
+        .get<Transaction>('transactions')
+        .query(Q.where('journal_id', inbox!.linkedJournalId!))
+        .fetch();
+      expect(transactions.map(row => row.accountId).sort()).toEqual([cashId, expenseId].sort());
+    });
+
+    it('auto-posts a uniquely recognized compatible source account', async () => {
+      const sms = message('recognition-compatible');
+      await addMatcher(cashId);
+      await addAutoPostRule(sms);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+    });
+
+    it.each([
+      ['one contradictory account', ['savings']],
+      ['a mixed compatible and contradictory pair', ['cash', 'savings']],
+    ] as const)(
+      'holds auto-post for %s and keeps rule account suggestions',
+      async (_label, ids) => {
+        const sms = message(`recognition-contradictory-${ids.length}`);
+        const savings = await accountWriteRepository.create({
+          name: 'Savings',
+          accountType: AccountType.ASSET,
+          currencyCode: 'INR',
+          workplaceId: SMS_TEST_WORKPLACE,
+        });
+        for (const id of ids) {
+          await addMatcher(id === 'cash' ? cashId : savings.id);
+        }
+        await addAutoPostRule(sms);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+        const inbox = await fetchInboxByDeviceId(sms.id);
+        expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+        expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+        expect(inbox?.suggestedCategoryAccountId).toBe(expenseId);
+        expect(inbox?.recognition?.hold).toBe('contradictory');
+        expect(
+          await database.collections
+            .get<Journal>('journals')
+            .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+            .fetchCount(),
+        ).toBe(0);
+      },
+    );
+
+    it('holds auto-post when a stored matcher is indeterminate', async () => {
+      const sms = message('recognition-indeterminate');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await database.write(async () => {
+        await database.batch(
+          accountMatcherRepository.prepareCreate(SMS_TEST_WORKPLACE, {
+            accountId: savings.id,
+            definition: { version: 1, body: { kind: 'regex', pattern: '(' } },
+            conditionsKey: 'broken-regex',
+            isEnabled: true,
+            provenance: 'manual',
+          }),
+        );
+      });
+      await addAutoPostRule(sms);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(inbox?.recognition?.hold).toBe('indeterminate');
+    });
+
+    it('auto-posts when a safe regex matcher uniquely recognizes the rule source', async () => {
+      const sms = message('recognition-compatible');
+      await saveAccountMatcher(SMS_TEST_WORKPLACE, {
+        accountId: cashId as AccountId,
+        definition: { version: 1, body: { kind: 'regex', pattern: 'SWIGGY' } },
+      });
+      await addAutoPostRule(sms);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+    });
+
+    it('allows a transfer rule when both financial accounts are recognized', async () => {
+      const sms = message('recognition-transfer-pair');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(savings.id);
+      await addMatcher(cashId);
+      await addAutoPostRule(sms, savings.id, cashId);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(inbox?.recognition?.accountIds).toHaveLength(2);
+    });
+
+    it('allows a transfer rule when only its destination financial account is recognized', async () => {
+      const sms = message('recognition-transfer-destination');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(cashId);
+      await addAutoPostRule(sms, savings.id, cashId);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+
+      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+    });
+
+    it('honors a matcher saved after analysis and before the accounting write', async () => {
+      const sms = message('recognition-saved-before-write');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addAutoPostRule(sms);
+      const original = recognitionRefresh.withRecognitionWrite;
+      const writeSpy = jest
+        .spyOn(recognitionRefresh, 'withRecognitionWrite')
+        .mockImplementation(async (workplaceId, work) => {
+          await addMatcher(savings.id);
+          return original(workplaceId, work);
+        });
+
+      try {
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+      } finally {
+        writeSpy.mockRestore();
+      }
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.recognition?.hold).toBe('contradictory');
+      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(0);
+    });
+
+    it('uses a matcher saved before the writer for review-only messages', async () => {
+      const sms = message('recognition-review-saved-before-write');
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      const original = recognitionRefresh.withRecognitionWrite;
+      const writeSpy = jest
+        .spyOn(recognitionRefresh, 'withRecognitionWrite')
+        .mockImplementation(async (workplaceId, work) => {
+          await addMatcher(savings.id);
+          return original(workplaceId, work);
+        });
+      try {
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+      } finally {
+        writeSpy.mockRestore();
+      }
+
+      const inbox = await fetchInboxByDeviceId(sms.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
+      expect(inbox?.suggestedSourceAccountId).toBe(savings.id);
+    });
+
+    it('refreshes recognition when an owner becomes a parent and a leaf again', async () => {
+      const sms = message('recognition-owner-eligibility');
+      const owner = await accountWriteRepository.create({
+        name: 'Owner',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(owner.id);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+      expect((await fetchInboxByDeviceId(sms.id))?.recognition?.accountIds).toEqual([owner.id]);
+
+      const child = await createAccount(SMS_TEST_WORKPLACE, {
+        name: 'Child',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+        parentAccountId: owner.id,
+      });
+      expect((await fetchInboxByDeviceId(sms.id))?.recognition?.accountIds).toEqual([]);
+
+      await deleteAccount(child.id, SMS_TEST_WORKPLACE);
+      expect((await fetchInboxByDeviceId(sms.id))?.recognition?.accountIds).toEqual([owner.id]);
+    });
+
+    it('refreshes pending recognition without touching processed records, journals, or consumption', async () => {
+      const pending = message('recognition-refresh-pending');
+      const posted = smsMessageFromFixture('swiggyNoRef', {
+        id: 'recognition-refresh-posted',
+        date: baseDate + 1000,
+        address: 'AUTO-BANK',
+      });
+      await addAutoPostRule(posted);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [pending, posted]);
+      const pendingBefore = await fetchInboxByDeviceId(pending.id);
+      const postedBefore = await fetchInboxByDeviceId(posted.id);
+      expect(pendingBefore?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(postedBefore?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+
+      await seedInboxRecord({
+        workplaceId: SMS_TEST_WORKPLACE_B,
+        deviceSourceId: pending.id,
+        processingStatus: InboxProcessingStatus.IMPORTED,
+      });
+      const pendingWithConsumption = await fetchInboxByDeviceId(pending.id);
+      const journalCountBefore = await database.collections
+        .get<Journal>('journals')
+        .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+        .fetchCount();
+
+      const savings = await accountWriteRepository.create({
+        name: 'Savings',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: SMS_TEST_WORKPLACE,
+      });
+      await addMatcher(savings.id, ['debited']);
+
+      const pendingAfter = await fetchInboxByDeviceId(pending.id);
+      const postedAfter = await fetchInboxByDeviceId(posted.id);
+      expect(pendingAfter?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(pendingAfter?.recognition?.accountIds).toEqual([savings.id]);
+      expect(pendingAfter?.suggestedSourceAccountId).toBe(savings.id);
+      expect(pendingAfter?.consumedWorkplaces).toEqual(pendingWithConsumption?.consumedWorkplaces);
+      expect(postedAfter?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(postedAfter?.linkedJournalId).toBe(postedBefore?.linkedJournalId);
+      expect(postedAfter?.recognition?.status).toBe('none');
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(journalCountBefore);
+      expect((await fetchInboxByDeviceId(pending.id, SMS_TEST_WORKPLACE_B))?.processingStatus).toBe(
+        InboxProcessingStatus.IMPORTED,
+      );
     });
   });
 

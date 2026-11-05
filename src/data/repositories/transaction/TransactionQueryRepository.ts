@@ -46,6 +46,16 @@ export class TransactionQueryRepository {
     );
   }
 
+  async findByAccount(workplaceId: WorkplaceId, accountId: AccountId): Promise<Transaction[]> {
+    return this.transactions
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
   /** Results follow requested chunk order; rows within a chunk retain database order. */
   async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Transaction[]> {
     return fetchSequentiallyInChunks(ids, chunk =>

@@ -10,6 +10,11 @@ import {
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics';
 import { smsService, type SmsInboxFilterStatus } from '@/src/services/sms-service';
+import {
+  recognitionRefreshState,
+  refreshSmsRecognitionBestEffort,
+  type RecognitionRefreshState,
+} from '@/src/services/sms/refreshSmsRecognition';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -55,6 +60,15 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const [scanCursor, setScanCursor] = useState<SmsInboxCursor | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScanningOlder, setIsScanningOlder] = useState(false);
+  const [recognitionState, setRecognitionState] = useState<RecognitionRefreshState>(
+    () => recognitionRefreshState(workplaceId).value,
+  );
+  useEffect(() => {
+    const state = recognitionRefreshState(workplaceId);
+    const subscription = state.subscribe(setRecognitionState);
+    if (state.value === 'failed') void refreshSmsRecognitionBestEffort(workplaceId);
+    return () => subscription.unsubscribe();
+  }, [workplaceId]);
 
   const modals = useTransactionInboxModals({
     workplaceId,
@@ -201,7 +215,14 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   return {
     filter,
     setFilter,
-    items,
+    items:
+      recognitionState === 'ready'
+        ? items
+        : items.map(item =>
+            item.channel === 'sms' && item.processingStatus === InboxProcessingStatus.PENDING
+              ? { ...item, recognitionRefreshState: recognitionState }
+              : item,
+          ),
     isLoading,
     isLoadingMore,
     hasMore,

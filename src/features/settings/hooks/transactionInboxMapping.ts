@@ -1,5 +1,6 @@
 import { safeParseJSON } from '@/src/utils/serialization';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionDuplicateCandidate, TransactionInboxItem } from '@/src/types/domainJournal';
@@ -16,6 +17,12 @@ export async function enrichTransactionInboxRecords(
   const journals = await journalQueryRepository.findWithDeletedByIds(
     workplaceId,
     Array.from(journalIds),
+  );
+  const recognizedAccounts = await accountQueryRepository.findAllByIds(workplaceId, [
+    ...new Set(records.flatMap(record => record.recognition?.accountIds ?? [])),
+  ]);
+  const recognizedNamesById = new Map(
+    recognizedAccounts.map(account => [account.id, account.name]),
   );
   const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
@@ -59,6 +66,10 @@ export async function enrichTransactionInboxRecords(
       direction: record.direction,
       parseConfidence: record.parseConfidence,
       parseReason: record.parseReason,
+      recognition: record.recognition,
+      recognizedAccountNames: (record.recognition?.accountIds ?? [])
+        .map(accountId => recognizedNamesById.get(accountId))
+        .filter((name): name is string => Boolean(name)),
       linkedJournal: record.linkedJournalId
         ? {
             journalId: record.linkedJournalId,

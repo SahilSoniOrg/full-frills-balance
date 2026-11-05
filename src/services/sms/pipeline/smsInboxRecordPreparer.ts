@@ -21,6 +21,8 @@ import { logger } from '@/src/utils/logger';
 import { resolveProcessingStatus } from './smsFingerprint';
 import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { SmsAnalysisResult, SmsContentReservation } from './types';
+import { decideSms, type SmsDecision } from './smsDecision';
+import type { SmsDecisionContext } from './smsDecisionContext';
 
 export function prepareUpsertInboxRecord(
   sms: SmsMessage,
@@ -81,6 +83,7 @@ export function prepareUpsertInboxRecord(
 export async function processScanBatchItem(params: {
   session: AccountingWriteSession;
   result: SmsAnalysisResult;
+  decisionContext: SmsDecisionContext;
   latestRecord: InboxRecordSnapshot | null;
   latestJournal: Journal | null;
   latestReferenceDuplicate?: DuplicateMatch;
@@ -95,9 +98,11 @@ export async function processScanBatchItem(params: {
   autoPosted: boolean;
   auditCorrelationId?: string;
   journalResult?: JournalPersistenceResult;
+  decision: SmsDecision;
 }> {
   const {
     result,
+    decisionContext,
     session,
     latestRecord,
     latestJournal,
@@ -166,10 +171,17 @@ export async function processScanBatchItem(params: {
     finalStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
   }
 
-  if (
-    result.finalStatus === InboxProcessingStatus.DISMISSED &&
-    finalStatus === InboxProcessingStatus.PENDING
-  ) {
+  const statusAtDecision = finalStatus;
+  const allowAutoPost =
+    preferences.device.isSmsAutoPostEnabled && !latestRecord?.consumedWorkplaces?.length;
+  const decision = decideSms(
+    result.message,
+    result.parsed,
+    decisionContext,
+    statusAtDecision,
+    allowAutoPost,
+  );
+  if (decision.kind === 'ignore' && statusAtDecision === InboxProcessingStatus.PENDING) {
     finalStatus = InboxProcessingStatus.DISMISSED;
   }
 
@@ -177,18 +189,12 @@ export async function processScanBatchItem(params: {
   let auditCorrelationId: string | undefined;
   let journalResult: JournalPersistenceResult | undefined;
 
-  if (
-    result.autoPost &&
-    preferences.device.isSmsAutoPostEnabled &&
-    !latestRecord?.consumedWorkplaces?.length &&
-    !linkedJournalId &&
-    finalStatus === InboxProcessingStatus.PENDING
-  ) {
+  if (decision.kind === 'post' && !linkedJournalId && finalStatus === statusAtDecision) {
     try {
       auditCorrelationId = generator();
       journalResult = await journalPersistenceService.putInSession(
         session,
-        result.autoPost.journalData,
+        decision.journalData,
         workplaceId,
         {
           eventType: 'journal.sms_auto_posted',
@@ -207,10 +213,10 @@ export async function processScanBatchItem(params: {
       if (referenceReservationKey) {
         reservedReferences.set(referenceReservationKey, linkedJournalId);
       }
-      triggeredRuleIds.push(result.autoPost.ruleId);
+      triggeredRuleIds.push(decision.ruleId);
     } catch (error) {
       auditCorrelationId = undefined;
-      logger.warn(`SMS auto-post rule ${result.autoPost.ruleId} failed persistence validation`, {
+      logger.warn(`SMS auto-post rule ${decision.ruleId} failed persistence validation`, {
         error,
       });
     }
@@ -226,5 +232,5 @@ export async function processScanBatchItem(params: {
     linkedJournalId,
     effectiveDuplicate || undefined,
   );
-  return { inboxRecord, autoPosted, auditCorrelationId, journalResult };
+  return { inboxRecord, autoPosted, auditCorrelationId, journalResult, decision };
 }

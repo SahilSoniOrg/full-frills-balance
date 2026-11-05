@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import AuditLog from '@/src/data/models/AuditLog';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -13,6 +14,50 @@ const repository = new SmsPrivacyRepository();
 describe('SmsPrivacyRepository integration', () => {
   beforeEach(async () => {
     await resetDatabase();
+  });
+
+  it('keeps compact account recognition intact while hashing Device SMS fingerprints', async () => {
+    const recognition = {
+      status: 'recognized',
+      accountIds: ['account-recognized'],
+      matcherIds: ['matcher-recognized'],
+      hold: 'contradictory',
+    } as const;
+    await database.write(async () => {
+      const inbox = database.collections.get<DeviceSmsInboxRecord>('device_sms_inbox_records');
+      await inbox.create(record => {
+        record._raw.id = 'device-recognition';
+        record.deviceSourceId = 'sms-recognition';
+        record.senderAddress = 'PrivateBank';
+        record.rawBody = 'Private text stays on device';
+        record.inputDate = 1_700_000_000_000;
+        record.inputFingerprint = 'privatebank::private text::19675';
+        record.parseStatus = InboxParseStatus.PARSED;
+        record.direction = TransactionDirection.DEBIT;
+        record.reviewStatesJson = JSON.stringify({
+          [WORKPLACE]: {
+            processingStatus: InboxProcessingStatus.PENDING,
+            recognition,
+            sourceAccountId: 'account-recognized',
+          },
+        });
+        record.notificationState = 'none';
+        record.notificationOrigin = 'manual';
+        record.firstSeenAt = 1_700_000_000_000;
+        record.lastScannedAt = 1_700_000_000_000;
+      });
+    });
+
+    await repository.sanitizeLegacySmsData();
+
+    const device = await database
+      .get<DeviceSmsInboxRecord>('device_sms_inbox_records')
+      .find('device-recognition');
+    expect(device.inputFingerprint).toBe(
+      hashLegacySmsFingerprint('privatebank::private text::19675'),
+    );
+    expect(JSON.parse(device.reviewStatesJson)[WORKPLACE].recognition).toEqual(recognition);
+    expect(device.rawBody).toBe('Private text stays on device');
   });
 
   it('retains SMS sources and journal metadata, hashes old identities, sanitizes audits, and is idempotent', async () => {

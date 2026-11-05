@@ -11,7 +11,7 @@ import {
 } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useState } from 'react';
-import { Opacity, Spacing } from '@/src/constants';
+import { Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -21,6 +21,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { inboxProcessingStatusLabel } from './inboxProcessingStatusLabel';
 import { StyleSheet, View } from 'react-native';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
 
 interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
@@ -51,6 +53,7 @@ export function TransactionInboxItemCardView({
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const privateMode = useEffectivePrivacyMode();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const channelIcon = item.channel === 'voice' ? Icon.Mic : Icon.MessageSquare;
@@ -212,6 +215,39 @@ export function TransactionInboxItemCardView({
         )}
       </View>
 
+      {item.recognitionRefreshState ? (
+        <AppText variant="caption" color="secondary">
+          {item.recognitionRefreshState === 'updating'
+            ? 'Updating account recognition…'
+            : 'Account recognition could not be updated.'}
+        </AppText>
+      ) : !privateMode && (item.recognition?.hold || !!item.recognizedAccountNames?.length) ? (
+        <View
+          style={styles.recognitionNote}
+          accessibilityRole={item.recognition?.hold ? 'alert' : undefined}
+        >
+          <AppIcon
+            name={item.recognition?.hold ? Icon.Alert : Icon.Check}
+            size={Size.iconXs}
+            color={item.recognition?.hold ? theme.warning : theme.textSecondary}
+          />
+          <View style={styles.recognitionText}>
+            {item.recognition?.hold ? (
+              <AppText variant="bodySmall" weight="medium">
+                {item.recognition.hold === 'contradictory'
+                  ? accountMatcherStrings.recognitionConflict
+                  : "Couldn't check the account"}
+              </AppText>
+            ) : null}
+            {item.recognizedAccountNames?.length ? (
+              <AppText variant="caption" color="secondary">
+                Recognized: {item.recognizedAccountNames.join(', ')}
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
       {!!item.consumedWorkplaces?.length && (
         <AppText variant="caption" color="secondary">
           Already handled in {item.consumedWorkplaces.map(workplace => workplace.name).join(', ')}
@@ -285,6 +321,13 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
+  recognitionNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  recognitionText: { flex: 1, minWidth: 0, gap: Spacing.xs },
   bodyPreview: {
     marginBottom: Spacing.sm,
   },

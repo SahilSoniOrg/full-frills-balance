@@ -22,6 +22,7 @@ const colors = {
   account: 'asset',
   merchant: 'liability',
   reference: 'primary',
+  date: 'primary',
 } as const;
 
 function SmsMessage({ sms }: { sms: SmsJournalInfoDisplay }) {
@@ -46,6 +47,7 @@ function SmsMessage({ sms }: { sms: SmsJournalInfoDisplay }) {
     account: strings.accountHint,
     merchant: strings.merchant,
     reference: strings.reference,
+    date: strings.date,
   };
   return (
     <Stack space="md">

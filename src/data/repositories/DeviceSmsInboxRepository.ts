@@ -7,19 +7,28 @@ import type {
   SmsScanOrigin,
   SmsWorkplaceReviewState,
 } from '@/src/types/smsInbox';
+import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import { stageModelWrite, type AccountingWriteSession } from './AccountingWriteSession';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import { isSmsRedelivery } from '@/src/utils/smsDeliveryIdentity';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { AppConfig } from '@/src/constants/app-config';
 import { Model, Q } from '@nozbe/watermelondb';
+
+export interface SmsRecognitionReviewUpdate {
+  deviceInboxId: string;
+  recognition: SmsRecognitionSummary;
+  sourceAccountId?: AccountId;
+  categoryAccountId?: AccountId;
+}
 
 export interface DeviceSmsWriteOptions {
   origin: SmsScanOrigin;
   queueReview: boolean;
   source?: Readonly<{ senderAddress: string; rawBody: string }>;
   reviewRule?: Pick<SmsWorkplaceReviewState, 'sourceAccountId' | 'categoryAccountId'>;
+  recognition?: SmsRecognitionSummary;
 }
 
 interface StagedDeviceWrite {
@@ -45,8 +54,9 @@ export function deviceSmsSnapshot(
     workplaceId,
     channel: 'sms',
     deviceSourceId: record.deviceSourceId,
-    senderAddress: record.senderAddress,
-    rawBody: record.rawBody,
+    contentDigest: record.contentDigest,
+    senderAddress: record.senderAddress ?? undefined,
+    rawBody: record.rawBody ?? undefined,
     inputDate: record.inputDate,
     inputFingerprint: record.inputFingerprint,
     parseStatus: record.parseStatus,
@@ -67,6 +77,7 @@ export function deviceSmsSnapshot(
     duplicateConfidence: state?.duplicateConfidence,
     suggestedSourceAccountId: state?.sourceAccountId,
     suggestedCategoryAccountId: state?.categoryAccountId,
+    recognition: state?.recognition,
     metadataJson: state?.metadataJson,
     firstSeenAt: record.firstSeenAt,
     lastScannedAt: record.lastScannedAt,
@@ -101,8 +112,66 @@ export class DeviceSmsInboxRepository {
     return this.inbox.query(Q.sortBy('input_date', Q.desc), Q.take(limit)).fetch();
   }
 
+  async findPageAfterId(
+    afterId: string | undefined,
+    limit: number,
+  ): Promise<DeviceSmsInboxRecord[]> {
+    return this.inbox
+      .query(...(afterId ? [Q.where('id', Q.gt(afterId))] : []), Q.sortBy('id'), Q.take(limit))
+      .fetch();
+  }
+
   async find(id: string): Promise<DeviceSmsInboxRecord | null> {
     return (await this.inbox.query(Q.where('id', id)).fetch())[0] ?? null;
+  }
+
+  /** Replaces only recognition and suggestions on still-pending Workplace review states. */
+  async updatePendingRecognition(
+    workplaceId: WorkplaceId,
+    updates: readonly SmsRecognitionReviewUpdate[],
+    shouldApply: () => boolean = () => true,
+  ): Promise<void> {
+    if (!updates.length) return;
+    const byId = new Map(updates.map(update => [update.deviceInboxId, update]));
+    await database.write(async () => {
+      if (!shouldApply()) return;
+      const records = await this.inbox.query(Q.where('id', Q.oneOf([...byId.keys()]))).fetch();
+      if (!shouldApply()) return;
+      const operations = records.flatMap(record => {
+        const update = byId.get(record.id);
+        if (!update) return [];
+        const states = safeParseJSON<Record<string, SmsWorkplaceReviewState>>(
+          record.reviewStatesJson,
+          {},
+        );
+        const current = states[workplaceId];
+        const currentStatus =
+          current?.processingStatus ??
+          (record.parseStatus === InboxParseStatus.PARSE_FAILED
+            ? InboxProcessingStatus.PARSE_FAILED
+            : InboxProcessingStatus.PENDING);
+        if (currentStatus !== InboxProcessingStatus.PENDING) return [];
+
+        const next: SmsWorkplaceReviewState = {
+          ...current,
+          processingStatus: InboxProcessingStatus.PENDING,
+          recognition: update.recognition,
+        };
+        delete next.sourceAccountId;
+        delete next.categoryAccountId;
+        if (update.sourceAccountId) next.sourceAccountId = update.sourceAccountId;
+        if (update.categoryAccountId) next.categoryAccountId = update.categoryAccountId;
+        states[workplaceId] = next;
+        const encoded = JSON.stringify(states);
+        if (encoded === record.reviewStatesJson) return [];
+        return [
+          record.prepareUpdate(entry => {
+            entry.reviewStatesJson = encoded;
+          }),
+        ];
+      });
+      if (operations.length) await database.batch(...operations);
+    });
   }
 
   async findBySourceIds(ids: string[]): Promise<DeviceSmsInboxRecord[]> {
@@ -183,6 +252,7 @@ export class DeviceSmsInboxRepository {
       duplicateConfidence: data.duplicateConfidence,
       metadataJson: data.metadataJson,
       ...options.reviewRule,
+      ...(options.recognition ? { recognition: options.recognition } : {}),
     };
     staged.reviewCompleted ||=
       data.processingStatus === InboxProcessingStatus.IMPORTED ||

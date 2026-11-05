@@ -25,6 +25,7 @@ export const E2E_SEED_PROFILES = [
   'planned-payments',
   'sms-ready',
   'sms-sync',
+  'matcher-discovery',
   'merge-edit',
   'picker-ready',
   'first-run-restore',

@@ -42,6 +42,8 @@ import {
 } from './fixtures/firstRunRestoreBackup';
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 import { seedJournalDetailsRedesign } from './journalDetailsSeed';
+import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 
 export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
@@ -509,6 +511,46 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
   ]);
 }
 
+async function seedMatcherDiscovery(workplaceId: WorkplaceId): Promise<void> {
+  const cash = await accountQueryRepository.findByName(workplaceId, 'Cash');
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
+  if (!cash || !bank || !food) {
+    throw new Error('[E2E] matcher-discovery seed requires Cash, Bank, and Food & Drink accounts');
+  }
+
+  await saveAccountMatcher(workplaceId, {
+    accountId: cash.id,
+    definition: { version: 1, body: { kind: 'fragments', fragments: ['SWIGGY'] } },
+  });
+  await saveAccountMatcher(workplaceId, {
+    accountId: bank.id,
+    definition: { version: 1, body: { kind: 'fragments', fragments: ['AMAZON'] } },
+  });
+  await transactionAutoPostRuleRepository.save(
+    {
+      mode: 'regex',
+      senderMatch: 'HDFCBK',
+      actions: {
+        disposition: 'auto_post',
+        sourceAccountId: cash.id,
+        categoryAccountId: food.id,
+      },
+      isActive: true,
+    },
+    workplaceId,
+  );
+
+  const now = Date.now();
+  setE2eSmsInboxMessages([
+    smsMessageFromFixture('swiggyNoRef', { id: 'e2e-matcher-compatible', date: now }),
+    smsMessageFromFixture('cardEndingNegative', {
+      id: 'e2e-matcher-contradictory',
+      date: now - 60_000,
+    }),
+  ]);
+}
+
 /** Three SMS-originated two-leg journals used to exercise merge → edit losslessness. */
 async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
@@ -609,6 +651,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
 
   if (profile === 'sms-sync') {
     await seedSmsSyncHarness(workplaceId);
+  }
+
+  if (profile === 'matcher-discovery') {
+    await seedMatcherDiscovery(workplaceId);
   }
 
   if (profile === 'merge-edit') {

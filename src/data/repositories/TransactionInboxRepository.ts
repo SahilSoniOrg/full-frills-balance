@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { AuditAction, InboxProcessingStatus } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
-import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   inboxAuditState,
@@ -14,7 +14,7 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { Model, Q } from '@nozbe/watermelondb';
-import { Observable, combineLatest, map } from 'rxjs';
+import { Observable, combineLatest, filter, map, merge, startWith } from 'rxjs';
 import {
   deviceSmsInboxRepository,
   deviceSmsSnapshot,
@@ -76,10 +76,15 @@ export class TransactionInboxRepository {
       ...devices.map(device => {
         const consumed = copiesBySource.get(device.deviceSourceId) ?? [];
         const local = consumed.find(copy => copy.workplaceId === workplaceId);
+        const deviceProjection = deviceSmsSnapshot(device, workplaceId);
         return {
-          ...(local ? inboxSnapshotFromRecord(local) : deviceSmsSnapshot(device, workplaceId)),
-          senderAddress: local?.senderAddress ?? device.senderAddress,
-          rawBody: local?.rawBody ?? device.rawBody,
+          ...(local ? inboxSnapshotFromRecord(local) : deviceProjection),
+          suggestedSourceAccountId: deviceProjection.suggestedSourceAccountId,
+          suggestedCategoryAccountId: deviceProjection.suggestedCategoryAccountId,
+          recognition: deviceProjection.recognition,
+          senderAddress: local?.senderAddress ?? deviceProjection.senderAddress,
+          rawBody: local?.rawBody ?? deviceProjection.rawBody,
+          contentDigest: device.contentDigest,
           id: device.id,
           deviceInboxId: device.id,
           consumedWorkplaces: consumed
@@ -162,6 +167,55 @@ export class TransactionInboxRepository {
     return this.project(workplaceId, devices, copies).sort((a, b) => a.inputDate - b.inputDate);
   }
 
+  /** The database selects a bounded SMS page before any Account history is hydrated. */
+  async findRecentLinkedToAccount(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    limit: number,
+  ): Promise<InboxRecordSnapshot[]> {
+    if (limit <= 0) return [];
+    const copies = await this.inbox
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.experimentalNestedJoin('journals', 'transactions'),
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.on('journals', [
+          Q.where('workplace_id', workplaceId),
+          Q.on('transactions', [
+            Q.where('workplace_id', workplaceId),
+            Q.where('account_id', accountId),
+            Q.where('deleted_at', Q.eq(null)),
+          ]),
+        ]),
+        Q.sortBy('input_date', Q.desc),
+        Q.sortBy('id', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
+    const devices = await deviceSmsInboxRepository.findBySourceIds(
+      copies.map(copy => copy.deviceSourceId),
+    );
+    return this.project(workplaceId, devices, copies);
+  }
+
+  /** Invalidation signals only; subscribing never materializes the full SMS history. */
+  observeMatcherDiscoveryEvidence(workplaceId: WorkplaceId): Observable<void> {
+    return merge(
+      this.inbox.changes.pipe(
+        filter(changes =>
+          changes.some(
+            ({ record }) => record.workplaceId === workplaceId && record.channel === 'sms',
+          ),
+        ),
+      ),
+      database.collections.get<DeviceSmsInboxRecord>('device_sms_inbox_records').changes,
+    ).pipe(
+      map(() => undefined),
+      startWith(undefined),
+    );
+  }
+
   observeInbox(
     workplaceId: WorkplaceId,
     limit: number,
@@ -218,6 +272,69 @@ export class TransactionInboxRepository {
         .fetch(),
     ]);
     return this.project(workplaceId, devices, copies).slice(0, limit);
+  }
+
+  async findRecentPendingSms(
+    workplaceId: WorkplaceId,
+    limit: number,
+  ): Promise<InboxRecordSnapshot[]> {
+    const [recentDevices, pendingCopies] = await Promise.all([
+      deviceSmsInboxRepository.findRecent(limit),
+      this.inbox
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('channel', 'sms'),
+          Q.where('processing_status', InboxProcessingStatus.PENDING),
+          Q.sortBy('input_date', Q.desc),
+          Q.take(limit),
+        )
+        .fetch(),
+    ]);
+    const pendingDevices = recentDevices.filter(
+      device =>
+        deviceSmsSnapshot(device, workplaceId).processingStatus === InboxProcessingStatus.PENDING,
+    );
+    const newestDateBySourceId = new Map<string, number>();
+    for (const device of pendingDevices) {
+      newestDateBySourceId.set(device.deviceSourceId, device.inputDate);
+    }
+    for (const copy of pendingCopies) {
+      newestDateBySourceId.set(
+        copy.deviceSourceId,
+        Math.max(newestDateBySourceId.get(copy.deviceSourceId) ?? 0, copy.inputDate),
+      );
+    }
+    const sourceIds = [...newestDateBySourceId.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, limit)
+      .map(([sourceId]) => sourceId);
+    if (!sourceIds.length) return [];
+    const [devicesBySource, copies] = await Promise.all([
+      deviceSmsInboxRepository.findBySourceIds(sourceIds),
+      this.copiesForSourceIds(sourceIds),
+    ]);
+    const devicesById = new Map(
+      [...recentDevices, ...devicesBySource].map(device => [device.id, device]),
+    );
+    const selectedDevices = [...devicesById.values()].filter(device =>
+      sourceIds.includes(device.deviceSourceId),
+    );
+    return this.project(workplaceId, selectedDevices, copies)
+      .filter(record => record.processingStatus === InboxProcessingStatus.PENDING)
+      .slice(0, limit);
+  }
+
+  // This walks the device inbox by id and then keeps this workplace's pending rows,
+  // because pending state lives on workplace review state rather than on the device row.
+  async findPendingSmsPage(workplaceId: WorkplaceId, afterId: string | undefined, limit: number) {
+    const devices = await deviceSmsInboxRepository.findPageAfterId(afterId, limit);
+    const copies = await this.copiesForSourceIds(devices.map(device => device.deviceSourceId));
+    return {
+      records: this.project(workplaceId, devices, copies).filter(
+        record => record.deviceInboxId && record.processingStatus === InboxProcessingStatus.PENDING,
+      ),
+      nextCursor: devices.length === limit ? devices[devices.length - 1].id : undefined,
+    };
   }
 
   async findRecentLinkedProcessed(

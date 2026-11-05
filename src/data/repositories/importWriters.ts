@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
+import AccountMatcher from '@/src/data/models/AccountMatcher';
 import AuditLog from '@/src/data/models/AuditLog';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Budget from '@/src/data/models/Budget';
@@ -190,6 +191,7 @@ export function prepareAuxiliaryImportRecords(
   const autoPostRules = database.collections.get<TransactionAutoPostRule>(
     'transaction_auto_post_rules',
   );
+  const accountMatchers = database.collections.get<AccountMatcher>('account_matchers');
   const inboxRecords = database.collections.get<TransactionInboxRecord>(
     'transaction_inbox_records',
   );
@@ -385,6 +387,20 @@ export function prepareAuxiliaryImportRecords(
     }),
   );
 
+  const accountMatcherPrepares = (data.accountMatchers || []).map(matcher =>
+    accountMatchers.prepareCreate(record => {
+      record._raw.id = matcher.id;
+      record.workplaceId = workplaceId;
+      record.accountId = matcher.accountId;
+      record.definitionJson = matcher.definitionJson;
+      record.conditionsKey = matcher.conditionsKey;
+      record.isEnabled = matcher.isEnabled;
+      record.provenance = matcher.provenance;
+      record._raw._status = 'synced';
+      setRecordTimestamps(record, { createdAt: matcher.createdAt, updatedAt: matcher.updatedAt });
+    }),
+  );
+
   return [
     ...auditLogPrepares,
     ...budgetPrepares,
@@ -393,6 +409,7 @@ export function prepareAuxiliaryImportRecords(
     ...plannedPaymentPrepares,
     ...journalMetadataPrepares,
     ...autoPostRulePrepares,
+    ...accountMatcherPrepares,
     ...inboxPrepares,
     ...balanceSnapshotPrepares,
   ];

@@ -215,6 +215,15 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
       })),
   },
   {
+    entityType: 'account_matcher',
+    eventType: 'account_matcher.imported',
+    collect: data =>
+      (data.accountMatchers ?? []).map(matcher => ({
+        id: matcher.id,
+        after: { accountId: matcher.accountId, isEnabled: matcher.isEnabled },
+      })),
+  },
+  {
     entityType: 'transaction_inbox_record',
     eventType: 'transaction_inbox_record.imported',
     collect: data =>

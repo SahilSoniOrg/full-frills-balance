@@ -164,14 +164,19 @@ export class SmsReviewNotificationService {
     for (const [workplaceId, group] of groups) {
       const latest = group[group.length - 1];
       const grouped = group.length > 1 || group.some(item => item.catchUp);
+      const hasHeldAccount = group.some(item => !!item.record.recognition?.hold);
       let title = grouped
         ? `${group.length} ${group.length === 1 ? 'transaction' : 'transactions'} to review`
         : 'Transaction to review';
       let tone: NotificationTone = 'neutral';
-      let body = grouped
-        ? 'Open your SMS inbox to review and log.'
-        : 'Open the app to review and log this SMS transaction.';
-      if (!ctx.privatePreview && !grouped) {
+      let body = hasHeldAccount
+        ? grouped
+          ? 'Check the account for one or more messages before posting.'
+          : 'Check the account before posting this SMS transaction.'
+        : grouped
+          ? 'Open your SMS inbox to review and log.'
+          : 'Open the app to review and log this SMS transaction.';
+      if (!ctx.privatePreview && !grouped && !hasHeldAccount) {
         const direction = latest.record.direction ?? 'unknown';
         tone = direction === 'debit' ? 'expense' : direction === 'credit' ? 'income' : 'neutral';
         const hints = {

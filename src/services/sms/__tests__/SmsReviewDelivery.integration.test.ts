@@ -101,6 +101,29 @@ it('coalesces a burst and drains changes requested during an active delivery pas
   expect(reconcile).toHaveBeenCalledTimes(3);
 });
 
+it('tells held messages to check the account without adding private SMS details', async () => {
+  await capture('held-account');
+  const [device] = await deviceSmsInboxRepository.findBySourceIds(['held-account']);
+  const states = JSON.parse(device.reviewStatesJson);
+  states[A].recognition = {
+    status: 'recognized',
+    accountIds: ['account-id-only'],
+    matcherIds: ['matcher-id-only'],
+    hold: 'contradictory',
+  };
+  await database.write(async () => {
+    await device.update(record => {
+      record.reviewStatesJson = JSON.stringify(states);
+    });
+  });
+
+  await service.flush();
+
+  expect(deliver.mock.calls[0][1]).toBe('Check the account before posting this SMS transaction.');
+  expect(deliver.mock.calls[0][2].hasDetails).toBe(false);
+  expect(deliver.mock.calls[0][1]).not.toContain(message().body);
+});
+
 it('retains a refresh requested during a failing delivery pass', async () => {
   const reconcile = jest.mocked(notificationService.reconcileSmsReviews);
   reconcile.mockClear();
