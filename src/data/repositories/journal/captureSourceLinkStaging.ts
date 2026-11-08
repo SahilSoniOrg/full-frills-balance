@@ -22,6 +22,8 @@ export async function stageLinkedCaptureSource(
   addJournalCaptureSources(session, workplaceId, journalId, [source]);
   if (hasJournalCaptureMetadataWrite(session, workplaceId, journalId)) return;
 
+  // Same-session creates are not queryable yet; sources stay on the accumulator for any
+  // writer already staged by put. Linking without existing capture metadata is a no-op write.
   const journals = await database.collections
     .get<Journal>('journals')
     .query(
@@ -30,7 +32,7 @@ export async function stageLinkedCaptureSource(
       Q.where('deleted_at', Q.eq(null)),
     )
     .fetch();
-  if (journals.length === 0) throw new Error('Journal not found in this Workplace');
+  if (journals.length === 0) return;
 
   const rows = await database.collections
     .get<JournalMetadata>('journal_metadata')
