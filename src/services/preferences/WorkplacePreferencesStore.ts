@@ -4,6 +4,8 @@ import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { storage } from '@/src/utils/storage';
+import { parseCategoryDefaults } from '@/src/domain/transaction-intelligence/categoryDefaults';
+import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/utils/gmailBindingKey';
 import {
   DEFAULT_WORKPLACE_PREFERENCES,
   WORKPLACE_PREFERENCES_KEY_PREFIX,
@@ -33,6 +35,8 @@ export class WorkplacePreferencesStore {
   }
 
   replace(workplaceId: WorkplaceId, value: Partial<WorkplacePreferences>): void {
+    // A restored Workplace must reconnect explicitly on this device.
+    storage.remove(gmailBindingKey(workplaceId));
     this.persist(workplaceId, {
       ...DEFAULT_WORKPLACE_PREFERENCES,
       ...this.sanitize(value),
@@ -56,6 +60,7 @@ export class WorkplacePreferencesStore {
       this.subjects.delete(workplaceId);
       try {
         storage.remove(workplacePreferencesStorageKey(workplaceId));
+        storage.remove(gmailBindingKey(workplaceId));
       } catch (error) {
         logger.warn('Failed to clear workplace preferences from MMKV', { error });
       }
@@ -64,7 +69,11 @@ export class WorkplacePreferencesStore {
 
     try {
       for (const key of storage.getAllKeys()) {
-        if (key.startsWith(WORKPLACE_PREFERENCES_KEY_PREFIX)) storage.remove(key);
+        if (
+          key.startsWith(WORKPLACE_PREFERENCES_KEY_PREFIX) ||
+          key.startsWith(GMAIL_BINDING_KEY_PREFIX)
+        )
+          storage.remove(key);
       }
     } catch (error) {
       logger.warn('Failed to clear all workplace preferences from MMKV', { error });
@@ -114,6 +123,60 @@ export class WorkplacePreferencesStore {
 
   private sanitize(input: Partial<WorkplacePreferences>): Partial<WorkplacePreferences> {
     const sanitized = { ...input };
+    if ('captureCategoryDefaults' in sanitized) {
+      sanitized.captureCategoryDefaults = parseCategoryDefaults(sanitized.captureCategoryDefaults);
+    }
+    if ('historicalSmsCaptureBackfillVersion' in sanitized) {
+      sanitized.historicalSmsCaptureBackfillVersion =
+        sanitized.historicalSmsCaptureBackfillVersion === 1 ? 1 : undefined;
+    }
+    if ('captureDescriptionDefaults' in sanitized) {
+      const value = sanitized.captureDescriptionDefaults;
+      sanitized.captureDescriptionDefaults =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? Object.fromEntries(
+              Object.entries(value).filter(
+                ([key, description]) =>
+                  !!key &&
+                  typeof description === 'string' &&
+                  !!description.trim() &&
+                  description.length <= 200,
+              ),
+            )
+          : {};
+    }
+    if ('openCaptureMerchants' in sanitized) {
+      sanitized.openCaptureMerchants = Array.isArray(sanitized.openCaptureMerchants)
+        ? [
+            ...new Set(
+              sanitized.openCaptureMerchants
+                .filter((value): value is string => typeof value === 'string' && !!value.trim())
+                .map(value => value.trim().toLowerCase()),
+            ),
+          ]
+        : [];
+    }
+    if ('automaticTransactionCapture' in sanitized) {
+      const value = sanitized.automaticTransactionCapture;
+      const enabledAt = value?.enabledAt;
+      sanitized.automaticTransactionCapture = {
+        enabled:
+          value?.enabled === true &&
+          typeof enabledAt === 'number' &&
+          Number.isFinite(enabledAt) &&
+          enabledAt > 0,
+        enabledAt:
+          typeof enabledAt === 'number' && Number.isFinite(enabledAt) && enabledAt > 0
+            ? enabledAt
+            : undefined,
+        uncategorizedAccountIds: Object.fromEntries(
+          Object.entries(value?.uncategorizedAccountIds ?? {}).filter(
+            ([key, id]) =>
+              /^(expense|income):[A-Z]{3}$/.test(key) && typeof id === 'string' && id.length > 0,
+          ),
+        ),
+      };
+    }
     delete (sanitized as { isSmsImportEnabled?: boolean }).isSmsImportEnabled;
     if ('dismissedPatternIds' in sanitized && !Array.isArray(sanitized.dismissedPatternIds)) {
       sanitized.dismissedPatternIds = [];
