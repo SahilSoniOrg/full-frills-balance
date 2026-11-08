@@ -19,7 +19,7 @@ MUST NOT — violations are defects. See `quirks.md` for repo-specific traps.
 
 ## YAGNI
 - **NO Speculative Code**: No columns, models, routes, or fields without active screen consumers.
-- **NO Custom Folders**: Directories only under `src/` and `app/`.
+- **NO Custom Folders**: Application code directories belong under `src/` and `app/`; native Expo modules belong under the existing `modules/` directory.
 
 ## SOLID & SRP
 - **NO UI Database Writes**: No `database.write` in components; use repositories.

@@ -13,7 +13,7 @@ This is the canonical behavior and ownership contract. Terms follow `CONTEXT.md`
 | -------------------------------------------------------------------------------------------------------------- | ----------- |
 | Display name, theme, font, privacy mask, notifications                                                         | User        |
 | Device registration, app lock, Active workplace, telemetry ID, Device inbox, Device SMS listen                 | Device      |
-| Journals, accounts, currency, budgets, planned payments, Workplace settings, SMS rules, Workplace inbox copies | Workplace   |
+| Journals, accounts, currency, budgets, planned payments, capture preferences, Workplace inbox copies          | Workplace   |
 | Unfinished journey recipe, accepted setup outputs, limited fact provenance, operation identity                 | Setup draft |
 
 There is no general “onboarding state.” Device registration, Workplace publication, Setup acceptance, and app-entry eligibility are different facts.

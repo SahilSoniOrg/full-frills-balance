@@ -39,7 +39,7 @@ The person. Owns identity and chrome that follow them across Devices and Workpla
 _Avoid_: Account (that is a ledger bucket); profile (as a synonym); owner
 
 **Workplace**:
-The tenancy for the books. Journals, ledger accounts, budgets, planned payments, and settings that change meaning or writes (default currency, Safe to Spend horizon, last-used ledger accounts, dismissed insights) belong here. SMS rules, Account matchers, and this Workplace’s consumed-SMS copies belong here; the shared SMS feed does not.
+The tenancy for the books. Journals, ledger accounts, budgets, planned payments, and settings that change meaning or writes (default currency, Safe to Spend horizon, last-used ledger accounts, dismissed insights) belong here. Capture preferences, Account matchers, and this Workplace’s consumed-SMS copies belong here; the shared SMS feed does not.
 _Avoid_: User data; workspace; company; books (as the tenancy name)
 
 **Workplace membership**:
@@ -208,36 +208,60 @@ _Avoid_: Device inbox; cloning the phone’s SMS per Workplace as the pending li
 A Device inbox message already consumed by another Workplace. Still shown in the Device inbox with a tag naming that Workplace. Manual consume in this Workplace is always allowed.
 _Avoid_: Hidden; processed (as “gone from this Workplace”)
 
-**Cross-workplace auto-post**:
-Workplace preference: auto-post Elsewhere-consumed messages into this Workplace. Off means auto-post skips them; the User can still post by hand. Two Workplaces may both consume the same SMS.
+**Cross-workplace consumption**:
+Separate Workplaces linking or dismissing the same source observation in their own books. Elsewhere-consumed SMS remain available for explicit manual consumption; automatic capture skips them.
 _Avoid_: Resurface; show consumed as pending (the feed already shows them)
 
-**SMS rule**:
-A Workplace's confirmed conditions on incoming SMS and the outcome when they match: auto-post, review, or ignore.
-_Avoid_: Auto-post rule (auto-post is one outcome); automation rule; SMS auto-post rule
+**Source observation**:
+One source's evidence of a money movement, such as a bank SMS. Several observations may describe one journal; an observation is not itself a category confirmation.
+_Avoid_: Journal; duplicate transaction (before reconciliation establishes identity)
 
-**Rule suggestion**:
-A proposed SMS rule derived from the User's confirmed postings and corrections. It has no posting authority until the User enables it as an SMS rule.
-_Avoid_: History suggestion; Insight (a Hub observation about money, not a proposed change to message handling)
+**Economic kind**:
+Whether an established money movement is an expense, income, transfer, or refund/reversal. Account debit/credit direction alone does not establish its economic kind.
+_Avoid_: Direction; category
+
+**Automatic transaction capture**:
+Creation of a journal from established source facts and resolved financial Accounts under the Workplace's explicit capture permission. Its category may still need review.
+_Avoid_: SMS rule; category confirmation; Device SMS listen
+
+**Transaction intelligence**:
+The shared interpretation of source observations, Account evidence, and confirmed journal classifications. It supplies capture and review decisions across sources within a Workplace.
+_Avoid_: SMS engine; remote AI (neither a source nor a model provider defines this responsibility)
+
+**Categorization review**:
+Unresolved category assignments on an existing journal. It belongs to that journal even when several observations describe it, and is independent of whether the journal is posted.
+_Avoid_: Inbox processing status; draft journal; observation confirmation
+
+**Category confirmation**:
+The User's explicit classification of a journal allocation. It is evidence for that allocation, not automatic permission to apply the same category to every later visit to the merchant.
+_Avoid_: Inactivity; description edit; merchant default
+
+**Historical category suggestion**:
+A review-only proposal derived from categories on older journals linked to SMS observations. Several SMS observations on one journal contribute one classification. The proposal is not confirmed history until the User explicitly approves a prospective category default.
+_Avoid_: Backfilled confirmation
+
+**Uncategorized account**:
+An explicit income or expense Account receiving captured movements whose category is unresolved. Its role persists when its display name changes.
+_Avoid_: Blank category; suspense (unless a separate accounting role is intended)
 
 **Account reference**:
 A bank-account or card mention in one SMS, such as a masked number or visible ending. The mention is evidence in that message; the User can select its text as part of an Account matcher.
 _Avoid_: Account hint; account source (as the domain term)
 
 **Account matcher**:
-User-confirmed conditions on an SMS sender, its text, or both, attached to one leaf asset or liability Account to recognize that Account in messages. It may use a general pattern or a specific Account reference; an SMS rule controls the posting outcome.
-_Avoid_: Account rule; SMS rule (also controls the outcome); Account identifier (too narrow for general patterns)
+User-confirmed conditions on an SMS sender, its text, or both, attached to one leaf asset or liability Account to recognize that Account in messages. It may use a general pattern or a specific Account reference; recognition alone does not authorize posting.
+_Avoid_: Account rule; Account identifier (too narrow for general patterns)
 
 **Account matcher suggestion**:
 A proposed Account matcher inferred from SMS linked to journals involving an Account, or from SMS the User selects for that Account. It has no authority to assign the Account to future messages until confirmed; previewing the proposal does not activate it.
-_Avoid_: Automatic matcher; SMS rule suggestion (a different proposal)
+_Avoid_: Automatic matcher
 
 **Identified account**:
 An Account recognized in one Workplace by confirmed Account matchers. Conflicting account assignments or unresolved source/destination roles require review.
 _Avoid_: Matched account; source account (it may receive money)
 
 **Device SMS listen**:
-Device preference: this install may scan the OS SMS inbox and run auto-post. Default **off** on a fresh Device; the User turns it on. Off is Device-wide — no Workplace can listen independently. OS SMS permission is also Device.
+Device permission to read arriving SMS and scan messages on this install, separate from a Workplace’s permission to capture journals. Listening is off on a fresh Device and remains subject to OS SMS permission.
 _Avoid_: Per-Workplace SMS import enabled; workplace participates; scan during Device setup
 
 ### Interaction
@@ -292,7 +316,7 @@ A workplace-scoped ledger bucket (asset, liability, equity, income, or expense) 
 _Avoid_: Wallet (as the domain term for any account); category (except for income/expense account types in user-facing copy)
 
 **Archived account**:
-An account marked archived so it is hidden from default account lists and pickers. Still fully live for balances, reporting, posting, references, and SMS recognition — archive is a visibility preference, not removal.
+An account marked archived so it is hidden from default account lists and pickers. Still fully live for balances, reporting, manual posting, references, and SMS recognition — archive is a visibility preference, not removal.
 _Avoid_: Deleted account; inactive account; hidden account (as the canonical term)
 
 **Archive**:

@@ -1,16 +1,16 @@
 # Account matcher discovery
 
-**Date:** 2026-11-04
+**Date:** 2026-11-06
 **Status:** Agreed design; implemented through Phases 1–8. Feature flag removal waits one internal release.
-**Related:** [Glossary](../../../CONTEXT.md), [confirmation boundary](../../adr/0008-confirm-discovered-account-matchers.md)
+**Related:** [Glossary](../../../CONTEXT.md), [confirmation boundary](../../adr/0008-confirm-discovered-account-matchers.md), [transaction capture](../automatic-transaction-capture/spec.md)
 
 ## Document responsibilities
 
 | Document     | Authority                                                                                             |
 | ------------ | ----------------------------------------------------------------------------------------------------- |
-| Glossary     | Meaning of Account reference, Account matcher, Account matcher suggestion, Identified account, and SMS rule |
+| Glossary     | Meaning of Account reference, Account matcher, Account matcher suggestion, Identified account, and automatic transaction capture |
 | ADR          | Why confirmation, one configuration workflow, and add-by-default learning form the authority boundary |
-| This spec    | Product behavior, user decisions, matching semantics, and interaction with SMS rules                  |
+| This spec    | Product behavior, user decisions, matching semantics, and capture evidence                  |
 
 This spec owns the durable product contract. The ADR records why the confirmation boundary exists.
 
@@ -20,7 +20,7 @@ Compare SMS associated with an Account to propose reusable matching conditions. 
 
 ## Domain boundary
 
-An Account matcher recognizes an Account in an SMS through one general configuration workflow. SMS rules continue to control disposition (auto-post, review, ignore), categorization, and other posting actions. A matcher does not by itself authorize posting.
+An Account matcher recognizes an Account in an SMS through one general configuration workflow. Shared transaction intelligence owns posting and review decisions under the transaction-capture contract. A matcher does not by itself authorize posting or confirm a category.
 
 User-confirmed matchers may be as general as the User chooses, using message patterns or specific account references. Actual ambiguity and existing posting safeguards still apply.
 
@@ -52,52 +52,37 @@ The editor's Flow on this account control offers Either, Incoming, and Outgoing.
 
 Saved patterns show matching SMS and unique linked-journal counts within an explicit inspected window, including while recognition is disabled. The counts describe matching content and remain unchanged by a flow declaration. Opening a journal does not create or change links. Preview shows the target Account, sender, date, highlighted fragments, and supporting SMS. It also exposes potentially overlapping matches among messages associated with other Accounts. Such examples are evidence to inspect, not automatic proof that a candidate is wrong: a journal or SMS can involve several Accounts.
 
-Each supporting SMS shows whether its journal was auto-posted by an SMS rule or created or reviewed by the User. Auto-posted examples count toward the discovery threshold, but repeated auto-posts may only repeat one rule's choice; they are not independent confirmation of the Account. When every supporting example was auto-posted, the preview says so before confirmation.
+Each supporting SMS shows whether its journal was created automatically or created or reviewed by the User. Automatically created examples count toward the discovery threshold, but repeated captures are not independent User confirmation of the Account. Historical journals remain evidence with their original provenance. When every supporting example was created automatically, the preview says so before confirmation.
 
 Only explicit User confirmation creates or changes an active matcher. Evidence volume never activates one automatically. Text selection identifies the proposed Account-related fragment; a separately confirmed flow declaration supplies that Account's source or destination role. Either leaves the role to message context or User resolution. Unresolved roles and conflicting account assignments remain review cases.
 
-## Runtime recognition and SMS rules
+## Runtime recognition and transaction capture
 
-Learning and runtime recognition are separate uses of SMS. Learning proposes configuration from linked examples; runtime recognition applies only confirmed, enabled, eligible matchers to incoming messages.
+Learning and runtime recognition are separate uses of SMS. Learning proposes configuration from linked examples; runtime recognition applies only confirmed, enabled, eligible matchers in the current Workplace.
 
-Evaluate matching evidence within the current Workplace and combine it with the existing priority-selected SMS rule:
+Recognition supplies Account evidence to the shared capture policy. Account matchers do not select categories or description templates.
 
-| Rule/result                                            | Behavior                                                                                                             |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| No applicable SMS rule                                 | Recognition can suggest an Account during review; it does not post                                                   |
-| Ignore rule                                            | Preserve the rule's ignore outcome; a matcher does not turn it into a review or a posting                            |
-| Review rule                                            | Keep review; agreeing evidence can preselect an Account, while conflicting candidates remain visible for User choice |
-| Auto-post rule, no matcher identifies an Account       | Preserve existing rule behavior and its configured account pair, subject to existing posting safeguards              |
-| Auto-post rule and unique compatible recognition       | The rule may post if all existing checks permit it                                                                   |
-| Auto-post rule and contradictory/ambiguous recognition | Hold automatic posting for review; do not silently replace the rule's Account                                        |
-| Auto-post rule and indeterminate recognition           | Hold automatic posting for review and explain that account recognition could not complete                            |
+| Recognition result | Behavior |
+| --- | --- |
+| No Account recognized | Keep for manual review |
+| One Account, supported expense/income evidence, compatible role | Capture may post only if permission, date, currency, duplicate, and Uncategorized-account gates also pass |
+| Two Accounts with explicit outgoing/incoming roles and supported transfer evidence | Capture may post between those Accounts if the remaining gates pass |
+| Several unresolved candidates, opposing declarations, or indeterminate recognition | Keep for review; no matcher silently wins by order |
+| An individual observation already dismissed by the User | Preserve dismissal |
 
-A User's manual choice remains authoritative for the current draft, without silently creating or modifying a matcher.
+Repeated declarations for the same Account and flow consolidate. Either does not cancel an explicit declaration. Opposing declarations for one Account, several Accounts competing for the same transfer leg, or more than two Account candidates with declared flow require review.
 
-### Compatibility with the rule's accounts
+For manual import, explicit outgoing and incoming declarations can prefill known journal legs. A single declaration fills only its known leg. With Either, one recognized Account can suggest the financial leg from parsed direction; several unresolved Accounts remain candidates for User choice. Fragment order alone does not establish money-flow direction.
 
-Recognition identifies financial Accounts and carries any confirmed incoming/outgoing declarations. When an auto-post rule applies, the rule's account pair and parsed debit/credit direction determine its posting legs. Recognition must agree with both the financial Account set and any declared flow. A debit SMS makes the rule's source Account outgoing and a financial category Account incoming; a credit SMS reverses those roles. Missing parsed direction cannot establish agreement with a declared flow, so automatic posting waits for review.
+A User's manual choice remains authoritative for the current draft without silently creating or modifying a matcher. Account recognition and category learning have separate confirmation boundaries: automatically created journals may support proposals for explicitly accepted Account matchers, but untouched automatic categories are not confirmed category labels.
 
-- The rule's financial Accounts are its source Account, plus its category Account when that is an eligible leaf asset or liability Account (a transfer).
-- The recognized set is every Account with at least one matching matcher, consolidated by Account.
-- Recognition is compatible when the recognized set is non-empty, every recognized Account is one of the rule's financial Accounts, and each declared flow agrees with its posting leg. A different Account or opposing declared flow is contradictory.
-- Repeated matching declarations for the same Account and flow consolidate. Either does not cancel an explicit declaration. Opposing declarations for one Account, multiple Accounts competing for the same transfer leg, or more than two Account candidates when flow is declared require review; no matcher silently wins by ordering.
-
-| Rule (source → category)           | Recognized    | Outcome                                                 |
-| ---------------------------------- | ------------- | ------------------------------------------------------- |
-| Card → Food                        | Card          | Compatible; the rule may post                           |
-| Card → Food                        | Savings       | Contradictory; hold for review                          |
-| Card → Food                        | Card, Savings | Contradictory; hold for review                          |
-| Savings → Card (card bill payment) | Savings, Card | Compatible; a transfer naturally mentions both Accounts |
-| Savings → Card                     | Card          | Compatible; the rule may post                           |
-
-Without an auto-post rule, recognition only informs review. Explicit outgoing and incoming declarations can prefill a transfer's source and destination. A single explicit declaration fills only its known leg. With Either, one recognized Account keeps the existing parser-based financial-leg suggestion; several unresolved Accounts remain candidates for User choice. Fragment order alone does not imply money-flow direction. A flow declaration never authorizes posting.
+Archived financial leaves remain matcher-eligible. Automatic capture applies a stricter account-availability gate and retains archived financial or Uncategorized Accounts for review; manual journal behavior is unchanged.
 
 ### Indeterminate evaluation
 
 Each matcher evaluates to match, no match, or indeterminate. Indeterminate means evaluation could not complete: an advanced regex exceeded its evaluation budget or failed, or a stored definition no longer validates. Indeterminate is never treated as no match.
 
-A matcher whose sender condition does not match is no match without evaluating its body. Fragment matchers do not depend on regex evaluation and cannot be indeterminate. If any enabled, eligible matcher in the Workplace is indeterminate for a message, that message's recognition is indeterminate: auto-posting is held, review rules stay review without a preselection from the failed matcher, ignore rules still ignore, and no Account is suggested when no rule applies. SMS recognition management flags a matcher that keeps failing so the User can fix or disable it.
+A matcher whose sender condition does not match is no match without evaluating its body. Fragment matchers do not depend on regex evaluation and cannot be indeterminate. If any enabled, eligible matcher in the Workplace is indeterminate for a message, that message's recognition is indeterminate: automatic capture waits for review and no Account is preselected from the failed evaluation. SMS recognition management flags a matcher that keeps failing so the User can fix or disable it.
 
 ## Message selection
 
@@ -123,4 +108,4 @@ A later SMS using different wording is linked to another journal involving that 
 
 ## Delivery boundary
 
-Phases 1–8 are implemented: matcher store and schema, recognition/pipeline holds, Account-scoped SMS recognition management and editor (including Android older-message picker and safe-subset regex), plus Playwright and Detox coverage. The `accountMatchers` feature flag stays enabled for one internal release before removal. The implementation plan remains the authority for verification gaps and release follow-through.
+Phases 1–8 are implemented: matcher store and schema, recognition/pipeline holds, Account-scoped SMS recognition management and editor (including Android older-message picker and safe-subset regex), plus Playwright and Detox coverage. The `accountMatchers` feature flag stays enabled for one internal release before removal. The [transaction-capture spec](../automatic-transaction-capture/spec.md) owns the current runtime posting boundary. Capture implementation validation and rollout remain pending; this document does not claim its tests have run.

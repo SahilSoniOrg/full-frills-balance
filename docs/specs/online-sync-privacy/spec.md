@@ -276,7 +276,7 @@ Sync source data:
 - Budgets and scopes;
 - Planned payments;
 - Workplace preferences that affect book meaning;
-- Workplace-owned SMS rules and consumed records.
+- Workplace-owned capture preferences and consumed records.
 
 Rebuild locally:
 
