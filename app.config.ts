@@ -141,6 +141,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    'expo-background-task',
+    ...(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.endsWith('.apps.googleusercontent.com')
+      ? [
+          [
+            '@react-native-google-signin/google-signin',
+            {
+              iosUrlScheme: `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.replace('.apps.googleusercontent.com', '')}`,
+            },
+          ] as [string, { iosUrlScheme: string }],
+        ]
+      : []),
     [
       'expo-font',
       {

@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "EB98F99DD94D465D825126EE"
+               BlueprintIdentifier = "B5E428FEF5E642288E73F98F"
                BuildableName = "FullFrillsBalanceWidget.appex"
                BlueprintName = "FullFrillsBalanceWidget"
                ReferencedContainer = "container:FullFrillsBalance.xcodeproj">
