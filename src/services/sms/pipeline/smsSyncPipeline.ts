@@ -343,7 +343,10 @@ export class SmsSyncPipeline {
         importedCount = stagedImportedCount;
         journalPersistenceService.afterAtomicWriteCommit(journalResults, workplaceId);
         if (importedCount > 0)
-          analytics.trackFeatureUsage('transaction_capture', 'captured', { count: importedCount });
+          analytics.trackFeatureUsage('transaction_capture', 'captured', {
+            count: importedCount,
+            channel: 'sms',
+          });
       }
     }
 

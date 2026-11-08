@@ -23,6 +23,7 @@ import {
   readGmailRawMessage,
 } from './gmailApi';
 import { ingestGmailObservation } from './gmailIngestion';
+import { analytics } from '@/src/services/analytics';
 import { BehaviorSubject } from 'rxjs';
 import { logger } from '@/src/utils/logger';
 
@@ -62,6 +63,7 @@ async function sync(
   const { accessToken } = credentials;
   let matcherContext: Awaited<ReturnType<typeof loadAccountMatcherContext>> | undefined;
   let deferHistoryAdvance = false;
+  let capturedCount = 0;
   const processIds = async (ids: readonly string[]) => {
     for (const id of ids) {
       if (signal?.aborted || shouldContinue?.() === false) throw new Error('Gmail sync cancelled.');
@@ -169,7 +171,7 @@ async function sync(
             logger.debug('[Gmail] Automatic capture skipped', {
               reason: 'disabled_or_before_capture_cutoff',
             });
-          await ingestGmailObservation(
+          const journalResult = await ingestGmailObservation(
             workplaceId,
             binding.accountId,
             binding.connectedAt,
@@ -177,6 +179,7 @@ async function sync(
             signal,
             shouldContinue,
           );
+          if (journalResult) capturedCount += 1;
         } else logger.debug('[Gmail] Message skipped', { reason: 'before_connection_cutoff' });
       } catch (error) {
         if (
@@ -245,6 +248,11 @@ async function sync(
       throw recoveryError;
     }
   }
+  if (capturedCount > 0)
+    analytics.trackFeatureUsage('transaction_capture', 'captured', {
+      count: capturedCount,
+      channel: 'email',
+    });
   if (!nextHistoryId || signal?.aborted || shouldContinue?.() === false) return;
   if (deferHistoryAdvance) {
     logger.debug('[Gmail] History cursor deferred', { reason: 'retryable_message_unread' });
@@ -275,6 +283,8 @@ export function syncGmailForWorkplace(
     .then(
       () => {
         state.next(controller.signal.aborted ? 'idle' : 'ok');
+        if (!controller.signal.aborted)
+          analytics.trackFeatureUsage('gmail', 'sync', { status: 'success' });
       },
       error => {
         state.next(controller.signal.aborted ? 'idle' : 'error');
@@ -285,6 +295,8 @@ export function syncGmailForWorkplace(
               ? `http_${error.status}`
               : 'sync_error',
         });
+        if (!controller.signal.aborted)
+          analytics.trackFeatureUsage('gmail', 'sync', { status: 'failed' });
         throw error;
       },
     )

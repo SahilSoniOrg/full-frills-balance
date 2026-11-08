@@ -17,6 +17,7 @@ import {
   parseStoredMatcherDefinition,
   validateAccountMatcherDefinition,
 } from '@/src/services/sms/recognition/accountMatcherDefinition';
+import { analytics } from '@/src/services/analytics';
 
 export { AccountMatcherConflictError, AccountMatcherProposalUnavailableError };
 
@@ -203,16 +204,40 @@ export async function saveAccountMatcher(
 ): Promise<AccountMatcher> {
   const saved = await withAccountRecognitionRefresh(args[0], () => saveAccountMatcherCore(...args));
   const input = args[1];
+  const provenance = input.provenance ?? (saved.provenance as AccountMatcherProvenance);
+  analytics.trackFeatureUsage('account_matcher', input.id ? 'update' : 'create', {
+    ...(provenance === 'discovered' || provenance === 'selected_message' || provenance === 'manual'
+      ? { provenance }
+      : {}),
+    enabled: saved.isEnabled,
+  });
   if (!input.id && input.provenance === 'selected_message') {
     // The matcher row is the source of truth if the process dies before this preference update.
     restoreForgottenSuppressions(args[0], input, validateDefinition(input.definition).definition);
   }
   return saved;
 }
-export const setAccountMatcherEnabled = (
+export async function setAccountMatcherEnabled(
   ...args: Parameters<typeof setAccountMatcherEnabledCore>
-) => withAccountRecognitionRefresh(args[0], () => setAccountMatcherEnabledCore(...args));
-export const forgetAccountMatcher = (...args: Parameters<typeof forgetAccountMatcherCore>) =>
-  withAccountRecognitionRefresh(args[0], () => forgetAccountMatcherCore(...args));
-export const moveAccountMatcher = (...args: Parameters<typeof moveAccountMatcherCore>) =>
-  withAccountRecognitionRefresh(args[0], () => moveAccountMatcherCore(...args));
+): Promise<AccountMatcher> {
+  const updated = await withAccountRecognitionRefresh(args[0], () =>
+    setAccountMatcherEnabledCore(...args),
+  );
+  analytics.trackFeatureUsage('account_matcher', args[2] ? 'enable' : 'disable', {
+    enabled: args[2],
+  });
+  return updated;
+}
+export async function forgetAccountMatcher(
+  ...args: Parameters<typeof forgetAccountMatcherCore>
+): Promise<void> {
+  await withAccountRecognitionRefresh(args[0], () => forgetAccountMatcherCore(...args));
+  analytics.trackFeatureUsage('account_matcher', 'forget');
+}
+export async function moveAccountMatcher(
+  ...args: Parameters<typeof moveAccountMatcherCore>
+): Promise<AccountMatcher> {
+  const moved = await withAccountRecognitionRefresh(args[0], () => moveAccountMatcherCore(...args));
+  analytics.trackFeatureUsage('account_matcher', 'move');
+  return moved;
+}

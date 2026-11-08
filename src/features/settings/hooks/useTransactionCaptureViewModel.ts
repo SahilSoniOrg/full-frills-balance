@@ -16,6 +16,7 @@ import {
 } from '@/src/services/transaction-intelligence/captureReviewService';
 import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
+import { analytics } from '@/src/services/analytics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -145,8 +146,10 @@ export function useTransactionCaptureViewModel({
   const onToggleEnabled = useCallback(
     (enabled: boolean) => {
       if (loading || settingsError) return;
-      const operation = (currentWorkplaceId: WorkplaceId) =>
-        transactionCaptureService.setEnabled(currentWorkplaceId, enabled);
+      const operation = async (currentWorkplaceId: WorkplaceId) => {
+        await transactionCaptureService.setEnabled(currentWorkplaceId, enabled);
+        analytics.trackFeatureUsage('transaction_capture', 'toggle_enabled', { enabled });
+      };
       const options = {
         errorMessage: (cause: unknown) =>
           cause instanceof Error ? cause.message : strings.loadError,
@@ -194,25 +197,40 @@ export function useTransactionCaptureViewModel({
     onConfigureAccounts: async () => {
       if (loading || settingsError) return;
       await mutations.run(
-        currentWorkplaceId => transactionCaptureService.configureNewAccounts(currentWorkplaceId),
+        async currentWorkplaceId => {
+          await transactionCaptureService.configureNewAccounts(currentWorkplaceId);
+          analytics.trackFeatureUsage('transaction_capture', 'accounts_configured');
+        },
         {
           errorMessage: cause => (cause instanceof Error ? cause.message : strings.loadError),
         },
       );
     },
     onSetMerchantOpen: (merchant: string, open: boolean) =>
-      mutations.run(currentWorkplaceId =>
-        setCaptureMerchantOpen(currentWorkplaceId, merchant, open),
-      ),
+      mutations.run(async currentWorkplaceId => {
+        await setCaptureMerchantOpen(currentWorkplaceId, merchant, open);
+        analytics.trackFeatureUsage('transaction_capture', 'merchant_open_toggled', {
+          enabled: open,
+        });
+      }),
     onSetHistoricalMerchantsOpen: (pattern: HistoricalCategoryPattern, open: boolean) =>
-      mutations.run(currentWorkplaceId =>
-        setCaptureMerchantOpen(currentWorkplaceId, pattern.merchant, open),
-      ),
+      mutations.run(async currentWorkplaceId => {
+        await setCaptureMerchantOpen(currentWorkplaceId, pattern.merchant, open);
+        analytics.trackFeatureUsage('transaction_capture', 'merchant_open_toggled', {
+          enabled: open,
+        });
+      }),
     onConfirmCategories: (item: CaptureReviewItem) => {
       if (!item.confirmCategoryKey) return;
       void mutations.run(
-        currentWorkplaceId =>
-          confirmCaptureCategories(currentWorkplaceId, item.journalId, item.confirmCategoryKey!),
+        async currentWorkplaceId => {
+          await confirmCaptureCategories(
+            currentWorkplaceId,
+            item.journalId,
+            item.confirmCategoryKey!,
+          );
+          analytics.trackFeatureUsage('transaction_capture', 'category_confirmed');
+        },
         { errorMessage: () => strings.categoryChanged },
       );
     },
@@ -232,8 +250,12 @@ export function useTransactionCaptureViewModel({
           confirmText: strings.rememberCategoryAction,
           cancelText: strings.cancel,
         },
-        currentWorkplaceId =>
-          saveCaptureCategoryDefault(currentWorkplaceId, item.journalId, choice),
+        async currentWorkplaceId => {
+          await saveCaptureCategoryDefault(currentWorkplaceId, item.journalId, choice);
+          analytics.trackFeatureUsage('transaction_capture', 'category_default_saved', {
+            kind: choice.kind,
+          });
+        },
         { errorMessage: () => strings.categoryChanged },
       );
     },
@@ -255,20 +277,36 @@ export function useTransactionCaptureViewModel({
           confirmText: strings.rememberCategoryAction,
           cancelText: strings.cancel,
         },
-        currentWorkplaceId =>
-          saveHistoricalCaptureCategoryDefault(currentWorkplaceId, pattern.key, category.accountId),
+        async currentWorkplaceId => {
+          await saveHistoricalCaptureCategoryDefault(
+            currentWorkplaceId,
+            pattern.key,
+            category.accountId,
+          );
+          analytics.trackFeatureUsage('transaction_capture', 'category_default_saved', {
+            kind: pattern.kind,
+          });
+        },
         { errorMessage: () => strings.categoryChanged },
       );
     },
     onForgetCategory: (key: string) =>
-      mutations.run(currentWorkplaceId => removeCaptureCategoryDefault(currentWorkplaceId, key)),
+      mutations.run(async currentWorkplaceId => {
+        await removeCaptureCategoryDefault(currentWorkplaceId, key);
+        analytics.trackFeatureUsage('transaction_capture', 'category_default_removed');
+      }),
     onResolveCategoryDefaultConflict: (key: string, categoryAccountId: AccountId) =>
-      mutations.run(currentWorkplaceId =>
-        resolveCaptureCategoryDefaultConflict(currentWorkplaceId, key, categoryAccountId),
-      ),
+      mutations.run(async currentWorkplaceId => {
+        await resolveCaptureCategoryDefaultConflict(currentWorkplaceId, key, categoryAccountId);
+        analytics.trackFeatureUsage('transaction_capture', 'category_default_saved');
+      }),
     onSetDescriptionDefault: (key: string, description?: string) => {
-      const operation = (currentWorkplaceId: WorkplaceId) =>
-        setCaptureDescriptionDefault(currentWorkplaceId, key, description);
+      const operation = async (currentWorkplaceId: WorkplaceId) => {
+        await setCaptureDescriptionDefault(currentWorkplaceId, key, description);
+        analytics.trackFeatureUsage('transaction_capture', 'description_default_set', {
+          enabled: !!description,
+        });
+      };
       if (!description) {
         void mutations.run(operation);
         return;

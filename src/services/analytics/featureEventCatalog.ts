@@ -105,9 +105,51 @@ export const FEATURE_EVENT_CATALOG = {
     schema: {
       mode: 'token',
       status: 'token',
+      channel: 'token',
       count: 'count',
       success: 'boolean',
       is_auto_posted: 'boolean',
+    } as const satisfies Record<string, AnalyticsPropertyKind>,
+  },
+  gmail: {
+    actions: [
+      'connect',
+      'disconnect',
+      'reconnect',
+      'sync',
+      'toggle_background',
+      'toggle_automatic_capture',
+    ] as const,
+    schema: {
+      enabled: 'boolean',
+      count: 'count',
+      status: 'token',
+    } as const satisfies Record<string, AnalyticsPropertyKind>,
+  },
+  transaction_capture: {
+    actions: [
+      'captured',
+      'toggle_enabled',
+      'accounts_configured',
+      'category_confirmed',
+      'category_default_saved',
+      'category_default_removed',
+      'description_default_set',
+      'merchant_open_toggled',
+    ] as const,
+    schema: {
+      count: 'count',
+      channel: 'token',
+      enabled: 'boolean',
+      kind: 'token',
+    } as const satisfies Record<string, AnalyticsPropertyKind>,
+  },
+  account_matcher: {
+    actions: ['create', 'update', 'forget', 'enable', 'disable', 'move'] as const,
+    schema: {
+      count: 'count',
+      enabled: 'boolean',
+      provenance: 'token',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   transaction_ingestion: {

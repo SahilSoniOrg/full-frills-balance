@@ -29,7 +29,10 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   interval: new Set(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']),
   choice: new Set(['fix_now', 'later', 'dismissed']),
   source: new Set(['manual', 'system', 'import', 'sms', 'restore', 'cleanup', 'user', 'widget']),
+  channel: new Set(['sms', 'email', 'voice']),
   format: new Set(['csv', 'json', 'pdf', 'zip', 'text', 'ofx', 'qif']),
+  kind: new Set(['expense', 'income', 'transfer']),
+  provenance: new Set(['discovered', 'selected_message', 'manual']),
   requested_format: new Set(['csv', 'json', 'pdf', 'zip', 'text']),
   effective_format: new Set(['csv', 'json', 'pdf', 'zip', 'text', 'file']),
   platform: new Set(['ios', 'android', 'web']),
@@ -131,6 +134,20 @@ const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<st
     item: SAFE_TO_SPEND_LEGENDS,
     slice: SAFE_TO_SPEND_LEGENDS,
     quality: new Set(['ready', 'stale', 'unavailable']),
+  },
+  sms: {
+    mode: new Set(['refresh', 'scan_older']),
+    channel: ENUM_VALUES.channel,
+  },
+  gmail: {
+    status: ENUM_VALUES.status,
+  },
+  transaction_capture: {
+    channel: ENUM_VALUES.channel,
+    kind: ENUM_VALUES.kind,
+  },
+  account_matcher: {
+    provenance: ENUM_VALUES.provenance,
   },
 };
 

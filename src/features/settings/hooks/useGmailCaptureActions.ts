@@ -10,6 +10,7 @@ import {
 import { registerGmailBackgroundTask } from '@/src/services/email/gmailBackgroundTask';
 import { cancelGmailSync, syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
+import { analytics } from '@/src/services/analytics';
 import type { WorkplaceId } from '@/src/types/ids';
 
 type MutationRunner = ReturnType<typeof useCaptureMutationRunner>;
@@ -45,7 +46,9 @@ export function useGmailCaptureActions({
           if (connected) {
             cancelGmailSync(currentWorkplaceId);
             await disconnectGmailForWorkplace(currentWorkplaceId);
+            analytics.trackFeatureUsage('gmail', 'disconnect');
           } else if (await connectGmailForWorkplace(currentWorkplaceId)) {
+            analytics.trackFeatureUsage('gmail', 'connect');
             void syncGmailForWorkplace(currentWorkplaceId).catch(() => {});
           }
         },
@@ -56,8 +59,10 @@ export function useGmailCaptureActions({
       if (loading) return;
       void mutations.run(
         async currentWorkplaceId => {
-          if (await connectGmailForWorkplace(currentWorkplaceId, true))
+          if (await connectGmailForWorkplace(currentWorkplaceId, true)) {
+            analytics.trackFeatureUsage('gmail', 'reconnect');
             await syncGmailForWorkplace(currentWorkplaceId);
+          }
         },
         { errorMessage: gmailError },
       );
@@ -68,6 +73,7 @@ export function useGmailCaptureActions({
         if (enabled && !(await registerGmailBackgroundTask()))
           throw new Error(strings.backgroundUnavailable);
         await setGmailBackgroundEnabled(currentWorkplaceId, enabled);
+        analytics.trackFeatureUsage('gmail', 'toggle_background', { enabled });
         if (!enabled) cancelGmailSync(currentWorkplaceId);
       };
       if (enabled) {
@@ -96,6 +102,7 @@ export function useGmailCaptureActions({
       const apply = async (currentWorkplaceId: WorkplaceId) => {
         if (!enabled) cancelGmailSync(currentWorkplaceId);
         await setGmailAutomaticCapture(currentWorkplaceId, enabled);
+        analytics.trackFeatureUsage('gmail', 'toggle_automatic_capture', { enabled });
       };
       if (enabled) {
         mutations.confirmAndRun(

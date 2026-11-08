@@ -31,12 +31,13 @@ export async function ingestGmailObservation(
   message: GmailObservation,
   signal?: AbortSignal,
   shouldContinue?: () => boolean,
-): Promise<void> {
-  if (message.receivedAt <= connectedAt || signal?.aborted || shouldContinue?.() === false) return;
+): Promise<boolean> {
+  if (message.receivedAt <= connectedAt || signal?.aborted || shouldContinue?.() === false)
+    return false;
   const parsed = await parseGmailTransaction(message);
   if (!parsed) {
     logger.debug('[Gmail] Message skipped', { reason: 'no_transaction_direction' });
-    return;
+    return false;
   }
   logger.debug('[Gmail] Transaction parsed', {
     direction: parsed.direction,
@@ -286,4 +287,5 @@ export async function ingestGmailObservation(
     return result;
   });
   if (journalResult) journalPersistenceService.afterAtomicWriteCommit([journalResult], workplaceId);
+  return !!journalResult;
 }
