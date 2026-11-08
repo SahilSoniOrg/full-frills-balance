@@ -61,7 +61,7 @@ export const plannedPayments = {
 
 export const smsInbox = {
   screen: 'transaction-inbox-screen',
-  settingsAutomation: 'settings-automation',
+  settingsAutomation: 'settings-capture-review',
   settingsSmsSettings: 'settings-sms-settings',
   settingsSmsInbox: 'settings-sms-inbox',
   filterDuplicates: 'inbox-filter-duplicates',

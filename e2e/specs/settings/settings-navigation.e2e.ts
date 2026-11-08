@@ -7,14 +7,11 @@ import { E2E_DEFAULT_WORKPLACE_LABEL } from '@/src/testing/e2eConstants';
 
 jest.setTimeout(180000);
 
-const notificationsTitle =
-  device.getPlatform() === 'android' ? 'Notifications & Automation' : 'Notifications';
-
 const settingsDestinations = [
   ['settings-profile', 'Profile'],
   ['settings-current-workplace', 'Current Workplace'],
   ['settings-appearance', 'Appearance'],
-  ['settings-automation', notificationsTitle],
+  ['settings-capture-review', 'Capture & review'],
   ['settings-privacy-security', 'Privacy & Security'],
   ['settings-data-management', 'Data & Backup'],
   ['settings-maintenance', 'Maintenance'],

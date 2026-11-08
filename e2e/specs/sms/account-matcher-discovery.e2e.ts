@@ -21,12 +21,12 @@ describe(':android: account matcher discovery', () => {
     await launchOnboardedApp({ seedProfile: 'matcher-discovery' });
   });
 
-  it('holds contradictory recognition and auto-posts a compatible SMS', async () => {
+  it('captures supported purchases and holds conflicting account roles', async () => {
     await openSmsInboxFromSettings();
     await refreshSmsInbox();
     await selectInboxFilter('pending');
     await waitForInboxItem('e2e-matcher-contradictory');
-    await assertTextVisible("Account didn't match the rule", LONG_TIMEOUT_MS);
+    await assertTextVisible('Account recognition conflicts', LONG_TIMEOUT_MS);
     await assertInboxItemMissing('e2e-matcher-compatible');
   });
 });
