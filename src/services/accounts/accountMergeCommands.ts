@@ -9,7 +9,6 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { analytics } from '@/src/services/analytics';
 import {
   AccountReferenceSiteKey,
@@ -26,6 +25,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { generator } from '@/src/data/database/idGenerator';
 import { preferences } from '@/src/services/preferences';
+import { remapCategoryDefaultsForAccountMerge } from '@/src/domain/transaction-intelligence/categoryDefaults';
 
 /**
  * Merge rewrite/destroy paths keyed by Account reference site.
@@ -33,13 +33,7 @@ import { preferences } from '@/src/services/preferences';
  * which paths are required.
  */
 type MergePrepareKind =
-  | 'transactions'
-  | 'plannedPayments'
-  | 'smsRules'
-  | 'matchers'
-  | 'budgets'
-  | 'accounts'
-  | 'snapshots';
+  'transactions' | 'plannedPayments' | 'matchers' | 'budgets' | 'accounts' | 'snapshots';
 
 const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepareKind>> = {
   'account.parentAccountId': 'accounts',
@@ -50,8 +44,6 @@ const MERGE_PREPARE_BY_SITE: Partial<Record<AccountReferenceSiteKey, MergePrepar
   'plannedPayment.fromAccountId': 'plannedPayments',
   'plannedPayment.toAccountId': 'plannedPayments',
   'balanceSnapshot.accountId': 'snapshots',
-  'transactionAutoPostRule.sourceAccountId': 'smsRules',
-  'transactionAutoPostRule.categoryAccountId': 'smsRules',
   'accountMatcher.accountId': 'matchers',
 };
 
@@ -150,17 +142,6 @@ async function mergeAccountsCore(
         ),
       );
     }
-    if (prepareKinds.has('smsRules')) {
-      writes.push(
-        transactionAutoPostRuleRepository.mergeAccountsInSession(
-          session,
-          workplaceId,
-          filteredSourceIds,
-          targetAccountId,
-          correlationId,
-        ),
-      );
-    }
     if (prepareKinds.has('matchers')) {
       writes.push(
         accountMatcherRepository.mergeAccountsInSession(
@@ -215,6 +196,42 @@ async function mergeAccountsCore(
       workplaceId,
       targetAccountId,
       sourceAccountIds: filteredSourceIds,
+    });
+  }
+
+  try {
+    await runAccountingWriteSession(async () => {
+      const snapshot = preferences.workplace.getSnapshot(workplaceId);
+      const capture = snapshot.automaticTransactionCapture;
+      const sourceIds = new Set(filteredSourceIds);
+      const uncategorizedAccountIds = Object.fromEntries(
+        Object.entries(capture?.uncategorizedAccountIds ?? {}).map(([role, accountId]) => [
+          role,
+          sourceIds.has(accountId) ? targetAccountId : accountId,
+        ]),
+      );
+      preferences.workplace.update(workplaceId, {
+        ...(capture
+          ? { automaticTransactionCapture: { ...capture, uncategorizedAccountIds } }
+          : {}),
+        ...(snapshot.captureCategoryDefaults
+          ? {
+              captureCategoryDefaults: remapCategoryDefaultsForAccountMerge(
+                snapshot.captureCategoryDefaults,
+                sourceIds,
+                targetAccountId,
+              ),
+            }
+          : {}),
+      });
+    });
+  } catch (error) {
+    // If a role still points at the merged/deleted account, capture validation
+    // holds new postings for review instead of guessing another account.
+    logger.warn('[AccountMergeCommand] Failed to remap capture roles after merge', {
+      error,
+      workplaceId,
+      targetAccountId,
     });
   }
 

@@ -6,7 +6,7 @@ export const AUDIT_EVENT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_AUDIT_ACTIONS = ['create', 'update', 'delete'] as const;
 
 /**
- * Non-CRUD event names emitted by current writers, plus legacy aliases retained for imports.
+ * Non-CRUD event names emitted by current writers.
  * Add new domain events here so writers get compile-time validation and the UI can label them.
  */
 export const AUDIT_DOMAIN_EVENT_TYPES = [
@@ -27,6 +27,7 @@ export const AUDIT_DOMAIN_EVENT_TYPES = [
   'account.balance_repaired',
   'journal.created',
   'journal.sms_auto_posted',
+  'journal.automatically_captured',
   'journal.imported',
   'journal.updated',
   'journal.deleted',
@@ -59,11 +60,6 @@ export const AUDIT_DOMAIN_EVENT_TYPES = [
   'planned_payment.status_changed',
   'planned_payment.schedule_advanced',
   'planned_payment.reverted',
-  'transaction_auto_post_rule.created',
-  'transaction_auto_post_rule.imported',
-  'transaction_auto_post_rule.updated',
-  'transaction_auto_post_rule.deleted',
-  'transaction_auto_post_rule.accounts_retargeted',
   'account_matcher.created',
   'account_matcher.imported',
   'account_matcher.updated',

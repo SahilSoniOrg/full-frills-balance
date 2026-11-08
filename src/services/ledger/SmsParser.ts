@@ -1,6 +1,7 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { InboxParseStatus, TransactionDirection } from '@/src/types/enums';
 import { SmsExtractor } from '@/src/services/ledger/SmsExtractor';
+import { resolveMessageTransactionAmount } from '@/src/services/transaction-intelligence/messageAmountEvidence';
 
 export function toTransactionDirection(type: 'debit' | 'credit' | 'unknown'): TransactionDirection {
   if (type === 'debit') return TransactionDirection.DEBIT;
@@ -19,6 +20,7 @@ export interface ParsedTransaction {
   accountSource?: string;
   referenceNumber?: string;
   currencyCode?: string;
+  amountReliableForCapture?: boolean;
   confidence: number;
   parseStatus: InboxParseStatus;
   parseReason: string;
@@ -81,9 +83,13 @@ export class SmsParser {
       };
     }
 
+    const monetary = await resolveMessageTransactionAmount(
+      { channel: 'sms', id: sms.id, receivedAt: sms.date, text: sms.body },
+      info,
+    );
     return {
       id: sms.id,
-      amount: info.amount,
+      amount: monetary.amount,
       merchant: info.merchantName,
       type: info.direction === 'debit' ? 'debit' : 'credit',
       date: sms.date,
@@ -91,7 +97,8 @@ export class SmsParser {
       address: sms.address,
       accountSource: info.sourceAccountHint,
       referenceNumber: info.referenceNumber,
-      currencyCode: info.currencyCode,
+      currencyCode: monetary.currencyCode,
+      amountReliableForCapture: monetary.reliable,
       confidence: info.merchantName ? 0.92 : 0.82,
       parseStatus: InboxParseStatus.PARSED,
       parseReason: info.currencyCode

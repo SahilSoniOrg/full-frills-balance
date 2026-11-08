@@ -19,15 +19,18 @@ import { Model, Q } from '@nozbe/watermelondb';
 export interface SmsRecognitionReviewUpdate {
   deviceInboxId: string;
   recognition: SmsRecognitionSummary;
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
+  suggestedSourceAccountId?: AccountId;
+  suggestedCategoryAccountId?: AccountId;
 }
 
 export interface DeviceSmsWriteOptions {
   origin: SmsScanOrigin;
   queueReview: boolean;
   source?: Readonly<{ senderAddress: string; rawBody: string }>;
-  reviewRule?: Pick<SmsWorkplaceReviewState, 'sourceAccountId' | 'categoryAccountId'>;
+  suggestedAccounts?: Pick<
+    SmsWorkplaceReviewState,
+    'suggestedSourceAccountId' | 'suggestedCategoryAccountId'
+  >;
   recognition?: SmsRecognitionSummary;
 }
 
@@ -75,8 +78,8 @@ export function deviceSmsSnapshot(
         : InboxProcessingStatus.PENDING),
     duplicateJournalId: state?.duplicateJournalId,
     duplicateConfidence: state?.duplicateConfidence,
-    suggestedSourceAccountId: state?.sourceAccountId,
-    suggestedCategoryAccountId: state?.categoryAccountId,
+    suggestedSourceAccountId: state?.suggestedSourceAccountId,
+    suggestedCategoryAccountId: state?.suggestedCategoryAccountId,
     recognition: state?.recognition,
     metadataJson: state?.metadataJson,
     firstSeenAt: record.firstSeenAt,
@@ -153,14 +156,22 @@ export class DeviceSmsInboxRepository {
         if (currentStatus !== InboxProcessingStatus.PENDING) return [];
 
         const next: SmsWorkplaceReviewState = {
-          ...current,
           processingStatus: InboxProcessingStatus.PENDING,
+          ...(current?.duplicateJournalId !== undefined
+            ? { duplicateJournalId: current.duplicateJournalId }
+            : {}),
+          ...(current?.duplicateConfidence !== undefined
+            ? { duplicateConfidence: current.duplicateConfidence }
+            : {}),
+          ...(current?.metadataJson !== undefined ? { metadataJson: current.metadataJson } : {}),
           recognition: update.recognition,
+          ...(update.suggestedSourceAccountId
+            ? { suggestedSourceAccountId: update.suggestedSourceAccountId }
+            : {}),
+          ...(update.suggestedCategoryAccountId
+            ? { suggestedCategoryAccountId: update.suggestedCategoryAccountId }
+            : {}),
         };
-        delete next.sourceAccountId;
-        delete next.categoryAccountId;
-        if (update.sourceAccountId) next.sourceAccountId = update.sourceAccountId;
-        if (update.categoryAccountId) next.categoryAccountId = update.categoryAccountId;
         states[workplaceId] = next;
         const encoded = JSON.stringify(states);
         if (encoded === record.reviewStatesJson) return [];
@@ -250,7 +261,7 @@ export class DeviceSmsInboxRepository {
       duplicateJournalId: data.duplicateJournalId,
       duplicateConfidence: data.duplicateConfidence,
       metadataJson: data.metadataJson,
-      ...options.reviewRule,
+      ...options.suggestedAccounts,
       ...(options.recognition ? { recognition: options.recognition } : {}),
     };
     staged.reviewCompleted ||=

@@ -1,5 +1,4 @@
 import type { SmsMessage } from '@/modules/expo-sms-inbox';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMatcherEligibility';
 import type { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
@@ -14,20 +13,21 @@ import {
   type InboxImportParityCase,
 } from './inboxImportDecisionParity.fixtures';
 
-// decideSms stores the parser-primary account on sourceAccountId and its counterparty
-// on categoryAccountId. Navigation stores outgoing on sourceAccountId and incoming
-// on destinationAccountId, so a credit SMS swaps those two fields.
+// Scan suggestions store the parser-primary financial account and counterparty.
+// Journal navigation always stores outgoing source and incoming destination.
 function journalLegs(
   direction: InboxImportParityCase['direction'],
-  suggested: { sourceAccountId?: AccountId; categoryAccountId?: AccountId },
+  suggested: { suggestedSourceAccountId?: AccountId; suggestedCategoryAccountId?: AccountId },
 ) {
-  const sourceAccountId =
-    direction === 'credit' ? suggested.categoryAccountId : suggested.sourceAccountId;
-  const destinationAccountId =
-    direction === 'credit' ? suggested.sourceAccountId : suggested.categoryAccountId;
   return {
-    sourceAccountId: sourceAccountId || undefined,
-    destinationAccountId: destinationAccountId || undefined,
+    sourceAccountId:
+      direction === 'credit'
+        ? suggested.suggestedCategoryAccountId
+        : suggested.suggestedSourceAccountId,
+    destinationAccountId:
+      direction === 'credit'
+        ? suggested.suggestedSourceAccountId
+        : suggested.suggestedCategoryAccountId,
   };
 }
 
@@ -66,54 +66,41 @@ function parsedTransaction(fixture: InboxImportParityCase): ParsedTransaction {
   };
 }
 
-function matchedRule(fixture: InboxImportParityCase): TransactionAutoPostRule | null {
-  if (!fixture.rule) return null;
-  return {
-    id: 'rule-parity',
-    senderMatch: 'BANK',
-    sourceAccountId: fixture.rule.sourceAccountId,
-    categoryAccountId: fixture.rule.categoryAccountId,
-    priority: 1,
-    isActive: true,
-  } as TransactionAutoPostRule;
-}
-
-describe('inbox import and decideSms account parity', () => {
+describe('manual import and scan recognition parity', () => {
   it.each(inboxImportDecisionParityCases)('$name', fixture => {
     const message: SmsMessage = parityMessage;
     const accounts = fixture.accounts.map(account => ({ ...account, currencyCode: 'INR' }));
     const financialLeaves = getEligibleMatcherAccountIds(accounts);
-    const recognition = recognizeSmsAccounts(
-      { matchers: fixture.matchers, eligibleAccountIds: [...financialLeaves] },
-      { senderAddress: message.address, rawBody: message.body },
-    );
-    const rule = matchedRule(fixture);
+    const matchers = { matchers: fixture.matchers, eligibleAccountIds: [...financialLeaves] };
+    const recognition = recognizeSmsAccounts(matchers, {
+      senderAddress: message.address,
+      rawBody: message.body,
+    });
     const decision = decideSms(
       message,
       parsedTransaction(fixture),
       {
-        activeRules: rule ? [rule] : [],
-        matchers: { matchers: fixture.matchers, eligibleAccountIds: [...financialLeaves] },
+        matchers,
         sourceAccountCurrency: () => 'INR',
         isFinancialLeaf: id => financialLeaves.has(id),
+        uncategorizedAccount: () => undefined,
+        captureEnabled: false,
       },
       InboxProcessingStatus.PENDING,
-      true,
+      false,
     );
-    if (decision.kind === 'ignore') {
-      throw new Error(`${fixture.name} produced an ignore decision`);
-    }
+    if (decision.kind !== 'review')
+      throw new Error('Recognition-only evaluation must retain manual review');
 
-    const fromDecision = journalLegs(fixture.direction, decision.suggestedAccounts);
-    const navigation = prepareTransactionInboxImport(inboxItem(fixture), accounts, rule, {
+    const navigation = prepareTransactionInboxImport(inboxItem(fixture), accounts, {
       recognition,
     }).navigation;
-    const fromImport = {
+
+    expect(journalLegs(fixture.direction, decision.suggestedAccounts)).toEqual(fixture.expected);
+    expect({
       sourceAccountId: navigation.params.sourceAccountId,
       destinationAccountId: navigation.params.destinationAccountId,
-    };
-
-    expect(fromDecision).toEqual(fixture.expected);
-    expect(fromImport).toEqual(fixture.expected);
+    }).toEqual(fixture.expected);
+    expect(navigation.params.description).toBe('Unmatched Merchant');
   });
 });

@@ -10,5 +10,6 @@ export const makeParsedTx = (overrides: Partial<ParsedTransaction>): ParsedTrans
   parseReason: 'OK',
   type: 'debit',
   parseStatus: InboxParseStatus.PARSED,
+  amountReliableForCapture: true,
   ...overrides,
 });

@@ -10,7 +10,6 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { assertNoLiveAccountReferences } from '@/src/services/accounts/accountReferenceGraph';
 import { logger } from '@/src/utils/logger';
@@ -56,7 +55,6 @@ describe('mergeAccounts command', () => {
       'retargetAccountsForMergeInSession',
     );
     const plannedPaymentSpy = jest.spyOn(plannedPaymentRepository, 'mergeAccountsInSession');
-    const smsRuleSpy = jest.spyOn(transactionAutoPostRuleRepository, 'mergeAccountsInSession');
     const budgetSpy = jest.spyOn(budgetRepository, 'mergeAccountsInSession');
     const accountSpy = jest.spyOn(accountWriteRepository, 'mergeInSession');
     const snapshotSpy = jest.spyOn(balanceSnapshotRepository, 'deleteForAccountMergeInSession');
@@ -69,13 +67,7 @@ describe('mergeAccounts command', () => {
       target.id,
     ]);
 
-    for (const repositorySpy of [
-      journalSpy,
-      plannedPaymentSpy,
-      smsRuleSpy,
-      budgetSpy,
-      accountSpy,
-    ]) {
+    for (const repositorySpy of [journalSpy, plannedPaymentSpy, budgetSpy, accountSpy]) {
       expect(repositorySpy).toHaveBeenCalledWith(
         expect.anything(),
         workplaceId,

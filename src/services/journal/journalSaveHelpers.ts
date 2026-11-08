@@ -4,8 +4,15 @@ import { validateDistinctAccounts } from '@/src/services/accounting/JournalValid
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { JournalEntryLine } from '@/src/types/domainJournal';
-import { WorkplaceId } from '@/src/types/ids';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { AccountType } from '@/src/types/enums';
+import { preferences } from '@/src/services/preferences';
+import {
+  readCaptureMetadata,
+  withCaptureMetadata,
+  type CaptureMetadata,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
 
 type JournalSaveLineInput = {
   lines: JournalEntryLine[];
@@ -15,6 +22,7 @@ type JournalSaveLineInput = {
   journalTime?: string;
   smsId?: string;
   smsRecordId?: string;
+  journalId?: JournalId;
   workplaceId: WorkplaceId;
 };
 
@@ -82,13 +90,17 @@ function mapLinesToCreateTransactions(
 async function resolveSmsMetadataJson(
   smsRecordId: string | undefined,
   workplaceId: WorkplaceId,
+  lines: readonly JournalEntryLine[],
+  createCapture: boolean,
 ): Promise<string | undefined> {
   if (!smsRecordId) return undefined;
   try {
     const inboxRecord = await transactionInboxRepository.find(workplaceId, smsRecordId);
     if (!inboxRecord) return undefined;
-    return JSON.stringify({
-      smsFingerprint: inboxRecord.inputFingerprint,
+    const metadataJson = JSON.stringify({
+      ...(inboxRecord.channel === 'sms'
+        ? { smsFingerprint: inboxRecord.inputFingerprint }
+        : { sourceFingerprint: inboxRecord.inputFingerprint }),
       parsedAmount: inboxRecord.parsedAmount ?? null,
       parsedCurrencyCode: inboxRecord.parsedCurrencyCode ?? null,
       parsedMerchant: inboxRecord.parsedMerchant ?? null,
@@ -97,6 +109,46 @@ async function resolveSmsMetadataJson(
         : null,
       accountSource: inboxRecord.parsedAccountSource ?? null,
     });
+    if ((inboxRecord.channel !== 'sms' && inboxRecord.channel !== 'email') || !createCapture)
+      return metadataJson;
+    const uncategorizedAccountIds = Object.values(
+      preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+        ?.uncategorizedAccountIds ?? {},
+    );
+    const categoryLines = lines.filter(
+      line => line.accountType === AccountType.EXPENSE || line.accountType === AccountType.INCOME,
+    );
+    const now = Date.now();
+    const capture: CaptureMetadata = {
+      version: 1,
+      merchant: inboxRecord.parsedMerchant,
+      economicKind:
+        categoryLines.length === 0
+          ? 'transfer'
+          : categoryLines.every(line => line.accountType === AccountType.INCOME)
+            ? 'income'
+            : 'expense',
+      reviewState: categoryLines.length === 0 ? 'not_applicable' : 'confirmed',
+      allocations: categoryLines.map(line => ({
+        accountId: line.accountId,
+        amount: sanitizeAmount(line.amount, 9) ?? 0,
+        transactionType: line.transactionType,
+        currencyCode: line.accountCurrency,
+        origin: uncategorizedAccountIds.includes(line.accountId) ? 'uncategorized' : 'user',
+        confirmedAt: uncategorizedAccountIds.includes(line.accountId) ? undefined : now,
+      })),
+      uncategorizedAccountIds,
+      sources: [
+        {
+          channel: inboxRecord.channel,
+          sourceId: inboxRecord.deviceSourceId,
+          occurredAt: inboxRecord.inputDate,
+          fingerprint: inboxRecord.inputFingerprint,
+          merchant: inboxRecord.parsedMerchant,
+        },
+      ],
+    };
+    return withCaptureMetadata(metadataJson, capture);
   } catch {
     return undefined;
   }
@@ -119,11 +171,18 @@ export async function assembleCreateJournalData(
   const currencyCode =
     params.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
 
-  const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId, params.workplaceId);
+  const smsMetadataJson = await resolveSmsMetadataJson(
+    params.smsRecordId,
+    params.workplaceId,
+    params.lines,
+    !params.journalId,
+  );
   const metadata =
     params.smsId || params.smsRecordId
       ? {
-          importSource: params.smsId ? 'sms' : 'manual',
+          importSource: params.smsId
+            ? 'sms'
+            : (readCaptureMetadata(smsMetadataJson)?.sources[0]?.channel ?? 'manual'),
           originalSmsId: params.smsId,
           metadataJson: smsMetadataJson,
         }

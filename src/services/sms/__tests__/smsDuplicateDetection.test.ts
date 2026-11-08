@@ -2,6 +2,8 @@ import { AppConfig } from '@/src/constants';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
+import type Journal from '@/src/data/models/Journal';
 import {
   buildReferenceDuplicateMatch,
   coalesceActionableDuplicate,
@@ -18,6 +20,9 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
     findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
     findLinkedSmsRecordsByFingerprints: jest.fn().mockResolvedValue([]),
   },
+}));
+jest.mock('@/src/data/repositories/journal/JournalCaptureQueries', () => ({
+  journalCaptureQueries: { findPreservedMerchants: jest.fn().mockResolvedValue(new Map()) },
 }));
 
 describe('smsDuplicateDetection', () => {
@@ -75,9 +80,34 @@ describe('smsDuplicateDetection', () => {
         expect.objectContaining({
           centerDate: messageDate,
           windowMs: fuzzyWindowMs,
+          limit: null,
         }),
         'wp-1',
       );
+    });
+
+    it('does not flag an otherwise similar journal in a different currency', async () => {
+      const messageDate = 1700000000000;
+      jest.mocked(smsJournalQueries.findNearbyJournals).mockResolvedValueOnce([
+        {
+          id: 'other-currency',
+          totalAmount: 100,
+          currencyCode: 'USD',
+          journalDate: messageDate,
+          description: 'Market',
+        } as unknown as Journal,
+      ]);
+      jest.mocked(journalCaptureQueries.findPreservedMerchants).mockResolvedValueOnce(new Map());
+      const matches = await findManyDuplicateCandidates(
+        [
+          {
+            message: { id: 'sms-1', address: 'BANK', body: 'test', date: messageDate },
+            parsed: makeParsedTx({ amount: 100, currencyCode: 'INR', merchant: 'Market' }),
+          },
+        ],
+        'wp-1' as WorkplaceId,
+      );
+      expect(matches.size).toBe(0);
     });
   });
 

@@ -136,6 +136,7 @@ export const journalDetailsStrings = {
   events: {
     'journal.created': 'Created',
     'journal.sms_auto_posted': 'Auto-posted from SMS',
+    'journal.automatically_captured': 'Captured automatically',
     'journal.imported': 'Imported',
     'journal.updated': 'Edited',
     'journal.renamed': 'Edited',

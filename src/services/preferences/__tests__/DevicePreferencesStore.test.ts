@@ -82,7 +82,6 @@ describe('DevicePreferencesStore', () => {
       deviceRegistered: false,
       isAppLockEnabled: false,
       isAutomaticSmsImportEnabled: false,
-      isSmsAutoPostEnabled: true,
       areSmsReviewNotificationsEnabled: true,
       showSmsNotificationDetails: false,
       reduceMotion: false,

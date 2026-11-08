@@ -228,7 +228,12 @@ function describeEvent(
   if (kind === 'transaction_inbox_record.linked') {
     return typeof details.senderAddress === 'string' ? details.senderAddress : undefined;
   }
-  if (kind !== 'journal.created' && kind !== 'journal.sms_auto_posted') return undefined;
+  if (
+    kind !== 'journal.created' &&
+    kind !== 'journal.sms_auto_posted' &&
+    kind !== 'journal.automatically_captured'
+  )
+    return undefined;
   const legs = asTransactionSnapshots(snapshot.transactions);
   const from = legs.filter(leg => leg.type === 'CREDIT');
   const to = legs.filter(leg => leg.type === 'DEBIT');

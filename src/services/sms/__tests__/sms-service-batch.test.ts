@@ -4,6 +4,10 @@ import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
+import { loadSmsDecisionContext } from '../pipeline/smsDecisionContext';
+import { compileAccountMatcher } from '../recognition/accountMatcherEvaluator';
+import type { AccountMatcherRecord } from '@/src/types/accountMatcher';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   stageModelWrite,
@@ -89,6 +93,12 @@ jest.mock('@/src/data/repositories/account', () => ({
   },
 }));
 
+jest.mock('@/src/services/sms/pipeline/smsDecisionContext', () => ({
+  loadSmsDecisionContext: jest.fn(),
+}));
+jest.mock('@/src/data/repositories/journal/captureSourceLinkStaging', () => ({
+  stageLinkedCaptureSource: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/src/services/analytics');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -121,9 +131,37 @@ function createMockAuditCollection() {
   };
 }
 
+async function enableSupportedCapture() {
+  const matcher: AccountMatcherRecord = {
+    id: 'bank-matcher',
+    accountId: asAccountId('acc-1'),
+    isEnabled: true,
+    eligible: true,
+    definition: { version: 1, sender: { op: 'contains', value: 'BANK' } },
+  };
+  jest.mocked(loadSmsDecisionContext).mockResolvedValue({
+    matchers: {
+      matchers: [{ ...matcher, compiled: compileAccountMatcher(matcher) }],
+      eligibleAccountIds: [asAccountId('acc-1')],
+    },
+    sourceAccountCurrency: () => 'INR',
+    isFinancialLeaf: id => id === 'acc-1',
+    uncategorizedAccount: () => asAccountId('cat-1'),
+    captureEnabled: true,
+    captureEnabledAt: Date.now() - 10_000,
+  });
+}
+
 describe('SmsService Batching', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(loadSmsDecisionContext).mockResolvedValue({
+      matchers: { matchers: [], eligibleAccountIds: [] },
+      sourceAccountCurrency: () => 'INR',
+      isFinancialLeaf: () => true,
+      uncategorizedAccount: () => asAccountId('cat-1'),
+      captureEnabled: false,
+    });
     jest.mocked(deviceSmsInboxRepository.stageUpsert).mockImplementation(async (session, data) => {
       stageModelWrite(session, [{ id: data.deviceInboxId } as Model]);
       return {
@@ -156,21 +194,20 @@ describe('SmsService Batching', () => {
         return obj;
       }),
     };
-    const mockRulesCollection = {
-      query: jest.fn().mockReturnValue({
-        fetch: jest.fn().mockResolvedValue([]),
-      }),
-    };
     const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
-      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
       if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
 
-    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+      undefined,
+      { origin: 'arrival' },
+    );
 
     // Verify database.write was called once
     expect(database.write).toHaveBeenCalledTimes(1);
@@ -188,10 +225,13 @@ describe('SmsService Batching', () => {
     expect(mockAuditCollection.prepareCreate).not.toHaveBeenCalled();
   });
 
-  it('includes ledger operations in the same batch when auto-post is triggered', async () => {
+  it('includes ledger operations in the same batch when automatic capture posts', async () => {
     const workplaceId = 'wp-1' as any;
 
-    const messages = [{ id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() }];
+    const messages = [
+      { id: '1', address: 'BANK', body: 'INR 100 spent on Card XX1234 at SHOP.', date: Date.now() },
+    ];
+    await enableSupportedCapture();
     (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
 
     const mockInboxCollection = {
@@ -205,26 +245,10 @@ describe('SmsService Batching', () => {
       }),
     };
 
-    // Mock a rule that matches
-    const mockRulesCollection = {
-      query: jest.fn().mockReturnValue({
-        fetch: jest.fn().mockResolvedValue([
-          {
-            id: 'rule-1',
-            senderMatch: 'BANK',
-            isActive: true,
-            sourceAccountId: 'acc-1',
-            categoryAccountId: 'cat-1',
-            prepareUpdate: jest.fn(),
-          },
-        ]),
-      }),
-    };
     const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
-      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
       if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
@@ -247,10 +271,12 @@ describe('SmsService Batching', () => {
         },
       );
 
-    // Remove the incorrect mock for journalRepository.getRuleDefinition
-    // since it's a private method of SmsService, not JournalRepository.
-
-    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+      undefined,
+      { origin: 'arrival' },
+    );
 
     // Verify database.batch was called
     expect(database.batch).toHaveBeenCalled();
@@ -264,7 +290,10 @@ describe('SmsService Batching', () => {
 
   it('rechecks the scoped inbox state inside the final write before auto-posting', async () => {
     const workplaceId = 'wp-1' as any;
-    const messages = [{ id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() }];
+    const messages = [
+      { id: '1', address: 'BANK', body: 'INR 100 spent on Card XX1234 at SHOP.', date: Date.now() },
+    ];
+    await enableSupportedCapture();
     (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
 
     type MockInboxRecord = {
@@ -295,30 +324,20 @@ describe('SmsService Batching', () => {
       query: jest.fn().mockReturnValue({ fetch: inWriterFetch }),
       prepareCreate: jest.fn(),
     };
-    const mockRulesCollection = {
-      query: jest.fn().mockReturnValue({
-        fetch: jest.fn().mockResolvedValue([
-          {
-            id: 'rule-1',
-            senderMatch: 'BANK',
-            isActive: true,
-            sourceAccountId: 'acc-1',
-            categoryAccountId: 'cat-1',
-            prepareUpdate: jest.fn(),
-          },
-        ]),
-      }),
-    };
     const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
-      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
       if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
 
-    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+      undefined,
+      { origin: 'arrival' },
+    );
 
     expect(database.write).toHaveBeenCalledTimes(1);
     // Both reads happen inside the writer: the scoped inbox lookup, then the stage re-read.

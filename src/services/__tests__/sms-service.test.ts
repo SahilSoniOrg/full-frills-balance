@@ -1,16 +1,7 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import {
-  InboxParseStatus,
-  InboxProcessingStatus,
-  TransactionDirection,
-  AccountType,
-  TransactionType,
-} from '@/src/types/enums';
+import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import Transaction from '@/src/data/models/Transaction';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { createJournalFixture } from '@/src/testing/journalFixtures';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
@@ -89,65 +80,12 @@ describe('smsService.parseTransactionMessage', () => {
   });
 });
 
-describe('smsService.getMatchingRule', () => {
-  it('returns the matching rule for a parsed transaction', async () => {
-    const mockRule = {
-      id: 'rule-1',
-      senderMatch: 'HDFCBK',
-      bodyMatch: undefined,
-      conditionsJson: undefined,
-      actionsJson: JSON.stringify({
-        disposition: 'review',
-        sourceAccountId: 'hdfc-acc-id',
-      }),
-      priority: 100,
-      sourceAccountId: 'hdfc-acc-id',
-      categoryAccountId: '',
-      isActive: true,
-    };
-
-    const mockQuery = {
-      fetch: jest.fn().mockResolvedValue([mockRule]),
-    };
-
-    const databaseSpy = jest.spyOn(database.collections, 'get').mockReturnValue({
-      query: jest.fn().mockReturnValue(mockQuery),
-    } as any);
-
-    const parsedTx = {
-      id: 'sms-hdfc',
-      amount: 1990,
-      merchant: undefined,
-      type: 'debit' as const,
-      date: Date.now(),
-      rawBody: 'Your card XX1990 is debited',
-      address: 'HDFCBK',
-      confidence: 0.9,
-      parseStatus: InboxParseStatus.PARSED,
-      parseReason: 'Parsed amount',
-    };
-
-    const rule = await smsService.getMatchingRule(
-      'HDFCBK',
-      'Your card XX1990 is debited',
-      parsedTx,
-      'wp-1' as any,
-    );
-
-    expect(rule).not.toBeNull();
-    expect(rule?.id).toBe('rule-1');
-    expect(rule?.sourceAccountId).toBe('hdfc-acc-id');
-
-    databaseSpy.mockRestore();
-  });
-});
-
 describe('smsService workplace isolation', () => {
   beforeEach(async () => {
     await resetDatabase();
   });
 
-  it('limits preview, record-id, and linked-journal reads to the requested workplace', async () => {
+  it('limits record-id and linked-journal reads to the requested workplace', async () => {
     const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
     const createRecord = async (workplaceId: WorkplaceId, linkedJournalId: JournalId) =>
       database.write(async () =>
@@ -175,14 +113,6 @@ describe('smsService workplace isolation', () => {
     const currentRecord = await createRecord(workplaceId, sharedJournalId);
     const secondCurrentRecord = await createRecord(workplaceId, sharedJournalId);
 
-    const preview = await smsService.previewRuleMatches(workplaceId, {
-      mode: 'regex',
-      senderMatch: 'BANK',
-    });
-    expect(preview.map(record => record.id)).toEqual(
-      expect.arrayContaining([currentRecord.id, secondCurrentRecord.id]),
-    );
-    expect(preview).toHaveLength(2);
     expect(await transactionInboxRepository.find(workplaceId, foreignRecord.id)).toBeNull();
     expect([currentRecord.id, secondCurrentRecord.id]).toContain(
       (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId))[0]?.id,
@@ -205,79 +135,6 @@ describe('smsService workplace isolation', () => {
 
     expect(foreignRecord.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
     expect(foreignRecord.linkedJournalId).toBe(sharedJournalId);
-  });
-
-  it('excludes foreign transactions linked to local journals from rule suggestions', async () => {
-    const workplaceId = 'wp-1' as WorkplaceId;
-    const otherWorkplaceId = 'wp-2' as WorkplaceId;
-    const sourceAccount = await accountWriteRepository.create({
-      name: 'Local card',
-      accountType: AccountType.LIABILITY,
-      currencyCode: 'USD',
-      workplaceId,
-    });
-    const categoryAccount = await accountWriteRepository.create({
-      name: 'Local coffee',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId,
-    });
-
-    const journalIds: JournalId[] = [];
-    for (const journalDate of [1_000, 2_000]) {
-      const journal = await createJournalFixture(
-        {
-          description: 'Coffee',
-          journalDate,
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: sourceAccount.id,
-              amount: 10,
-              transactionType: TransactionType.CREDIT,
-            },
-          ],
-        },
-        workplaceId,
-      );
-      journalIds.push(journal.id);
-    }
-
-    const transactions = database.collections.get<Transaction>('transactions');
-    const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-    await database.write(async () => {
-      for (const [index, journalId] of journalIds.entries()) {
-        await transactions.create(transaction => {
-          transaction.workplaceId = otherWorkplaceId;
-          transaction.journalId = journalId;
-          transaction.accountId = categoryAccount.id;
-          transaction.amount = 10;
-          transaction.transactionType = TransactionType.DEBIT;
-          transaction.currencyCode = 'USD';
-          transaction.transactionDate = (index + 1) * 1_000;
-          transaction.createdAt = new Date();
-          transaction.updatedAt = new Date();
-        });
-        await inbox.create(record => {
-          record.workplaceId = workplaceId;
-          record.channel = 'sms';
-          record.deviceSourceId = `local-sms-${index}`;
-          record.senderAddress = 'BANK';
-          record.rawBody = 'Coffee purchase';
-          record.inputDate = (index + 1) * 1_000;
-          record.inputFingerprint = `local-fingerprint-${index}`;
-          record.parseStatus = InboxParseStatus.PARSED;
-          record.parsedMerchant = 'Coffee';
-          record.direction = TransactionDirection.DEBIT;
-          record.processingStatus = InboxProcessingStatus.IMPORTED;
-          record.linkedJournalId = journalId;
-          record.firstSeenAt = (index + 1) * 1_000;
-          record.lastScannedAt = (index + 1) * 1_000;
-        });
-      }
-    });
-
-    expect(await smsService.getRuleSuggestions(workplaceId)).toEqual([]);
   });
 });
 

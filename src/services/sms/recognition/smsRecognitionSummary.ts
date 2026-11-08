@@ -1,20 +1,8 @@
-import type {
-  RuleCompatibility,
-  SmsAccountRecognition,
-  SmsRecognitionSummary,
-} from '@/src/types/accountMatcher';
+import type { SmsAccountRecognition, SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import { resolveAccountFlowRoles } from './accountFlowRoles';
 
-export function summarizeSmsRecognition(
-  recognition: SmsAccountRecognition,
-  compatibility?: RuleCompatibility,
-): SmsRecognitionSummary {
-  const hold =
-    compatibility === 'contradictory' || compatibility === 'indeterminate'
-      ? compatibility
-      : resolveAccountFlowRoles(recognition).isAmbiguous
-        ? 'contradictory'
-        : undefined;
+export function summarizeSmsRecognition(recognition: SmsAccountRecognition): SmsRecognitionSummary {
+  const hold = resolveAccountFlowRoles(recognition).isAmbiguous ? 'contradictory' : undefined;
   const matcherIds = [
     ...new Set(
       recognition.outcomes

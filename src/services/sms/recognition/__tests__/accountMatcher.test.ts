@@ -9,7 +9,6 @@ import {
   evaluateMatcher,
   recognizeSmsAccounts,
 } from '../accountMatcherEvaluator';
-import { checkRuleCompatibility } from '../accountRuleCompatibility';
 import type { AccountMatcherDefinitionV1, AccountMatcherRecord } from '@/src/types/accountMatcher';
 
 const a = asAccountId('card');
@@ -174,37 +173,5 @@ describe('account matcher definitions and evaluation', () => {
     expect(recognition.outcomes).toEqual([
       { status: 'indeterminate', matcherId: 'budget', accountId: a, reason: 'regex_budget' },
     ]);
-  });
-});
-describe('rule compatibility table', () => {
-  const rule = { sourceAccountId: a, categoryAccountId: asAccountId('food') };
-  const rec = (...ids: string[]) => ({
-    status: ids.length ? ('recognized' as const) : ('none' as const),
-    accountIds: ids.map(asAccountId),
-    outcomes: [],
-  });
-  const leaf = (id: string) => id === 'card';
-  it.each([
-    [rec('card'), 'compatible'],
-    [rec('savings'), 'contradictory'],
-    [rec('card', 'savings'), 'contradictory'],
-  ] as const)('checks category exclusions', (r, result) =>
-    expect(checkRuleCompatibility(r, rule, leaf)).toBe(result),
-  );
-  it('accepts both transfer accounts and one side; handles no recognition and indeterminate', () => {
-    expect(
-      checkRuleCompatibility(
-        rec('savings', 'card'),
-        { sourceAccountId: b, categoryAccountId: a },
-        leaf,
-      ),
-    ).toBe('compatible');
-    expect(
-      checkRuleCompatibility(rec('card'), { sourceAccountId: b, categoryAccountId: a }, leaf),
-    ).toBe('compatible');
-    expect(checkRuleCompatibility(rec(), rule, leaf)).toBe('no_recognition');
-    expect(checkRuleCompatibility({ ...rec(), status: 'indeterminate' }, rule, leaf)).toBe(
-      'indeterminate',
-    );
   });
 });

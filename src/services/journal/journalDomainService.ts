@@ -338,6 +338,7 @@ export class JournalService {
         (await workplaceService.getCurrency(workplaceId));
       const assembled = await assembleCreateJournalData({
         ...entryParams,
+        journalId,
         workplaceId,
         currencyCode: effectiveCurrencyCode,
       });

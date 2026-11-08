@@ -43,7 +43,6 @@ export interface CanonicalImportV1 {
   accountMetadata?: CanonicalAccountMetadata[];
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
-  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
   accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
@@ -230,21 +229,6 @@ export interface CanonicalTransactionInboxRecord {
   updatedAt?: number;
 }
 
-export interface CanonicalTransactionAutoPostRule {
-  id: string;
-  channelsJson?: string;
-  senderMatch?: string;
-  bodyMatch?: string;
-  conditionsJson?: string;
-  actionsJson?: string;
-  priority?: number;
-  sourceAccountId: AccountId;
-  categoryAccountId: AccountId;
-  isActive: boolean;
-  createdAt?: number;
-  updatedAt?: number;
-}
-
 export interface CanonicalAccountMatcher {
   id: string;
   accountId: AccountId;
@@ -284,7 +268,6 @@ export interface BatchImportData {
   accountMetadata?: CanonicalAccountMetadata[];
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
-  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
   accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];

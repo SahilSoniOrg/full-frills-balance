@@ -17,7 +17,6 @@ export const parityMessage = {
 const card = asAccountId('card');
 const savings = asAccountId('savings');
 const bank = asAccountId('bank');
-const equity = asAccountId('equity');
 const food = asAccountId('food');
 
 export interface InboxImportParityAccount {
@@ -32,7 +31,6 @@ export interface InboxImportParityCase {
   accountSource?: string;
   accounts: InboxImportParityAccount[];
   matchers: AccountMatcherContext['matchers'];
-  rule: { sourceAccountId: AccountId; categoryAccountId: AccountId } | null;
   /** Journal legs: outgoing source, incoming destination. */
   expected: { sourceAccountId?: AccountId; destinationAccountId?: AccountId };
 }
@@ -41,11 +39,7 @@ const leaf = (
   id: AccountId,
   name: string,
   accountType = AccountType.ASSET,
-): InboxImportParityAccount => ({
-  id,
-  name,
-  accountType,
-});
+): InboxImportParityAccount => ({ id, name, accountType });
 
 const matcher = (
   id: string,
@@ -71,77 +65,65 @@ const none = { sourceAccountId: undefined, destinationAccountId: undefined };
 
 export const inboxImportDecisionParityCases: InboxImportParityCase[] = [
   {
-    name: 'unique recognition with no rule',
+    name: 'unique recognition takes precedence over a fuzzy source hint',
     direction: 'debit',
     accountSource: 'Card 1990',
     accounts: [leaf(card, 'Card 1990'), leaf(savings, 'Savings')],
     matchers: [matcher('savings', savings)],
-    rule: null,
     expected: { sourceAccountId: savings, destinationAccountId: undefined },
   },
   {
-    name: 'contradictory rule',
+    name: 'one explicit incoming role remains an incoming draft leg',
     direction: 'debit',
     accounts: [leaf(card, 'Card'), leaf(food, 'Food', AccountType.EXPENSE)],
     matchers: [matcher('card-in', card, 'incoming')],
-    rule: { sourceAccountId: card, categoryAccountId: food },
-    expected: none,
+    expected: { sourceAccountId: undefined, destinationAccountId: card },
   },
   {
-    name: 'ambiguous flows',
+    name: 'competing outgoing financial accounts remain unresolved',
     direction: 'debit',
     accountSource: 'Card 1990',
     accounts: [leaf(card, 'Card 1990'), leaf(savings, 'Savings')],
     matchers: [matcher('card-out', card, 'outgoing'), matcher('savings-out', savings, 'outgoing')],
-    rule: null,
     expected: none,
   },
   {
-    name: 'indeterminate recognition',
+    name: 'invalid matcher evidence prevents partial prefill',
     direction: 'debit',
     accountSource: 'Card 1990',
-    accounts: [
-      leaf(card, 'Card 1990'),
-      leaf(savings, 'Savings'),
-      leaf(food, 'Food', AccountType.EXPENSE),
-    ],
+    accounts: [leaf(card, 'Card 1990'), leaf(savings, 'Savings')],
     matchers: [
       matcher('invalid', card, undefined, { version: 1 }),
       matcher('savings-out', savings, 'outgoing'),
     ],
-    rule: { sourceAccountId: card, categoryAccountId: food },
     expected: none,
   },
   {
-    name: 'equity is not a financial leaf',
+    name: 'two matches without flow declarations do not invent transfer roles',
     direction: 'debit',
-    accounts: [leaf(bank, 'Bank'), leaf(equity, 'Opening balance', AccountType.EQUITY)],
-    matchers: [matcher('equity-in', equity, 'incoming')],
-    rule: { sourceAccountId: bank, categoryAccountId: equity },
+    accounts: [leaf(card, 'Card'), leaf(savings, 'Savings')],
+    matchers: [matcher('card', card), matcher('savings', savings)],
     expected: none,
   },
   {
-    name: 'recognized equity without a rule',
-    direction: 'debit',
-    accounts: [leaf(equity, 'Opening balance', AccountType.EQUITY)],
-    matchers: [matcher('equity-in', equity, 'incoming')],
-    rule: null,
-    expected: { sourceAccountId: undefined, destinationAccountId: equity },
+    name: 'unique credit recognition fills the incoming financial leg',
+    direction: 'credit',
+    accounts: [leaf(bank, 'Bank')],
+    matchers: [matcher('bank', bank)],
+    expected: { sourceAccountId: undefined, destinationAccountId: bank },
   },
   {
-    name: 'credit declared transfer',
+    name: 'credit notification of a declared own-account transfer',
     direction: 'credit',
     accounts: [leaf(bank, 'Bank'), leaf(savings, 'Savings')],
     matchers: [matcher('savings-out', savings, 'outgoing'), matcher('bank-in', bank, 'incoming')],
-    rule: null,
     expected: { sourceAccountId: savings, destinationAccountId: bank },
   },
   {
-    name: 'compatible rule without flows',
+    name: 'debit notification of a declared own-account transfer',
     direction: 'debit',
-    accounts: [leaf(bank, 'Bank'), leaf(food, 'Food', AccountType.EXPENSE)],
-    matchers: [matcher('bank', bank)],
-    rule: { sourceAccountId: bank, categoryAccountId: food },
-    expected: { sourceAccountId: bank, destinationAccountId: food },
+    accounts: [leaf(bank, 'Bank'), leaf(savings, 'Savings')],
+    matchers: [matcher('savings-out', savings, 'outgoing'), matcher('bank-in', bank, 'incoming')],
+    expected: { sourceAccountId: savings, destinationAccountId: bank },
   },
 ];

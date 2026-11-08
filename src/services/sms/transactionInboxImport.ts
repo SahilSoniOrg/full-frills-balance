@@ -1,272 +1,101 @@
-import { AccountFields, PlainSmsRule } from '@/src/types/plainDtos';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { AccountType, TransactionDirection } from '@/src/types/enums';
-import { TransactionInboxItem } from '@/src/types/domainJournal';
-import type {
-  RuleCompatibility,
-  SmsAccountRecognition,
-  SmsRecognitionSummary,
-} from '@/src/types/accountMatcher';
+import { AccountFields } from '@/src/types/plainDtos';
+import type { AccountId } from '@/src/types/ids';
+import type { TransactionInboxItem } from '@/src/types/domainJournal';
+import type { SmsAccountRecognition, SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMatcherEligibility';
-import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
-import { toTransactionDirection } from '@/src/services/ledger/SmsParser';
-import type { AccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
-import { resolveAccountRuleRecognition } from '@/src/services/sms/recognition/accountRuleCompatibility';
+import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import { summarizeSmsRecognition } from '@/src/services/sms/recognition/smsRecognitionSummary';
 
 export interface TransactionInboxImportOptions {
   mode?: 'simple' | 'split' | 'advanced';
 }
-
 export interface TransactionInboxImportDecision extends TransactionInboxImportOptions {
-  /** Fresh matcher results are required for every manual import decision. */
   recognition: SmsAccountRecognition;
 }
-
 export interface TransactionInboxImportNavigation {
   smsId?: string;
   smsRecordId: string;
   initialDate: string;
   params: Record<string, string>;
 }
-
 export interface TransactionInboxImportPlan {
   navigation: TransactionInboxImportNavigation;
   recognition: SmsRecognitionSummary;
 }
 
-function normalizeForMatch(value?: string): string {
+function normalize(value?: string): string {
   return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function resolveRuleAccounts(
-  item: TransactionInboxItem,
-  accounts: AccountFields[],
-  matchedRule: PlainSmsRule | null,
-  recognition: Pick<SmsAccountRecognition, 'status' | 'accountIds'>,
-): { bankAccountId?: AccountId; counterpartyId?: AccountId } {
-  let bankAccountId = matchedRule?.sourceAccountId;
-  let counterpartyId = matchedRule?.categoryAccountId;
-
-  if (bankAccountId === EMPTY_ACCOUNT_ID) bankAccountId = undefined;
-  if (counterpartyId === EMPTY_ACCOUNT_ID) counterpartyId = undefined;
-
-  const uniqueRecognizedAccountId =
-    recognition.status === 'recognized' && recognition.accountIds.length === 1
-      ? recognition.accountIds[0]
-      : undefined;
-  const recognitionBlocksFuzzyFallback =
-    recognition.status === 'indeterminate' ||
-    (recognition.status === 'recognized' && recognition.accountIds.length > 1);
-
-  if (!bankAccountId && uniqueRecognizedAccountId) {
-    bankAccountId = uniqueRecognizedAccountId;
-  } else if (!bankAccountId && !recognitionBlocksFuzzyFallback && item.parsedAccountSource) {
-    const normalizedSource = normalizeForMatch(item.parsedAccountSource);
-    const sourceDigits = item.parsedAccountSource.match(/(\d{3,6})/)?.[1];
-    const bestAccount = accounts.find(account => {
-      const name = normalizeForMatch(account.name);
-      const description = normalizeForMatch(account.description);
-      if (
-        sourceDigits &&
-        ((account.name || '').includes(sourceDigits) ||
-          (account.description || '').includes(sourceDigits))
-      ) {
-        return true;
-      }
-      return name.includes(normalizedSource) || description.includes(normalizedSource);
-    });
-    bankAccountId = bestAccount?.id;
-  }
-
-  if (!counterpartyId && item.parsedMerchant) {
-    const isCredit = item.direction === 'credit';
-    const compatibleAccounts = accounts.filter(account => {
-      return account.accountType === (isCredit ? AccountType.INCOME : AccountType.EXPENSE);
-    });
-    const normalizedMerchant = normalizeForMatch(item.parsedMerchant);
-    const bestAccount = compatibleAccounts.find(account => {
-      const name = normalizeForMatch(account.name);
-      if (!normalizedMerchant || !name) return false;
-      return name.includes(normalizedMerchant) || normalizedMerchant.includes(name);
-    });
-    if (bestAccount && bestAccount.id !== bankAccountId) {
-      counterpartyId = bestAccount.id;
-    }
-  }
-
-  return { bankAccountId, counterpartyId };
-}
-
-function ruleDescription(matchedRule: PlainSmsRule | null): string | undefined {
-  if (matchedRule?.actionsJson) {
-    try {
-      const actions: unknown = JSON.parse(matchedRule.actionsJson);
-      if (
-        typeof actions === 'object' &&
-        actions !== null &&
-        'journalDescription' in actions &&
-        typeof actions.journalDescription === 'string'
-      ) {
-        return actions.journalDescription;
-      }
-    } catch {
-      // Optional rule actions are best-effort metadata.
-    }
-  }
-}
-
-interface ImportAccountRoles {
-  sourceAccountId?: AccountId;
-  destinationAccountId?: AccountId;
-}
-
-interface ExplicitRuleAccounts {
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
-}
-
-function namedAccount(id?: AccountId | null): AccountId | undefined {
-  return id && id !== EMPTY_ACCOUNT_ID ? id : undefined;
-}
-
-function explicitRuleAccounts(matchedRule: PlainSmsRule | null): ExplicitRuleAccounts {
-  return {
-    sourceAccountId: namedAccount(matchedRule?.sourceAccountId),
-    categoryAccountId: namedAccount(matchedRule?.categoryAccountId),
-  };
-}
-
-/**
- * Places an already-resolved flow and an explicit rule mapping on journal legs.
- * Rule compatibility is resolved before adapting the roles to journal legs.
- */
-function mapResolvedFlowAccounts(
-  direction: TransactionDirection,
-  rule: ExplicitRuleAccounts,
-  roles: AccountFlowRoles,
-  compatibility: RuleCompatibility | undefined,
-): ImportAccountRoles {
-  if (compatibility === 'contradictory' || compatibility === 'indeterminate' || roles.isAmbiguous) {
-    return {};
-  }
-  if (direction !== TransactionDirection.DEBIT && direction !== TransactionDirection.CREDIT) {
-    return {
-      sourceAccountId: roles.sourceAccountId,
-      destinationAccountId: roles.destinationAccountId,
-    };
-  }
-  const ruleSource =
-    direction === TransactionDirection.DEBIT ? rule.sourceAccountId : rule.categoryAccountId;
-  const ruleDestination =
-    direction === TransactionDirection.DEBIT ? rule.categoryAccountId : rule.sourceAccountId;
-  return {
-    sourceAccountId: ruleSource ?? roles.sourceAccountId,
-    destinationAccountId: ruleDestination ?? roles.destinationAccountId,
-  };
-}
-
-function orientBankAndCounterparty(
-  direction: TransactionInboxItem['direction'],
-  bankAccountId?: AccountId,
-  counterpartyId?: AccountId,
-): ImportAccountRoles {
-  return direction === 'debit'
-    ? { sourceAccountId: bankAccountId, destinationAccountId: counterpartyId }
-    : { sourceAccountId: counterpartyId, destinationAccountId: bankAccountId };
-}
-
-function expandDescriptionTemplate(template: string, item: TransactionInboxItem): string {
-  return template
-    .trim()
-    .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
-    .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
-    .replace(/{ref}/gi, item.referenceNumber || '')
-    .replace(/{sender}/gi, item.senderAddress || '')
-    .replace(/\\n/g, '\n');
-}
-
-function buildDescription(
-  item: TransactionInboxItem,
-  type: 'expense' | 'income' | 'transfer',
-  customDescription?: string,
-): string {
-  if (customDescription?.trim()) return expandDescriptionTemplate(customDescription, item);
-  if (item.parsedMerchant?.trim()) return item.parsedMerchant.trim();
-  return `${type.charAt(0).toUpperCase() + type.slice(1)} via SMS`;
-}
-
+/** Build manual review suggestions from current account recognition. */
 export function prepareTransactionInboxImport(
   item: TransactionInboxItem,
   accounts: AccountFields[],
-  matchedRule: PlainSmsRule | null,
   options: TransactionInboxImportDecision,
 ): TransactionInboxImportPlan {
-  const financialLeaves = getEligibleMatcherAccountIds(accounts);
-  const isBalanceSheetLeg = (id?: AccountId) => {
-    const account = accounts.find(candidate => candidate.id === id);
-    return !!account && isBalanceSheetAccount(account.accountType);
-  };
+  const financialIds = getEligibleMatcherAccountIds(accounts);
   const recognition = options.recognition;
-  const direction = toTransactionDirection(item.direction);
-  const ruleAccounts = explicitRuleAccounts(matchedRule);
-  const hasRuleAccounts = !!(ruleAccounts.sourceAccountId || ruleAccounts.categoryAccountId);
-  const resolution = resolveAccountRuleRecognition(
-    recognition,
-    hasRuleAccounts ? ruleAccounts : undefined,
-    id => financialLeaves.has(id),
-    direction,
-  );
-  const compatibility = resolution.compatibility;
-  const recognitionSummary = summarizeSmsRecognition(recognition, compatibility);
+  const summary = summarizeSmsRecognition(recognition);
+  const roles = resolveAccountFlowRoles(recognition);
+  let sourceAccountId: AccountId | undefined;
+  let destinationAccountId: AccountId | undefined;
 
-  let selectedAccounts: ImportAccountRoles;
-  if (recognition.flows?.length) {
-    selectedAccounts = mapResolvedFlowAccounts(
-      direction,
-      ruleAccounts,
-      resolution.flowRoles,
-      compatibility,
-    );
-  } else if (recognitionSummary.hold || recognitionSummary.status === 'indeterminate') {
-    selectedAccounts = {};
-  } else {
-    const { bankAccountId, counterpartyId } = resolveRuleAccounts(
-      item,
-      accounts,
-      matchedRule,
-      recognition,
-    );
-    selectedAccounts = orientBankAndCounterparty(item.direction, bankAccountId, counterpartyId);
+  if (
+    !summary.hold &&
+    recognition.status !== 'indeterminate' &&
+    recognition.accountIds.every(id => financialIds.has(id))
+  ) {
+    if (recognition.flows?.length) {
+      sourceAccountId = roles.sourceAccountId;
+      destinationAccountId = roles.destinationAccountId;
+    } else {
+      let bankAccountId =
+        recognition.status === 'recognized' && recognition.accountIds.length === 1
+          ? recognition.accountIds[0]
+          : undefined;
+      if (!bankAccountId && recognition.status === 'none' && item.parsedAccountSource) {
+        const hint = normalize(item.parsedAccountSource);
+        const digits = item.parsedAccountSource.match(/(\d{3,6})/)?.[1];
+        const candidates = accounts.filter(
+          account =>
+            financialIds.has(account.id) &&
+            ((digits &&
+              ((account.name || '').includes(digits) ||
+                (account.description || '').includes(digits))) ||
+              (hint &&
+                (normalize(account.name).includes(hint) ||
+                  normalize(account.description).includes(hint)))),
+        );
+        if (candidates.length === 1) bankAccountId = candidates[0].id;
+      }
+      if (item.direction === 'credit') destinationAccountId = bankAccountId;
+      else if (item.direction === 'debit') sourceAccountId = bankAccountId;
+    }
   }
-  const { sourceAccountId, destinationAccountId } = selectedAccounts;
   const type: 'expense' | 'income' | 'transfer' =
-    isBalanceSheetLeg(sourceAccountId) && isBalanceSheetLeg(destinationAccountId)
+    sourceAccountId &&
+    destinationAccountId &&
+    financialIds.has(sourceAccountId) &&
+    financialIds.has(destinationAccountId)
       ? 'transfer'
-      : recognition.flows?.length && (sourceAccountId || destinationAccountId)
-        ? !!destinationAccountId && financialLeaves.has(destinationAccountId)
-          ? 'income'
-          : 'expense'
+      : destinationAccountId && financialIds.has(destinationAccountId)
+        ? 'income'
         : item.direction === 'credit'
           ? 'income'
           : 'expense';
+
   const params: Record<string, string> = {
     type,
     amount: item.parsedAmount != null ? String(item.parsedAmount) : '',
     ...(item.parsedCurrencyCode ? { currencyCode: item.parsedCurrencyCode } : {}),
-    description: buildDescription(item, type, ruleDescription(matchedRule)),
-    notes:
-      item.channel === 'sms'
-        ? ''
-        : item.channel === 'voice'
-          ? `Spoken transcript: ${item.rawBody}`
-          : `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`,
+    description:
+      item.parsedMerchant?.trim() ||
+      `${type.charAt(0).toUpperCase() + type.slice(1)} via ${item.channel === 'voice' ? 'voice' : item.channel === 'email' ? 'email' : 'SMS'}`,
+    notes: item.channel === 'voice' ? `Spoken transcript: ${item.rawBody || ''}` : '',
     ...(options.mode ? { mode: options.mode } : {}),
   };
-
   if (sourceAccountId) params.sourceAccountId = sourceAccountId;
   if (destinationAccountId) params.destinationAccountId = destinationAccountId;
-
   return {
     navigation: {
       smsId: item.channel === 'sms' ? item.deviceSourceId : undefined,
@@ -274,6 +103,6 @@ export function prepareTransactionInboxImport(
       initialDate: new Date(item.inputDate).toISOString(),
       params,
     },
-    recognition: recognitionSummary,
+    recognition: summary,
   };
 }

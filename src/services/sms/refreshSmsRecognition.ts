@@ -169,11 +169,7 @@ export async function refreshSmsRecognition(
           if (record.parseStatus !== InboxParseStatus.PARSED || !record.deviceInboxId) return [];
           const { message, parsed } = storedSmsForRecognition(record);
           const projection = projectRecognition(message, parsed, context);
-          // Ignore rules have no new suggestions; preserve existing hints.
-          const suggestions = projection.suggestedAccounts ?? {
-            sourceAccountId: record.suggestedSourceAccountId,
-            categoryAccountId: record.suggestedCategoryAccountId,
-          };
+          const suggestions = projection.suggestedAccounts ?? {};
           return [
             {
               deviceInboxId: record.deviceInboxId,

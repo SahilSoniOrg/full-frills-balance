@@ -11,6 +11,7 @@ import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
   displayType?: JournalDisplayType;
+  confirmCaptureKey?: string;
 }
 
 export interface PutJournalPatchInput {
@@ -25,6 +26,7 @@ export interface PutJournalPatchInput {
   displayType?: JournalDisplayType;
   transactions?: JournalWriteLine[];
   metadata?: JournalWriteMetadata;
+  confirmCaptureKey?: string;
 }
 
 export type PutJournalRequest = PutJournalInput | PutJournalPatchInput;

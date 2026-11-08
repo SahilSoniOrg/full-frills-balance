@@ -150,7 +150,7 @@ export class SmsJournalQueries {
       amount?: number;
       amounts?: number[];
       excludeJournalId?: string;
-      limit?: number;
+      limit?: number | null;
     },
     workplaceId: WorkplaceId,
   ): Promise<Journal[]> {
@@ -162,8 +162,8 @@ export class SmsJournalQueries {
       Q.where('journal_date', Q.lte(centerDate + windowMs)),
       Q.where('workplace_id', workplaceId),
       Q.sortBy('journal_date', 'desc'),
-      Q.take(limit),
     ];
+    if (limit !== null) clauses.push(Q.take(limit));
 
     if (typeof amount === 'number') {
       clauses.unshift(Q.where('total_amount', amount));

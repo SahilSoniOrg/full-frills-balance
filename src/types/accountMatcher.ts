@@ -46,7 +46,6 @@ export interface SmsRecognitionSummary {
   flows?: RecognizedAccountFlow[];
   hold?: 'contradictory' | 'indeterminate';
 }
-export type RuleCompatibility = 'no_recognition' | 'compatible' | 'contradictory' | 'indeterminate';
 export interface AccountMatcherRecord {
   id: string;
   accountId: AccountId;
@@ -81,7 +80,7 @@ export type CompiledAccountMatcher =
     };
 export interface AccountMatcherContext {
   matchers: readonly (AccountMatcherRecord & { compiled: CompiledAccountMatcher })[];
-  /** Eligible leaf asset/liability Accounts, used to check transfer rule compatibility. */
+  /** Eligible leaf asset/liability Accounts, used to resolve declared flow roles. */
   eligibleAccountIds?: readonly AccountId[];
 }
 export interface MatcherMessage {

@@ -8,6 +8,14 @@ export interface SmsContentReservation {
   messageDate: number;
 }
 
+export interface SmsFuzzyReservation {
+  journalId: JournalId;
+  messageDate: number;
+  amount: number;
+  currencyCode?: string;
+  merchant?: string;
+}
+
 export interface SmsAnalysisResult {
   message: SmsMessage;
   parsed: ParsedTransaction;

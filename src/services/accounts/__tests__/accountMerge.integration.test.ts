@@ -23,7 +23,6 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -327,20 +326,6 @@ describe('account commands (integration)', () => {
       status: PlannedPaymentStatus.ACTIVE,
       isAutoPost: false,
     });
-    const smsRule = await transactionAutoPostRuleRepository.save(
-      {
-        mode: 'regex',
-        senderMatch: 'BANK',
-        actions: {
-          disposition: 'auto_post',
-          sourceAccountId: source.id,
-          categoryAccountId: source.id,
-        },
-        isActive: true,
-      },
-      WP,
-    );
-
     await mergeAccounts(WP, target.id, [source.id]);
 
     const transactions = await transactionQueryRepository.findAllByAccountIds(WP, [source.id]);
@@ -364,13 +349,6 @@ describe('account commands (integration)', () => {
     const refreshedPayment = await plannedPaymentRepository.find(WP, plannedPayment.id);
     expect(refreshedPayment?.fromAccountId).toBe(target.id);
     expect(refreshedPayment?.toAccountId).toBe(target.id);
-
-    const refreshedRule = await transactionAutoPostRuleRepository.find(WP, smsRule.id);
-    expect(refreshedRule?.sourceAccountId).toBe(target.id);
-    expect(refreshedRule?.categoryAccountId).toBe(target.id);
-    expect(JSON.parse(refreshedRule?.actionsJson ?? '{}')).toEqual(
-      expect.objectContaining({ sourceAccountId: target.id, categoryAccountId: target.id }),
-    );
 
     const metadata = await accountQueryRepository.findMetadata(WP, target.id);
     expect(metadata?.payFromAccountId).toBe(target.id);

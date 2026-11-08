@@ -18,7 +18,6 @@ export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Metadata', table: 'account_metadata' },
   { name: 'Planned Payments', table: 'planned_payments' },
   { name: 'Journal Metadata', table: 'journal_metadata' },
-  { name: 'Rules', table: 'transaction_auto_post_rules' },
   { name: 'Inbox', table: 'transaction_inbox_records' },
   { name: 'Balance Snapshots', table: 'balance_snapshots' },
 ] as const;

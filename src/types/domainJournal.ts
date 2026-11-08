@@ -30,7 +30,7 @@ export interface TransactionLinkedJournalInfo {
   displayType?: string;
 }
 
-export type TransactionChannel = 'sms' | 'voice';
+export type TransactionChannel = 'sms' | 'voice' | 'email';
 
 export interface TransactionInboxItem {
   consumedWorkplaces?: { workplaceId: WorkplaceId; name: string }[];
@@ -38,6 +38,9 @@ export interface TransactionInboxItem {
   channel: TransactionChannel;
   deviceSourceId: string;
   senderAddress?: string;
+  emailSubject?: string;
+  gmailMessageId?: string;
+  internetMessageId?: string;
   rawBody?: string;
   inputDate: number;
   parseStatus: string;

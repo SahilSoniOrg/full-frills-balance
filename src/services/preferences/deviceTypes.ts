@@ -9,8 +9,6 @@ export interface DevicePreferences {
   activeWorkplaceId?: WorkplaceId;
   /** Explicit opt-in for background reads of each arriving SMS. */
   isAutomaticSmsImportEnabled: boolean;
-  /** Master switch for applying SMS rules that post entries without review. */
-  isSmsAutoPostEnabled: boolean;
   areSmsReviewNotificationsEnabled: boolean;
   showSmsNotificationDetails: boolean;
   /** In-app reduce-motion for this install (ORs with system AccessibilityInfo). */
@@ -25,7 +23,6 @@ export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
   anonymizedId: undefined,
   activeWorkplaceId: undefined,
   isAutomaticSmsImportEnabled: false,
-  isSmsAutoPostEnabled: true,
   areSmsReviewNotificationsEnabled: true,
   showSmsNotificationDetails: false,
   reduceMotion: false,
@@ -38,7 +35,6 @@ export const DEVICE_PREFERENCE_KEYS = [
   'anonymizedId',
   'activeWorkplaceId',
   'isAutomaticSmsImportEnabled',
-  'isSmsAutoPostEnabled',
   'areSmsReviewNotificationsEnabled',
   'showSmsNotificationDetails',
   'reduceMotion',

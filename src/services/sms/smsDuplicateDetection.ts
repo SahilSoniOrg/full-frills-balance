@@ -2,6 +2,7 @@ import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import Journal from '@/src/data/models/Journal';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -18,6 +19,7 @@ export function scoreFuzzyDuplicateMatch(params: {
   journalDate: number;
   messageDate: number;
   journalDescription?: string | null;
+  preservedMerchants?: readonly string[];
   merchant?: string;
 }): { score: number; reasons: string[] } {
   const reasons: string[] = [];
@@ -36,11 +38,18 @@ export function scoreFuzzyDuplicateMatch(params: {
 
   if (
     params.merchant &&
-    params.journalDescription &&
-    params.journalDescription.toLowerCase().includes(params.merchant.toLowerCase())
+    (params.preservedMerchants?.length
+      ? params.preservedMerchants.some(
+          merchant => merchant.toLowerCase() === params.merchant!.toLowerCase(),
+        )
+      : params.journalDescription?.toLowerCase().includes(params.merchant.toLowerCase()))
   ) {
     score += DUPLICATE_CONFIG.weightMerchant;
-    reasons.push('Matching description/merchant');
+    reasons.push(
+      params.preservedMerchants?.length
+        ? 'Matching preserved merchant'
+        : 'Matching description/merchant',
+    );
   }
 
   return { score, reasons };
@@ -108,18 +117,24 @@ export async function findManyDuplicateCandidates(
       centerDate: (minDate + maxDate) / 2,
       windowMs: (maxDate - minDate) / 2,
       amounts,
-      limit: 100,
+      // A truncated candidate list can miss a duplicate in a busy book.
+      limit: null,
     },
     workplaceId,
   );
 
   if (journals.length === 0) return results;
+  const merchantByJournal = await journalCaptureQueries.findPreservedMerchants(
+    workplaceId,
+    journals.map(journal => journal.id),
+  );
 
   for (const { message, parsed } of parsedItems) {
     const nearby = journals.filter(
       j =>
         Math.abs(j.journalDate - message.date) <= DUPLICATE_CONFIG.fuzzyWindowMs &&
-        j.totalAmount === parsed.amount,
+        j.totalAmount === parsed.amount &&
+        (!parsed.currencyCode || j.currencyCode === parsed.currencyCode),
     );
 
     if (nearby.length === 0) continue;
@@ -130,6 +145,7 @@ export async function findManyDuplicateCandidates(
         journalDate: journal.journalDate,
         messageDate: message.date,
         journalDescription: journal.description,
+        preservedMerchants: merchantByJournal.get(journal.id),
         merchant: parsed.merchant,
       });
 

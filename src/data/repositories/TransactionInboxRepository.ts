@@ -30,6 +30,7 @@ import {
   applyInboxWriteData,
   inboxSnapshotFromRecord,
 } from '@/src/data/repositories/inboxRecordFields';
+import { stageLinkedCaptureSource } from '@/src/data/repositories/journal/captureSourceLinkStaging';
 
 interface InboxAuditContext {
   correlationId?: string;
@@ -108,6 +109,35 @@ export class TransactionInboxRepository {
     return this.inbox
       .query(Q.where('channel', 'sms'), Q.where('device_source_id', Q.oneOf(sourceIds)))
       .fetch();
+  }
+
+  /** Provider IDs are scoped to the source account and stored without message bodies. */
+  async findEmailCopies(sourceId: string): Promise<InboxRecordSnapshot[]> {
+    const records = await this.inbox
+      .query(Q.where('channel', 'email'), Q.where('device_source_id', sourceId))
+      .fetch();
+    return records.map(inboxSnapshotFromRecord);
+  }
+
+  async findEmail(workplaceId: WorkplaceId, id: string): Promise<InboxRecordSnapshot | null> {
+    const records = await this.inbox
+      .query(Q.where('id', id), Q.where('workplace_id', workplaceId), Q.where('channel', 'email'))
+      .fetch();
+    return records[0] ? inboxSnapshotFromRecord(records[0]) : null;
+  }
+
+  async stageEmailInSession(
+    session: AccountingWriteSession,
+    data: TransactionInboxRecordWriteData,
+    auditContext?: InboxAuditContext,
+  ): Promise<void> {
+    if (data.channel !== 'email') throw new Error('Expected an email observation');
+    const existing = await this.findEmailCopies(data.deviceSourceId);
+    if (existing.some(record => record.workplaceId === data.workplaceId)) {
+      throw new Error('This email has already been ingested');
+    }
+    const prepared = this.prepareUpsert(data, null, auditContext);
+    stageModelWrite(session, prepared.ops);
   }
 
   async find(workplaceId: WorkplaceId, id: string): Promise<InboxRecordSnapshot | null> {
@@ -224,7 +254,15 @@ export class TransactionInboxRepository {
     return combineLatest([
       deviceSmsInboxRepository.observe(),
       this.inbox
-        .query(Q.where('channel', 'sms'))
+        .query(
+          Q.or(
+            Q.where('channel', 'sms'),
+            Q.and(
+              Q.where('channel', Q.oneOf(['email', 'voice'])),
+              Q.where('workplace_id', workplaceId),
+            ),
+          ),
+        )
         .observeWithColumns([
           'processing_status',
           'linked_journal_id',
@@ -524,13 +562,20 @@ export class TransactionInboxRepository {
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) throw new Error('Inbox record not found');
+    if (record.linkedJournalId && record.linkedJournalId !== journalId)
+      throw new Error('This source is already linked to another transaction');
+    await stageLinkedCaptureSource(session, workplaceId, journalId, {
+      channel: record.channel,
+      sourceId: record.deviceSourceId,
+      occurredAt: record.inputDate,
+      fingerprint: record.inputFingerprint,
+      merchant: record.parsedMerchant,
+    });
     if (record.channel !== 'sms') {
       const model = await this.inbox.find(record.id);
       stageModelWrite(session, () => [this.prepareLink(model, journalId, disposition)]);
       return;
     }
-    if (record.linkedJournalId && record.linkedJournalId !== journalId)
-      throw new Error('This SMS is already linked to another transaction');
     await this.stageUpsertInSession(
       session,
       {
@@ -565,13 +610,13 @@ export class TransactionInboxRepository {
     await runAccountingWriteSession(async session => {
       const record = await this.find(workplaceId, recordId);
       if (!record) return;
+      if (record.linkedJournalId && status !== record.processingStatus)
+        throw new Error('A linked observation cannot be returned to the pending inbox');
       if (record.channel !== 'sms') {
         const model = await this.inbox.find(record.id);
         stageModelWrite(session, () => [this.prepareStatus(model, status)]);
         return;
       }
-      if (record.linkedJournalId && status !== record.processingStatus)
-        throw new Error('A linked SMS cannot be returned to the pending inbox');
       await this.stageUpsertInSession(
         session,
         { ...record, channel: 'sms', processingStatus: status, lastScannedAt: Date.now() },

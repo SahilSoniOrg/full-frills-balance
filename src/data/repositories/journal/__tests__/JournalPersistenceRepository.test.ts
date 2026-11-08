@@ -16,6 +16,13 @@ import {
   type JournalPersistenceWriteFixtures,
 } from './journalPersistenceTest.helpers';
 import { resetDatabase } from '@/src/testing/resetDatabase';
+import {
+  captureConfirmationKey,
+  readCaptureMetadata,
+  withCaptureMetadata,
+  type CaptureMetadata,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
+import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
 
 const WORKPLACE_ID = JOURNAL_PERSISTENCE_WORKPLACE;
 
@@ -62,6 +69,197 @@ describe('JournalPersistenceRepository', () => {
         .query(Q.where('entity_id', journal.id), Q.where('workplace_id', WORKPLACE_ID))
         .fetchCount(),
     ).toBe(1);
+  });
+
+  it('confirms an existing unconfirmed category only after an explicit, current user action', async () => {
+    const capture: CaptureMetadata = {
+      version: 1,
+      merchant: 'Market',
+      economicKind: 'expense',
+      reviewState: 'needs_categorization',
+      allocations: [
+        {
+          accountId: creditAccountId,
+          amount: 10,
+          currencyCode: 'USD',
+          transactionType: TransactionType.CREDIT,
+          origin: 'system',
+        },
+      ],
+      sources: [{ channel: 'sms', sourceId: 'source', occurredAt: 1_000 }],
+    };
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({
+        metadata: { importSource: 'sms', metadataJson: withCaptureMetadata(undefined, capture) },
+      }),
+      WORKPLACE_ID,
+      { source: 'system' },
+    );
+    const [review] = await journalCaptureQueries.listReview(WORKPLACE_ID);
+    expect(review.currentCategoryNames).toEqual(['Expense']);
+    expect(review.confirmCategoryKey).toBeTruthy();
+
+    await expect(
+      journalPersistenceRepository.put(
+        { journalId: journal.id, confirmCaptureKey: review.confirmCategoryKey },
+        WORKPLACE_ID,
+        { source: 'system' },
+      ),
+    ).rejects.toThrow(/categories changed/i);
+    await journalPersistenceRepository.put(
+      { journalId: journal.id, transactions: lines(11, 11) },
+      WORKPLACE_ID,
+      { source: 'system' },
+    );
+    await expect(
+      journalPersistenceRepository.put(
+        { journalId: journal.id, confirmCaptureKey: review.confirmCategoryKey },
+        WORKPLACE_ID,
+        { source: 'app' },
+      ),
+    ).rejects.toThrow(/categories changed/i);
+    const [updatedReview] = await journalCaptureQueries.listReview(WORKPLACE_ID);
+
+    await journalPersistenceRepository.put(
+      { journalId: journal.id, confirmCaptureKey: updatedReview.confirmCategoryKey },
+      WORKPLACE_ID,
+      { source: 'app' },
+    );
+    const [metadata] = await database.collections
+      .get<JournalMetadata>('journal_metadata')
+      .query(Q.where('journal_id', journal.id), Q.where('workplace_id', WORKPLACE_ID))
+      .fetch();
+    const confirmed = readCaptureMetadata(metadata.metadataJson);
+    expect(confirmed).toMatchObject({
+      reviewState: 'confirmed',
+      allocations: [
+        { accountId: creditAccountId, origin: 'user', confirmedAt: expect.any(Number) },
+      ],
+      sources: [{ sourceId: 'source' }],
+    });
+    expect(await journalCaptureQueries.listReview(WORKPLACE_ID)).toEqual([]);
+    expect(
+      captureConfirmationKey(confirmed!.allocations, await activeTransactions(journal.id)),
+    ).not.toBe(review.confirmCategoryKey);
+  });
+
+  it('does not let confirmation turn Uncategorized into a learning label', async () => {
+    const capture: CaptureMetadata = {
+      version: 1,
+      economicKind: 'expense',
+      reviewState: 'needs_categorization',
+      allocations: [
+        {
+          accountId: creditAccountId,
+          amount: 10,
+          currencyCode: 'USD',
+          transactionType: TransactionType.CREDIT,
+          origin: 'uncategorized',
+        },
+      ],
+      uncategorizedAccountIds: [creditAccountId],
+      sources: [{ channel: 'sms', sourceId: 'source', occurredAt: 1_000 }],
+    };
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({
+        metadata: { importSource: 'sms', metadataJson: withCaptureMetadata(undefined, capture) },
+      }),
+      WORKPLACE_ID,
+      { source: 'system' },
+    );
+    const [review] = await journalCaptureQueries.listReview(WORKPLACE_ID);
+    expect(review.confirmCategoryKey).toBeUndefined();
+    await expect(
+      journalPersistenceRepository.put(
+        {
+          journalId: journal.id,
+          confirmCaptureKey: captureConfirmationKey(
+            capture.allocations,
+            await activeTransactions(journal.id),
+          ),
+        },
+        WORKPLACE_ID,
+        { source: 'app' },
+      ),
+    ).rejects.toThrow(/categories changed/i);
+  });
+
+  it('learns from a defaulted category only after the user confirms that entry', async () => {
+    const uncategorized = await accountWriteRepository.create({
+      workplaceId: WORKPLACE_ID,
+      name: 'Uncategorized',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+    });
+    const capture: CaptureMetadata = {
+      version: 1,
+      merchant: 'Market',
+      economicKind: 'expense',
+      reviewState: 'defaulted',
+      allocations: [
+        {
+          accountId: creditAccountId,
+          amount: 10,
+          currencyCode: 'USD',
+          transactionType: TransactionType.CREDIT,
+          origin: 'default',
+        },
+      ],
+      uncategorizedAccountIds: [uncategorized.id],
+      sources: [{ channel: 'sms', sourceId: 'defaulted', occurredAt: 1_000 }],
+    };
+    const defaulted = await journalPersistenceRepository.put(
+      putInput({
+        metadata: { importSource: 'sms', metadataJson: withCaptureMetadata(undefined, capture) },
+      }),
+      WORKPLACE_ID,
+      { source: 'system' },
+    );
+    const waitingCapture: CaptureMetadata = {
+      ...capture,
+      reviewState: 'needs_categorization',
+      allocations: [
+        { ...capture.allocations[0], accountId: uncategorized.id, origin: 'uncategorized' },
+      ],
+      sources: [{ channel: 'sms', sourceId: 'waiting', occurredAt: 2_000 }],
+    };
+    const waiting = await journalPersistenceRepository.put(
+      putInput({
+        journalDate: 2_000,
+        transactions: [
+          { accountId: debitAccountId, amount: 10, transactionType: TransactionType.DEBIT },
+          { accountId: uncategorized.id, amount: 10, transactionType: TransactionType.CREDIT },
+        ],
+        metadata: {
+          importSource: 'sms',
+          metadataJson: withCaptureMetadata(undefined, waitingCapture),
+        },
+      }),
+      WORKPLACE_ID,
+      { source: 'system' },
+    );
+    const before = await journalCaptureQueries.listReview(WORKPLACE_ID, true);
+    const defaultedItem = before.find(item => item.journalId === defaulted.journal.id);
+    expect(defaultedItem).toMatchObject({
+      reviewState: 'defaulted',
+      currentCategoryNames: ['Expense'],
+    });
+    expect(
+      before.find(item => item.journalId === waiting.journal.id)?.suggestedCategoryName,
+    ).toBeUndefined();
+
+    await journalPersistenceRepository.put(
+      { journalId: defaulted.journal.id, confirmCaptureKey: defaultedItem!.confirmCategoryKey },
+      WORKPLACE_ID,
+      { source: 'app' },
+    );
+    const after = await journalCaptureQueries.listReview(WORKPLACE_ID, true);
+    expect(after.find(item => item.journalId === defaulted.journal.id)?.reviewState).toBe(
+      'confirmed',
+    );
+    expect(after.find(item => item.journalId === waiting.journal.id)?.suggestedCategoryName).toBe(
+      'Expense',
+    );
   });
 
   it('allows an unbalanced planned journal but refuses to post it', async () => {

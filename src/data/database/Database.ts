@@ -17,7 +17,6 @@ import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction from '@/src/data/models/Transaction';
 import Workplace from '@/src/data/models/Workplace';
@@ -46,7 +45,6 @@ export const database = new WatermelonDB({
     Journal,
     JournalMetadata,
     PlannedPayment,
-    TransactionAutoPostRule,
     TransactionInboxRecord,
     Transaction,
     Workplace,

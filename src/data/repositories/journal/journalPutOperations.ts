@@ -35,6 +35,14 @@ import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
 import { safeParseJSON } from '@/src/utils/serialization';
+import { stageJournalCaptureMetadataWrite } from '@/src/data/repositories/AccountingWriteSession';
+import {
+  mergeCaptureMetadataJson,
+  readCaptureMetadata,
+  withCaptureMetadata,
+  type CaptureCategoryLine,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
+import { transitionCapture } from '@/src/domain/transaction-intelligence/captureTransition';
 import { Model, Q } from '@nozbe/watermelondb';
 
 export interface PreparedJournalWrite {
@@ -218,14 +226,110 @@ export async function preparePutOperations(
       record.updatedAt = now;
     });
 
-  const { metadata } = input;
-  const existingMetadata =
-    metadata && existing
-      ? await journalTables.metadata
-          .query(Q.where('journal_id', existing.id), Q.where('workplace_id', workplaceId))
-          .fetch()
-          .then(rows => rows[0] ?? null)
-      : null;
+  const existingMetadata = existing
+    ? await journalTables.metadata
+        .query(Q.where('journal_id', existing.id), Q.where('workplace_id', workplaceId))
+        .fetch()
+        .then(rows => rows.find(row => readCaptureMetadata(row.metadataJson)) ?? rows[0] ?? null)
+    : null;
+  const existingCapture = readCaptureMetadata(existingMetadata?.metadataJson);
+  let metadata: JournalWriteMetadata | undefined = input.metadata
+    ? {
+        ...input.metadata,
+        importSource:
+          existingCapture && existingMetadata
+            ? existingMetadata.importSource
+            : input.metadata.importSource,
+        originalSmsId: input.metadata.originalSmsId ?? existingMetadata?.originalSmsId,
+        metadataJson: mergeCaptureMetadataJson(
+          existingMetadata?.metadataJson,
+          input.metadata.metadataJson,
+        ),
+      }
+    : undefined;
+  const newCapture = !existing ? readCaptureMetadata(metadata?.metadataJson) : null;
+  const captureLines = (values: readonly JournalWriteLine[]): CaptureCategoryLine[] =>
+    values.map(line => ({
+      ...line,
+      accountType: balance.accountsById.get(line.accountId)!.accountType,
+      currencyCode: balance.accountsById.get(line.accountId)!.currencyCode,
+    }));
+  if (newCapture && metadata) {
+    // Source UI hints are normalized against persisted account types and rounded lines.
+    const transition = transitionCapture({
+      existing: newCapture,
+      proposedLines: captureLines(lines),
+      actor: auditMetadata?.source === 'system' ? 'system' : 'user',
+      now: now.getTime(),
+    });
+    if (!transition.ok || !transition.capture)
+      throw new Error('The captured category information could not be prepared.');
+    metadata = {
+      ...metadata,
+      metadataJson: withCaptureMetadata(metadata.metadataJson, transition.capture),
+    };
+  }
+  if (put.replacesLines || input.confirmCaptureKey) {
+    const transition = transitionCapture({
+      existing: existingCapture,
+      proposedLines: captureLines(lines),
+      actor: auditMetadata?.source === 'system' ? 'system' : 'user',
+      now: now.getTime(),
+      ...(input.confirmCaptureKey
+        ? {
+            confirmation: {
+              key: input.confirmCaptureKey,
+              originalLines: oldTransactions,
+              posted: auditMetadata?.source === 'app' && status === JournalStatus.POSTED,
+            },
+          }
+        : {}),
+    });
+    if (!transition.ok) {
+      throw new Error(
+        transition.rejection === 'missing_capture'
+          ? 'This entry has no captured categories to confirm.'
+          : 'The categories changed. Review this entry again.',
+      );
+    }
+    if (transition.capture && existingCapture && existingMetadata) {
+      metadata = {
+        importSource: existingMetadata.importSource,
+        originalSmsId: existingMetadata.originalSmsId,
+        ...metadata,
+        metadataJson: withCaptureMetadata(
+          metadata?.metadataJson ?? existingMetadata.metadataJson,
+          transition.capture,
+        ),
+      };
+    }
+  }
+  if (metadata) {
+    const metadataWriterKey = existingMetadata?.id ?? 'create-metadata';
+    stageJournalCaptureMetadataWrite(
+      session,
+      workplaceId,
+      journal.id,
+      metadataWriterKey,
+      metadata.metadataJson,
+      metadataJson => {
+        const linkedMetadata = {
+          ...metadata,
+          metadataJson,
+        };
+        return [
+          existingMetadata
+            ? existingMetadata.prepareUpdate(record => assignMetadata(record, linkedMetadata, now))
+            : journalTables.metadata.prepareCreate(record => {
+                record.journalId = journal.id;
+                record.workplaceId = workplaceId;
+                record.createdAt = now;
+                assignMetadata(record, linkedMetadata, now);
+              }),
+        ];
+      },
+    );
+  }
 
   const auditedTransactions = lines.map(line =>
     mapTransactionToAudit({
@@ -318,18 +422,6 @@ export async function preparePutOperations(
         : [];
 
     const operations: Model[] = [journalOp, ...transactionOps];
-    if (metadata) {
-      operations.push(
-        existingMetadata
-          ? existingMetadata.prepareUpdate(record => assignMetadata(record, metadata, now))
-          : journalTables.metadata.prepareCreate(record => {
-              record.journalId = journal.id;
-              record.workplaceId = workplaceId;
-              record.createdAt = now;
-              assignMetadata(record, metadata, now);
-            }),
-      );
-    }
     operations.push(
       auditRepository.prepareLog(
         {
@@ -425,27 +517,36 @@ export async function stagePost(
   const [existingMetadata] = await journalTables.metadata
     .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
     .fetch();
+  const originalMetadataJson = JSON.stringify({
+    ...(existingMetadata
+      ? safeParseJSON<Record<string, unknown>>(existingMetadata.metadataJson, {})
+      : {}),
+    [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalPlannedDate,
+  });
+  stageJournalCaptureMetadataWrite(
+    session,
+    workplaceId,
+    journalId,
+    existingMetadata?.id ?? 'create-metadata',
+    originalMetadataJson,
+    metadataJson => [
+      existingMetadata
+        ? existingMetadata.prepareUpdate(record => {
+            record.metadataJson = metadataJson;
+            record.importSource = MetadataSources.MANUAL_POST;
+            record.updatedAt = now;
+          })
+        : journalTables.metadata.prepareCreate(record => {
+            record.journalId = journalId;
+            record.workplaceId = workplaceId;
+            record.importSource = MetadataSources.MANUAL_POST;
+            record.metadataJson = metadataJson ?? originalMetadataJson;
+            record.createdAt = now;
+            record.updatedAt = now;
+          }),
+    ],
+  );
   stageModelWrite(session, () => [
-    existingMetadata
-      ? existingMetadata.prepareUpdate(record => {
-          const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
-          record.metadataJson = JSON.stringify({
-            ...currentJson,
-            [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalPlannedDate,
-          });
-          record.importSource = MetadataSources.MANUAL_POST;
-          record.updatedAt = now;
-        })
-      : journalTables.metadata.prepareCreate(record => {
-          record.journalId = journalId;
-          record.workplaceId = workplaceId;
-          record.importSource = MetadataSources.MANUAL_POST;
-          record.metadataJson = JSON.stringify({
-            [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalPlannedDate,
-          });
-          record.createdAt = now;
-          record.updatedAt = now;
-        }),
     journal.prepareUpdate(record => {
       record.status = JournalStatus.POSTED;
       record.journalDate = postedAt;

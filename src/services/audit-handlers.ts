@@ -147,6 +147,7 @@ const canRevertJournal: RevertCapability = (action, rawChanges) => {
     changes.eventType === 'journal.planned_payment_generated' ||
     changes.eventType === 'journal.planned_payment_skipped' ||
     changes.eventType === 'journal.sms_auto_posted' ||
+    changes.eventType === 'journal.automatically_captured' ||
     changes.eventType === 'journal.opening_balance_created'
   ) {
     return false;

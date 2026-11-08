@@ -1,5 +1,5 @@
 export const accountMatcherStrings = {
-  sectionTitle: 'SMS recognition',
+  sectionTitle: 'Message recognition',
   addMatcher: 'Add matcher',
   add: 'Add',
   sectionHint: 'Choose how messages identify this account.',
@@ -19,8 +19,6 @@ export const accountMatcherStrings = {
   importConflictTitle: 'Check the account',
   importConflictUnconfirmed:
     'The account could not be confirmed. Choose the accounts for this entry.',
-  importConflictDetail: (ruleAccountName: string | undefined, recognizedNames: readonly string[]) =>
-    `Rule account: ${ruleAccountName ?? 'Unspecified'}\nRecognized: ${recognizedNames.join(', ') || 'Unknown'}\n\nChoose the accounts for this entry.`,
   senderOnly: 'Matches this sender',
   review: 'Review conditions',
   suggestionActions: 'Suggestion actions',
@@ -31,7 +29,7 @@ export const accountMatcherStrings = {
   activeMatchers: 'Saved matchers',
   editorIntro: 'Tap the words that identify this account. Leave changing details out.',
   exampleHint: 'Start with a message, or enter the conditions below.',
-  senderHint: 'Leave empty to match any sender.',
+  senderHint: 'Leave empty to match any SMS sender. Previews show SMS only.',
   phrasesHint: 'Every phrase must appear in this order.',
   previewHint: 'Check which available messages these conditions match.',
   previewDetails: 'About this preview',
@@ -133,7 +131,7 @@ export const accountMatcherStrings = {
   boundedPreviewNote:
     'This preview covers available app messages and selected device messages. It cannot establish global uniqueness.',
   allAutoPostedWarning:
-    'Every linked supporting example was auto-posted. Those messages may repeat one rule’s account choice.',
+    'Every linked supporting example was added automatically. Those messages may repeat an automated account choice.',
   autoPosted: 'Auto-posted',
   linkedManually: 'Created or reviewed by you',
   selectedMessage: 'Selected message',

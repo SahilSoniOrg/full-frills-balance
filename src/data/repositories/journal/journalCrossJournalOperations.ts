@@ -1,5 +1,6 @@
 import {
   stageModelWrite,
+  stageJournalCaptureMetadataWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import Journal from '@/src/data/models/Journal';
@@ -29,6 +30,14 @@ import type {
 import { AuditAction, JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
+import {
+  combineCaptureMetadata,
+  readCaptureMetadata,
+  retargetCaptureAccounts,
+  withCaptureMetadata,
+  withoutCaptureMetadata,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
+import { transitionCapture } from '@/src/domain/transaction-intelligence/captureTransition';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { Q } from '@nozbe/watermelondb';
 
@@ -135,6 +144,34 @@ export async function stageMerge(
     input.description ||
     (descriptions.length > 0 ? `Merged: ${descriptions.join(', ')}` : 'Merged Transaction');
   const transactions = sourceTransactions.map(toPersistenceLine);
+  const capture = combineCaptureMetadata(
+    sourceMetadata
+      .map(metadata => readCaptureMetadata(metadata.metadataJson))
+      .filter(metadata => metadata !== null),
+  );
+  const sourceAccounts = capture
+    ? await journalTables.accounts
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('id', Q.oneOf([...new Set(transactions.map(line => line.accountId))])),
+        )
+        .fetch()
+    : [];
+  const accountsById = new Map(sourceAccounts.map(account => [account.id, account]));
+  const mergedCapture = capture
+    ? transitionCapture({
+        existing: capture,
+        proposedLines: transactions.map(line => {
+          const account = accountsById.get(line.accountId);
+          if (!account) throw new Error('Account not found while merging capture evidence');
+          return { ...line, accountType: account.accountType, currencyCode: account.currencyCode };
+        }),
+        actor: 'system',
+        now: Date.now(),
+      })
+    : null;
+  if (mergedCapture && (!mergedCapture.ok || !mergedCapture.capture))
+    throw new Error('Capture evidence could not be merged. Review the journals again.');
   // A merge can only be undone as a whole; reverting one history row would change balances.
   const auditMetadata: AuditEventMetadata = {
     eventType: 'journal.created',
@@ -151,6 +188,13 @@ export async function stageMerge(
       plannedPaymentId: plannedPaymentIds[0],
       displayType: input.displayType ?? defaultDisplayType,
       transactions,
+      metadata:
+        mergedCapture?.ok && mergedCapture.capture
+          ? {
+              importSource: 'merged',
+              metadataJson: withCaptureMetadata(undefined, mergedCapture.capture),
+            }
+          : undefined,
     },
     workplaceId,
     session,
@@ -174,6 +218,9 @@ export async function stageMerge(
     ...sourceMetadata.map(metadata =>
       metadata.prepareUpdate(record => {
         record.journalId = mergedJournalId;
+        if (readCaptureMetadata(record.metadataJson)) {
+          record.metadataJson = withoutCaptureMetadata(record.metadataJson);
+        }
         record.updatedAt = now;
       }),
     ),
@@ -239,6 +286,44 @@ export async function stageReassignAccounts(
   );
 
   const now = new Date();
+  const metadataRows = await journalTables.metadata
+    .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(journalIds)))
+    .fetch();
+  const captureUpdates = metadataRows.flatMap(metadata => {
+    const capture = readCaptureMetadata(metadata.metadataJson);
+    if (!capture) return [];
+    const balance = validated.get(metadata.journalId)!;
+    const transition = transitionCapture({
+      existing: capture,
+      proposedLines: balance.lines.map(line => ({
+        ...line,
+        accountType: balance.accountsById.get(line.accountId)!.accountType,
+        currencyCode: balance.accountsById.get(line.accountId)!.currencyCode,
+      })),
+      actor: 'user',
+      now: now.getTime(),
+    });
+    if (!transition.ok || !transition.capture)
+      throw new Error('Capture categories could not be updated during account reassignment.');
+    return [
+      { metadata, metadataJson: withCaptureMetadata(metadata.metadataJson, transition.capture) },
+    ];
+  });
+  for (const { metadata, metadataJson } of captureUpdates) {
+    stageJournalCaptureMetadataWrite(
+      session,
+      workplaceId,
+      metadata.journalId,
+      metadata.id,
+      metadataJson,
+      linkedMetadataJson => [
+        metadata.prepareUpdate(record => {
+          record.metadataJson = linkedMetadataJson;
+          record.updatedAt = now;
+        }),
+      ],
+    );
+  }
   stageModelWrite(session, () => [
     ...transactions.map(transaction => {
       const accountId = replacements.get(transaction.id)!;
@@ -285,11 +370,11 @@ export async function stageRetargetAccountsForMerge(
       Q.where('deleted_at', Q.eq(null)),
     )
     .fetch();
-  if (movedTransactions.length === 0) return;
-
-  const [journals, journalTransactions] = await loadJournalsWithActiveLines(workplaceId, [
-    ...new Set(movedTransactions.map(transaction => transaction.journalId)),
-  ]);
+  const [journals, journalTransactions] = movedTransactions.length
+    ? await loadJournalsWithActiveLines(workplaceId, [
+        ...new Set(movedTransactions.map(transaction => transaction.journalId)),
+      ])
+    : [[], []];
   await validateRetargetedJournals(
     session,
     workplaceId,
@@ -300,6 +385,42 @@ export async function stageRetargetAccountsForMerge(
 
   const now = new Date();
   const transactionsByJournal = groupTransactionsByJournal(journalTransactions);
+  const metadataRows = await journalTables.metadata
+    .query(
+      Q.where('workplace_id', workplaceId),
+      Q.where('metadata_json', Q.like('%"transactionCapture"%')),
+    )
+    .fetch();
+  const captureUpdates = metadataRows.flatMap(metadata => {
+    const capture = readCaptureMetadata(metadata.metadataJson);
+    if (!capture) return [];
+    if (
+      ![
+        ...capture.allocations.map(allocation => allocation.accountId),
+        ...(capture.uncategorizedAccountIds ?? []),
+      ].some(accountId => sourceIds.has(accountId))
+    )
+      return [];
+    const nextCapture = retargetCaptureAccounts(capture, accountId =>
+      sourceIds.has(accountId) ? targetAccountId : accountId,
+    );
+    return [{ metadata, metadataJson: withCaptureMetadata(metadata.metadataJson, nextCapture) }];
+  });
+  for (const { metadata, metadataJson } of captureUpdates) {
+    stageJournalCaptureMetadataWrite(
+      session,
+      workplaceId,
+      metadata.journalId,
+      metadata.id,
+      metadataJson,
+      linkedMetadataJson => [
+        metadata.prepareUpdate(record => {
+          record.metadataJson = linkedMetadataJson;
+          record.updatedAt = now;
+        }),
+      ],
+    );
+  }
   const beforeTransactionsByJournal = new Map(
     [...transactionsByJournal].map(([journalId, transactions]) => [
       journalId,

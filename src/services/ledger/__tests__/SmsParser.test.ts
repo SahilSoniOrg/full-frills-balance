@@ -11,6 +11,30 @@ describe('SmsParser.toTransactionDirection', () => {
   });
 });
 
+describe('SmsParser capture amount evidence', () => {
+  it.each([
+    'Amount INR 1500. INR 450 spent on Card XX1234 at MARKET.',
+    'INR 450 spent on Card XX1234 at MARKET. Avbl bal INR 1500.',
+  ])('identifies the transaction amount when a separate balance is present', async body => {
+    const parsed = await SmsParser.parse({ id: 'sms', address: 'BANK', body, date: 1 });
+    expect(parsed).toMatchObject({
+      amount: 450,
+      currencyCode: 'INR',
+      amountReliableForCapture: true,
+    });
+  });
+
+  it('requires review when a fee makes the transaction amount ambiguous', async () => {
+    const parsed = await SmsParser.parse({
+      id: 'sms',
+      address: 'BANK',
+      body: 'INR 450 spent on Card XX1234 at MARKET including INR 50 fee.',
+      date: 1,
+    });
+    expect(parsed.amountReliableForCapture).toBe(false);
+  });
+});
+
 describe('SmsParser.parse currency-adjacent amounts', () => {
   it.each([
     {

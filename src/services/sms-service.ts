@@ -2,18 +2,11 @@ import type { InboxRecordSnapshot, SmsInboxCursor } from '@/src/types/smsInbox';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
-import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import { toPlainInboxRecord } from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { SmsRuleDraftInput } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
-import {
-  smsRuleEngine,
-  SmsRulePreviewInput,
-  SmsRuleSuggestion,
-} from '@/src/services/sms/SmsRuleEngine';
 import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { map, Observable } from 'rxjs';
@@ -120,39 +113,8 @@ class SmsService {
     await this.linkSmsToJournal(workplaceId, recordId, journalId, InboxProcessingStatus.IMPORTED);
   }
 
-  async previewRuleMatches(
-    workplaceId: WorkplaceId,
-    inputOrSender: SmsRulePreviewInput | string,
-    bodyMatch?: string,
-  ) {
-    const records = await smsRuleEngine.previewRuleMatches(workplaceId, inputOrSender, bodyMatch);
-    return records.map(toPlainInboxRecord);
-  }
-
-  async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
-    return smsRuleEngine.getRuleSuggestions(workplaceId);
-  }
-
   parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
     return Promise.resolve(SmsParser.parse(sms));
-  }
-
-  async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
-    return smsRuleEngine.saveAutoPostRule(data, workplaceId);
-  }
-
-  async deleteAutoPostRule(id: string, workplaceId: WorkplaceId) {
-    return smsRuleEngine.deleteAutoPostRule(id, workplaceId);
-  }
-
-  async getMatchingRule(
-    address: string,
-    body: string,
-    parsed: ParsedTransaction,
-    workplaceId: WorkplaceId,
-  ) {
-    const rule = await smsRuleEngine.getMatchingRule(address, body, parsed, workplaceId);
-    return rule ? toPlainSmsRule(rule) : null;
   }
 
   private getProcessingStatusesForFilter(

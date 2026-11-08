@@ -4,11 +4,12 @@ import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
 import { SmsReviewNotificationService } from '../SmsReviewNotificationService';
+import * as recognitionRefresh from '../refreshSmsRecognition';
 import { smsSyncPipeline } from '../pipeline/smsSyncPipeline';
 import { smsService } from '@/src/services/sms-service';
 import { smsPrivacyService } from '../SmsPrivacyService';
@@ -52,7 +53,11 @@ jest.mock('@/src/services/notification/NotificationService', () => {
 });
 const deliver = jest.mocked(notificationService.deliverSmsReview);
 const message = (id = 'one', offset = 0) =>
-  smsMessageFromFixture('swiggyNoRef', { id, date: 1_700_000_000_000 + offset });
+  smsMessageFromFixture('swiggyNoRef', {
+    id,
+    date: 1_700_000_000_000 + offset,
+    body: 'INR 500 spent on Card XX1234 at SWIGGY on 07-Mar.',
+  });
 let service: SmsReviewNotificationService;
 beforeEach(async () => {
   await resetSmsTestDb();
@@ -65,7 +70,10 @@ beforeEach(async () => {
     showSmsNotificationDetails: false,
   });
   preferences.update({ isPrivacyMode: false });
-  preferences.device.setSmsAutoPostEnabled(false);
+  preferences.workplace.clear();
+  jest.spyOn(recognitionRefresh, 'recognitionRefreshState').mockReturnValue({
+    value: 'ready',
+  } as ReturnType<typeof recognitionRefresh.recognitionRefreshState>);
   preferences.device.setAppLockEnabled(false);
   jest.spyOn(preferences, 'loadPreferences').mockResolvedValue(preferences.getSnapshot());
 });
@@ -122,6 +130,31 @@ it('tells held messages to check the account without adding private SMS details'
   expect(deliver.mock.calls[0][1]).toBe('Check the account before posting this SMS transaction.');
   expect(deliver.mock.calls[0][2].hasDetails).toBe(false);
   expect(deliver.mock.calls[0][1]).not.toContain(message().body);
+});
+
+it('does not expose account suggestions while matcher refresh is pending', async () => {
+  const { cashId, expenseId } = await seedSmsTestAccounts(A);
+  preferences.device.update({ showSmsNotificationDetails: true });
+  await capture('legacy-hints');
+  const [device] = await deviceSmsInboxRepository.findBySourceIds(['legacy-hints']);
+  const states = JSON.parse(device.reviewStatesJson);
+  states[A].suggestedSourceAccountId = cashId;
+  states[A].suggestedCategoryAccountId = expenseId;
+  states[A].recognition = { status: 'recognized', accountIds: [cashId], hold: 'contradictory' };
+  await database.write(async () => {
+    await device.update(record => {
+      record.reviewStatesJson = JSON.stringify(states);
+    });
+  });
+  jest.mocked(recognitionRefresh.recognitionRefreshState).mockReturnValue({
+    value: 'failed',
+  } as ReturnType<typeof recognitionRefresh.recognitionRefreshState>);
+
+  await service.flush();
+
+  expect(deliver.mock.calls[0][1]).not.toContain('Cash');
+  expect(deliver.mock.calls[0][1]).not.toContain('Food');
+  expect(deliver.mock.calls[0][1]).not.toContain('Check the account');
 });
 
 it('retains a refresh requested during a failing delivery pass', async () => {
@@ -346,47 +379,32 @@ it('shares pending SMS across workplaces and creates a copy only when consumed',
   expect(deliver).not.toHaveBeenCalled();
 });
 
-it('preserves the first matching rule and account suggestions when auto-post is disabled', async () => {
-  const { cashId, expenseId } = await seedSmsTestAccounts(A);
-  await transactionAutoPostRuleRepository.save(
-    {
-      mode: 'regex',
-      senderMatch: message().address,
-      isActive: true,
-      actions: {
-        disposition: 'auto_post',
-        sourceAccountId: cashId as AccountId,
-        categoryAccountId: expenseId as AccountId,
-      },
-    },
-    A,
-  );
+it('includes recognized account suggestions in review notifications while capture is disabled', async () => {
+  const { cashId } = await seedSmsTestAccounts(A);
+  await saveAccountMatcher(A, {
+    accountId: cashId as AccountId,
+    definition: { version: 1, sender: { op: 'contains', value: message().address } },
+  });
   preferences.device.update({ showSmsNotificationDetails: true });
   await capture();
   await service.flush();
   const [record] = await transactionInboxRepository.findByDeviceSourceIds(A, ['one']);
   expect(record.processingStatus).toBe(InboxProcessingStatus.PENDING);
+  expect(record.suggestedSourceAccountId).toBe(cashId);
   expect(deliver.mock.calls[0][1]).toContain('Cash');
-  expect(deliver.mock.calls[0][1]).toContain('Food');
+  expect(deliver.mock.calls[0][1]).not.toContain('Food');
 });
 
-it('keeps the Device message reviewable in another workplace after an ignore rule', async () => {
-  await transactionAutoPostRuleRepository.save(
-    {
-      mode: 'regex',
-      senderMatch: message().address,
-      isActive: true,
-      actions: { disposition: 'ignore' },
-    },
-    A,
-  );
+it('keeps the Device message reviewable elsewhere after explicit dismissal in one Workplace', async () => {
   await capture();
-  const inA = await transactionInboxRepository.findByDeviceSourceIds(A, ['one']);
-  const inB = await transactionInboxRepository.findByDeviceSourceIds(B, ['one']);
-  expect(inA[0].processingStatus).toBe(InboxProcessingStatus.DISMISSED);
-  expect(inA[0].rawBody).toBe(message().body);
-  expect(inB[0].processingStatus).toBe(InboxProcessingStatus.PENDING);
-  expect(inB[0].rawBody).toBe(message().body);
+  const [record] = await transactionInboxRepository.findByDeviceSourceIds(A, ['one']);
+  await smsService.markInboxRecordStatus(A, record.id, InboxProcessingStatus.DISMISSED);
+  const [inA] = await transactionInboxRepository.findByDeviceSourceIds(A, ['one']);
+  const [inB] = await transactionInboxRepository.findByDeviceSourceIds(B, ['one']);
+  expect(inA.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
+  expect(inA.rawBody).toBe(message().body);
+  expect(inB.processingStatus).toBe(InboxProcessingStatus.PENDING);
+  expect(inB.rawBody).toBe(message().body);
 });
 
 it('requires manual review in B when the same Device message was already posted in A', async () => {
@@ -406,21 +424,20 @@ it('requires manual review in B when the same Device message was already posted 
     journal.id,
     InboxProcessingStatus.IMPORTED,
   );
-  await transactionAutoPostRuleRepository.save(
-    {
-      mode: 'regex',
-      senderMatch: message().address,
-      isActive: true,
-      actions: {
-        disposition: 'auto_post',
-        sourceAccountId: accountsB.cashId as AccountId,
-        categoryAccountId: accountsB.expenseId as AccountId,
-      },
+  await saveAccountMatcher(B, {
+    accountId: accountsB.cashId as AccountId,
+    definition: { version: 1, sender: { op: 'contains', value: message().address } },
+  });
+  preferences.workplace.update(B, {
+    automaticTransactionCapture: {
+      enabled: true,
+      enabledAt: message().date - 1,
+      uncategorizedAccountIds: { 'expense:INR': accountsB.expenseId as AccountId },
     },
-    B,
+  });
+  expect(await smsSyncPipeline.scanMessages(B, [message()], undefined, { origin: 'arrival' })).toBe(
+    0,
   );
-  preferences.device.setSmsAutoPostEnabled(true);
-  expect(await smsSyncPipeline.scanMessages(B, [message()])).toBe(0);
   const [reviewB] = await transactionInboxRepository.findByDeviceSourceIds(B, ['one']);
   expect(reviewB.processingStatus).toBe(InboxProcessingStatus.PENDING);
   expect(reviewB.consumedWorkplaces?.map(workplace => workplace.workplaceId)).toEqual([A]);

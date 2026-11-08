@@ -1,7 +1,6 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import {
@@ -13,7 +12,7 @@ import {
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/data/repositories/account', () => ({
   ...jest.requireActual('@/src/data/repositories/account'),
@@ -39,12 +38,6 @@ jest.mock('@/src/data/repositories/PlannedPaymentRepository', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository', () => ({
-  transactionAutoPostRuleRepository: {
-    findAllReferencingAccountIds: jest.fn(),
-  },
-}));
-
 jest.mock('@/src/data/repositories/AccountMatcherRepository', () => ({
   accountMatcherRepository: {
     findAllByAccountIds: jest.fn(),
@@ -61,9 +54,9 @@ jest.mock('@/src/data/repositories/transaction', () => ({
 
 describe('Account reference graph', () => {
   describe('referenceSites', () => {
-    it('inventories all 12 WatermelonDB Account FK sites from research', () => {
+    it('inventories active Account FK sites', () => {
       const sites = referenceSites();
-      expect(sites).toHaveLength(12);
+      expect(sites).toHaveLength(10);
       expect(sites.map(site => site.key)).toEqual([
         'account.parentAccountId',
         'transaction.accountId',
@@ -74,17 +67,13 @@ describe('Account reference graph', () => {
         'plannedPayment.fromAccountId',
         'plannedPayment.toAccountId',
         'balanceSnapshot.accountId',
-        'transactionAutoPostRule.sourceAccountId',
-        'transactionAutoPostRule.categoryAccountId',
         'accountMatcher.accountId',
       ]);
     });
 
-    it('marks funding list as CSV and SMS rules as dual storage', () => {
+    it('marks active account references by their storage cardinality', () => {
       const byKey = Object.fromEntries(referenceSites().map(site => [site.key, site]));
       expect(byKey['budget.assetAccountIds'].cardinality).toBe('csv');
-      expect(byKey['transactionAutoPostRule.sourceAccountId'].cardinality).toBe('dual');
-      expect(byKey['transactionAutoPostRule.categoryAccountId'].cardinality).toBe('dual');
       expect(byKey['transaction.accountId'].cardinality).toBe('scalar');
       expect(byKey['accountMatcher.accountId']).toMatchObject({
         mergeBehavior: 'retarget',
@@ -100,10 +89,8 @@ describe('Account reference graph', () => {
       expect(byKey['accountMetadata.accountId'].mergeBehavior).toBe('none');
     });
 
-    it('marks SMS dual sites as sanitize and other FK sites as salvage', () => {
+    it('salvages active FK sites', () => {
       const byKey = Object.fromEntries(referenceSites().map(site => [site.key, site]));
-      expect(byKey['transactionAutoPostRule.sourceAccountId'].importPolicy).toBe('sanitize');
-      expect(byKey['transactionAutoPostRule.categoryAccountId'].importPolicy).toBe('sanitize');
       expect(byKey['transaction.accountId'].importPolicy).toBe('salvage');
       expect(byKey['budget.assetAccountIds'].importPolicy).toBe('salvage');
     });
@@ -175,9 +162,6 @@ describe('Account reference graph', () => {
       (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([]);
       (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([]);
       (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
-      (
-        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
-      ).mockResolvedValue([]);
       (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
       (accountMatcherRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     });
@@ -209,10 +193,6 @@ describe('Account reference graph', () => {
       (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([
         { id: 'meta' },
       ]);
-      (
-        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
-      ).mockResolvedValue([{ id: 'rule' }]);
-
       const blockers = await deleteBlockers(workplaceId, accountId);
       expect(blockers).toEqual([
         { code: 'transactions', count: 2, label: 'transaction(s)' },
@@ -221,7 +201,6 @@ describe('Account reference graph', () => {
         { code: 'budget_funding_accounts', count: 1, label: 'budget funding account list(s)' },
         { code: 'planned_payments', count: 1, label: 'planned payment(s)' },
         { code: 'pay_from_metadata', count: 1, label: 'pay-from metadata reference(s)' },
-        { code: 'sms_auto_post_rules', count: 1, label: 'SMS auto-post rule(s)' },
       ]);
     });
 
@@ -248,9 +227,6 @@ describe('Account reference graph', () => {
       (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([]);
       (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([]);
       (accountQueryRepository.findMetadataByPayFromAccountIds as jest.Mock).mockResolvedValue([]);
-      (
-        transactionAutoPostRuleRepository.findAllReferencingAccountIds as jest.Mock
-      ).mockResolvedValue([]);
       (transactionQueryRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
       (accountMatcherRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     });
@@ -283,7 +259,7 @@ describe('Account reference graph', () => {
   });
 
   describe('importPlan', () => {
-    it('lists missing salvage refs and clears rule refs that stay missing after salvage', () => {
+    it('lists missing salvage references', () => {
       const plan = importPlan({
         accountIds: ['acc-live', 'acc-tombstone'],
         refs: [
@@ -292,67 +268,24 @@ describe('Account reference graph', () => {
           { siteKey: 'budget.assetAccountIds', accountId: 'orphan-funding' },
           { siteKey: 'account.parentAccountId', accountId: 'acc-tombstone' },
         ],
-        rules: [
-          {
-            ruleKey: 'rule-ok',
-            sourceAccountId: 'acc-live',
-            categoryAccountId: 'orphan-tx',
-          },
-          {
-            ruleKey: 'rule-stale',
-            sourceAccountId: 'ghost-source',
-            categoryAccountId: 'acc-live',
-          },
-        ],
       });
 
       expect(plan.missingAccountIds.sort()).toEqual(['orphan-funding', 'orphan-tx']);
-      expect(plan.rulePatches).toEqual([
-        { ruleKey: 'rule-stale', sourceAccountId: EMPTY_ACCOUNT_ID },
-      ]);
     });
 
     it('treats soft-deleted batch accounts as present (no salvage placeholder)', () => {
       const plan = importPlan({
         accountIds: ['soft-deleted-acc'],
         refs: [{ siteKey: 'transaction.accountId', accountId: 'soft-deleted-acc' }],
-        rules: [
-          {
-            ruleKey: 'rule-1',
-            sourceAccountId: 'soft-deleted-acc',
-            categoryAccountId: 'soft-deleted-acc',
-          },
-        ],
       });
 
       expect(plan.missingAccountIds).toEqual([]);
-      expect(plan.rulePatches).toEqual([]);
-    });
-
-    it('does not salvage SMS rule-only orphans (sanitize via rulePatches)', () => {
-      const plan = importPlan({
-        accountIds: ['acc-1'],
-        refs: [],
-        rules: [
-          {
-            ruleKey: 'rule-only',
-            sourceAccountId: 'rule-orphan',
-            categoryAccountId: 'acc-1',
-          },
-        ],
-      });
-
-      expect(plan.missingAccountIds).toEqual([]);
-      expect(plan.rulePatches).toEqual([
-        { ruleKey: 'rule-only', sourceAccountId: EMPTY_ACCOUNT_ID },
-      ]);
     });
 
     it('does not salvage matcher owners when the import policy is reject', () => {
       const plan = importPlan({
         accountIds: ['acc-1'],
         refs: [{ siteKey: 'accountMatcher.accountId', accountId: 'matcher-orphan' }],
-        rules: [],
       });
 
       expect(plan.missingAccountIds).toEqual([]);

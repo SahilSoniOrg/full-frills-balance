@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { AccountType, InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
@@ -26,7 +26,6 @@ import {
   mockAndroidSmsInbox,
   parseFixtureMessage,
   resetSmsTestDb,
-  scanSmsInbox,
   seedExpenseJournal,
   seedInboxRecord,
   seedSmsTestAccounts,
@@ -54,6 +53,26 @@ jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () =>
 
 jest.mock('@/src/services/analytics');
 
+// Capture-capable scans use arrival semantics; history remains review-only in production.
+async function scanSmsInbox(
+  workplaceId: WorkplaceId,
+  messages: ReturnType<typeof smsMessageFromFixture>[],
+) {
+  return smsSyncPipeline.scanMessages(workplaceId, messages, undefined, { origin: 'arrival' });
+}
+
+// Duplicate/reservation fixtures use supported card-purchase wording while retaining their
+// original amounts, references, long prefixes, and delivery timestamps.
+function captureMessageFromFixture(...args: Parameters<typeof smsMessageFromFixture>) {
+  const message = smsMessageFromFixture(...args);
+  return {
+    ...message,
+    body:
+      message.body.replace(/\bUPI\b/gi, '').replace(/\bdebited\b/gi, 'spent on Card') +
+      ' Card purchase at SWIGGY.',
+  };
+}
+
 describe('SmsSyncPipeline integration', () => {
   const baseDate = 1_700_000_000_000;
   let cashId: string;
@@ -75,7 +94,7 @@ describe('SmsSyncPipeline integration', () => {
 
   beforeEach(async () => {
     storage.clearAll();
-    preferences.device.setSmsAutoPostEnabled(true);
+    preferences.workplace.clear();
     preferences.device.update({ areSmsReviewNotificationsEnabled: true });
     await resetSmsTestDb();
     ({ cashId, expenseId } = await seedSmsTestAccounts());
@@ -335,30 +354,36 @@ describe('SmsSyncPipeline integration', () => {
     });
   });
 
-  describe('auto-post persistence boundary', () => {
+  describe('automatic capture persistence boundary', () => {
     async function enableAutoPostFor(message: ReturnType<typeof smsMessageFromFixture>) {
-      await transactionAutoPostRuleRepository.save(
-        {
-          mode: 'regex',
-          senderMatch: message.address,
-          actions: {
-            disposition: 'auto_post',
-            sourceAccountId: cashId as AccountId,
-            categoryAccountId: expenseId as AccountId,
-          },
-          isActive: true,
+      preferences.workplace.update(SMS_TEST_WORKPLACE, {
+        automaticTransactionCapture: {
+          enabled: true,
+          enabledAt: message.date - AppConfig.time.msPerDay,
+          uncategorizedAccountIds: { 'expense:INR': cashCategoryId() },
         },
-        SMS_TEST_WORKPLACE,
-      );
+      });
+      await saveAccountMatcher(SMS_TEST_WORKPLACE, {
+        accountId: cashId as AccountId,
+        definition: { version: 1, sender: { op: 'contains', value: message.address } },
+      });
     }
 
-    it('leaves matching entries pending when the SMS auto-post master switch is off', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
+    function cashCategoryId(): AccountId {
+      return expenseId as AccountId;
+    }
+
+    it('leaves matching entries pending when automatic capture is disabled', async () => {
+      const message = captureMessageFromFixture('swiggyNoRef', {
         id: 'auto-post-master-off',
         date: baseDate,
       });
       await enableAutoPostFor(message);
-      preferences.device.setSmsAutoPostEnabled(false);
+      const config =
+        preferences.workplace.getSnapshot(SMS_TEST_WORKPLACE).automaticTransactionCapture!;
+      preferences.workplace.update(SMS_TEST_WORKPLACE, {
+        automaticTransactionCapture: { ...config, enabled: false },
+      });
 
       await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
 
@@ -373,33 +398,26 @@ describe('SmsSyncPipeline integration', () => {
       ).toBe(0);
     });
 
-    it('auto-posts an SMS without a currency marker in the source account currency', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
-        id: 'auto-post-no-currency',
+    it('retains a purchase without a currency marker for review instead of inheriting account currency', async () => {
+      const message = captureMessageFromFixture('swiggyNoRef', {
+        id: 'capture-no-currency',
         date: baseDate,
-        body: 'Your a/c XX1234 debited by 500.00 at SWIGGY on 07-Mar.',
+        body: 'Your Card XX1234 spent 500.00 at SWIGGY on 07-Mar.',
       });
       await enableAutoPostFor(message);
-
       await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
       expect((await fetchInboxByDeviceId(message.id))?.processingStatus).toBe(
-        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.PENDING,
       );
-      const [journal] = await database.collections
-        .get<Journal>('journals')
-        .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
-        .fetch();
-      expect(journal.currencyCode).toBe('INR');
-      expect(journal.totalAmount).toBe(500);
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
     });
 
     it('auto-posts duplicate reference candidates only once within a scan', async () => {
-      const first = smsMessageFromFixture('upiRef121554846690', {
+      const first = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-duplicate-a',
         date: baseDate,
       });
-      const second = smsMessageFromFixture('upiRef121554846690', {
+      const second = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-duplicate-b',
         date: baseDate + 1000,
       });
@@ -421,11 +439,11 @@ describe('SmsSyncPipeline integration', () => {
     });
 
     it('reserves exact no-reference content within a scan and correlates the accepted audit group once', async () => {
-      const first = smsMessageFromFixture('swiggyNoRef', {
+      const first = captureMessageFromFixture('swiggyNoRef', {
         id: 'content-duplicate-a',
         date: baseDate,
       });
-      const second = smsMessageFromFixture('swiggyNoRef', {
+      const second = captureMessageFromFixture('swiggyNoRef', {
         id: 'content-duplicate-b',
         date: baseDate,
       });
@@ -452,7 +470,7 @@ describe('SmsSyncPipeline integration', () => {
         .query(
           Q.where('workplace_id', SMS_TEST_WORKPLACE),
           Q.where('entity_id', journal.id),
-          Q.where('event_type', 'journal.sms_auto_posted'),
+          Q.where('event_type', 'journal.automatically_captured'),
         )
         .fetch();
       expect(journalLogs).toHaveLength(1);
@@ -462,16 +480,18 @@ describe('SmsSyncPipeline integration', () => {
           Q.where('correlation_id', journalLogs[0].correlationId),
         )
         .fetch();
-      expect(logs.filter(log => log.eventType === 'journal.sms_auto_posted')).toHaveLength(1);
+      expect(logs.filter(log => log.eventType === 'journal.automatically_captured')).toHaveLength(
+        1,
+      );
       expect(logs.length).toBeGreaterThanOrEqual(2);
     });
 
     it('flags a repeated no-reference SMS delivered seconds apart within one scan', async () => {
-      const first = smsMessageFromFixture('swiggyNoRef', {
+      const first = captureMessageFromFixture('swiggyNoRef', {
         id: 'content-redelivered-a',
         date: baseDate,
       });
-      const second = smsMessageFromFixture('swiggyNoRef', {
+      const second = captureMessageFromFixture('swiggyNoRef', {
         id: 'content-redelivered-b',
         date: baseDate + 4000,
       });
@@ -493,15 +513,69 @@ describe('SmsSyncPipeline integration', () => {
       expect(flagged?.rawBody).toBe(first.body);
     });
 
+    it('flags similar no-reference messages in a batch after one is captured', async () => {
+      const first = captureMessageFromFixture('swiggyNoRef', {
+        id: 'batch-fuzzy-a',
+        date: baseDate,
+      });
+      const second = {
+        ...first,
+        id: 'batch-fuzzy-b',
+        date: baseDate + 60_000,
+        body: first.body.replace('Rs.5000', 'Rs.5100'),
+      };
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      const firstRecord = await fetchInboxByDeviceId(first.id);
+      const secondRecord = await fetchInboxByDeviceId(second.id);
+      expect(firstRecord?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(secondRecord?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+      expect(secondRecord?.duplicateJournalId).toBe(firstRecord?.linkedJournalId);
+    });
+
+    it('rechecks fuzzy duplicates after entering the accounting writer', async () => {
+      const sms = captureMessageFromFixture('swiggyNoRef', {
+        id: 'fuzzy-before-writer',
+        date: baseDate,
+      });
+      await enableAutoPostFor(sms);
+      const original = accountingWriteSession.runAccountingWriteSession;
+      let seeded = false;
+      const writeSpy = jest
+        .spyOn(accountingWriteSession, 'runAccountingWriteSession')
+        .mockImplementation(async work => {
+          if (!seeded) {
+            seeded = true;
+            await seedExpenseJournal({
+              cashId,
+              expenseId,
+              amount: 500,
+              description: 'SWIGGY',
+              journalDate: baseDate,
+            });
+          }
+          return original(work);
+        });
+      try {
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
+      } finally {
+        writeSpy.mockRestore();
+      }
+      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      );
+    });
+
     it('auto-posts distinct long messages sharing the legacy fingerprint prefix', async () => {
       const prefix = 'Account transaction notification '.repeat(8);
       const messages = [
-        smsMessageFromFixture('upiRef121554846690', {
+        captureMessageFromFixture('upiRef121554846690', {
           id: 'long-content-a',
           date: baseDate,
           body: `${prefix}INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
         }),
-        smsMessageFromFixture('upiRef121554846690', {
+        captureMessageFromFixture('upiRef121554846690', {
           id: 'long-content-b',
           date: baseDate + 4000,
           body: `${prefix}INR 900.00 debited (UPI Ref No 121554846691) on 07-Mar.`,
@@ -534,7 +608,7 @@ describe('SmsSyncPipeline integration', () => {
 
     it('auto-posts identical no-reference templates hours apart on the same day', async () => {
       const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
-      const first = smsMessageFromFixture('swiggyNoRef', {
+      const first = captureMessageFromFixture('swiggyNoRef', {
         id: 'same-template-morning',
         date: dayStart + 9 * 60 * 60 * 1000,
       });
@@ -568,7 +642,7 @@ describe('SmsSyncPipeline integration', () => {
       'flags redelivery across midnight with newest-first=%s',
       async newestFirst => {
         const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
-        const older = smsMessageFromFixture('swiggyNoRef', {
+        const older = captureMessageFromFixture('swiggyNoRef', {
           id: 'midnight-older',
           date: dayStart + AppConfig.time.msPerDay - 2000,
         });
@@ -596,7 +670,7 @@ describe('SmsSyncPipeline integration', () => {
 
     it('retains earlier content claims when scan timestamps are out of order', async () => {
       const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
-      const first = smsMessageFromFixture('swiggyNoRef', {
+      const first = captureMessageFromFixture('swiggyNoRef', {
         id: 'content-claim-first',
         date: dayStart + 9 * 60 * 60 * 1000,
       });
@@ -631,7 +705,7 @@ describe('SmsSyncPipeline integration', () => {
           .fetchCount();
 
       it('links a redelivery seconds later to the earlier journal', async () => {
-        const first = smsMessageFromFixture('swiggyNoRef', {
+        const first = captureMessageFromFixture('swiggyNoRef', {
           id: 'cross-redeliver-a',
           date: baseDate,
         });
@@ -650,7 +724,7 @@ describe('SmsSyncPipeline integration', () => {
 
       it('links a redelivery that crosses midnight', async () => {
         const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
-        const older = smsMessageFromFixture('swiggyNoRef', {
+        const older = captureMessageFromFixture('swiggyNoRef', {
           id: 'cross-midnight-older',
           date: dayStart + AppConfig.time.msPerDay - 2000,
         });
@@ -670,7 +744,7 @@ describe('SmsSyncPipeline integration', () => {
 
       it('auto-posts an identical template hours later on the same day', async () => {
         const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
-        const morning = smsMessageFromFixture('swiggyNoRef', {
+        const morning = captureMessageFromFixture('swiggyNoRef', {
           id: 'cross-template-morning',
           date: dayStart + 9 * 60 * 60 * 1000,
         });
@@ -694,12 +768,12 @@ describe('SmsSyncPipeline integration', () => {
 
       it('auto-posts a distinct debit sharing the legacy fingerprint prefix', async () => {
         const prefix = 'Account transaction notification '.repeat(8);
-        const small = smsMessageFromFixture('upiRef121554846690', {
+        const small = captureMessageFromFixture('upiRef121554846690', {
           id: 'cross-long-a',
           date: baseDate,
           body: `${prefix}INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
         });
-        const large = smsMessageFromFixture('upiRef121554846690', {
+        const large = captureMessageFromFixture('upiRef121554846690', {
           id: 'cross-long-b',
           date: baseDate + 4000,
           body: `${prefix}INR 900.00 debited (UPI Ref No 121554846691) on 07-Mar.`,
@@ -720,7 +794,7 @@ describe('SmsSyncPipeline integration', () => {
     });
 
     it('stages only one inbox record when a device message ID is repeated in a scan', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
+      const message = captureMessageFromFixture('swiggyNoRef', {
         id: 'same-device-id',
         date: baseDate,
       });
@@ -741,11 +815,11 @@ describe('SmsSyncPipeline integration', () => {
     });
 
     it('does not collapse the same reference when parsed amounts differ', async () => {
-      const first = smsMessageFromFixture('upiRef121554846690', {
+      const first = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-amount-a',
         date: baseDate,
       });
-      const second = smsMessageFromFixture('upiRef121554846690', {
+      const second = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-amount-b',
         date: baseDate + 1000,
         body: 'INR 500.00 debited (UPI Ref No 121554846690) on 07-Mar.',
@@ -766,7 +840,7 @@ describe('SmsSyncPipeline integration', () => {
 
     it('retains earlier reference claims when another amount reuses the reference', async () => {
       const messages = [100, 200, 100].map((amount, index) =>
-        smsMessageFromFixture('upiRef121554846690', {
+        captureMessageFromFixture('upiRef121554846690', {
           id: `ref-reused-${index}`,
           date: baseDate + index * 1000,
           body: `INR ${amount}.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
@@ -791,11 +865,11 @@ describe('SmsSyncPipeline integration', () => {
     });
 
     it('keeps same-amount transactions with distinct references in the same scan', async () => {
-      const first = smsMessageFromFixture('upiRef121554846690', {
+      const first = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-distinct-a',
         date: baseDate,
       });
-      const second = smsMessageFromFixture('upiRef121554846690', {
+      const second = captureMessageFromFixture('upiRef121554846690', {
         id: 'ref-distinct-b',
         date: baseDate + 1000,
         body: 'INR 250.00 debited (UPI Ref No 121554846691) on 07-Mar.',
@@ -815,30 +889,15 @@ describe('SmsSyncPipeline integration', () => {
     });
 
     it('posts through the accounting repository and stays idempotent on a repeated scan', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
-        id: 'sms-auto-post-1',
+      const message = captureMessageFromFixture('swiggyNoRef', {
+        id: 'captured-once',
         date: baseDate,
       });
-      await transactionAutoPostRuleRepository.save(
-        {
-          mode: 'regex',
-          senderMatch: message.address,
-          actions: {
-            disposition: 'auto_post',
-            sourceAccountId: cashId as AccountId,
-            categoryAccountId: expenseId as AccountId,
-          },
-          isActive: true,
-        },
-        SMS_TEST_WORKPLACE,
-      );
-
+      await enableAutoPostFor(message);
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(1);
       const inbox = await fetchInboxByDeviceId(message.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(inbox?.linkedJournalId).toBeTruthy();
-      expect(inbox?.rawBody).toBe(message.body);
-      expect(inbox?.senderAddress).toBe(message.address);
       const journal = await database.collections
         .get<Journal>('journals')
         .find(inbox!.linkedJournalId!);
@@ -849,34 +908,27 @@ describe('SmsSyncPipeline integration', () => {
           .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
           .fetchCount(),
       ).toBe(2);
-
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
-      const rescannedInbox = await fetchInboxByDeviceId(message.id);
-      expect(rescannedInbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
-      expect(rescannedInbox?.rawBody).toBe(message.body);
-      expect(rescannedInbox?.senderAddress).toBe(message.address);
+      const repeated = await fetchInboxByDeviceId(message.id);
+      expect(repeated?.linkedJournalId).toBe(journal.id);
+      expect(repeated?.rawBody).toBe(message.body);
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
     });
 
-    it('leaves inbox pending and creates no journal when persistence validation fails', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
-        id: 'sms-auto-post-missing-account',
+    it('leaves inbox pending when its required Uncategorized mapping is invalid', async () => {
+      const message = captureMessageFromFixture('swiggyNoRef', {
+        id: 'capture-missing-category',
         date: baseDate,
       });
-      await transactionAutoPostRuleRepository.save(
-        {
-          mode: 'regex',
-          senderMatch: message.address,
-          actions: {
-            disposition: 'auto_post',
-            sourceAccountId: 'missing-account' as AccountId,
-            categoryAccountId: expenseId as AccountId,
-          },
-          isActive: true,
+      await enableAutoPostFor(message);
+      const config =
+        preferences.workplace.getSnapshot(SMS_TEST_WORKPLACE).automaticTransactionCapture!;
+      preferences.workplace.update(SMS_TEST_WORKPLACE, {
+        automaticTransactionCapture: {
+          ...config,
+          uncategorizedAccountIds: { 'expense:INR': 'missing-account' as AccountId },
         },
-        SMS_TEST_WORKPLACE,
-      );
-
+      });
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
       expect((await fetchInboxByDeviceId(message.id))?.processingStatus).toBe(
         InboxProcessingStatus.PENDING,
@@ -886,7 +938,8 @@ describe('SmsSyncPipeline integration', () => {
   });
 
   describe('account matcher runtime integration', () => {
-    const message = (id: string) => smsMessageFromFixture('swiggyNoRef', { id, date: baseDate });
+    const message = (id: string) =>
+      captureMessageFromFixture('swiggyNoRef', { id, date: baseDate });
 
     async function addMatcher(
       accountId: string,
@@ -903,32 +956,17 @@ describe('SmsSyncPipeline integration', () => {
       });
     }
 
-    async function addAutoPostRule(
-      forMessage: ReturnType<typeof smsMessageFromFixture>,
-      sourceAccountId = cashId,
-      categoryAccountId = expenseId,
-      disposition: 'auto_post' | 'review' | 'ignore' = 'auto_post',
-    ) {
-      return transactionAutoPostRuleRepository.save(
-        {
-          mode: 'regex',
-          senderMatch: forMessage.address,
-          actions: {
-            disposition,
-            ...(disposition === 'ignore'
-              ? {}
-              : {
-                  sourceAccountId: sourceAccountId as AccountId,
-                  categoryAccountId: categoryAccountId as AccountId,
-                }),
-          },
-          isActive: true,
+    async function enableCapture(forMessage: ReturnType<typeof smsMessageFromFixture>) {
+      preferences.workplace.update(SMS_TEST_WORKPLACE, {
+        automaticTransactionCapture: {
+          enabled: true,
+          enabledAt: forMessage.date - AppConfig.time.msPerDay,
+          uncategorizedAccountIds: { 'expense:INR': expenseId as AccountId },
         },
-        SMS_TEST_WORKPLACE,
-      );
+      });
     }
 
-    it('suggests one recognized account with no applicable rule', async () => {
+    it('suggests one recognized account with capture disabled', async () => {
       const sms = message('recognition-no-rule');
       await addMatcher(cashId);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
@@ -948,15 +986,15 @@ describe('SmsSyncPipeline integration', () => {
     ] as const)('checks the source account flow %s before auto-posting', async (flow, expected) => {
       const sms = message(`recognition-flow-${flow}`);
       await addMatcher(cashId, ['SWIGGY'], flow);
-      await addAutoPostRule(sms);
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
 
       const inbox = await fetchInboxByDeviceId(sms.id);
       expect(inbox?.processingStatus).toBe(expected);
       if (flow === 'incoming') {
-        expect(inbox?.recognition?.hold).toBe('contradictory');
+        expect(inbox?.recognition?.hold).toBeUndefined();
         expect(inbox?.suggestedSourceAccountId).toBeUndefined();
-        expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
+        expect(inbox?.suggestedCategoryAccountId).toBe(cashId);
         expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
       }
     });
@@ -999,33 +1037,7 @@ describe('SmsSyncPipeline integration', () => {
       expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
     });
 
-    it('does not prefill conflicting roles from a review rule', async () => {
-      const sms = message('recognition-flow-conflict-review-rule');
-      await addMatcher(cashId, ['SWIGGY'], 'incoming');
-      await addAutoPostRule(sms, cashId, expenseId, 'review');
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
-      const inbox = await fetchInboxByDeviceId(sms.id);
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-      expect(inbox?.recognition?.hold).toBe('contradictory');
-      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
-      expect(inbox?.suggestedCategoryAccountId).toBeUndefined();
-    });
-
-    it('preserves ignore rules even when declared roles conflict', async () => {
-      const sms = message('recognition-flow-conflict-ignore');
-      await addMatcher(cashId, ['SWIGGY'], 'incoming');
-      await addMatcher(cashId, ['SWIGGY'], 'outgoing');
-      await addAutoPostRule(sms, cashId, expenseId, 'ignore');
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
-      expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
-        InboxProcessingStatus.DISMISSED,
-      );
-      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
-    });
-
-    it('does not preselect among multiple recognized accounts when no rule applies', async () => {
+    it('does not preselect among multiple recognized accounts with capture disabled', async () => {
       const sms = message('recognition-no-rule-ambiguous');
       const savings = await accountWriteRepository.create({
         name: 'Savings',
@@ -1069,114 +1081,37 @@ describe('SmsSyncPipeline integration', () => {
       expect(inbox?.recognition?.hold).toBeUndefined();
     });
 
-    it('keeps an ignore rule ignored when a matcher recognizes an account', async () => {
-      const sms = message('recognition-ignore');
-      const savings = await accountWriteRepository.create({
-        name: 'Savings',
-        accountType: AccountType.ASSET,
-        currencyCode: 'INR',
-        workplaceId: SMS_TEST_WORKPLACE,
-      });
-      await addMatcher(savings.id);
-      await addAutoPostRule(sms, cashId, expenseId, 'ignore');
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
-      const inbox = await fetchInboxByDeviceId(sms.id);
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
-      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
-      expect(inbox?.recognition?.hold).toBeUndefined();
-    });
-
-    it('keeps a review rule in review and attaches recognition', async () => {
+    it('retains review and account recognition while capture is disabled', async () => {
       const sms = message('recognition-review');
       await addMatcher(cashId);
-      await addAutoPostRule(sms, cashId, expenseId, 'review');
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
       const inbox = await fetchInboxByDeviceId(sms.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
       expect(inbox?.suggestedSourceAccountId).toBe(cashId);
       expect(inbox?.recognition?.status).toBe('recognized');
     });
 
-    it('keeps review-rule suggestions visible alongside conflicting recognized candidates', async () => {
-      const sms = message('recognition-review-conflict');
-      const savings = await accountWriteRepository.create({
-        name: 'Savings',
-        accountType: AccountType.ASSET,
-        currencyCode: 'INR',
-        workplaceId: SMS_TEST_WORKPLACE,
-      });
-      await addMatcher(savings.id);
-      await addAutoPostRule(sms, cashId, expenseId, 'review');
+    it('requires account recognition even when capture is enabled', async () => {
+      const sms = message('recognition-no-match');
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
       const inbox = await fetchInboxByDeviceId(sms.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
-      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
-      expect(inbox?.recognition?.hold).toBeUndefined();
-    });
-
-    it('preserves an auto-post rule when no matcher identifies an account', async () => {
-      const sms = message('recognition-no-match');
-      await addAutoPostRule(sms);
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
-      const inbox = await fetchInboxByDeviceId(sms.id);
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(inbox?.recognition).toMatchObject({ status: 'none', accountIds: [] });
-      expect(inbox?.linkedJournalId).toBeTruthy();
-      const transactions = await database
-        .get<Transaction>('transactions')
-        .query(Q.where('journal_id', inbox!.linkedJournalId!))
-        .fetch();
-      expect(transactions.map(row => row.accountId).sort()).toEqual([cashId, expenseId].sort());
+      expect(inbox?.linkedJournalId).toBeUndefined();
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
     });
 
     it('auto-posts a uniquely recognized compatible source account', async () => {
       const sms = message('recognition-compatible');
       await addMatcher(cashId);
-      await addAutoPostRule(sms);
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
 
       expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
         InboxProcessingStatus.AUTO_POSTED,
       );
     });
-
-    it.each([
-      ['one contradictory account', ['savings']],
-      ['a mixed compatible and contradictory pair', ['cash', 'savings']],
-    ] as const)(
-      'holds auto-post for %s and keeps rule account suggestions',
-      async (_label, ids) => {
-        const sms = message(`recognition-contradictory-${ids.length}`);
-        const savings = await accountWriteRepository.create({
-          name: 'Savings',
-          accountType: AccountType.ASSET,
-          currencyCode: 'INR',
-          workplaceId: SMS_TEST_WORKPLACE,
-        });
-        for (const id of ids) {
-          await addMatcher(id === 'cash' ? cashId : savings.id);
-        }
-        await addAutoPostRule(sms);
-        await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
-        const inbox = await fetchInboxByDeviceId(sms.id);
-        expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-        expect(inbox?.suggestedSourceAccountId).toBe(cashId);
-        expect(inbox?.suggestedCategoryAccountId).toBe(expenseId);
-        expect(inbox?.recognition?.hold).toBe('contradictory');
-        expect(
-          await database.collections
-            .get<Journal>('journals')
-            .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
-            .fetchCount(),
-        ).toBe(0);
-      },
-    );
 
     it('holds auto-post when a stored matcher is indeterminate', async () => {
       const sms = message('recognition-indeterminate');
@@ -1197,22 +1132,22 @@ describe('SmsSyncPipeline integration', () => {
           }),
         );
       });
-      await addAutoPostRule(sms);
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
 
       const inbox = await fetchInboxByDeviceId(sms.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
-      expect(inbox?.recognition?.hold).toBe('indeterminate');
+      expect(inbox?.suggestedSourceAccountId).toBeUndefined();
+      expect(inbox?.recognition?.status).toBe('indeterminate');
     });
 
-    it('auto-posts when a safe regex matcher uniquely recognizes the rule source', async () => {
+    it('auto-posts when a safe regex matcher uniquely recognizes the financial account', async () => {
       const sms = message('recognition-compatible');
       await saveAccountMatcher(SMS_TEST_WORKPLACE, {
         accountId: cashId as AccountId,
         definition: { version: 1, body: { kind: 'regex', pattern: 'SWIGGY' } },
       });
-      await addAutoPostRule(sms);
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
 
       expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
@@ -1220,39 +1155,38 @@ describe('SmsSyncPipeline integration', () => {
       );
     });
 
-    it('allows a transfer rule when both financial accounts are recognized', async () => {
-      const sms = message('recognition-transfer-pair');
+    it('captures a transfer only when both financial roles are declared', async () => {
+      const sms = {
+        ...message('recognition-transfer-pair'),
+        body: 'INR 500 transferred by UPI from Savings to Cash.',
+      };
       const savings = await accountWriteRepository.create({
         name: 'Savings',
         accountType: AccountType.ASSET,
         currencyCode: 'INR',
         workplaceId: SMS_TEST_WORKPLACE,
       });
-      await addMatcher(savings.id);
-      await addMatcher(cashId);
-      await addAutoPostRule(sms, savings.id, cashId);
+      await addMatcher(savings.id, ['transferred'], 'outgoing');
+      await addMatcher(cashId, ['transferred'], 'incoming');
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
       const inbox = await fetchInboxByDeviceId(sms.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(inbox?.recognition?.accountIds).toHaveLength(2);
     });
 
-    it('allows a transfer rule when only its destination financial account is recognized', async () => {
-      const sms = message('recognition-transfer-destination');
-      const savings = await accountWriteRepository.create({
-        name: 'Savings',
-        accountType: AccountType.ASSET,
-        currencyCode: 'INR',
-        workplaceId: SMS_TEST_WORKPLACE,
-      });
-      await addMatcher(cashId);
-      await addAutoPostRule(sms, savings.id, cashId);
+    it('retains a transfer with only its destination account recognized for review', async () => {
+      const sms = {
+        ...message('recognition-transfer-destination'),
+        body: 'INR 500 transferred by UPI from Savings to Cash.',
+      };
+      await addMatcher(cashId, ['transferred'], 'incoming');
+      await enableCapture(sms);
       await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
-
       expect((await fetchInboxByDeviceId(sms.id))?.processingStatus).toBe(
-        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.PENDING,
       );
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
     });
 
     it('honors a matcher saved after analysis and before the accounting write', async () => {
@@ -1263,7 +1197,7 @@ describe('SmsSyncPipeline integration', () => {
         currencyCode: 'INR',
         workplaceId: SMS_TEST_WORKPLACE,
       });
-      await addAutoPostRule(sms);
+      await enableCapture(sms);
       const original = accountingWriteSession.runAccountingWriteSession;
       let matcherSaved = false;
       const writeSpy = jest
@@ -1275,23 +1209,20 @@ describe('SmsSyncPipeline integration', () => {
           }
           return original(work);
         });
-
       try {
         await scanSmsInbox(SMS_TEST_WORKPLACE, [sms]);
       } finally {
         writeSpy.mockRestore();
       }
-
       const inbox = await fetchInboxByDeviceId(sms.id);
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-      expect(inbox?.recognition?.hold).toBe('contradictory');
-      expect(inbox?.suggestedSourceAccountId).toBe(cashId);
-      expect(
-        await database.collections
-          .get<Journal>('journals')
-          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
-          .fetchCount(),
-      ).toBe(0);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(inbox?.recognition?.accountIds).toEqual([savings.id]);
+      expect(inbox?.suggestedSourceAccountId).toBe(savings.id);
+      const transactions = await database
+        .get<Transaction>('transactions')
+        .query(Q.where('journal_id', inbox!.linkedJournalId!))
+        .fetch();
+      expect(transactions.map(row => row.accountId).sort()).toEqual([savings.id, expenseId].sort());
     });
 
     it('uses a matcher saved before the writer for review-only messages', async () => {
@@ -1352,12 +1283,16 @@ describe('SmsSyncPipeline integration', () => {
 
     it('refreshes pending recognition without touching processed records, journals, or consumption', async () => {
       const pending = message('recognition-refresh-pending');
-      const posted = smsMessageFromFixture('swiggyNoRef', {
+      const posted = captureMessageFromFixture('swiggyNoRef', {
         id: 'recognition-refresh-posted',
         date: baseDate + 1000,
         address: 'AUTO-BANK',
       });
-      await addAutoPostRule(posted);
+      await enableCapture(posted);
+      await saveAccountMatcher(SMS_TEST_WORKPLACE, {
+        accountId: cashId as AccountId,
+        definition: { version: 1, sender: { op: 'contains', value: posted.address } },
+      });
       await scanSmsInbox(SMS_TEST_WORKPLACE, [pending, posted]);
       const pendingBefore = await fetchInboxByDeviceId(pending.id);
       const postedBefore = await fetchInboxByDeviceId(posted.id);
@@ -1381,7 +1316,7 @@ describe('SmsSyncPipeline integration', () => {
         currencyCode: 'INR',
         workplaceId: SMS_TEST_WORKPLACE,
       });
-      await addMatcher(savings.id, ['debited']);
+      await addMatcher(savings.id, ['spent']);
 
       const pendingAfter = await fetchInboxByDeviceId(pending.id);
       const postedAfter = await fetchInboxByDeviceId(posted.id);
@@ -1391,7 +1326,7 @@ describe('SmsSyncPipeline integration', () => {
       expect(pendingAfter?.consumedWorkplaces).toEqual(pendingWithConsumption?.consumedWorkplaces);
       expect(postedAfter?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(postedAfter?.linkedJournalId).toBe(postedBefore?.linkedJournalId);
-      expect(postedAfter?.recognition?.status).toBe('none');
+      expect(postedAfter?.recognition?.accountIds).toEqual([cashId]);
       expect(
         await database.collections
           .get<Journal>('journals')
@@ -1542,29 +1477,6 @@ describe('SmsSyncPipeline integration', () => {
 
       const inbox = await fetchInboxByDeviceId('sms-edge-e2');
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PARSE_FAILED);
-    });
-
-    it('retains the Device source for a financial SMS dismissed by an ignore rule', async () => {
-      const message = smsMessageFromFixture('swiggyNoRef', {
-        id: 'sms-edge-ignored',
-        date: baseDate,
-      });
-      await transactionAutoPostRuleRepository.save(
-        {
-          mode: 'regex',
-          senderMatch: message.address,
-          actions: { disposition: 'ignore' },
-          isActive: true,
-        },
-        SMS_TEST_WORKPLACE,
-      );
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
-      const inbox = await fetchInboxByDeviceId('sms-edge-ignored');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
-      expect(inbox?.senderAddress).toBe(message.address);
-      expect(inbox?.rawBody).toBe(message.body);
     });
 
     it('does not create inbox records for personal phone-number senders', async () => {

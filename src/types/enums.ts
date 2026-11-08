@@ -90,7 +90,6 @@ export const AUDIT_ENTITY_TYPES = [
   'exchange_rate',
   'budget',
   'planned_payment',
-  'transaction_auto_post_rule',
   'account_matcher',
   'transaction_inbox_record',
   'workplace',

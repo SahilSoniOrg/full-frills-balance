@@ -1074,5 +1074,12 @@ BEGIN
 END;`),
       ],
     },
+    {
+      toVersion: 37,
+      steps: [
+        unsafeExecuteSql('DROP TABLE IF EXISTS transaction_auto_post_rules;'),
+        unsafeExecuteSql('DROP TABLE IF EXISTS sms_auto_post_rules;'),
+      ],
+    },
   ],
 });

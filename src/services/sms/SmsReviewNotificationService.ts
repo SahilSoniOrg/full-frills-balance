@@ -15,6 +15,7 @@ import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { formatSmsReviewNotification } from './smsReviewNotification';
 import { merge, auditTime } from 'rxjs';
 import { logger } from '@/src/utils/logger';
+import { recognitionRefreshState } from './refreshSmsRecognition';
 
 const actionable = (record: InboxRecordSnapshot | null) =>
   !!record &&
@@ -100,7 +101,10 @@ export class SmsReviewNotificationService {
     return (
       !!intent.inboxRecordId &&
       ctx.devicePrefs.areSmsReviewNotificationsEnabled &&
-      (!intent.hasDetails || ctx.detailsAllowed)
+      (!intent.hasDetails ||
+        (ctx.detailsAllowed &&
+          !!intent.workplaceId &&
+          recognitionRefreshState(intent.workplaceId as WorkplaceId).value === 'ready'))
     );
   }
 
@@ -164,7 +168,10 @@ export class SmsReviewNotificationService {
     for (const [workplaceId, group] of groups) {
       const latest = group[group.length - 1];
       const grouped = group.length > 1 || group.some(item => item.catchUp);
-      const hasHeldAccount = group.some(item => !!item.record.recognition?.hold);
+      const recognitionReady = recognitionRefreshState(workplaceId).value === 'ready';
+      const allowDetails = !ctx.privatePreview && recognitionReady;
+      const hasHeldAccount =
+        recognitionReady && group.some(item => !!item.record.recognition?.hold);
       let title = grouped
         ? `${group.length} ${group.length === 1 ? 'transaction' : 'transactions'} to review`
         : 'Transaction to review';
@@ -176,12 +183,14 @@ export class SmsReviewNotificationService {
         : grouped
           ? 'Open your SMS inbox to review and log.'
           : 'Open the app to review and log this SMS transaction.';
-      if (!ctx.privatePreview && !grouped && !hasHeldAccount) {
+      if (allowDetails && !grouped && !hasHeldAccount) {
         const direction = latest.record.direction ?? 'unknown';
         tone = direction === 'debit' ? 'expense' : direction === 'credit' ? 'income' : 'neutral';
         const hints = {
-          sourceAccountId: latest.record.suggestedSourceAccountId,
-          categoryAccountId: latest.record.suggestedCategoryAccountId,
+          sourceAccountId: recognitionReady ? latest.record.suggestedSourceAccountId : undefined,
+          categoryAccountId: recognitionReady
+            ? latest.record.suggestedCategoryAccountId
+            : undefined,
         };
         const accounts = await accountQueryRepository.findAllByIds(
           workplaceId,
@@ -219,7 +228,7 @@ export class SmsReviewNotificationService {
           inboxRecordId: latest.id,
           workplaceId,
           grouped,
-          hasDetails: !ctx.privatePreview && !grouped,
+          hasDetails: allowDetails && !grouped,
         },
         title,
         tone,

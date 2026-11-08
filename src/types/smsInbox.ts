@@ -17,7 +17,7 @@ export interface SmsInboxCursor {
 export interface InboxRecordSnapshot {
   id: string;
   workplaceId: WorkplaceId;
-  channel: 'sms' | 'voice';
+  channel: 'sms' | 'voice' | 'email';
   deviceSourceId: string;
   contentDigest?: string;
   senderAddress?: string;
@@ -52,7 +52,7 @@ export interface TransactionInboxRecordWriteData extends Omit<
   InboxRecordSnapshot,
   'id' | 'channel' | 'recognition'
 > {
-  channel: 'sms';
+  channel: 'sms' | 'email';
   contentDigest?: string;
   providerSourceId?: string;
 }
@@ -62,7 +62,7 @@ export interface SmsWorkplaceReviewState {
   duplicateJournalId?: InboxRecordSnapshot['duplicateJournalId'];
   duplicateConfidence?: number;
   metadataJson?: string;
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
+  suggestedSourceAccountId?: AccountId;
+  suggestedCategoryAccountId?: AccountId;
   recognition?: SmsRecognitionSummary;
 }

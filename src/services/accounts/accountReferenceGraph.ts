@@ -11,9 +11,8 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
 
@@ -31,7 +30,7 @@ export type AccountReferenceDeletePolicy = 'block' | 'allow' | 'owned';
 /**
  * Import policy for the site.
  * - salvage: missing ids become placeholder Accounts (`missingAccountIds`)
- * - sanitize: missing ids are cleared on rules (`rulePatches`); not salvaged
+ * - sanitize: missing ids are cleared by the importer; not salvaged
  * - reject: missing ids remain validation errors and must be dropped by the importer
  */
 export type AccountReferenceImportPolicy = 'salvage' | 'sanitize' | 'reject';
@@ -46,8 +45,6 @@ export type AccountReferenceSiteKey =
   | 'plannedPayment.fromAccountId'
   | 'plannedPayment.toAccountId'
   | 'balanceSnapshot.accountId'
-  | 'transactionAutoPostRule.sourceAccountId'
-  | 'transactionAutoPostRule.categoryAccountId'
   | 'accountMatcher.accountId';
 
 export type AccountReferenceSite = {
@@ -70,8 +67,6 @@ export type AccountImportBatchDto = {
   accountIds: readonly string[];
   /** Account FK occurrences from salvage/reject sites (adapter walks inventory). */
   refs: readonly AccountImportRef[];
-  /** SMS auto-post rules — sanitize path (not salvage). */
-  rules: readonly AccountImportRuleRef[];
 };
 
 export type AccountImportRef = {
@@ -81,19 +76,8 @@ export type AccountImportRef = {
   recordId?: string;
 };
 
-export type AccountImportRuleRef = {
-  ruleKey: string;
-  sourceAccountId?: string | null;
-  categoryAccountId?: string | null;
-};
-
 export type ImportPlan = {
   missingAccountIds: string[];
-  rulePatches: {
-    ruleKey: string;
-    sourceAccountId?: string;
-    categoryAccountId?: string;
-  }[];
 };
 
 export type MissingImportedAccountRef = {
@@ -108,8 +92,7 @@ export type DeleteBlockerCode =
   | 'budget_scopes'
   | 'budget_funding_accounts'
   | 'planned_payments'
-  | 'pay_from_metadata'
-  | 'sms_auto_post_rules';
+  | 'pay_from_metadata';
 
 /** Structured delete gate; commands format the user-facing Error. */
 export type DeleteBlocker = {
@@ -211,26 +194,6 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     importPolicy: 'salvage',
   },
   {
-    key: 'transactionAutoPostRule.sourceAccountId',
-    table: 'transaction_auto_post_rules',
-    field: 'sourceAccountId',
-    column: 'source_account_id',
-    cardinality: 'dual',
-    mergeBehavior: 'retarget',
-    deletePolicy: 'block',
-    importPolicy: 'sanitize',
-  },
-  {
-    key: 'transactionAutoPostRule.categoryAccountId',
-    table: 'transaction_auto_post_rules',
-    field: 'categoryAccountId',
-    column: 'category_account_id',
-    cardinality: 'dual',
-    mergeBehavior: 'retarget',
-    deletePolicy: 'block',
-    importPolicy: 'sanitize',
-  },
-  {
     key: 'accountMatcher.accountId',
     table: 'account_matchers',
     field: 'accountId',
@@ -272,11 +235,7 @@ function isNonEmptyAccountId(value: string | null | undefined): value is string 
   return typeof value === 'string' && value.length > 0;
 }
 
-/**
- * Pure import plan: salvage missing non-rule Account refs; sanitize SMS rule
- * fields that remain missing after salvage. Soft-deleted batch accounts are
- * present (no placeholder). Adapter materializes placeholders + patches.
- */
+/** Pure import plan for missing Account references. */
 export function importPlan(batch: AccountImportBatchDto): ImportPlan {
   const present = new Set(batch.accountIds.filter(isNonEmptyAccountId));
   const missing = new Set<string>();
@@ -288,34 +247,11 @@ export function importPlan(batch: AccountImportBatchDto): ImportPlan {
     missing.add(ref.accountId);
   }
 
-  const afterSalvage = new Set([...present, ...missing]);
-  const rulePatches: ImportPlan['rulePatches'] = [];
-
-  for (const rule of batch.rules) {
-    const patch: ImportPlan['rulePatches'][number] = { ruleKey: rule.ruleKey };
-    let needed = false;
-
-    if (isNonEmptyAccountId(rule.sourceAccountId) && !afterSalvage.has(rule.sourceAccountId)) {
-      patch.sourceAccountId = EMPTY_ACCOUNT_ID;
-      needed = true;
-    }
-    if (isNonEmptyAccountId(rule.categoryAccountId) && !afterSalvage.has(rule.categoryAccountId)) {
-      patch.categoryAccountId = EMPTY_ACCOUNT_ID;
-      needed = true;
-    }
-
-    if (needed) rulePatches.push(patch);
-  }
-
-  return {
-    missingAccountIds: [...missing],
-    rulePatches,
-  };
+  return { missingAccountIds: [...missing] };
 }
 
 /**
- * Account FK occurrences in the batch that are not present. Used by import
- * validate as a thin inventory walk — empty rule legs are omitted by the adapter.
+ * Account FK occurrences in the batch that are not present.
  */
 export function missingImportedAccountRefs(
   batch: AccountImportBatchDto,
@@ -330,23 +266,6 @@ export function missingImportedAccountRefs(
       accountId: ref.accountId,
       recordId: ref.recordId,
     });
-  }
-
-  for (const rule of batch.rules) {
-    if (isNonEmptyAccountId(rule.sourceAccountId) && !present.has(rule.sourceAccountId)) {
-      missing.push({
-        siteKey: 'transactionAutoPostRule.sourceAccountId',
-        accountId: rule.sourceAccountId,
-        recordId: rule.ruleKey,
-      });
-    }
-    if (isNonEmptyAccountId(rule.categoryAccountId) && !present.has(rule.categoryAccountId)) {
-      missing.push({
-        siteKey: 'transactionAutoPostRule.categoryAccountId',
-        accountId: rule.categoryAccountId,
-        recordId: rule.ruleKey,
-      });
-    }
   }
 
   return missing;
@@ -393,7 +312,6 @@ export async function deleteBlockers(
     fromPayments,
     toPayments,
     payFromMetadata,
-    smsRules,
   ] = await Promise.all([
     transactionQueryRepository.findAllByAccountIds(workplaceId, [accountId]),
     accountQueryRepository.queryByParentId(workplaceId, accountId).fetch(),
@@ -402,7 +320,6 @@ export async function deleteBlockers(
     plannedPaymentRepository.findAllByFromAccountIds(workplaceId, [accountId]),
     plannedPaymentRepository.findAllByToAccountIds(workplaceId, [accountId]),
     accountQueryRepository.findMetadataByPayFromAccountIds(workplaceId, [accountId]),
-    transactionAutoPostRuleRepository.findAllReferencingAccountIds(workplaceId, [accountId]),
   ]);
 
   const assetBudgetHits = assetBudgetCandidates.filter(budget =>
@@ -454,14 +371,6 @@ export async function deleteBlockers(
       label: 'pay-from metadata reference(s)',
     });
   }
-  if (smsRules.length > 0) {
-    blockers.push({
-      code: 'sms_auto_post_rules',
-      count: smsRules.length,
-      label: 'SMS auto-post rule(s)',
-    });
-  }
-
   return blockers;
 }
 

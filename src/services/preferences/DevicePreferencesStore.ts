@@ -85,14 +85,6 @@ export class DevicePreferencesStore {
     this.update({ isAutomaticSmsImportEnabled: enabled });
   }
 
-  get isSmsAutoPostEnabled(): boolean {
-    return this.preferences.isSmsAutoPostEnabled;
-  }
-
-  setSmsAutoPostEnabled(enabled: boolean): void {
-    this.update({ isSmsAutoPostEnabled: enabled });
-  }
-
   get reduceMotion(): boolean {
     return this.preferences.reduceMotion;
   }
@@ -163,9 +155,6 @@ export class DevicePreferencesStore {
         : {}),
       ...(typeof value.isAutomaticSmsImportEnabled === 'boolean'
         ? { isAutomaticSmsImportEnabled: value.isAutomaticSmsImportEnabled }
-        : {}),
-      ...(typeof value.isSmsAutoPostEnabled === 'boolean'
-        ? { isSmsAutoPostEnabled: value.isSmsAutoPostEnabled }
         : {}),
       ...(typeof value.areSmsReviewNotificationsEnabled === 'boolean'
         ? { areSmsReviewNotificationsEnabled: value.areSmsReviewNotificationsEnabled }

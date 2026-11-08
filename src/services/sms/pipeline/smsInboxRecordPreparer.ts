@@ -14,13 +14,14 @@ import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtract
 import { AppConfig } from '@/src/constants';
 import {
   buildReferenceDuplicateMatch,
+  isDuplicateAboveThreshold,
+  scoreFuzzyDuplicateMatch,
   type DuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
-import { preferences } from '@/src/services/preferences';
 import { logger } from '@/src/utils/logger';
 import { resolveProcessingStatus } from './smsFingerprint';
 import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
-import { SmsAnalysisResult, SmsContentReservation } from './types';
+import { SmsAnalysisResult, SmsContentReservation, SmsFuzzyReservation } from './types';
 import { decideSms, type SmsDecision } from './smsDecision';
 import type { SmsDecisionContext } from './smsDecisionContext';
 
@@ -43,7 +44,7 @@ export function prepareUpsertInboxRecord(
     ...(cleanedMetadata ? safeParseJSON<Record<string, unknown>>(cleanedMetadata, {}) : {}),
     ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
   });
-  // Scan-dismissed messages (non-transactions, ignore rules) never gain raw text; a record the
+  // Scan-dismissed messages never gain raw text; a record the
   // user dismissed keeps what it already holds so it stays restorable.
   const rawContent =
     processingStatus === InboxProcessingStatus.DISMISSED
@@ -91,8 +92,9 @@ export async function processScanBatchItem(params: {
   reservedDeviceIds: Set<string>;
   reservedContents: Map<string, SmsContentReservation[]>;
   reservedReferences: Map<string, JournalId>;
+  reservedFuzzy: SmsFuzzyReservation[];
   workplaceId: WorkplaceId;
-  triggeredRuleIds: string[];
+  allowAutomaticCapture?: boolean;
 }): Promise<{
   inboxRecord: TransactionInboxRecordWriteData;
   autoPosted: boolean;
@@ -111,8 +113,9 @@ export async function processScanBatchItem(params: {
     reservedDeviceIds,
     reservedContents,
     reservedReferences,
+    reservedFuzzy,
     workplaceId,
-    triggeredRuleIds,
+    allowAutomaticCapture = false,
   } = params;
 
   let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
@@ -138,6 +141,17 @@ export async function processScanBatchItem(params: {
           toTransactionDirection(result.parsed.type),
         ])
       : undefined;
+  // The two notifications for an own-account transfer have opposite directions.
+  // A same-batch match is still a candidate, not proof of identity.
+  const oppositeReferenceReservationKey =
+    reference && result.parsed.amount != null && result.parsed.type !== 'unknown'
+      ? JSON.stringify([
+          reference,
+          result.parsed.amount,
+          result.parsed.currencyCode?.toUpperCase(),
+          toTransactionDirection(result.parsed.type === 'debit' ? 'credit' : 'debit'),
+        ])
+      : undefined;
   reservedDeviceIds.add(result.message.id);
   // The persisted fingerprint truncates content and buckets by day. Same-scan claims
   // retain full text and parsed identity, then compare actual delivery timestamps.
@@ -156,9 +170,11 @@ export async function processScanBatchItem(params: {
         Math.abs(result.message.date - reservation.messageDate) <=
         AppConfig.input.sms.duplicateDetection.redeliveryWindowMs,
     );
-  const reservedReferenceJournalId = referenceReservationKey
-    ? reservedReferences.get(referenceReservationKey)
-    : undefined;
+  const reservedReferenceJournalId =
+    (referenceReservationKey ? reservedReferences.get(referenceReservationKey) : undefined) ??
+    (oppositeReferenceReservationKey
+      ? reservedReferences.get(oppositeReferenceReservationKey)
+      : undefined);
   const reservedJournalId = reservedReferenceJournalId ?? reservedContent?.journalId;
   if (!linkedJournalId && reservedJournalId) {
     effectiveDuplicate = reservedReferenceJournalId
@@ -171,9 +187,40 @@ export async function processScanBatchItem(params: {
     finalStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
   }
 
+  if (!linkedJournalId && !reference && finalStatus === InboxProcessingStatus.PENDING) {
+    for (const reservation of reservedFuzzy) {
+      if (
+        reservation.amount !== result.parsed.amount ||
+        (reservation.currencyCode &&
+          result.parsed.currencyCode &&
+          reservation.currencyCode !== result.parsed.currencyCode)
+      )
+        continue;
+      const match = scoreFuzzyDuplicateMatch({
+        journalDate: reservation.messageDate,
+        messageDate: result.message.date,
+        preservedMerchants: reservation.merchant ? [reservation.merchant] : undefined,
+        merchant: result.parsed.merchant,
+      });
+      const candidate = { journalId: reservation.journalId, ...match };
+      if (isDuplicateAboveThreshold(candidate)) {
+        effectiveDuplicate = candidate;
+        finalStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
+        break;
+      }
+    }
+  }
+
   const statusAtDecision = finalStatus;
+  const previousMetadata = safeParseJSON<Record<string, unknown>>(
+    latestRecord?.metadataJson ?? '{}',
+    {},
+  );
+  const alreadyHeldForReview =
+    previousMetadata.captureAutoPostBlocked === true ||
+    typeof previousMetadata.captureReviewReason === 'string';
   const allowAutoPost =
-    preferences.device.isSmsAutoPostEnabled && !latestRecord?.consumedWorkplaces?.length;
+    allowAutomaticCapture && !latestRecord?.consumedWorkplaces?.length && !alreadyHeldForReview;
   const decision = decideSms(
     result.message,
     result.parsed,
@@ -197,7 +244,7 @@ export async function processScanBatchItem(params: {
         decision.journalData,
         workplaceId,
         {
-          eventType: 'journal.sms_auto_posted',
+          eventType: 'journal.automatically_captured',
           source: 'system',
           correlationId: auditCorrelationId,
           undoable: false,
@@ -213,10 +260,18 @@ export async function processScanBatchItem(params: {
       if (referenceReservationKey) {
         reservedReferences.set(referenceReservationKey, linkedJournalId);
       }
-      triggeredRuleIds.push(decision.ruleId);
+      if (result.parsed.amount) {
+        reservedFuzzy.push({
+          journalId: linkedJournalId,
+          messageDate: result.message.date,
+          amount: result.parsed.amount,
+          currencyCode: result.parsed.currencyCode,
+          merchant: result.parsed.merchant,
+        });
+      }
     } catch (error) {
       auditCorrelationId = undefined;
-      logger.warn(`SMS auto-post rule ${decision.ruleId} failed persistence validation`, {
+      logger.warn('Automatic capture failed journal validation', {
         error,
       });
     }
@@ -232,5 +287,20 @@ export async function processScanBatchItem(params: {
     linkedJournalId,
     effectiveDuplicate || undefined,
   );
+  const remainsInReview = [
+    InboxProcessingStatus.PENDING,
+    InboxProcessingStatus.PARSE_FAILED,
+    InboxProcessingStatus.DUPLICATE_FLAGGED,
+  ].includes(inboxRecord.processingStatus);
+  // Sticky block only for explicit review holds. Manual/catch scans with auto-post off
+  // return kind:'review' without a reason and must not poison later arrival auto-post.
+  if (remainsInReview && decision.kind === 'review' && decision.reason) {
+    const metadata = safeParseJSON<Record<string, unknown>>(inboxRecord.metadataJson ?? '{}', {});
+    inboxRecord.metadataJson = JSON.stringify({
+      ...metadata,
+      captureAutoPostBlocked: true,
+      captureReviewReason: decision.reason,
+    });
+  }
   return { inboxRecord, autoPosted, auditCorrelationId, journalResult, decision };
 }

@@ -4,160 +4,79 @@ import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatc
 import { summarizeSmsRecognition } from '@/src/services/sms/recognition/smsRecognitionSummary';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import type { SmsAccountRecognition, SmsRecognitionSummary } from '@/src/types/accountMatcher';
-import {
-  InboxParseStatus,
-  InboxProcessingStatus,
-  JournalStatus,
-  TransactionType,
-} from '@/src/types/enums';
+import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import type { CreateJournalData } from '@/src/types/journalWrite';
-import { analyzeAutoPost, type AutoPostRuleAnalysis } from './smsAutoPostAnalyzer';
+import { decideCapture } from '@/src/domain/transaction-intelligence/decideCapture';
+import {
+  readCaptureMetadata,
+  withCaptureMetadata,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
+import { extractSmsEconomicEvidence } from './smsEconomicEvidence';
 import type { SmsDecisionContext } from './smsDecisionContext';
 import { computeSmsFingerprint } from './smsFingerprint';
 
 interface SuggestedAccounts {
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
+  suggestedSourceAccountId?: AccountId;
+  suggestedCategoryAccountId?: AccountId;
 }
-
-/** Hint projection. `suggestedAccounts` is absent when an ignore rule matches. */
 export interface SmsRecognitionProjection {
   recognition: SmsRecognitionSummary;
   suggestedAccounts?: SuggestedAccounts;
 }
-
-/** The complete rule/recognition decision; consumers choose which effects are permitted. */
 export type SmsDecision =
   | { kind: 'ignore'; recognition: SmsRecognitionSummary }
-  | { kind: 'review'; recognition: SmsRecognitionSummary; suggestedAccounts: SuggestedAccounts }
+  | {
+      kind: 'review';
+      recognition: SmsRecognitionSummary;
+      suggestedAccounts: SuggestedAccounts;
+      reason?: string;
+    }
   | {
       kind: 'post';
       recognition: SmsRecognitionSummary;
       suggestedAccounts: SuggestedAccounts;
-      ruleId: string;
       journalData: CreateJournalData;
     };
 
-function suggestedAccountsFor(
-  recognition: SmsAccountRecognition,
-  summary: SmsRecognitionSummary,
-  parsed: ParsedTransaction,
-  rule: AutoPostRuleAnalysis | null,
-): SuggestedAccounts {
-  const uniqueAccountId =
-    recognition.status === 'recognized' && recognition.accountIds.length === 1
-      ? recognition.accountIds[0]
-      : undefined;
-  if (recognition.flows?.length) {
-    const roles = rule?.flowRoles ?? resolveAccountFlowRoles(recognition);
-    const knownDirection = parsed.type === 'debit' || parsed.type === 'credit';
-    // These fields store the parser-primary financial leg and its counterparty,
-    // rather than the actual outgoing/incoming legs used by journal navigation.
-    return recognition.status !== 'recognized' ||
-      summary.hold ||
-      rule?.hold ||
-      roles.isAmbiguous ||
-      !knownDirection
-      ? {}
-      : {
-          sourceAccountId:
-            rule?.sourceAccountId ??
-            (parsed.type === 'debit' ? roles.sourceAccountId : roles.destinationAccountId),
-          categoryAccountId:
-            rule?.categoryAccountId ??
-            (parsed.type === 'debit' ? roles.destinationAccountId : roles.sourceAccountId),
-        };
-  }
-  return {
-    sourceAccountId: rule?.sourceAccountId ?? (rule?.hold ? undefined : uniqueAccountId),
-    categoryAccountId: rule?.categoryAccountId,
-  };
-}
-
-/** Shared suggestion and hold result. Ignore rules do not suggest accounts. */
-function projectRuleRecognition(
+function project(
   recognition: SmsAccountRecognition,
   parsed: ParsedTransaction,
-  rule: AutoPostRuleAnalysis | null,
 ): SmsRecognitionProjection {
   const summary = summarizeSmsRecognition(recognition);
-  if (rule?.disposition === 'ignore') return { recognition: summary };
-  return {
-    recognition: summarizeSmsRecognition(recognition, rule?.hold),
-    suggestedAccounts: suggestedAccountsFor(recognition, summary, parsed, rule),
-  };
+  const roles = resolveAccountFlowRoles(recognition);
+  if (summary.hold || roles.isAmbiguous || recognition.status !== 'recognized')
+    return { recognition: summary, suggestedAccounts: {} };
+  const suggestedAccounts: SuggestedAccounts = recognition.flows?.length
+    ? parsed.type === 'debit'
+      ? {
+          suggestedSourceAccountId: roles.sourceAccountId,
+          suggestedCategoryAccountId: roles.destinationAccountId,
+        }
+      : parsed.type === 'credit'
+        ? {
+            suggestedSourceAccountId: roles.destinationAccountId,
+            suggestedCategoryAccountId: roles.sourceAccountId,
+          }
+        : {}
+    : recognition.accountIds.length === 1
+      ? { suggestedSourceAccountId: recognition.accountIds[0] }
+      : {};
+  return { recognition: summary, suggestedAccounts };
 }
 
-function buildAutoPostJournal(
-  message: SmsMessage,
-  parsed: ParsedTransaction,
-  sourceAccountId: AccountId,
-  categoryAccountId: AccountId,
-  currencyCode: string,
-  amount: number,
-): CreateJournalData {
-  const isExpense = parsed.type === 'debit';
-  return {
-    journalDate: message.date,
-    description: parsed.merchant
-      ? `${parsed.merchant}`
-      : isExpense
-        ? 'Expense via SMS'
-        : 'Income via SMS',
-    notes: '',
-    currencyCode,
-    status: JournalStatus.POSTED,
-    metadata: {
-      importSource: 'sms',
-      originalSmsId: message.id,
-      metadataJson: JSON.stringify({
-        smsFingerprint: computeSmsFingerprint(message.address, message.body, message.date),
-      }),
-    },
-    transactions: [
-      {
-        accountId: sourceAccountId,
-        amount,
-        transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
-      },
-      {
-        accountId: categoryAccountId,
-        amount,
-        transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
-      },
-    ],
-  };
-}
-
-function recognizeMessage(message: SmsMessage, context: SmsDecisionContext): SmsAccountRecognition {
-  return recognizeSmsAccounts(context.matchers, {
-    senderAddress: message.address,
-    rawBody: message.body,
-  });
-}
-
-/**
- * Recognition and the rule-priority compatibility pass for review hints.
- * Does not build a journal or a fingerprint. Posting permission is not a hint,
- * so compatibility for an auto-post rule still runs.
- */
 export function projectRecognition(
   message: SmsMessage,
   parsed: ParsedTransaction,
   context: SmsDecisionContext,
 ): SmsRecognitionProjection {
-  const recognition = recognizeMessage(message, context);
-  const rule = analyzeAutoPost(
-    message,
+  return project(
+    recognizeSmsAccounts(context.matchers, {
+      senderAddress: message.address,
+      rawBody: message.body,
+    }),
     parsed,
-    context.activeRules,
-    context.sourceAccountCurrency,
-    true,
-    recognition,
-    context.isFinancialLeaf,
   );
-  return projectRuleRecognition(recognition, parsed, rule);
 }
 
 export function decideSms(
@@ -167,56 +86,77 @@ export function decideSms(
   processingStatus: InboxProcessingStatus,
   allowAutoPost: boolean,
 ): SmsDecision {
-  const recognition = recognizeMessage(message, context);
-  const summary = summarizeSmsRecognition(recognition);
-  if (processingStatus === InboxProcessingStatus.DISMISSED) {
-    return { kind: 'ignore', recognition: summary };
-  }
-  if (
-    parsed.parseStatus !== InboxParseStatus.PARSED ||
-    processingStatus !== InboxProcessingStatus.PENDING
-  ) {
-    return { kind: 'review', recognition: summary, suggestedAccounts: {} };
-  }
-
-  const rule = analyzeAutoPost(
-    message,
-    parsed,
-    context.activeRules,
-    context.sourceAccountCurrency,
-    allowAutoPost,
-    recognition,
-    context.isFinancialLeaf,
-  );
-  const projected = projectRuleRecognition(recognition, parsed, rule);
-  if (rule?.disposition === 'ignore') return { kind: 'ignore', recognition: projected.recognition };
-
-  const suggestedAccounts = projected.suggestedAccounts ?? {};
-  if (
-    rule?.disposition === 'auto_post' &&
-    rule.sourceAccountId &&
-    rule.categoryAccountId &&
-    rule.currencyCode &&
-    parsed.amount
-  ) {
-    return {
-      kind: 'post',
-      recognition: projected.recognition,
-      suggestedAccounts,
-      ruleId: rule.ruleId,
-      journalData: buildAutoPostJournal(
-        message,
-        parsed,
-        rule.sourceAccountId,
-        rule.categoryAccountId,
-        rule.currencyCode,
-        parsed.amount,
-      ),
-    };
-  }
-  return {
+  const recognition = recognizeSmsAccounts(context.matchers, {
+    senderAddress: message.address,
+    rawBody: message.body,
+  });
+  const projected = project(recognition, parsed);
+  if (processingStatus === InboxProcessingStatus.DISMISSED)
+    return { kind: 'ignore', recognition: projected.recognition };
+  const review = (reason?: string): SmsDecision => ({
     kind: 'review',
     recognition: projected.recognition,
-    suggestedAccounts,
+    suggestedAccounts: projected.suggestedAccounts ?? {},
+    reason,
+  });
+  if (
+    allowAutoPost &&
+    processingStatus === InboxProcessingStatus.PENDING &&
+    parsed.parseStatus === InboxParseStatus.PARSED &&
+    parsed.amountReliableForCapture !== true
+  )
+    return review('Review the transaction amount; this message contains ambiguous amounts.');
+  const roles = resolveAccountFlowRoles(recognition);
+  const disposition = decideCapture(
+    {
+      source: { channel: 'sms', sourceId: message.id, occurredAt: message.date },
+      direction: parsed.type,
+      amount: parsed.amount,
+      currencyCode: parsed.currencyCode,
+      merchant: parsed.merchant,
+      economicEvidence: extractSmsEconomicEvidence(message.body),
+      parsed: parsed.parseStatus === InboxParseStatus.PARSED,
+      pending: processingStatus === InboxProcessingStatus.PENDING,
+    },
+    {
+      status: recognition.status,
+      accountIds: recognition.accountIds,
+      outgoingAccountId: roles.sourceAccountId,
+      incomingAccountId: roles.destinationAccountId,
+      ambiguous: roles.isAmbiguous || !!projected.recognition.hold,
+    },
+    {
+      enabled: context.captureEnabled === true,
+      enabledAt: context.captureEnabledAt,
+      allowAutomaticCapture: allowAutoPost,
+      sourceAccountCurrency: context.sourceAccountCurrency,
+      isFinancialLeaf: context.isFinancialLeaf,
+      uncategorizedAccount: context.uncategorizedAccount,
+      categoryDefault: context.categoryDefault,
+      descriptionDefaults: context.descriptionDefaults,
+      openMerchants: context.openMerchants,
+    },
+    Date.now(),
+  );
+  if (disposition.kind === 'review') return review(disposition.reason);
+  const { journalData } = disposition;
+  const fingerprint = computeSmsFingerprint(message.address, message.body, message.date);
+  const capture = readCaptureMetadata(journalData.metadata?.metadataJson)!;
+  journalData.metadata = {
+    importSource: 'sms',
+    originalSmsId: message.id,
+    metadataJson: withCaptureMetadata(
+      JSON.stringify({
+        smsFingerprint: fingerprint,
+        ...(parsed.referenceNumber ? { referenceNumber: parsed.referenceNumber } : {}),
+      }),
+      { ...capture, sources: capture.sources.map(source => ({ ...source, fingerprint })) },
+    ),
+  };
+  return {
+    kind: 'post',
+    recognition: projected.recognition,
+    suggestedAccounts: projected.suggestedAccounts ?? {},
+    journalData,
   };
 }

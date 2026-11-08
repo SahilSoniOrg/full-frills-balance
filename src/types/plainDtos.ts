@@ -150,23 +150,10 @@ export interface PlainAuditLog {
   canRevert: boolean;
 }
 
-export interface PlainSmsRule {
-  id: string;
-  channelsJson?: string;
-  senderMatch?: string;
-  bodyMatch?: string;
-  conditionsJson?: string;
-  actionsJson?: string;
-  priority?: number;
-  sourceAccountId: AccountId;
-  categoryAccountId: AccountId;
-  isActive: boolean;
-}
-
 export interface PlainInboxRecord {
   consumedWorkplaces?: { workplaceId: WorkplaceId; name: string }[];
   id: string;
-  channel: 'sms' | 'voice';
+  channel: 'sms' | 'voice' | 'email';
   deviceSourceId: string;
   senderAddress?: string;
   rawBody?: string;

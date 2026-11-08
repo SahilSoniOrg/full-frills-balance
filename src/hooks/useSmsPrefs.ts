@@ -3,11 +3,9 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 export type SmsPrefsState = {
   isAutomaticSmsImportEnabled: boolean;
-  isSmsAutoPostEnabled: boolean;
   areSmsReviewNotificationsEnabled: boolean;
   showSmsNotificationDetails: boolean;
   setShowSmsNotificationDetails: (enabled: boolean) => void;
-  setSmsAutoPostEnabled: (enabled: boolean) => void;
   setSmsReviewNotificationsEnabled: (enabled: boolean) => void;
 };
 
@@ -26,14 +24,6 @@ export function useSmsPrefs(): SmsPrefsState {
     () => preferences.device.getSnapshot().isAutomaticSmsImportEnabled,
   );
 
-  const isSmsAutoPostEnabled = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.device.observe('isSmsAutoPostEnabled').subscribe(onStoreChange);
-      return () => sub.unsubscribe();
-    },
-    () => preferences.device.getSnapshot().isSmsAutoPostEnabled,
-    () => preferences.device.getSnapshot().isSmsAutoPostEnabled,
-  );
   const areSmsReviewNotificationsEnabled = useSyncExternalStore(
     onStoreChange => {
       const sub = preferences.device
@@ -44,9 +34,6 @@ export function useSmsPrefs(): SmsPrefsState {
     () => preferences.device.getSnapshot().areSmsReviewNotificationsEnabled,
     () => preferences.device.getSnapshot().areSmsReviewNotificationsEnabled,
   );
-  const setSmsAutoPostEnabled = useCallback((enabled: boolean) => {
-    preferences.device.setSmsAutoPostEnabled(enabled);
-  }, []);
   const setSmsReviewNotificationsEnabled = useCallback((enabled: boolean) => {
     preferences.device.update({ areSmsReviewNotificationsEnabled: enabled });
   }, []);
@@ -67,9 +54,7 @@ export function useSmsPrefs(): SmsPrefsState {
     showSmsNotificationDetails,
     setShowSmsNotificationDetails,
     isAutomaticSmsImportEnabled,
-    isSmsAutoPostEnabled,
     areSmsReviewNotificationsEnabled,
-    setSmsAutoPostEnabled,
     setSmsReviewNotificationsEnabled,
   };
 }

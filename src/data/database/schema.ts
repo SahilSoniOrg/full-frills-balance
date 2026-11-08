@@ -3,7 +3,7 @@ import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 import { CREATE_LEDGER_READ_INDEXES_SQL, DROP_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 
 export const schema = appSchema({
-  version: 36,
+  version: 37,
   unsafeSql: (sql, kind) =>
     `${sql}\n${kind === 'drop_indices' ? DROP_LEDGER_READ_INDEXES_SQL : CREATE_LEDGER_READ_INDEXES_SQL}`,
   tables: [
@@ -325,31 +325,6 @@ FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
   SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journal_metadata');
-END;`,
-    }),
-    tableSchema({
-      name: 'transaction_auto_post_rules',
-      columns: [
-        { name: 'channels_json', type: 'string', isOptional: true },
-        { name: 'sender_match', type: 'string', isOptional: true, isIndexed: true },
-        { name: 'body_match', type: 'string', isOptional: true },
-        { name: 'conditions_json', type: 'string', isOptional: true },
-        { name: 'actions_json', type: 'string', isOptional: true },
-        { name: 'priority', type: 'number', isOptional: true, isIndexed: true },
-        { name: 'source_account_id', type: 'string', isIndexed: true },
-        { name: 'category_account_id', type: 'string', isIndexed: true },
-        { name: 'is_active', type: 'boolean' },
-        { name: 'created_at', type: 'number', isIndexed: true },
-        { name: 'updated_at', type: 'number' },
-        { name: 'workplace_id', type: 'string', isIndexed: true },
-      ],
-      unsafeSql: sql => `${sql};
-CREATE TRIGGER IF NOT EXISTS trg_transaction_auto_post_rules_workplace_id_check
-BEFORE INSERT ON transaction_auto_post_rules
-FOR EACH ROW
-WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
-BEGIN
-  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transaction_auto_post_rules');
 END;`,
     }),
     tableSchema({
