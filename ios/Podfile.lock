@@ -2750,6 +2750,35 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-webview (14.0.1):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - React-NativeModulesApple (0.88.0):
     - boost
     - DoubleConversion
@@ -3986,6 +4015,7 @@ DEPENDENCIES:
   - react-native-pager-view (from `../node_modules/react-native-pager-view`)
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -4267,6 +4297,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-quick-base64"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-webview:
+    :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -4484,6 +4516,7 @@ SPEC CHECKSUMS:
   react-native-pager-view: 011c5b2885cfc5001d3b5fe86216bc94696046a6
   react-native-quick-base64: 17a7c123beaa503954045ea7e67eb2637cf79d67
   react-native-safe-area-context: 8ddc9a15aa6e439e7e1e70b7c4349a5e8129d2c0
+  react-native-webview: a7f03fc6ba1379612a1da947b23cbd17a7b1e7d8
   React-NativeModulesApple: 7c8a84d4d61f39cc277c68c0a39ce215c3b317a6
   React-networking: 03cfff836e3999b3f0ed56238baf8d89658be2e1
   React-oscompat: c43a8f3d98385003b47a73b5e6e5ad885327a347

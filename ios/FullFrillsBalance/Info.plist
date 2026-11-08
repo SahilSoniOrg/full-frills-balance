@@ -41,6 +41,12 @@
 				<string>exp+full-frills-balance</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.151156364497-oi7vgrbq7eh3cmnhohcl2dr17os3soto</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
