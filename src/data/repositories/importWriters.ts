@@ -10,7 +10,6 @@ import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import {
   pickImportedSubtype,
@@ -188,9 +187,6 @@ export function prepareAuxiliaryImportRecords(
   const accountMetadata = database.collections.get<AccountMetadata>('account_metadata');
   const plannedPayments = database.collections.get<PlannedPayment>('planned_payments');
   const journalMetadata = database.collections.get<JournalMetadata>('journal_metadata');
-  const autoPostRules = database.collections.get<TransactionAutoPostRule>(
-    'transaction_auto_post_rules',
-  );
   const accountMatchers = database.collections.get<AccountMatcher>('account_matchers');
   const inboxRecords = database.collections.get<TransactionInboxRecord>(
     'transaction_inbox_records',
@@ -319,23 +315,7 @@ export function prepareAuxiliaryImportRecords(
     }),
   );
 
-  const autoPostRulePrepares = (data.transactionAutoPostRules || []).map(rule =>
-    autoPostRules.prepareCreate(record => {
-      record._raw.id = rule.id;
-      record.workplaceId = workplaceId;
-      record.channelsJson = rule.channelsJson;
-      record.senderMatch = rule.senderMatch;
-      record.bodyMatch = rule.bodyMatch;
-      record.conditionsJson = rule.conditionsJson;
-      record.actionsJson = rule.actionsJson;
-      record.priority = rule.priority;
-      record.sourceAccountId = rule.sourceAccountId;
-      record.categoryAccountId = rule.categoryAccountId;
-      record.isActive = rule.isActive;
-      record._raw._status = 'synced';
-      setRecordTimestamps(record, { createdAt: rule.createdAt, updatedAt: rule.updatedAt });
-    }),
-  );
+  // Retired automation rows in old canonical payloads are intentionally ignored.
 
   const inboxPrepares = (data.transactionInboxRecords || []).map(inbox =>
     inboxRecords.prepareCreate(record => {
@@ -408,7 +388,6 @@ export function prepareAuxiliaryImportRecords(
     ...accountMetadataPrepares,
     ...plannedPaymentPrepares,
     ...journalMetadataPrepares,
-    ...autoPostRulePrepares,
     ...accountMatcherPrepares,
     ...inboxPrepares,
     ...balanceSnapshotPrepares,

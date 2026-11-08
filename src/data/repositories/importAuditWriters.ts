@@ -8,7 +8,6 @@ import {
   toTransactionType,
 } from '@/src/data/repositories/importValueParsers';
 import { plannedPaymentAuditSnapshot } from '@/src/data/repositories/PlannedPaymentRepository';
-import { autoPostRuleAuditSnapshot } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AuditAction } from '@/src/types/enums';
 import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
@@ -203,15 +202,6 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
           ...plannedPaymentAuditSnapshot(payment),
           deletedAt: isoDate(payment.deletedAt),
         },
-      })),
-  },
-  {
-    entityType: 'transaction_auto_post_rule',
-    eventType: 'transaction_auto_post_rule.imported',
-    collect: data =>
-      (data.transactionAutoPostRules ?? []).map(rule => ({
-        id: rule.id,
-        after: autoPostRuleAuditSnapshot(rule),
       })),
   },
   {

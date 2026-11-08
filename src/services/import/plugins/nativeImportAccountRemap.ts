@@ -1,5 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountId } from '@/src/types/ids';
 
 import {
   BatchImportData,
@@ -11,22 +11,16 @@ import {
   CanonicalBudgetScope,
   CanonicalPlannedPayment,
   CanonicalTransaction,
-  CanonicalTransactionAutoPostRule,
 } from '@/src/types/importContracts';
 import {
   AccountImportBatchDto,
   AccountImportRef,
-  AccountImportRuleRef,
   formatFundingAccountIds,
   importPlan,
   ImportPlan,
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
-import {
-  mapOptionalRuleAccountId,
-  syncRuleActionsFromColumns,
-} from '@/src/utils/sms/ruleActionsAccountIds';
 import { logger } from '@/src/utils/logger';
 import {
   conditionsKeyFor,
@@ -46,10 +40,7 @@ export type NativeImportAccountSources = {
   plannedPayments?: CanonicalPlannedPayment[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
   budgets?: CanonicalBudget[];
-  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
   accountMatchers?: CanonicalAccountMatcher[];
-  smsAutoPostRules?: CanonicalTransactionAutoPostRule[];
-  sms_auto_post_rules?: CanonicalTransactionAutoPostRule[];
 };
 
 function addRef(
@@ -63,15 +54,6 @@ function addRef(
   }
 }
 
-export function autoPostRulesFromData(
-  data: Pick<
-    NativeImportAccountSources,
-    'transactionAutoPostRules' | 'smsAutoPostRules' | 'sms_auto_post_rules'
-  >,
-): CanonicalTransactionAutoPostRule[] {
-  return data.transactionAutoPostRules || data.smsAutoPostRules || data.sms_auto_post_rules || [];
-}
-
 /**
  * Maps native/plugin bags (or post-remap BatchImportData) onto the narrow
  * Account reference graph import DTO. Soft-deleted transactions should already
@@ -81,7 +63,6 @@ export function accountImportBatchFromSources(
   data: NativeImportAccountSources | BatchImportData,
 ): AccountImportBatchDto {
   const refs: AccountImportRef[] = [];
-  const rules: AccountImportRuleRef[] = [];
 
   for (const site of referenceSites()) {
     if (site.importPolicy === 'sanitize') continue;
@@ -145,18 +126,9 @@ export function accountImportBatchFromSources(
     }
   }
 
-  for (const rule of autoPostRulesFromData(data)) {
-    rules.push({
-      ruleKey: rule.id,
-      sourceAccountId: rule.sourceAccountId,
-      categoryAccountId: rule.categoryAccountId,
-    });
-  }
-
   return {
     accountIds: data.accounts.map(account => account.id),
     refs,
-    rules,
   };
 }
 
@@ -175,11 +147,7 @@ export function requireMappedAccountId(
   return mapped;
 }
 
-/**
- * Plans salvage/sanitize via the Account reference graph, then materializes
- * placeholder Accounts for missing salvage ids. Rule patches are applied later
- * during remap (see remapAutoPostRulesForImport).
- */
+/** Plans import salvage, then materializes placeholder Accounts for missing references. */
 export function buildPlaceholderAccountsForOrphans(args: {
   data: NativeImportAccountSources;
   accountMap: Map<string, AccountId>;
@@ -203,7 +171,7 @@ export function buildPlaceholderAccountsForOrphans(args: {
       accountSubtype: AccountSubtype.OTHER,
       currencyCode: defaultCurrencyCode,
       description:
-        'Placeholder created during import for transactions or rules that referenced a missing account.',
+        'Placeholder created during import for ledger data that referenced a missing account.',
     });
   }
 
@@ -215,56 +183,6 @@ export function buildPlaceholderAccountsForOrphans(args: {
   }
 
   return { placeholderAccounts, plan };
-}
-
-export function remapAutoPostRulesForImport(
-  rules: CanonicalTransactionAutoPostRule[],
-  accountMap: Map<string, AccountId>,
-  nextId: () => string,
-  parseTimestamp: (value?: number | string) => number | undefined,
-  plan?: ImportPlan,
-  ruleIdMap?: ReadonlyMap<string, string>,
-): CanonicalTransactionAutoPostRule[] {
-  const patchesByKey = new Map((plan?.rulePatches ?? []).map(patch => [patch.ruleKey, patch]));
-
-  return rules.map(rule => {
-    const patch = patchesByKey.get(rule.id);
-    const sourceOriginal =
-      patch && 'sourceAccountId' in patch ? patch.sourceAccountId : rule.sourceAccountId;
-    const categoryOriginal =
-      patch && 'categoryAccountId' in patch ? patch.categoryAccountId : rule.categoryAccountId;
-
-    const sourceAccountId = mapOptionalRuleAccountId(accountMap, sourceOriginal);
-    const categoryAccountId = mapOptionalRuleAccountId(accountMap, categoryOriginal);
-    const clearedBadRef =
-      (Boolean(rule.sourceAccountId) && sourceAccountId === EMPTY_ACCOUNT_ID) ||
-      (Boolean(rule.categoryAccountId) && categoryAccountId === EMPTY_ACCOUNT_ID);
-
-    if (clearedBadRef) {
-      logger.warn(`[NativePlugin] Cleared missing account refs on auto-post rule "${rule.id}"`, {
-        sourceAccountId: rule.sourceAccountId,
-        categoryAccountId: rule.categoryAccountId,
-      });
-    }
-
-    return {
-      id: ruleIdMap?.get(rule.id) ?? nextId(),
-      channelsJson: rule.channelsJson,
-      senderMatch: rule.senderMatch,
-      bodyMatch: rule.bodyMatch,
-      conditionsJson: rule.conditionsJson,
-      actionsJson: syncRuleActionsFromColumns(rule.actionsJson, {
-        sourceAccountId,
-        categoryAccountId,
-      }),
-      priority: rule.priority,
-      sourceAccountId,
-      categoryAccountId,
-      isActive: rule.isActive,
-      createdAt: parseTimestamp(rule.createdAt),
-      updatedAt: parseTimestamp(rule.updatedAt),
-    };
-  });
 }
 
 export function remapAccountMatchersForImport(

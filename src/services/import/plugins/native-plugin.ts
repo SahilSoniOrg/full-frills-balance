@@ -1,4 +1,5 @@
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import { toAccountType, toTransactionType } from '@/src/data/repositories/importValueParsers';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {
   CanonicalAccount,
@@ -10,7 +11,6 @@ import {
   CanonicalJournal,
   CanonicalJournalMetadata,
   CanonicalPlannedPayment,
-  CanonicalTransactionAutoPostRule,
   CanonicalTransaction,
   CanonicalTransactionInboxRecord,
 } from '@/src/types/importContracts';
@@ -18,9 +18,7 @@ import {
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { canonicalImportFromBatchImportData } from '@/src/services/import/canonicalImportAdapter';
 import {
-  autoPostRulesFromData,
   buildPlaceholderAccountsForOrphans,
-  remapAutoPostRulesForImport,
   remapAccountMatchersForImport,
   remapAccountMatcherSuppressions,
   remapFundingAccountIdsCsv,
@@ -34,6 +32,13 @@ import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { UIPreferences } from '@/src/services/preferences';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
+import type { CaptureCategoryLine } from '@/src/domain/transaction-intelligence/captureMetadata';
+import {
+  remapCaptureMetadataForImport,
+  remapCapturePreferencesForImport,
+  remapCategoryDefaultsForImport,
+} from '@/src/services/import/plugins/nativeImportCaptureRemap';
+import { withoutEmailRecognitionEvidence } from '@/src/services/email/emailRecognitionEvidence';
 
 interface NativeImportData {
   version: string;
@@ -52,10 +57,6 @@ interface NativeImportData {
   accountMatchers?: unknown;
   plannedPayments?: CanonicalPlannedPayment[];
   journalMetadata?: CanonicalJournalMetadata[];
-  // Support both snake_case and camelCase for legacy compatibility
-  sms_auto_post_rules?: CanonicalTransactionAutoPostRule[];
-  smsAutoPostRules?: CanonicalTransactionAutoPostRule[];
-  transactionAutoPostRules?: CanonicalTransactionAutoPostRule[];
   sms_inbox_records?: CanonicalTransactionInboxRecord[];
   smsInboxRecords?: CanonicalTransactionInboxRecord[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
@@ -154,10 +155,8 @@ export const nativePlugin: ImportPlugin = {
     const transactionMap = new Map<string, TransactionId>();
     const budgetMap = new Map<string, BudgetId>();
     const plannedPaymentMap = new Map<string, PlannedPaymentId>();
-    const autoPostRules = autoPostRulesFromData(data);
     const inboxSources =
       data.transactionInboxRecords || data.smsInboxRecords || data.sms_inbox_records || [];
-    const autoPostRuleMap = new Map<string, string>();
     const accountMatcherMap = new Map<string, string>();
     const inboxRecordMap = new Map<string, string>();
     const auditLogMap = new Map<string, string>();
@@ -174,7 +173,6 @@ export const nativePlugin: ImportPlugin = {
     (data.plannedPayments || []).forEach(pp =>
       plannedPaymentMap.set(pp.id, generateId() as PlannedPaymentId),
     );
-    autoPostRules.forEach(rule => autoPostRuleMap.set(rule.id, generateId()));
     inboxSources.forEach(record => inboxRecordMap.set(record.id, generateId()));
     (data.auditLogs || []).forEach(log => auditLogMap.set(log.id, generateId()));
 
@@ -193,7 +191,6 @@ export const nativePlugin: ImportPlugin = {
       exchange_rate: new Map(),
       budget: budgetMap,
       planned_payment: plannedPaymentMap,
-      transaction_auto_post_rule: autoPostRuleMap,
       account_matcher: accountMatcherMap,
       transaction_inbox_record: inboxRecordMap,
       workplace: new Map(),
@@ -208,7 +205,7 @@ export const nativePlugin: ImportPlugin = {
       // Matcher owners are checked against accountMap above and invalid matchers are
       // dropped. They are not salvage references, so never pass raw rows to the planner.
       // Recover other orphaned account FKs by synthesizing placeholder accounts.
-      const { placeholderAccounts, plan } = buildPlaceholderAccountsForOrphans({
+      const { placeholderAccounts } = buildPlaceholderAccountsForOrphans({
         data: { ...data, accountMatchers: [] },
         accountMap,
         accountCurrencyMap,
@@ -287,6 +284,23 @@ export const nativePlugin: ImportPlugin = {
           deletedAt: parseTimestamp(t.deletedAt),
         };
       });
+
+      const restoredAccounts = new Map(accounts.map(account => [account.id, account]));
+      const restoredLinesByJournal = new Map<JournalId, CaptureCategoryLine[]>();
+      for (const transaction of transactions) {
+        if (transaction.deletedAt != null) continue;
+        const account = restoredAccounts.get(transaction.accountId);
+        if (!account) continue;
+        const lines = restoredLinesByJournal.get(transaction.journalId) ?? [];
+        lines.push({
+          accountId: transaction.accountId,
+          amount: transaction.amount,
+          transactionType: toTransactionType(transaction.transactionType),
+          currencyCode: transaction.currencyCode,
+          accountType: toAccountType(account.accountType),
+        });
+        restoredLinesByJournal.set(transaction.journalId, lines);
+      }
 
       const resultData = {
         accounts,
@@ -407,18 +421,14 @@ export const nativePlugin: ImportPlugin = {
           originalSmsId: meta.originalSmsId,
           originalSmsSender: meta.originalSmsSender,
           originalSmsBody: meta.originalSmsBody,
-          metadataJson: meta.metadataJson,
+          metadataJson: remapCaptureMetadataForImport(
+            meta.metadataJson,
+            accountMap,
+            restoredLinesByJournal.get(journalMap.get(meta.journalId)!) ?? [],
+          ),
           createdAt: parseTimestamp(meta.createdAt),
           updatedAt: parseTimestamp(meta.updatedAt),
         })),
-        transactionAutoPostRules: remapAutoPostRulesForImport(
-          autoPostRules,
-          accountMap,
-          generateId,
-          parseTimestamp,
-          plan,
-          autoPostRuleMap,
-        ),
         accountMatchers: remappedMatchers.matchers,
         transactionInboxRecords: inboxSources.map(inbox => ({
           id: inboxRecordMap.get(inbox.id) ?? generateId(),
@@ -445,7 +455,10 @@ export const nativePlugin: ImportPlugin = {
           duplicateConfidence: inbox.duplicateConfidence,
           parseConfidence: inbox.parseConfidence,
           parseReason: inbox.parseReason,
-          metadataJson: inbox.metadataJson,
+          metadataJson:
+            inbox.channel === 'email'
+              ? withoutEmailRecognitionEvidence(inbox.metadataJson)
+              : inbox.metadataJson,
           firstSeenAt: parseTimestamp(inbox.firstSeenAt) ?? Date.now(),
           lastScannedAt: parseTimestamp(inbox.lastScannedAt) ?? Date.now(),
           processedAt: parseTimestamp(inbox.processedAt),
@@ -484,6 +497,14 @@ export const nativePlugin: ImportPlugin = {
       const workplacePreferences = data.workplacePreferences
         ? {
             ...data.workplacePreferences,
+            automaticTransactionCapture: remapCapturePreferencesForImport(
+              data.workplacePreferences.automaticTransactionCapture,
+              accountMap,
+            ),
+            captureCategoryDefaults: remapCategoryDefaultsForImport(
+              data.workplacePreferences.captureCategoryDefaults,
+              accountMap,
+            ),
             ...(data.workplacePreferences.accountMatcherSuppressions
               ? {
                   accountMatcherSuppressions: remapAccountMatcherSuppressions(

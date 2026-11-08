@@ -1,5 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { AccountId, BudgetId, EMPTY_ACCOUNT_ID, JournalId, TransactionId } from '@/src/types/ids';
+import { AccountId, BudgetId, JournalId, TransactionId } from '@/src/types/ids';
 
 import { importPlan, referenceSites } from '@/src/services/accounts/accountReferenceGraph';
 import {
@@ -30,33 +30,15 @@ describe('native import Account reference adapter', () => {
         transactionDate: Date.now(),
       },
     ],
-    transactionAutoPostRules: [
-      {
-        id: 'rule-stale',
-        sourceAccountId: 'ghost' as AccountId,
-        categoryAccountId: 'a1' as AccountId,
-        isActive: true,
-      },
-      {
-        id: 'rule-salvaged',
-        sourceAccountId: 'missing-tx' as AccountId,
-        categoryAccountId: 'a1' as AccountId,
-        isActive: true,
-      },
-    ],
   });
 
-  it('maps plugin bags → DTO → importPlan (salvage + sanitize)', () => {
+  it('salvages ledger references', () => {
     const batch = accountImportBatchFromSources(baseData());
     expect(batch.accountIds).toEqual(['a1']);
     expect(batch.refs.some(ref => ref.accountId === 'missing-tx')).toBe(true);
-    expect(batch.rules).toHaveLength(2);
 
     const plan = importPlan(batch);
     expect(plan.missingAccountIds).toEqual(['missing-tx']);
-    expect(plan.rulePatches).toEqual([
-      { ruleKey: 'rule-stale', sourceAccountId: EMPTY_ACCOUNT_ID },
-    ]);
   });
 
   it('materializes placeholders only for plan.missingAccountIds', () => {

@@ -218,7 +218,6 @@ export class ImportRepository {
                 importedTransactions: data.transactions.length,
                 importedBudgets: data.budgets?.length ?? 0,
                 importedPlannedPayments: data.plannedPayments?.length ?? 0,
-                importedAutomationRules: data.transactionAutoPostRules?.length ?? 0,
                 importedAccountMatchers: data.accountMatchers?.length ?? 0,
                 importedAccountMetadata: data.accountMetadata?.length ?? 0,
                 importedBudgetScopes: data.budgetScopes?.length ?? 0,

@@ -111,16 +111,6 @@ describe('NativeImportPlugin', () => {
         minimumPaymentPercent: 5,
       },
     ],
-    transactionAutoPostRules: [
-      {
-        id: 'r1',
-        priority: 1,
-        sourceAccountId: 'a1',
-        categoryAccountId: 'a1',
-        isActive: true,
-        channelsJson: '["sms"]',
-      },
-    ],
     balanceSnapshots: [
       {
         id: 'bs1',
@@ -331,111 +321,6 @@ describe('NativeImportPlugin', () => {
       expect(data.accountMetadata[0].payFromAccountId).toBe(newAccountId);
       expect(data.accountMetadata[0].minPaymentOnly).toBe(true);
       expect(data.accountMetadata[0].minimumPaymentPercent).toBe(5);
-
-      // Check transaction auto post rules mapping
-      expect(data.transactionAutoPostRules[0].channelsJson).toBe('["sms"]');
-      expect(data.transactionAutoPostRules[0].sourceAccountId).toBe(newAccountId);
-    });
-
-    it('remaps account ids inside auto-post rule actionsJson', async () => {
-      const withActionsJson = {
-        ...validNativeData,
-        transactionAutoPostRules: [
-          {
-            id: 'r1',
-            priority: 1,
-            sourceAccountId: 'a1',
-            categoryAccountId: 'a1',
-            isActive: true,
-            channelsJson: '["sms"]',
-            actionsJson: JSON.stringify({
-              disposition: 'auto_post',
-              sourceAccountId: 'a1',
-              categoryAccountId: 'a1',
-              journalDescription: 'Coffee',
-            }),
-          },
-        ],
-      };
-      const context = { json: withActionsJson } as ImportFileContext;
-      await parseImport(context);
-
-      const data = lastBatch;
-      const newAccountId = data.accounts[0].id;
-      const actions = JSON.parse(data.transactionAutoPostRules[0].actionsJson);
-      expect(actions.sourceAccountId).toBe(newAccountId);
-      expect(actions.categoryAccountId).toBe(newAccountId);
-      expect(actions.journalDescription).toBe('Coffee');
-    });
-
-    it('sanitizes stale SMS rule actionsJson without creating placeholder accounts', async () => {
-      const withStaleRule = {
-        ...validNativeData,
-        transactionAutoPostRules: [
-          {
-            id: 'r-stale',
-            priority: 1,
-            sourceAccountId: 'a1',
-            categoryAccountId: 'a1',
-            isActive: true,
-            channelsJson: '["sms"]',
-            actionsJson: JSON.stringify({
-              disposition: 'auto_post',
-              sourceAccountId: 'ghost-source',
-              categoryAccountId: 'ghost-category',
-              journalDescription: 'Star Bazaar',
-            }),
-          },
-        ],
-      };
-      const context = { json: withStaleRule } as ImportFileContext;
-      await parseImport(context);
-
-      const data = lastBatch;
-      expect(data.accounts).toHaveLength(1);
-      expect(data.accounts[0].name).toBe('Acc 1');
-      const newAccountId = data.accounts[0].id;
-      const rule = data.transactionAutoPostRules[0];
-      expect(rule.sourceAccountId).toBe(newAccountId);
-      expect(rule.categoryAccountId).toBe(newAccountId);
-      expect(JSON.parse(rule.actionsJson)).toEqual({
-        disposition: 'auto_post',
-        sourceAccountId: newAccountId,
-        categoryAccountId: newAccountId,
-        journalDescription: 'Star Bazaar',
-      });
-    });
-
-    it('clears missing rule column accounts and demotes auto_post to review', async () => {
-      const withBrokenRule = {
-        ...validNativeData,
-        transactionAutoPostRules: [
-          {
-            id: 'r-broken',
-            priority: 1,
-            sourceAccountId: 'missing-source',
-            categoryAccountId: 'a1',
-            isActive: true,
-            actionsJson: JSON.stringify({
-              disposition: 'auto_post',
-              sourceAccountId: 'missing-source',
-              categoryAccountId: 'a1',
-            }),
-          },
-        ],
-      };
-      const context = { json: withBrokenRule } as ImportFileContext;
-      await parseImport(context);
-
-      const data = lastBatch;
-      const newAccountId = data.accounts[0].id;
-      const rule = data.transactionAutoPostRules[0];
-      expect(rule.sourceAccountId).toBe('');
-      expect(rule.categoryAccountId).toBe(newAccountId);
-      expect(JSON.parse(rule.actionsJson)).toEqual({
-        disposition: 'review',
-        categoryAccountId: newAccountId,
-      });
     });
 
     it('creates placeholder accounts for orphaned transaction account ids', async () => {

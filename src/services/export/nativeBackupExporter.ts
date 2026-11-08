@@ -20,7 +20,6 @@ const EXPORT_KEY_BY_TABLE: Record<string, string> = {
   account_metadata: 'accountMetadata',
   planned_payments: 'plannedPayments',
   journal_metadata: 'journalMetadata',
-  transaction_auto_post_rules: 'transactionAutoPostRules',
   account_matchers: 'accountMatchers',
   transaction_inbox_records: 'transactionInboxRecords',
   balance_snapshots: 'balance_snapshots',
@@ -43,7 +42,8 @@ export async function exportWorkplacesToJSON(
     const data: Record<string, readonly unknown[]> = {};
     const exportedTransactionIds = new Set<string>();
     const exportedJournalIds = new Set<string>();
-    for (const [taskIndex, task] of WORKPLACE_DATA_TABLES.entries()) {
+    const exportTasks = WORKPLACE_DATA_TABLES;
+    for (const [taskIndex, task] of exportTasks.entries()) {
       let rows = await fetchAndTransformTable<Record<string, unknown>>(workplaceId, task.table);
       if (task.table === 'journals') {
         rows.forEach(row => exportedJournalIds.add(String(row.id ?? '')));
@@ -57,7 +57,7 @@ export async function exportWorkplacesToJSON(
       data[EXPORT_KEY_BY_TABLE[task.table] ?? task.table] = rows;
       onProgress?.(
         `Gathering ${workplace.name}: ${task.name}...`,
-        ((index + (taskIndex + 1) / WORKPLACE_DATA_TABLES.length) / workplaceIds.length) * 0.8,
+        ((index + (taskIndex + 1) / exportTasks.length) / workplaceIds.length) * 0.8,
       );
     }
     const workplaceMetadata: ExportWorkplaceMetadata = {

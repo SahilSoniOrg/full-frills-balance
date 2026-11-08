@@ -44,9 +44,6 @@ function formatMissingAccountError(missing: MissingImportedAccountRef): string {
       return `Import validation failed: planned payment "${recordId}" references a missing account`;
     case 'balanceSnapshot.accountId':
       return `Import validation failed: balance snapshot "${recordId}" references a missing account or transaction`;
-    case 'transactionAutoPostRule.sourceAccountId':
-    case 'transactionAutoPostRule.categoryAccountId':
-      return `Import validation failed: auto-post rule "${recordId}" references missing account "${missing.accountId}"`;
     default:
       return `Import validation failed: missing account "${missing.accountId}"`;
   }
@@ -70,7 +67,6 @@ function validateStructuralRules(data: BatchImportData): void {
   assertUniqueIds('journal metadata', data.journalMetadata ?? []);
   assertUniqueIds('balance snapshot', data.balanceSnapshots ?? []);
   assertUniqueIds('transaction inbox record', data.transactionInboxRecords ?? []);
-  assertUniqueIds('transaction auto-post rule', data.transactionAutoPostRules ?? []);
   assertUniqueIds('account matcher', data.accountMatchers ?? []);
   assertUniqueIds('currency', data.currencies ?? []);
 

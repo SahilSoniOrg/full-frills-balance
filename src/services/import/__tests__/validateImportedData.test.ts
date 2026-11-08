@@ -177,36 +177,6 @@ describe('validateImportedData', () => {
     expect(() => validateImportedData(data)).toThrow(/duplicate transaction id "t-1"/);
   });
 
-  it('allows review auto-post rules with an empty category account', () => {
-    const data = minimalImport();
-    data.transactionAutoPostRules = [
-      {
-        id: 'rule-review',
-        sourceAccountId: 'acc-1' as AccountId,
-        categoryAccountId: '' as AccountId,
-        isActive: true,
-      },
-    ];
-
-    expect(() => validateImportedData(data)).not.toThrow();
-  });
-
-  it('rejects auto-post rules that reference a real missing account', () => {
-    const data = minimalImport();
-    data.transactionAutoPostRules = [
-      {
-        id: 'rule-bad',
-        sourceAccountId: 'missing-account' as AccountId,
-        categoryAccountId: 'acc-1' as AccountId,
-        isActive: true,
-      },
-    ];
-
-    expect(() => validateImportedData(data)).toThrow(
-      /auto-post rule "rule-bad" references missing account "missing-account"/,
-    );
-  });
-
   it('rejects budgets that reference a missing asset account id', () => {
     const data = minimalImport();
     data.budgets = [

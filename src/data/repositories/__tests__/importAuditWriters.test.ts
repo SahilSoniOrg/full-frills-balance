@@ -63,7 +63,7 @@ describe('prepareImportedEntityAuditRecords', () => {
     expect(withoutMetadata).toBeNull();
   });
 
-  it('pins planned-payment and auto-post-rule import audit after payloads', async () => {
+  it('pins planned-payment import audit after payloads', async () => {
     let logs: AuditLog[] = [];
     await database.write(async () => {
       logs = prepareImportedEntityAuditRecords(
@@ -88,15 +88,6 @@ describe('prepareImportedEntityAuditRecords', () => {
               nextOccurrence: 0,
               status: 'ACTIVE',
               isAutoPost: false,
-            },
-          ],
-          transactionAutoPostRules: [
-            {
-              id: 'rule-1',
-              senderMatch: 'BANK',
-              sourceAccountId: 'acc-1' as AccountId,
-              categoryAccountId: 'acc-2' as AccountId,
-              isActive: true,
             },
           ],
         },
@@ -130,17 +121,6 @@ describe('prepareImportedEntityAuditRecords', () => {
       recurrenceDay: null,
       recurrenceMonth: null,
       deletedAt: null,
-    });
-    expect(after.transaction_auto_post_rule).toEqual({
-      channelsJson: null,
-      senderMatch: 'BANK',
-      bodyMatch: null,
-      conditionsJson: null,
-      actionsJson: null,
-      priority: null,
-      sourceAccountId: 'acc-1',
-      categoryAccountId: 'acc-2',
-      isActive: true,
     });
   });
 });

@@ -17,6 +17,7 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   mergedAccountIds: 'account',
   mergedIntoAccountId: 'account',
   categoryAccountId: 'account',
+  uncategorizedAccountIds: 'account',
   targetAccountId: 'account',
   targetAccountIds: 'account',
   fromAccountId: 'account',
@@ -39,10 +40,6 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   budgetIds: 'budget',
   plannedPaymentId: 'planned_payment',
   plannedPaymentIds: 'planned_payment',
-  ruleId: 'transaction_auto_post_rule',
-  autoPostRuleId: 'transaction_auto_post_rule',
-  transactionAutoPostRuleId: 'transaction_auto_post_rule',
-  ruleKey: 'transaction_auto_post_rule',
   accountMatcherId: 'account_matcher',
   matcherId: 'account_matcher',
   matcherIds: 'account_matcher',
@@ -69,6 +66,17 @@ function remapValue(
     : inheritedMap;
 
   if (typeof value === 'string') {
+    if (key === 'metadataJson') {
+      try {
+        const result = remapValue(JSON.parse(value), undefined, undefined, maps);
+        return result.changed
+          ? { value: JSON.stringify(result.value), changed: true }
+          : { value, changed: false };
+      } catch {
+        // Historical audit payloads can contain malformed legacy metadata.
+        return { value, changed: false };
+      }
+    }
     if (key === 'assetAccountIds') {
       const remapped = value
         .split(',')
