@@ -53,7 +53,8 @@ it('replaces a root group with its children in one write, preserving journal lin
 
   await disbandAccountGroup(workplaceId, group.id);
 
-  expect(writeSpy).toHaveBeenCalledTimes(1);
+  // Disband batch plus a follow-up recognition refresh write (no pending SMS ⇒ no second batch).
+  expect(writeSpy).toHaveBeenCalledTimes(2);
   expect(batchSpy).toHaveBeenCalledTimes(1);
   const roots = (await accountQueryRepository.findAll(workplaceId)).filter(a => !a.parentAccountId);
   expect(roots.map(a => a.id)).toEqual([before.id, first.id, second.id, after.id]);
