@@ -50,6 +50,7 @@ describe('journalSaveHelpers workplace isolation', () => {
       'populates metadata from a same-workplace inbox record with device ID %s',
       async smsId => {
         jest.spyOn(transactionInboxRepository, 'find').mockResolvedValue({
+          channel: 'sms',
           inputFingerprint: 'fp-same-wp',
           parsedAmount: 50,
           parsedCurrencyCode: 'USD',
