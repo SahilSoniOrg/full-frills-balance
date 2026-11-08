@@ -1,5 +1,12 @@
-import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  EmptyStateView,
+  FilterChipButton,
+  Icon,
+} from '@/src/components/core';
+import { Size, Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { DuplicateConflictResolutionModal } from '@/src/features/settings/components/DuplicateConflictResolutionModal';
 import { EditReparseSmsModal } from '@/src/features/settings/components/EditReparseSmsModal';
@@ -8,7 +15,7 @@ import { TransactionInboxItemCardView } from '@/src/features/settings/components
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 interface TransactionInboxViewProps {
   vm: TransactionInboxViewModel;
@@ -39,7 +46,6 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
     handleMergeDuplicate,
-    handleCreateRuleFromItem,
     handleSplitImport,
     handleViewJournalFromDuplicate,
     filterButtons,
@@ -50,24 +56,16 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
 
   return (
     <View style={styles.container} testID="transaction-inbox-screen">
-      <SettingsLayout
-        title="Transaction Inbox"
-        headerActions={headerActions}
-        scrollable={false}
-        hideFooter
-      >
+      <SettingsLayout title="Inbox" headerActions={headerActions} scrollable={false} hideFooter>
         <View style={styles.container}>
           {!isAndroid && filter === 'pending' ? (
-            <View
-              style={[
-                styles.platformNotice,
-                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-              ]}
-            >
-              <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
-                Note: SMS transaction scanning is only supported on Android devices. Voice input
-                drafts are fully supported.
-              </AppText>
+            <View style={styles.platformNoticeWrap}>
+              <AppCard variant="secondary" paddingSize="sm">
+                <AppText variant="caption" color="secondary">
+                  Note: SMS transaction scanning is only supported on Android devices. Voice input
+                  drafts are fully supported.
+                </AppText>
+              </AppCard>
             </View>
           ) : null}
 
@@ -75,22 +73,26 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
             data={items}
             keyExtractor={item => item.id}
             ListHeaderComponent={
-              <View style={styles.filters}>
-                {filterButtons.map(button => (
-                  <AppButton
-                    key={button.key}
-                    size="sm"
-                    variant={filter === button.key ? 'primary' : 'secondary'}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setFilter(button.key);
-                    }}
-                    style={styles.filterButton}
-                    testID={`inbox-filter-${button.key}`}
-                  >
-                    {button.label}
-                  </AppButton>
-                ))}
+              <View style={styles.listHeader}>
+                <AppText variant="caption" color="secondary" weight="medium">
+                  Filter by status
+                </AppText>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filters}
+                >
+                  {filterButtons.map(button => (
+                    <FilterChipButton
+                      key={button.key}
+                      label={button.label}
+                      isActive={filter === button.key}
+                      onPress={() => setFilter(button.key)}
+                      style={styles.filterButton}
+                      testID={`inbox-filter-${button.key}`}
+                    />
+                  ))}
+                </ScrollView>
               </View>
             }
             renderItem={({ item }) => (
@@ -102,7 +104,6 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 handleImport={handleImport}
                 onCompareDuplicate={handleOpenDuplicateModal}
                 onOpenJournal={handleOpenJournal}
-                onCreateRule={handleCreateRuleFromItem}
                 onSplitImport={handleSplitImport}
                 onEditReparse={handleOpenEditReparseModal}
                 testID={`inbox-item-${item.deviceSourceId}`}
@@ -120,6 +121,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
               ) : (
                 <EmptyStateView
                   title="Inbox is clear"
+                  icon={Icon.Check}
                   subtitle={
                     isAndroid
                       ? 'Try refreshing or loading older messages.'
@@ -191,22 +193,21 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Spacing.md,
   },
-  platformNotice: {
-    padding: Spacing.md,
-    borderRadius: Shape.radius.md,
-    borderWidth: 1,
-    marginHorizontal: Spacing.xs,
+  listHeader: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  platformNoticeWrap: {
     marginBottom: Spacing.sm,
   },
   filters: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingRight: Spacing.md,
   },
   filterButton: {
-    marginRight: Spacing.xs,
-    marginBottom: Spacing.xs,
+    minHeight: Size.touchTargetLg,
   },
   center: {
     paddingVertical: Spacing.xl,

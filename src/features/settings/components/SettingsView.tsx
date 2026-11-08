@@ -57,10 +57,9 @@ export function SettingsView({ actions }: { actions: SettingsActions }) {
 const SETTINGS_SCREEN_ACTIONS: SettingsActions = {
   onProfile: AppNavigation.toPersonalizationSettings,
   onAppearance: AppNavigation.toAppearanceSettings,
-  onAutomation: AppNavigation.toAutomationSettings,
+  onCaptureWorkspace: AppNavigation.toCaptureWorkspace,
   onSmsSettings: AppNavigation.toSmsSettings,
   onSmsInbox: AppNavigation.toTransactionInbox,
-  onSmsRules: AppNavigation.toSmsRules,
   onPrivacy: AppNavigation.toPrivacySecuritySettings,
   onPrivacyNotice: AppNavigation.toPrivacyNotice,
   onCurrentWorkplace: AppNavigation.toWorkplaceManagement,

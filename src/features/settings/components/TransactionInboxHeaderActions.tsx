@@ -1,36 +1,37 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { AppButton } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { AppButton, IconButton } from '@/src/components/core';
+import { Size, Spacing } from '@/src/constants';
+import { Icon } from '@/src/types/domainIcons';
 import { Platform, StyleSheet, View } from 'react-native';
 
 type TransactionInboxHeaderActionsProps = {
   isRefreshing: boolean;
   onRefresh: () => void;
-  onOpenRules: () => void;
+  onOpenCaptureWorkspace: () => void;
 };
 
 export function TransactionInboxHeaderActions({
   isRefreshing,
   onRefresh,
-  onOpenRules,
+  onOpenCaptureWorkspace,
 }: TransactionInboxHeaderActionsProps) {
-  const isAndroid = Platform.OS === 'android';
+  const isMobile = Platform.OS !== 'web';
 
   return (
     <View style={styles.headerActions}>
-      <AppButton variant="ghost" size="sm" onPress={onOpenRules}>
-        Rules
+      <AppButton variant="ghost" size="sm" onPress={onOpenCaptureWorkspace}>
+        Capture & review
       </AppButton>
-      {isAndroid ? (
-        <AppButton
-          variant="ghost"
-          size="sm"
-          loading={isRefreshing}
+      {isMobile ? (
+        <IconButton
+          name={Icon.Refresh}
+          size={Size.iconSm}
+          variant="clear"
           onPress={onRefresh}
+          disabled={isRefreshing}
           testID="inbox-refresh-sms"
-        >
-          Refresh SMS
-        </AppButton>
+          accessibilityLabel="Refresh transaction inbox"
+        />
       ) : null}
       <PrivacyToggleButton />
     </View>

@@ -20,9 +20,11 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { inboxProcessingStatusLabel } from './inboxProcessingStatusLabel';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { EmailPreviewModal } from './EmailPreviewModal';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 
 interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
@@ -32,7 +34,6 @@ interface TransactionInboxItemCardViewProps {
   handleImport: (item: TransactionInboxItem) => void;
   onCompareDuplicate: (item: TransactionInboxItem) => void;
   onOpenJournal: (item: TransactionInboxItem) => void;
-  onCreateRule: (item: TransactionInboxItem) => void;
   onSplitImport: (item: TransactionInboxItem) => void;
   onEditReparse: (item: TransactionInboxItem) => void;
   testID?: string;
@@ -46,7 +47,6 @@ export function TransactionInboxItemCardView({
   handleImport,
   onCompareDuplicate,
   onOpenJournal,
-  onCreateRule,
   onSplitImport,
   onEditReparse,
   testID,
@@ -55,9 +55,12 @@ export function TransactionInboxItemCardView({
   const { resolvedHourCycle } = useHourCyclePrefs();
   const privateMode = useEffectivePrivacyMode();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  const channelIcon = item.channel === 'voice' ? Icon.Mic : Icon.MessageSquare;
-  const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
+  const channelIcon =
+    item.channel === 'voice' ? Icon.Mic : item.channel === 'email' ? Icon.Mail : Icon.MessageSquare;
+  const channelLabel =
+    item.channel === 'voice' ? 'Spoken' : item.channel === 'email' ? 'Email' : 'SMS';
   const linkedJournalUnavailable =
     item.linkedJournal?.status === 'DELETED' || item.linkedJournal?.status === 'MISSING';
   const linkedJournalColor = linkedJournalUnavailable ? theme.warning : theme.success;
@@ -71,8 +74,9 @@ export function TransactionInboxItemCardView({
   const id = item.deviceSourceId;
   const dismissed = item.processingStatus === InboxProcessingStatus.DISMISSED;
   const sms = item.channel === 'sms';
-  const title =
-    item.channel === 'voice'
+  const title = privateMode
+    ? transactionCaptureStrings.privateDescription
+    : item.channel === 'voice'
       ? 'Spoken Draft'
       : item.parsedMerchant || item.senderAddress || 'Unknown Origin';
   const run = (fn: (item: TransactionInboxItem) => unknown) => () => {
@@ -104,7 +108,8 @@ export function TransactionInboxItemCardView({
           testID: `inbox-compare-duplicate-${id}`,
         },
       !item.linkedJournal &&
-        item.processingStatus !== InboxProcessingStatus.PARSE_FAILED && {
+        (item.processingStatus !== InboxProcessingStatus.PARSE_FAILED ||
+          item.channel === 'email') && {
           id: 'import',
           title: 'Import / Review',
           icon: Icon.Check,
@@ -127,27 +132,21 @@ export function TransactionInboxItemCardView({
           testID: `inbox-split-btn-${id}`,
         },
       !dismissed && { id: 'dismiss', title: 'Dismiss', icon: Icon.X, onPress: run(handleDismiss) },
-      sms && {
-        id: 'rule',
-        title: 'Create Rule',
-        icon: Icon.Zap,
-        onPress: run(onCreateRule),
-        testID: `inbox-create-rule-btn-${id}`,
-      },
-      {
-        id: 'raw',
-        title: 'View Raw',
-        icon: Icon.MessageSquare,
-        onPress: run(() =>
-          alert.show({
-            title:
-              item.channel === 'voice'
-                ? 'Raw Voice Transcript'
-                : item.senderAddress || 'Raw Message',
-            message: item.rawBody || '',
-          }),
-        ),
-      },
+      !privateMode &&
+        item.channel !== 'email' && {
+          id: 'raw',
+          title: 'View Raw',
+          icon: Icon.MessageSquare,
+          onPress: run(() =>
+            alert.show({
+              title:
+                item.channel === 'voice'
+                  ? 'Raw Voice Transcript'
+                  : item.senderAddress || 'Raw Message',
+              message: item.rawBody || '',
+            }),
+          ),
+        },
     ] as (ListRowItem | false | null | undefined)[]
   ).filter((a): a is ListRowItem => !!a) as [ListRowItem, ...ListRowItem[]];
   const split = primary.id === 'import' ? more.find(a => a.id === 'split') : undefined;
@@ -248,27 +247,90 @@ export function TransactionInboxItemCardView({
         </View>
       ) : null}
 
-      {!!item.consumedWorkplaces?.length && (
+      {!privateMode && !!item.consumedWorkplaces?.length && (
         <AppText variant="caption" color="secondary">
           Already handled in {item.consumedWorkplaces.map(workplace => workplace.name).join(', ')}
         </AppText>
       )}
-      <AppText variant="body" color="secondary" style={styles.bodyPreview}>
-        {item.rawBody}
-      </AppText>
+      {!privateMode ? (
+        <AppText
+          variant="bodySmall"
+          color="secondary"
+          numberOfLines={3}
+          ellipsizeMode="tail"
+          style={styles.bodyPreview}
+        >
+          {item.channel === 'email'
+            ? 'The original email remains with your email provider.'
+            : item.rawBody}
+        </AppText>
+      ) : null}
 
-      {item.parseReason && (
+      {!privateMode && item.channel === 'email' ? (
+        <View>
+          {item.senderAddress ? (
+            <AppText variant="caption" color="secondary">
+              From: {item.senderAddress}
+            </AppText>
+          ) : null}
+          {item.emailSubject ? (
+            <AppText variant="caption" color="secondary">
+              Subject: {item.emailSubject}
+            </AppText>
+          ) : null}
+          {item.parsedAccountSource ? (
+            <AppText variant="caption" color="secondary">
+              Account hint: {item.parsedAccountSource}
+            </AppText>
+          ) : null}
+          {item.referenceNumber ? (
+            <AppText variant="caption" color="secondary">
+              Reference: {item.referenceNumber}
+            </AppText>
+          ) : null}
+          {item.gmailMessageId && Platform.OS !== 'web' ? (
+            <AppButton
+              variant="ghost"
+              size="sm"
+              testID="inbox-open-gmail"
+              onPress={() => setPreviewOpen(true)}
+            >
+              View original email
+            </AppButton>
+          ) : null}
+        </View>
+      ) : null}
+      {previewOpen && item.gmailMessageId && !privateMode ? (
+        <EmailPreviewModal
+          messageId={item.gmailMessageId}
+          sourceId={item.deviceSourceId}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
+
+      {!privateMode && item.parseReason && (
         <AppText variant="caption" color="secondary" style={styles.parseReason}>
           {item.parseReason}
         </AppText>
       )}
 
       <View style={styles.actions}>
-        <AppButton size="sm" onPress={primary.onPress} testID={primary.testID}>
+        <AppButton
+          size="sm"
+          onPress={primary.onPress}
+          testID={primary.testID}
+          style={styles.actionButton}
+        >
           {primary.title}
         </AppButton>
         {split ? (
-          <AppButton size="sm" variant="outline" onPress={split.onPress} testID={split.testID}>
+          <AppButton
+            size="sm"
+            variant="outline"
+            onPress={split.onPress}
+            testID={split.testID}
+            style={styles.actionButton}
+          >
             {split.title}
           </AppButton>
         ) : null}
@@ -278,6 +340,7 @@ export function TransactionInboxItemCardView({
             variant="secondary"
             onPress={() => setMenuOpen(true)}
             testID={`inbox-more-${item.deviceSourceId}`}
+            style={styles.actionButton}
           >
             More
           </AppButton>
@@ -299,7 +362,7 @@ export function TransactionInboxItemCardView({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: Spacing.md,
+    marginBottom: 0,
   },
   cardTop: {
     flexDirection: 'row',
@@ -339,5 +402,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.sm,
     marginTop: Spacing.md,
+  },
+  actionButton: {
+    minHeight: Size.touchTargetLg,
   },
 });

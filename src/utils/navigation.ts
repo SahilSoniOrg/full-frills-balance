@@ -444,14 +444,22 @@ export const AppNavigation = {
     router.push('/privacy-notice');
   },
 
-  /**
-   * Navigate to reminders and automation settings.
-   */
-  toAutomationSettings: (focus?: string) => {
-    router.push(buildRoute('/automation-settings', { focus }));
+  /** Navigate to the transaction capture and review workspace. */
+  toCaptureWorkspace: (focus?: string) => {
+    router.push(buildRoute('/transaction-capture', { focus }));
   },
 
-  /** Navigate to SMS import, review, and auto-post settings. */
+  /** Navigate to the captured transactions that still need a category. */
+  toCategorizationReview: () => {
+    router.push('/categorization-review');
+  },
+
+  /** Open the queue of transaction category and naming suggestions. */
+  toCaptureSuggestions: () => {
+    router.push('/capture-suggestions');
+  },
+
+  /** Navigate to SMS source access, listening, and notification settings. */
   toSmsSettings: (focus?: string) => {
     router.push(buildRoute('/sms-settings', { focus }));
   },
@@ -553,42 +561,10 @@ export const AppNavigation = {
   },
 
   /**
-   * Navigate to SMS rules list.
-   */
-  toSmsRules: () => {
-    router.push('/sms-rules' as Href);
-  },
-
-  /**
    * Navigate to the unified Transaction Inbox.
    */
   toTransactionInbox: () => {
     router.push('/sms-inbox' as Href);
-  },
-
-  /**
-   * Navigate to SMS rule form (new or edit).
-   */
-  toSmsRuleForm: (
-    id?: string,
-    seed?: {
-      senderMatch?: string;
-      bodyMatch?: string;
-      sourceAccountId?: string;
-      categoryAccountId?: string;
-      workplaceId?: string;
-    },
-  ) => {
-    router.push(
-      buildRoute('/sms-rule-form', {
-        id,
-        senderMatch: seed?.senderMatch,
-        bodyMatch: seed?.bodyMatch,
-        sourceAccountId: seed?.sourceAccountId,
-        categoryAccountId: seed?.categoryAccountId,
-        workplaceId: launchWorkplaceId(seed?.workplaceId),
-      }),
-    );
   },
 
   /**

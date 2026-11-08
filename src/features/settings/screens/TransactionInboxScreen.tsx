@@ -14,7 +14,7 @@ function TransactionInboxScreen() {
         <TransactionInboxHeaderActions
           isRefreshing={vm.isRefreshing}
           onRefresh={vm.handleRefresh}
-          onOpenRules={AppNavigation.toSmsRules}
+          onOpenCaptureWorkspace={AppNavigation.toCaptureWorkspace}
         />
       }
     />

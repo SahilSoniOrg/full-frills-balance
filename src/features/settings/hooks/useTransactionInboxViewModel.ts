@@ -21,6 +21,8 @@ import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Platform } from 'react-native';
+import { syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 
 export type InboxFilter = SmsInboxFilterStatus;
@@ -98,6 +100,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     let isMounted = true;
     const prime = async () => {
       try {
+        if (Platform.OS !== 'android') return;
         const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
         if (isMounted) {
           setScanCursor(result.cursor);
@@ -117,9 +120,12 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     setIsRefreshing(true);
     analytics.trackFeatureUsage('sms', 'inbox_bulk_sync', { mode: 'refresh' });
     try {
-      const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
-      setScanCursor(result.cursor);
-      setHasOlderMessages(result.hasMore);
+      if (Platform.OS === 'android') {
+        const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
+        setScanCursor(result.cursor);
+        setHasOlderMessages(result.hasMore);
+      }
+      if (Platform.OS !== 'web') await syncGmailForWorkplace(workplaceId);
       toast.success('Transaction inbox refreshed');
     } catch (error) {
       showErrorAlert(error, 'Transaction Inbox', true);

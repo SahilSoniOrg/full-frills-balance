@@ -14,11 +14,9 @@ export default function SmsSettingsScreen() {
   const smsAlerts = AppConfig.strings.settings.smsAlerts;
   const {
     isAutomaticSmsImportEnabled,
-    isSmsAutoPostEnabled,
     areSmsReviewNotificationsEnabled,
     showSmsNotificationDetails,
     setShowSmsNotificationDetails,
-    setSmsAutoPostEnabled,
     setSmsReviewNotificationsEnabled,
   } = useSmsPrefs();
 
@@ -122,16 +120,13 @@ export default function SmsSettingsScreen() {
   return (
     <SmsSettingsView
       isAutomaticSmsImportEnabled={isAutomaticSmsImportEnabled}
-      isSmsAutoPostEnabled={isSmsAutoPostEnabled}
       areSmsReviewNotificationsEnabled={areSmsReviewNotificationsEnabled}
       showSmsNotificationDetails={showSmsNotificationDetails}
       notificationsBlocked={notificationsBlocked}
       onToggleSmsNotificationDetails={setShowSmsNotificationDetails}
       onToggleSmsImport={setAutomaticSmsImportEnabled}
-      onToggleSmsAutoPost={setSmsAutoPostEnabled}
       onToggleSmsReviewNotifications={setSmsReviewNotificationsEnabledHandler}
       onOpenInbox={AppNavigation.toTransactionInbox}
-      onOpenSmsRules={AppNavigation.toSmsRules}
     />
   );
 }

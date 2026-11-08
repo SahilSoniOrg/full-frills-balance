@@ -42,10 +42,18 @@ exports[`settings screens keep their e2e testIDs and search focus targets automa
   "focusIds": [
     "notifications",
     "sms-settings",
+    "transaction-capture-activity",
+    "transaction-capture-enabled",
+    "transaction-capture-gmail",
+    "transaction-capture-inbox",
   ],
   "testIDs": [
     "nav-back-button",
     "settings-sms-settings",
+    "transaction-capture-gmail",
+    "transaction-capture-review-queue",
+    "transaction-capture-suggestions",
+    "transaction-capture-toggle",
   ],
 }
 `;
@@ -80,7 +88,7 @@ exports[`settings screens keep their e2e testIDs and search focus targets hub 1`
     "nav-back-button",
     "settings-about-support",
     "settings-appearance",
-    "settings-automation",
+    "settings-capture-review",
     "settings-current-workplace",
     "settings-data-management",
     "settings-maintenance",
@@ -123,15 +131,12 @@ exports[`settings screens keep their e2e testIDs and search focus targets profil
 exports[`settings screens keep their e2e testIDs and search focus targets sms 1`] = `
 {
   "focusIds": [
-    "sms-auto-post-enabled",
     "sms-automation-import",
     "sms-inbox",
     "sms-notification-details",
     "sms-review-notifications",
-    "sms-rules",
   ],
   "testIDs": [
-    "automation-sms-auto-post-toggle",
     "automation-sms-import-toggle",
     "automation-sms-review-notifications-toggle",
     "nav-back-button",

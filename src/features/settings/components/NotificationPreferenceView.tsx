@@ -57,7 +57,7 @@ export const NotificationPreferenceView = ({
   const displayTime = formatClockTime(dayjs().hour(hour).minute(minute), resolvedHourCycle);
 
   return (
-    <ListGroup variant="plain">
+    <ListGroup variant="card">
       <Stack space={0}>
         <ListRow
           focusId="notifications"

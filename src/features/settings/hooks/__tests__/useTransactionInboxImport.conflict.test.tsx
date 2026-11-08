@@ -1,13 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useTransactionInboxImport } from '../useTransactionInboxImport';
-import { smsService } from '@/src/services/sms-service';
 import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatcherContext';
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import { alert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/services/sms-service', () => ({ smsService: { getMatchingRule: jest.fn() } }));
 jest.mock('@/src/services/accounts/accountMatcherContext', () => ({
   loadAccountMatcherContext: jest.fn(),
 }));
@@ -18,18 +16,15 @@ jest.mock('@/src/contexts/PrivacyScope', () => ({ useEffectivePrivacyMode: () =>
 jest.mock('@/src/utils/alerts', () => ({ alert: { show: jest.fn() } }));
 jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toJournalEntry: jest.fn() } }));
 
-it('warns about the conflicting accounts and opens an unfilled entry', async () => {
+it('warns when recognition is incomplete and opens an unfilled entry', async () => {
   const card = asAccountId('card');
   const savings = asAccountId('savings');
-  jest
-    .mocked(smsService.getMatchingRule)
-    .mockResolvedValue({ sourceAccountId: card, categoryAccountId: asAccountId('food') } as never);
   jest
     .mocked(loadAccountMatcherContext)
     .mockResolvedValue({ matchers: [], eligibleAccountIds: [card, savings] } as never);
   jest
     .mocked(recognizeSmsAccounts)
-    .mockReturnValue({ status: 'recognized', accountIds: [savings], outcomes: [] });
+    .mockReturnValue({ status: 'indeterminate', accountIds: [savings], outcomes: [] });
   const accounts = [
     { id: card, name: 'Card' },
     { id: savings, name: 'Savings' },
@@ -50,7 +45,7 @@ it('warns about the conflicting accounts and opens an unfilled entry', async () 
   });
   expect(alert.show).toHaveBeenCalledWith(
     expect.objectContaining({
-      message: expect.stringContaining('Rule account: Card\nRecognized: Savings'),
+      message: expect.stringContaining('The account could not be confirmed'),
     }),
   );
   expect(AppNavigation.toJournalEntry).not.toHaveBeenCalled();

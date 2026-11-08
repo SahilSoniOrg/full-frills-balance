@@ -9,6 +9,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -81,6 +82,17 @@ const NAV_SECTIONS: {
     ],
   },
   {
+    label: copy.transactionsSection,
+    items: [
+      {
+        id: 'capture-review',
+        label: transactionCaptureStrings.title,
+        icon: Icon.Zap,
+        onPress: AppNavigation.toCaptureWorkspace,
+      },
+    ],
+  },
+  {
     label: copy.personalSection,
     items: [
       {
@@ -99,7 +111,7 @@ const NAV_SECTIONS: {
         id: 'notifications',
         label: copy.notificationSettings,
         icon: Icon.Notifications,
-        onPress: AppNavigation.toAutomationSettings,
+        onPress: () => AppNavigation.toCaptureWorkspace('notifications'),
       },
     ],
   },

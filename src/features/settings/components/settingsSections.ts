@@ -1,16 +1,16 @@
 import { AppConfig } from '@/src/constants';
 import { Icon, type IconName } from '@/src/components/core';
 import { Platform } from 'react-native';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 
 /** Every navigation target the settings hub and search can open. */
 export type SettingsActions = {
   onProfile: (target?: string) => void;
   onAppearance: (target?: string) => void;
-  onAutomation: (target?: string) => void;
+  onCaptureWorkspace: (target?: string) => void;
   onSmsSettings: (target?: string) => void;
   onSmsInbox: () => void;
-  onSmsRules: () => void;
   onPrivacy: (target?: string) => void;
   onPrivacyNotice: () => void;
   onCurrentWorkplace: (target?: string) => void;
@@ -72,11 +72,6 @@ const s = AppConfig.strings.settings;
 const { sections: sec, hub, personalization: me, appearance: look, privacy, data } = s;
 const DISPLAY = 'Preferences · Display Options';
 const ANDROID = { platform: 'android' } as const;
-const NOTIFICATIONS_HUB_TITLE =
-  Platform.OS === 'android' ? s.notifications.automationTitle : s.notifications.title;
-const NOTIFICATIONS_HUB_DESCRIPTION =
-  Platform.OS === 'android' ? s.notifications.automationDescription : s.notifications.description;
-
 // prettier-ignore
 export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...screen('Your Account', 'onProfile', [
@@ -92,10 +87,15 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     row('currency', Icon.Bank, s.currency.title, s.currency.description, ['workplace', 'money', 'currency code', 'default currency']),
     row('safe-to-spend-forecast', Icon.Safe, me.forecastTitle, me.forecastDesc, ['workplace', 'money', 'safe to spend', 'forecast', 'horizon', '30 days', '60 days', '90 days']),
   ]),
-  ...screen('Preferences', 'onAutomation', [
+  ...screen('Transactions', 'onCaptureWorkspace', [
     row('notifications', Icon.Notifications, s.notifications.title, s.notifications.description, ['notification', 'reminder', 'schedule', 'daily', 'weekly'], {
-      hub: { testID: 'settings-automation', title: NOTIFICATIONS_HUB_TITLE, description: NOTIFICATIONS_HUB_DESCRIPTION },
+      hub: { testID: 'settings-capture-review', title: transactionCaptureStrings.title, description: transactionCaptureStrings.description },
     }),
+  ]),
+  ...screen('Transactions', 'onCaptureWorkspace', [
+    row('transaction-capture-enabled', Icon.Zap, transactionCaptureStrings.captureTitle, transactionCaptureStrings.captureDescription, ['capture', 'categorization', 'automatic', 'transactions', 'automation'], ANDROID),
+    row('transaction-capture-activity', Icon.History, transactionCaptureStrings.activityTitle, transactionCaptureStrings.activityDescription, ['capture', 'journal', 'activity', 'transactions']),
+    row('transaction-capture-inbox', Icon.MessageSquare, transactionCaptureStrings.inboxTitle, transactionCaptureStrings.inboxDescription, ['capture', 'review', 'inbox', 'transactions']),
   ]),
   ...screen('Preferences', 'onAppearance', [
     row('appearance', Icon.Palette, look.themeTitle, look.themeDesc, ['appearance', 'theme', 'dark mode', 'light mode', 'color'], {
@@ -148,7 +148,6 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     'onSmsSettings',
     [
       row('sms-automation-import', Icon.Zap, me.smsImportTitle, hub.smsAutoImportSearchDescription, ['sms', 'import', 'automatic', 'messages']),
-      row('sms-auto-post-enabled', Icon.Terminal, me.smsAutoPostEnabledTitle, me.smsAutoPostEnabledDesc, ['sms', 'auto post', 'automatic', 'rules', 'entries']),
       row('sms-review-notifications', Icon.Notifications, me.smsReviewNotificationsTitle, me.smsReviewNotificationsDesc, ['sms', 'notification', 'review', 'alert']),
       row('sms-notification-details', Icon.Notifications, hub.smsNotificationDetailsTitle, hub.smsNotificationDetailsSearchDescription, ['sms', 'privacy', 'preview', 'amount']),
       row(
@@ -159,7 +158,6 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
         ['sms', 'inbox', 'messages', 'transactions'],
         { action: 'onSmsInbox' },
       ),
-      row('sms-rules', Icon.Terminal, me.smsAutoPostTitle, me.smsAutoPostDesc, ['sms', 'rules', 'automation', 'auto post'], { action: 'onSmsRules' }),
     ],
     ANDROID,
   ),

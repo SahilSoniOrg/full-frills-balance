@@ -2,13 +2,16 @@ import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { AboutSupportSettingsView } from '@/src/features/settings/components/AboutSupportSettingsView';
 import { AppearanceSettingsView } from '@/src/features/settings/components/AppearanceSettingsView';
 import { AutomationSettingsView } from '@/src/features/settings/components/AutomationSettingsView';
+import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { WorkplaceSettingsView } from '@/src/features/settings/components/WorkplaceSettingsView';
 import { DeviceSettingsView } from '@/src/features/settings/components/DeviceSettingsView';
 import { PersonalizationSettingsView } from '@/src/features/settings/components/PersonalizationSettingsView';
 import { PrivacySecuritySettingsView } from '@/src/features/settings/components/PrivacySecuritySettingsView';
 import { SettingsView } from '@/src/features/settings/components/SettingsView';
 import { SmsSettingsView } from '@/src/features/settings/components/SmsSettingsView';
+import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { render } from '@/src/utils/test-utils';
+import { asWorkplaceId } from '@/src/types/ids';
 import type { ReactElement } from 'react';
 import { Platform } from 'react-native';
 
@@ -29,13 +32,44 @@ jest.mock('@/src/components/filters/DateTimePickerModal', () => ({
 jest.mock('@/src/features/accounts', () => ({ CurrencySelector: () => null }));
 
 const fn = () => jest.fn();
+const emptyCaptureViewModel: TransactionCaptureViewModel = {
+  workplaceId: asWorkplaceId('wp'),
+  enabled: false,
+  enabledAt: undefined,
+  needsAccountSetup: false,
+  reviewCount: 0,
+  review: [],
+  defaulted: [],
+  categoryDefaults: [],
+  descriptionDefaults: [],
+  categoryCandidates: [],
+  descriptionCandidates: [],
+  possibleMerchantMatches: [],
+  historicalCategorySuggestions: [],
+  mixedHistoricalCategoryPatterns: [],
+  mixedHistoricalCategoryCount: 0,
+  loading: false,
+  busy: false,
+  error: false,
+  settingsError: false,
+  onToggleEnabled: fn(),
+  onRetry: fn(),
+  onConfigureAccounts: fn(),
+  onSetMerchantOpen: fn(),
+  onSetHistoricalMerchantsOpen: fn(),
+  onConfirmCategories: fn(),
+  onRememberCategory: fn(),
+  onRememberHistoricalCategory: fn(),
+  onForgetCategory: fn(),
+  onResolveCategoryDefaultConflict: fn(),
+  onSetDescriptionDefault: fn(),
+};
 const actions = {
   onProfile: fn(),
   onAppearance: fn(),
-  onAutomation: fn(),
+  onCaptureWorkspace: fn(),
   onSmsSettings: fn(),
   onSmsInbox: fn(),
-  onSmsRules: fn(),
   onPrivacy: fn(),
   onPrivacyNotice: fn(),
   onCurrentWorkplace: fn(),
@@ -144,21 +178,35 @@ const screens: Record<string, () => ReactElement> = {
         } as any
       }
       onOpenSmsSettings={fn()}
+      capture={emptyCaptureViewModel}
+      gmailSection={
+        <GmailCaptureSettingsSection
+          gmail={{
+            connected: false,
+            backgroundEnabled: false,
+            automaticCaptureEnabled: false,
+            syncState: 'idle',
+            loading: false,
+            busy: false,
+            onToggleGmail: fn(),
+            onReconnectGmail: fn(),
+            onToggleGmailBackground: fn(),
+            onToggleGmailAutomaticCapture: fn(),
+          }}
+        />
+      }
     />
   ),
   sms: () => (
     <SmsSettingsView
       isAutomaticSmsImportEnabled
-      isSmsAutoPostEnabled={false}
       areSmsReviewNotificationsEnabled
       showSmsNotificationDetails={false}
       notificationsBlocked={false}
       onToggleSmsNotificationDetails={fn()}
       onToggleSmsImport={fn()}
-      onToggleSmsAutoPost={fn()}
       onToggleSmsReviewNotifications={fn()}
       onOpenInbox={fn()}
-      onOpenSmsRules={fn()}
     />
   ),
 };

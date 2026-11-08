@@ -4,6 +4,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionDuplicateCandidate, TransactionInboxItem } from '@/src/types/domainJournal';
+import { InboxProcessingStatus } from '@/src/types/enums';
 
 export async function enrichTransactionInboxRecords(
   workplaceId: WorkplaceId,
@@ -27,7 +28,18 @@ export async function enrichTransactionInboxRecords(
   const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
   return records.map((record): TransactionInboxItem => {
-    const metadata = safeParseJSON<{ duplicateReasons?: string[] }>(record.metadataJson, {});
+    const metadata = safeParseJSON<{
+      duplicateReasons?: string[];
+      captureReviewReason?: unknown;
+      emailSubject?: unknown;
+      gmailMessageId?: unknown;
+      internetMessageId?: unknown;
+    }>(record.metadataJson, {});
+    const captureReviewReason =
+      record.processingStatus === InboxProcessingStatus.PENDING &&
+      typeof metadata.captureReviewReason === 'string'
+        ? metadata.captureReviewReason.trim()
+        : undefined;
     const duplicateJournalRecord = record.duplicateJournalId
       ? journalMap.get(record.duplicateJournalId)
       : undefined;
@@ -54,6 +66,11 @@ export async function enrichTransactionInboxRecords(
       channel: record.channel,
       deviceSourceId: record.deviceSourceId,
       senderAddress: record.senderAddress || '',
+      emailSubject: typeof metadata.emailSubject === 'string' ? metadata.emailSubject : undefined,
+      gmailMessageId:
+        typeof metadata.gmailMessageId === 'string' ? metadata.gmailMessageId : undefined,
+      internetMessageId:
+        typeof metadata.internetMessageId === 'string' ? metadata.internetMessageId : undefined,
       rawBody: record.rawBody || '',
       inputDate: record.inputDate,
       parseStatus: record.parseStatus,
@@ -65,7 +82,9 @@ export async function enrichTransactionInboxRecords(
       referenceNumber: record.referenceNumber,
       direction: record.direction,
       parseConfidence: record.parseConfidence,
-      parseReason: record.parseReason,
+      // The card explains why a parsed movement still needs review, rather than
+      // repeating a successful parser diagnostic over the capture decision.
+      parseReason: captureReviewReason || record.parseReason,
       recognition: record.recognition,
       recognizedAccountNames: (record.recognition?.accountIds ?? [])
         .map(accountId => recognizedNamesById.get(accountId))

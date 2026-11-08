@@ -2,6 +2,9 @@ export { default as AppearanceSettingsScreen } from './components/AppearanceSett
 export { default as DeviceSettingsScreen } from './components/DeviceSettingsView';
 export { default as AboutSupportSettingsScreen } from './components/AboutSupportSettingsView';
 export { default as AutomationSettingsScreen } from './components/AutomationSettingsView';
+export { default as CaptureWorkspaceScreen } from './components/AutomationSettingsView';
+export { default as CaptureSuggestionsScreen } from './components/CaptureSuggestionsView';
+export { default as CategorizationReviewScreen } from './screens/CategorizationReviewScreen';
 export { default as SmsSettingsScreen } from './screens/SmsSettingsScreen';
 export { default as DataManagementSettingsScreen } from './components/DataManagementSettingsView';
 export { default as ImportSelectionScreen } from './screens/ImportSelectionScreen';
@@ -11,6 +14,4 @@ export { default as PrivacySecuritySettingsScreen } from './components/PrivacySe
 export { default as SettingsScreen } from './components/SettingsView';
 
 export { default as SmsInboxScreen } from './screens/TransactionInboxScreen';
-export { default as SmsRuleFormScreen } from './screens/SmsRuleFormScreen';
-export { default as SmsRulesScreen } from './screens/SmsRulesScreen';
 export { default as WorkplaceSettingsScreen } from './components/WorkplaceSettingsView';

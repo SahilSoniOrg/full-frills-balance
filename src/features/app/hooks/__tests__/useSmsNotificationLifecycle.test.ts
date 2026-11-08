@@ -70,6 +70,10 @@ jest.mock('@/src/services/sms/SmsReviewNotificationService', () => ({
     refresh: jest.fn().mockResolvedValue(undefined),
   },
 }));
+jest.mock('@/src/services/sms/refreshSmsRecognition', () => ({
+  recognitionRefreshState: () => ({ value: 'ready' }),
+  refreshSmsRecognitionBestEffort: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/src/services/sms/SmsNotificationIntentStore', () => ({
   smsNotificationIntentStore: {
     subscribe: () => () => {},

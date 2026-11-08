@@ -19,7 +19,6 @@ jest.mock('@/src/services/analytics', () => ({
 
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
-    toSmsRuleForm: jest.fn(),
     toJournalDetails: jest.fn(),
   },
 }));
@@ -117,24 +116,6 @@ describe('useTransactionInboxModals', () => {
     });
 
     expect(smsService.finalizeManualImport).toHaveBeenCalledWith('wp-1', 'inbox-1', 'j-dup-1');
-  });
-
-  it('triggers create rule navigation with sender and merchant pre-fills', () => {
-    const { result } = renderHook(() =>
-      useTransactionInboxModals({
-        workplaceId: mockWorkplaceId,
-        handleImport: mockHandleImport,
-      }),
-    );
-
-    act(() => {
-      result.current.handleCreateRuleFromItem(mockItem);
-    });
-
-    expect(AppNavigation.toSmsRuleForm).toHaveBeenCalledWith(undefined, {
-      senderMatch: 'HDFCBK',
-      bodyMatch: 'Cafe',
-    });
   });
 
   it('triggers split import via handleImport with mode split', () => {

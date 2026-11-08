@@ -1,22 +1,20 @@
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
-import { InboxParseStatus } from '@/src/types/enums';
-import { smsService } from '@/src/services/sms-service';
 import {
   prepareTransactionInboxImport,
   type TransactionInboxImportOptions,
 } from '@/src/services/sms/transactionInboxImport';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { SmsAccountRecognition } from '@/src/types/accountMatcher';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatcherContext';
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { alert } from '@/src/utils/alerts';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { readEmailRecognitionEvidence } from '@/src/services/email/emailRecognitionEvidence';
 
 interface UseTransactionInboxImportProps {
   accounts: AccountFields[];
@@ -27,68 +25,49 @@ export function useTransactionInboxImport({
   accounts,
   workplaceId,
 }: UseTransactionInboxImportProps) {
-  const privateMode = useEffectivePrivacyMode();
   return useCallback(
     async (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => {
-      let matchedRule: Awaited<ReturnType<typeof smsService.getMatchingRule>> = null;
       let recognition: SmsAccountRecognition = {
         status: 'indeterminate',
         accountIds: [],
         outcomes: [],
       };
       try {
-        const parsedTx: ParsedTransaction = {
-          id: item.deviceSourceId,
-          amount: item.parsedAmount,
-          merchant: item.parsedMerchant,
-          type: item.direction ?? 'unknown',
-          date: item.inputDate,
-          rawBody: item.rawBody || '',
-          address: item.senderAddress || '',
-          accountSource: item.parsedAccountSource,
-          currencyCode: item.parsedCurrencyCode,
-          referenceNumber: item.referenceNumber,
-          confidence: item.parseConfidence ?? 0,
-          parseStatus: (item.parseStatus as InboxParseStatus) || InboxParseStatus.PARSED,
-          parseReason: item.parseReason || '',
-        };
-        matchedRule = await smsService.getMatchingRule(
-          item.senderAddress || '',
-          item.rawBody || '',
-          parsedTx,
-          workplaceId,
-        );
-        const matcherContext = await loadAccountMatcherContext(workplaceId);
-        recognition = recognizeSmsAccounts(matcherContext, {
-          senderAddress: item.senderAddress || '',
-          rawBody: item.rawBody || '',
-        });
+        if (item.channel === 'sms') {
+          const matcherContext = await loadAccountMatcherContext(workplaceId);
+          recognition = recognizeSmsAccounts(matcherContext, {
+            senderAddress: item.senderAddress || '',
+            rawBody: item.rawBody || '',
+          });
+        } else if (item.channel === 'email') {
+          const [matcherContext, inboxRecord] = await Promise.all([
+            loadAccountMatcherContext(workplaceId),
+            transactionInboxRepository.findEmail(workplaceId, item.id),
+          ]);
+          recognition = readEmailRecognitionEvidence(inboxRecord?.metadataJson, matcherContext) ?? {
+            status: 'none',
+            accountIds: [],
+            outcomes: [],
+          };
+        } else {
+          // Voice records retain manual import without text recognition.
+          recognition = { status: 'none', accountIds: [], outcomes: [] };
+        }
       } catch (error) {
-        logger.error('Failed to search matching rules in handleImport', { error });
+        logger.error('Failed to recognize accounts for inbox import', { error });
         // An incomplete recognition result must not fall through to fuzzy source matching.
         recognition = { status: 'indeterminate', accountIds: [], outcomes: [] };
       }
 
-      const prepared = prepareTransactionInboxImport(item, accounts, matchedRule, {
+      const prepared = prepareTransactionInboxImport(item, accounts, {
         ...options,
         recognition,
       });
       const recognitionSummary = prepared.recognition;
       if (recognitionSummary?.hold || recognitionSummary?.status === 'indeterminate') {
-        const ruleAccount = accounts.find(account => account.id === matchedRule?.sourceAccountId);
-        const recognized = accounts.filter(account =>
-          recognitionSummary.accountIds.includes(account.id),
-        );
-        const message =
-          recognitionSummary.hold === 'contradictory' && !privateMode
-            ? accountMatcherStrings.importConflictDetail(
-                ruleAccount?.name,
-                recognized.map(account => account.name),
-              )
-            : accountMatcherStrings.importConflictUnconfirmed;
         alert.show({
           title: accountMatcherStrings.importConflictTitle,
-          message,
+          message: accountMatcherStrings.importConflictUnconfirmed,
           type: 'warning',
           onAction: () => AppNavigation.toJournalEntry(prepared.navigation),
         });
@@ -96,6 +75,6 @@ export function useTransactionInboxImport({
         AppNavigation.toJournalEntry(prepared.navigation);
       }
     },
-    [accounts, workplaceId, privateMode],
+    [accounts, workplaceId],
   );
 }

@@ -39,7 +39,6 @@ describe('TransactionInboxItemCardView', () => {
     handleImport: jest.fn(),
     onCompareDuplicate: jest.fn(),
     onOpenJournal: jest.fn(),
-    onCreateRule: jest.fn(),
     onSplitImport: jest.fn(),
     onEditReparse: jest.fn(),
   };
@@ -60,7 +59,6 @@ describe('TransactionInboxItemCardView', () => {
     expect(getByText('Dismiss')).toBeTruthy();
     expect(getByText('View Raw')).toBeTruthy();
     expect(getByTestId('inbox-split-btn-sms-card-1')).toBeTruthy();
-    expect(getByTestId('inbox-create-rule-btn-sms-card-1')).toBeTruthy();
     expect(getByTestId('inbox-edit-reparse-btn-sms-card-1')).toBeTruthy();
   });
 
@@ -70,14 +68,6 @@ describe('TransactionInboxItemCardView', () => {
     fireEvent.press(getByTestId('inbox-more-sms-card-1'));
     fireEvent.press(getByTestId('inbox-split-btn-sms-card-1'));
     expect(defaultProps.onSplitImport).toHaveBeenCalledWith(mockItem);
-  });
-
-  it('triggers onCreateRule when Create Rule button is pressed', () => {
-    const { getByTestId } = render(<TransactionInboxItemCardView {...defaultProps} />);
-
-    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
-    fireEvent.press(getByTestId('inbox-create-rule-btn-sms-card-1'));
-    expect(defaultProps.onCreateRule).toHaveBeenCalledWith(mockItem);
   });
 
   it('triggers onEditReparse when Edit & Re-parse button is pressed', () => {

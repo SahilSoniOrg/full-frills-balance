@@ -9,6 +9,10 @@ import { smsNotificationIntentStore } from '@/src/services/sms/SmsNotificationIn
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { logger } from '@/src/utils/logger';
+import {
+  recognitionRefreshState,
+  refreshSmsRecognitionBestEffort,
+} from '@/src/services/sms/refreshSmsRecognition';
 
 /** Mounted above launch gates, so cold-start responses cannot be lost. */
 export function SmsNotificationResponseObserver() {
@@ -45,6 +49,15 @@ export function SmsNotificationNavigation() {
     return () => subscription.remove();
   }, []);
   const foreground = !isAppCurrentlyLocked && appState === 'active';
+  useEffect(() => {
+    if (
+      foreground &&
+      isAppReady &&
+      isDataHydrated &&
+      recognitionRefreshState(workplaceId).value === 'failed'
+    )
+      void refreshSmsRecognitionBestEffort(workplaceId);
+  }, [foreground, isAppReady, isDataHydrated, workplaceId]);
   const reviewInboxVisible = foreground && pathname === '/sms-inbox';
   const reviewRecordId =
     foreground && pathname === '/journal-entry' && typeof smsRecordId === 'string'

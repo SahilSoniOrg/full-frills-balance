@@ -7,10 +7,9 @@ import { Platform } from 'react-native';
 const actions = {
   onProfile: jest.fn(),
   onAppearance: jest.fn(),
-  onAutomation: jest.fn(),
+  onCaptureWorkspace: jest.fn(),
   onSmsSettings: jest.fn(),
   onSmsInbox: jest.fn(),
-  onSmsRules: jest.fn(),
   onPrivacy: jest.fn(),
   onPrivacyNotice: jest.fn(),
   onCurrentWorkplace: jest.fn(),
@@ -27,6 +26,8 @@ const IOS_FOCUS_TARGET_IDS = [
   'currency',
   'safe-to-spend-forecast',
   'notifications',
+  'transaction-capture-inbox',
+  'transaction-capture-activity',
   'share-format',
   'appearance',
   'mode',
@@ -54,11 +55,10 @@ const IOS_FOCUS_TARGET_IDS = [
 const ANDROID_FOCUS_TARGET_IDS = [
   ...IOS_FOCUS_TARGET_IDS,
   'sms-automation-import',
-  'sms-auto-post-enabled',
+  'transaction-capture-enabled',
   'sms-review-notifications',
   'sms-notification-details',
   'sms-inbox',
-  'sms-rules',
 ];
 
 describe('settings search catalog', () => {
@@ -128,21 +128,18 @@ describe('settings search catalog', () => {
     expect(catalog.every(item => item.focusId.length > 0)).toBe(true);
   });
 
-  it('routes SMS preference search results into SMS settings and keeps inbox/rules shortcuts direct', () => {
+  it('routes SMS preference search results into SMS settings and keeps the inbox shortcut direct', () => {
     const originalPlatformOS = Platform.OS;
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
     const catalog = createSettingsSearchCatalog(actions);
     const smsImport = catalog.find(item => item.id === 'sms-automation-import')!;
     const smsInbox = catalog.find(item => item.id === 'sms-inbox')!;
-    const smsRules = catalog.find(item => item.id === 'sms-rules')!;
 
     smsImport.navigate(smsImport.focusId);
     smsInbox.navigate(smsInbox.focusId);
-    smsRules.navigate(smsRules.focusId);
 
     expect(actions.onSmsSettings).toHaveBeenCalledWith('sms-automation-import');
     expect(actions.onSmsInbox).toHaveBeenCalled();
-    expect(actions.onSmsRules).toHaveBeenCalled();
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS });
   });
 });

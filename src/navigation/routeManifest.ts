@@ -57,7 +57,6 @@ const composerRoutes = [
   ['category-creation', 'account', 'category_setup'],
   ['planned-payment-form', 'commitments', 'commitment_configuration'],
   ['budget-edit', 'budget', 'budget_configuration'],
-  ['sms-rule-form', 'automation', 'sms_rule_configuration'],
 ] as const;
 
 type DetailRouteDef = readonly [
@@ -101,7 +100,6 @@ const detailRoutes = [
   ['reports-v2', 'reports', 'financial_reporting_v2', false],
   ['journal-search', 'journal', 'transaction_search', false, { name: 'activity' }],
   ['sms-inbox', 'automation', 'sms_transaction_review', false],
-  ['sms-rules', 'automation', 'sms_rule_management', false],
   ['workplace-management', 'workplace_management', 'workplace_management', false],
   ['device-settings', 'settings', 'device_settings', false],
   ['personalization-settings', 'settings', 'personalization', false],
@@ -109,7 +107,9 @@ const detailRoutes = [
   ['audit-log', 'audit', 'audit_review', false],
   ['privacy-security-settings', 'settings', 'privacy_security', false],
   ['privacy-notice', 'settings', 'privacy_notice', false],
-  ['automation-settings', 'settings', 'automation', false],
+  ['categorization-review', 'settings', 'automation_review', false],
+  ['transaction-capture', 'transaction_capture', 'capture_management', false],
+  ['capture-suggestions', 'settings', 'capture_suggestions', false],
   ['sms-settings', 'settings', 'sms_settings', false],
   ['maintenance-settings', 'settings', 'maintenance', false],
   ['about-support-settings', 'settings', 'support', false],

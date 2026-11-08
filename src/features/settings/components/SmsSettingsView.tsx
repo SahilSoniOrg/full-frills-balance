@@ -1,4 +1,4 @@
-import { ListGroup, ListRow } from '@/src/components/core';
+import { Badge, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -6,37 +6,44 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 
 interface SmsSettingsViewProps {
   isAutomaticSmsImportEnabled: boolean;
-  isSmsAutoPostEnabled: boolean;
   areSmsReviewNotificationsEnabled: boolean;
   showSmsNotificationDetails: boolean;
   notificationsBlocked: boolean;
   onToggleSmsNotificationDetails: (enabled: boolean) => void;
   onToggleSmsImport: (enabled: boolean) => void;
-  onToggleSmsAutoPost: (enabled: boolean) => void;
   onToggleSmsReviewNotifications: (enabled: boolean) => void;
   onOpenInbox: () => void;
-  onOpenSmsRules: () => void;
 }
 
 export function SmsSettingsView({
   isAutomaticSmsImportEnabled,
-  isSmsAutoPostEnabled,
   areSmsReviewNotificationsEnabled,
   showSmsNotificationDetails,
   notificationsBlocked,
   onToggleSmsNotificationDetails,
   onToggleSmsImport,
-  onToggleSmsAutoPost,
   onToggleSmsReviewNotifications,
   onOpenInbox,
-  onOpenSmsRules,
 }: SmsSettingsViewProps) {
   const strings = AppConfig.strings.settings.personalization;
 
   return (
     <SettingsLayout title={strings.smsSettingsTitle}>
-      <Stack space="xl">
-        <ListGroup variant="plain" header={strings.smsAutomationHeader}>
+      <Stack space="lg">
+        <ListGroup
+          variant="card"
+          header={strings.smsAutomationHeader}
+          headerAccessory={
+            <Badge
+              variant={isAutomaticSmsImportEnabled ? 'success' : 'default'}
+              size="sm"
+              icon={isAutomaticSmsImportEnabled ? Icon.Check : undefined}
+            >
+              {isAutomaticSmsImportEnabled ? 'On' : 'Off'}
+            </Badge>
+          }
+          footer="Device SMS listening is separate from this Workplace’s automatic capture setting."
+        >
           <ListRow
             focusId="sms-automation-import"
             icon={Icon.Zap}
@@ -50,6 +57,19 @@ export function SmsSettingsView({
               />
             }
           />
+        </ListGroup>
+
+        <ListGroup
+          variant="card"
+          header="Review alerts"
+          headerAccessory={
+            notificationsBlocked ? (
+              <Badge variant="warning" size="sm" icon={Icon.Alert}>
+                Blocked
+              </Badge>
+            ) : null
+          }
+        >
           <ListRow
             focusId="sms-review-notifications"
             icon={Icon.Notifications}
@@ -81,19 +101,9 @@ export function SmsSettingsView({
               />
             }
           />
-          <ListRow
-            focusId="sms-auto-post-enabled"
-            icon={Icon.Terminal}
-            title={strings.smsAutoPostEnabledTitle}
-            subtitle={strings.smsAutoPostEnabledDesc}
-            testID="automation-sms-auto-post-toggle"
-            trailing={
-              <ListRow.Toggle value={isSmsAutoPostEnabled} onValueChange={onToggleSmsAutoPost} />
-            }
-          />
         </ListGroup>
 
-        <ListGroup variant="plain" header={strings.smsManagementHeader}>
+        <ListGroup variant="card" header={strings.smsManagementHeader}>
           <ListRow
             focusId="sms-inbox"
             icon={Icon.MessageSquare}
@@ -101,13 +111,6 @@ export function SmsSettingsView({
             subtitle={strings.transactionInboxDesc}
             onPress={onOpenInbox}
             testID="settings-sms-inbox"
-          />
-          <ListRow
-            focusId="sms-rules"
-            icon={Icon.Terminal}
-            title={strings.smsAutoPostTitle}
-            subtitle={strings.smsAutoPostDesc}
-            onPress={onOpenSmsRules}
           />
         </ListGroup>
       </Stack>

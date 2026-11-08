@@ -1,5 +1,6 @@
 import { SharingProvider } from '@/src/contexts/SharingContext';
 import { sharingRuntime } from '@/src/services/SharingService';
+import '@/src/services/email/gmailBackgroundTask';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
@@ -46,6 +47,7 @@ import {
 import { readBlockingSetupProjection } from '@/src/features/setup';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
+import { useGmailCaptureLifecycle } from './hooks/useGmailCaptureLifecycle';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -157,6 +159,7 @@ function WorkplaceBootstrap() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   useAppBootstrap(workplaceId, defaultCurrencyCode);
   useAppForegroundMaintenance();
+  useGmailCaptureLifecycle();
   useWidgetSync(workplaceId, defaultCurrencyCode);
   return null;
 }

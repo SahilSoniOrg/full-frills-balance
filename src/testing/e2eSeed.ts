@@ -43,7 +43,8 @@ import {
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 import { seedJournalDetailsRedesign } from './journalDetailsSeed';
 import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 
 export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
@@ -514,41 +515,47 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
 async function seedMatcherDiscovery(workplaceId: WorkplaceId): Promise<void> {
   const cash = await accountQueryRepository.findByName(workplaceId, 'Cash');
   const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
-  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
-  if (!cash || !bank || !food) {
-    throw new Error('[E2E] matcher-discovery seed requires Cash, Bank, and Food & Drink accounts');
+  if (!cash || !bank) {
+    throw new Error('[E2E] matcher-discovery seed requires Cash and Bank accounts');
   }
-
   await saveAccountMatcher(workplaceId, {
     accountId: cash.id,
     definition: { version: 1, body: { kind: 'fragments', fragments: ['SWIGGY'] } },
   });
   await saveAccountMatcher(workplaceId, {
     accountId: bank.id,
-    definition: { version: 1, body: { kind: 'fragments', fragments: ['AMAZON'] } },
-  });
-  await transactionAutoPostRuleRepository.save(
-    {
-      mode: 'regex',
-      senderMatch: 'HDFCBK',
-      actions: {
-        disposition: 'auto_post',
-        sourceAccountId: cash.id,
-        categoryAccountId: food.id,
-      },
-      isActive: true,
+    definition: {
+      version: 1,
+      body: { kind: 'fragments', fragments: ['AMAZON'] },
+      flow: 'outgoing',
     },
-    workplaceId,
-  );
-
-  const now = Date.now();
-  setE2eSmsInboxMessages([
-    smsMessageFromFixture('swiggyNoRef', { id: 'e2e-matcher-compatible', date: now }),
+  });
+  await saveAccountMatcher(workplaceId, {
+    accountId: cash.id,
+    definition: {
+      version: 1,
+      body: { kind: 'fragments', fragments: ['Card', 'AMAZON'] },
+      flow: 'outgoing',
+    },
+  });
+  await transactionCaptureService.setEnabled(workplaceId, true);
+  const { enabledAt } = await transactionCaptureService.getSettings(workplaceId);
+  const now = (enabledAt ?? Date.now()) + 1;
+  const messages = [
+    smsMessageFromFixture('swiggyNoRef', {
+      id: 'e2e-matcher-compatible',
+      date: now,
+      body: `${cash.currencyCode} 450 spent on Card XX1234 at SWIGGY.`,
+    }),
     smsMessageFromFixture('cardEndingNegative', {
       id: 'e2e-matcher-contradictory',
-      date: now - 60_000,
+      date: now + 1,
+      body: `${cash.currencyCode} 2499 spent on Card XX1234 at AMAZON.`,
     }),
-  ]);
+  ];
+  setE2eSmsInboxMessages(messages);
+  // Seed an arrival explicitly: a later manual refresh must not authorize automatic writes.
+  await smsSyncPipeline.scanMessages(workplaceId, messages, undefined, { origin: 'arrival' });
 }
 
 /** Three SMS-originated two-leg journals used to exercise merge → edit losslessness. */

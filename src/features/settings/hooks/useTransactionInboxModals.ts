@@ -20,7 +20,6 @@ export interface TransactionInboxModals {
   handleOpenEditReparseModal: (item: TransactionInboxItem) => void;
   handleCloseEditReparseModal: () => void;
   handleMergeDuplicate: (item: TransactionInboxItem) => Promise<void>;
-  handleCreateRuleFromItem: (item: TransactionInboxItem) => void;
   handleSplitImport: (item: TransactionInboxItem) => void;
   handleViewJournalFromDuplicate: (item: TransactionInboxItem) => void;
 }
@@ -64,24 +63,17 @@ export function useTransactionInboxModals({
           item.id,
           item.duplicateCandidate.journalId,
         );
-        toast.success('SMS details merged into journal');
+        toast.success(
+          item.channel === 'email'
+            ? 'Email details merged into journal'
+            : 'SMS details merged into journal',
+        );
       } catch (error) {
         showErrorAlert(error, 'Merge Duplicate', true);
       }
     },
     [workplaceId],
   );
-
-  const handleCreateRuleFromItem = useCallback((item: TransactionInboxItem) => {
-    analytics.trackFeatureUsage('sms', 'inbox_accept', {
-      channel: item.channel,
-      action: 'create_rule',
-    });
-    AppNavigation.toSmsRuleForm(undefined, {
-      senderMatch: item.senderAddress || undefined,
-      bodyMatch: item.parsedMerchant || undefined,
-    });
-  }, []);
 
   const handleSplitImport = useCallback(
     (item: TransactionInboxItem) => {
@@ -107,7 +99,6 @@ export function useTransactionInboxModals({
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
     handleMergeDuplicate,
-    handleCreateRuleFromItem,
     handleSplitImport,
     handleViewJournalFromDuplicate,
   };

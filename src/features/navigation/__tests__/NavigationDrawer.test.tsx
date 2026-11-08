@@ -84,7 +84,7 @@ jest.mock('@/src/utils/navigation', () => ({
     toHub: jest.fn(),
     toPersonalizationSettings: jest.fn(),
     toAppearanceSettings: jest.fn(),
-    toAutomationSettings: jest.fn(),
+    toCaptureWorkspace: jest.fn(),
     toTransactionInbox: jest.fn(),
     toWorkplaceManagement: jest.fn(),
     toSettings: jest.fn(),
@@ -134,7 +134,7 @@ describe('NavigationDrawer shell', () => {
   it('distinguishes notification settings from insights', () => {
     const { onClose } = renderDrawer();
     fireEvent.press(screen.getByText('Notification settings'));
-    expect(AppNavigation.toAutomationSettings).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.toCaptureWorkspace).toHaveBeenCalledWith('notifications');
     expect(AppNavigation.toHub).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Insights')).toBeTruthy();
