@@ -242,6 +242,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         subdomains: '*',
       },
     ],
+    // After expo-detox-config-plugin: stock DetoxTest.java is replaced with Hermes profiler hooks.
+    './plugins/withDetoxHermesProfiler',
     [
       'expo-dev-launcher',
       {

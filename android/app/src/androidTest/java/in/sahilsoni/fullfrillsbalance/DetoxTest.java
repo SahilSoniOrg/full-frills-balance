@@ -1,5 +1,6 @@
 package in.sahilsoni.fullfrillsbalance;
-    
+
+// @generated begin detox-hermes-profiler - expo prebuild (DO NOT MODIFY)
 import com.wix.detox.Detox;
 import com.wix.detox.config.DetoxConfig;
 import com.facebook.hermes.instrumentation.HermesSamplingProfiler;
