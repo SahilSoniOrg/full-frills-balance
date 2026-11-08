@@ -197,7 +197,8 @@ describe('account commands (integration)', () => {
     const writeSpy = jest.spyOn(database, 'write');
     const batchSpy = jest.spyOn(database, 'batch');
     await mergeAccounts(WP, target.id, [source.id]);
-    expect(writeSpy).toHaveBeenCalledTimes(1);
+    // Merge batch plus a follow-up recognition refresh write (no pending SMS ⇒ no second batch).
+    expect(writeSpy).toHaveBeenCalledTimes(2);
     expect(batchSpy).toHaveBeenCalledTimes(1);
     writeSpy.mockRestore();
     batchSpy.mockRestore();

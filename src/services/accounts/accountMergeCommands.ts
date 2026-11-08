@@ -200,30 +200,27 @@ async function mergeAccountsCore(
   }
 
   try {
-    await runAccountingWriteSession(async () => {
-      const snapshot = preferences.workplace.getSnapshot(workplaceId);
-      const capture = snapshot.automaticTransactionCapture;
-      const sourceIds = new Set(filteredSourceIds);
-      const uncategorizedAccountIds = Object.fromEntries(
-        Object.entries(capture?.uncategorizedAccountIds ?? {}).map(([role, accountId]) => [
-          role,
-          sourceIds.has(accountId) ? targetAccountId : accountId,
-        ]),
-      );
-      preferences.workplace.update(workplaceId, {
-        ...(capture
-          ? { automaticTransactionCapture: { ...capture, uncategorizedAccountIds } }
-          : {}),
-        ...(snapshot.captureCategoryDefaults
-          ? {
-              captureCategoryDefaults: remapCategoryDefaultsForAccountMerge(
-                snapshot.captureCategoryDefaults,
-                sourceIds,
-                targetAccountId,
-              ),
-            }
-          : {}),
-      });
+    // Capture roles live in MMKV, same as matcher suppressions — not a database write.
+    const snapshot = preferences.workplace.getSnapshot(workplaceId);
+    const capture = snapshot.automaticTransactionCapture;
+    const sourceIds = new Set(filteredSourceIds);
+    const uncategorizedAccountIds = Object.fromEntries(
+      Object.entries(capture?.uncategorizedAccountIds ?? {}).map(([role, accountId]) => [
+        role,
+        sourceIds.has(accountId) ? targetAccountId : accountId,
+      ]),
+    );
+    preferences.workplace.update(workplaceId, {
+      ...(capture ? { automaticTransactionCapture: { ...capture, uncategorizedAccountIds } } : {}),
+      ...(snapshot.captureCategoryDefaults
+        ? {
+            captureCategoryDefaults: remapCategoryDefaultsForAccountMerge(
+              snapshot.captureCategoryDefaults,
+              sourceIds,
+              targetAccountId,
+            ),
+          }
+        : {}),
     });
   } catch (error) {
     // If a role still points at the merged/deleted account, capture validation
