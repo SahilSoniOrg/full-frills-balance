@@ -69,7 +69,7 @@ export function ConfirmDialog({
       onClose={onClose}
       accessibilityCloseLabel={accessibilityCloseLabel}
       fixedHeight={false}
-      scrollable={Boolean(requiredConfirmationValue)}
+      scrollable
       keyboardAvoiding={Boolean(requiredConfirmationValue)}
       useNativeModal={useNativeModal}
       footer={
