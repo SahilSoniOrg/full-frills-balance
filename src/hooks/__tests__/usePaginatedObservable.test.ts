@@ -1,8 +1,54 @@
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 describe('usePaginatedObservable', () => {
+  it('settles a failed stream and retries without losing existing rows', async () => {
+    const failure = new Error('Read failed');
+    const observe = jest
+      .fn()
+      .mockReturnValueOnce(of(['a', 'b']))
+      .mockReturnValueOnce(throwError(() => failure))
+      .mockReturnValueOnce(of(['a', 'b', 'c']));
+    const { result } = renderHook(() => usePaginatedObservable({ pageSize: 2, observe }));
+
+    act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.error).toBe(failure));
+    expect(result.current.items).toEqual(['a', 'b']);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isLoadingMore).toBe(false);
+
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.items).toEqual(['a', 'b', 'c']));
+    expect(result.current.error).toBeNull();
+    expect(result.current.isLoadingMore).toBe(false);
+  });
+
+  it('does not publish enrichment after its source stream fails', async () => {
+    const stream = new Subject<string[]>();
+    let resolve!: (value: string[]) => void;
+    const pending = new Promise<string[]>(done => {
+      resolve = done;
+    });
+    const observe = () => stream;
+    const enrich = () => pending;
+    const failure = new Error('Stream failed');
+    const { result } = renderHook(() => usePaginatedObservable({ pageSize: 2, observe, enrich }));
+
+    act(() => {
+      stream.next(['raw']);
+      stream.error(failure);
+    });
+    await act(async () => {
+      resolve(['obsolete']);
+      await pending;
+    });
+
+    expect(result.current.items).toEqual([]);
+    expect(result.current.error).toBe(failure);
+    expect(result.current.isLoading).toBe(false);
+  });
+
   it('should load initial data', async () => {
     const observe = jest.fn().mockReturnValue(of(['a', 'b']));
     const { result } = renderHook(() =>

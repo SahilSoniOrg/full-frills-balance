@@ -276,6 +276,43 @@ describe('useObservable', () => {
 });
 
 describe('useObservableWithEnrichment', () => {
+  it('keeps a terminal stream error when earlier enrichment resolves', async () => {
+    const subject = new Subject<string>();
+    let resolve!: (value: string) => void;
+    const pending = new Promise<string>(done => {
+      resolve = done;
+    });
+    const enrich = () => pending;
+    const failure = new Error('Stream failed');
+    const { result } = renderHook(() =>
+      useObservableWithEnrichment(() => subject, enrich, [], 'initial'),
+    );
+    act(() => {
+      subject.next('raw');
+      subject.error(failure);
+    });
+    await act(async () => {
+      resolve('obsolete');
+      await pending;
+    });
+    expect(result.current.data).toBe('initial');
+    expect(result.current.error).toBe(failure);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('clears an enrichment error after a later emission succeeds', async () => {
+    const subject = new Subject<string>();
+    const enrich = jest.fn().mockRejectedValueOnce(new Error('Failed')).mockResolvedValue('ready');
+    const { result } = renderHook(() =>
+      useObservableWithEnrichment(() => subject, enrich, [], 'initial'),
+    );
+    act(() => subject.next('first'));
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    act(() => subject.next('second'));
+    await waitFor(() => expect(result.current.data).toBe('ready'));
+    expect(result.current.error).toBeNull();
+  });
+
   it('should enrich data asynchronously', async () => {
     const subject = new BehaviorSubject('raw');
     const enricher = jest.fn().mockResolvedValue('enriched');

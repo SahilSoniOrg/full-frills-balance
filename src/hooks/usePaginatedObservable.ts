@@ -107,6 +107,9 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
 
   useEffect(() => {
     if (!enabled) return;
+    // A replacement subscription must not display the previous stream's failure.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(null);
     let isActive = true;
     let sequence = 0;
 
@@ -164,28 +167,41 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
 
     const observable = currentObserve(currentLimit, currentFilter, currentQuery);
 
-    const subscription = observable.subscribe(async loaded => {
-      const current = ++sequence;
-      try {
-        if (currentEnrich) {
-          const enriched = await currentEnrich(loaded, currentLimit, currentFilter, currentQuery);
+    const settleError = (err: unknown) => {
+      if (!isActive) return;
+      const normalizedError = err instanceof Error ? err : new Error(String(err));
+      setError(normalizedError);
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    };
+
+    const subscription = observable.subscribe({
+      next: async loaded => {
+        const current = ++sequence;
+        try {
+          if (currentEnrich) {
+            const enriched = await currentEnrich(loaded, currentLimit, currentFilter, currentQuery);
+            if (!isActive || current !== sequence) return;
+            setItems([...enriched] as E[]);
+          } else {
+            if (!isActive || current !== sequence) return;
+            setItems([...loaded] as unknown as E[]);
+          }
+          setHasMore(loaded.length >= currentLimit);
+          setError(null);
+          setVersion(v => v + 1);
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        } catch (err) {
           if (!isActive || current !== sequence) return;
-          setItems([...enriched] as E[]);
-        } else {
-          if (!isActive || current !== sequence) return;
-          setItems([...loaded] as unknown as E[]);
+          settleError(err);
         }
-        setHasMore(loaded.length >= currentLimit);
-        setVersion(v => v + 1);
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      } catch (err) {
-        if (!isActive || current !== sequence) return;
-        const normalizedError = err instanceof Error ? err : new Error(String(err));
-        setError(normalizedError);
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }
+      },
+      error: err => {
+        // A terminal stream failure owns the outcome, even if enrichment is pending.
+        sequence += 1;
+        settleError(err);
+      },
     });
 
     return () => {
@@ -209,19 +225,14 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     setCurrentLimit(prev => prev + pageSize);
   }, [enabled, isLoadingMore, hasMore, pageSize]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
-    if (items.length > 0) {
-      // If we already have items, just trigger a re-observation with the current limit.
-      // This is safer for "load more" failures as it doesn't wipe existing pages.
-      setRetryKey(v => v + 1);
-    } else {
-      // Only full reset if we have no data at all
-      setItems([]);
-      setCurrentLimit(pageSize);
-      setRetryKey(v => v + 1);
-    }
-  };
+    setIsLoading(items.length === 0);
+    setIsLoadingMore(items.length > 0);
+    // Retain loaded rows and their limit; restart at page one only for an empty list.
+    if (items.length === 0) setCurrentLimit(pageSize);
+    setRetryKey(v => v + 1);
+  }, [items.length, pageSize]);
 
   return {
     items,

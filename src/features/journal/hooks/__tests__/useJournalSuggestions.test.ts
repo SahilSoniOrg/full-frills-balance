@@ -22,6 +22,30 @@ const suggestion: JournalSuggestion = {
 };
 
 describe('useJournalSuggestions', () => {
+  it('hides retained routes immediately when workplace or mode changes', async () => {
+    const { result, rerender } = renderHook(
+      ({ workplace, page }: { workplace: WorkplaceId; page: 'simple' | 'split' }) =>
+        useJournalSuggestions(workplace, 'gro', 'expense', page),
+      { initialProps: { workplace: workplaceId, page: 'simple' as 'simple' | 'split' } },
+    );
+    act(() => result.current.loadSuggestions());
+    await act(async () => {
+      jest.advanceTimersByTime(160);
+      await Promise.resolve();
+    });
+    expect(result.current.suggestions).toEqual([suggestion]);
+    rerender({ workplace: workplaceId, page: 'split' });
+    expect(result.current.suggestions).toEqual([]);
+    await act(async () => {
+      jest.advanceTimersByTime(160);
+      await Promise.resolve();
+    });
+    expect(result.current.suggestions).toEqual([suggestion]);
+    rerender({ workplace: 'another-workplace' as WorkplaceId, page: 'split' });
+    expect(result.current.suggestions).toEqual([]);
+    expect(result.current.suggestionState).toBe('loading');
+  });
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();

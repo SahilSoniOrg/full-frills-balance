@@ -20,6 +20,8 @@ interface JournalEntryListViewProps {
   items: JournalListItem[];
   isLoading?: boolean;
   isLoadingMore?: boolean;
+  error?: Error | null;
+  retry?: () => void;
   suppressEmptyContent?: boolean;
   loadingMoreText?: string;
   emptyTitle?: string;
@@ -100,6 +102,8 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     items,
     isLoading,
     isLoadingMore,
+    error,
+    retry,
     suppressEmptyContent,
     loadingMoreText,
     emptyTitle = AppConfig.strings.common.noTransactions,
@@ -117,7 +121,17 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
   const selectionActive = !!isSelectionModeActive && !!selectionChrome;
   const journalEntryCount = items.filter(i => i.type === 'journal').length;
 
-  const listEmpty = suppressEmptyContent ? null : isLoading && items.length === 0 ? (
+  const loadFailure = error ? (
+    <EmptyStateView
+      title={AppConfig.strings.common.listLoadError}
+      subtitle={AppConfig.strings.common.listLoadErrorSubtitle}
+      primaryActionLabel={AppConfig.strings.common.retry}
+      onPrimaryAction={retry}
+    />
+  ) : null;
+  const listEmpty = suppressEmptyContent ? null : loadFailure ? (
+    loadFailure
+  ) : isLoading && items.length === 0 ? (
     <Stack gap="md">
       {[1, 2, 3, 4, 5].map(i => (
         <Stack key={i} gap="sm">
@@ -143,6 +157,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
 
   const listFooter = (
     <Stack>
+      {items.length > 0 && !suppressEmptyContent ? loadFailure : null}
       {isLoadingMore && (
         <Inline align="center" justify="center" space="sm" paddingVertical="lg">
           <ActivityIndicator size="small" />

@@ -24,30 +24,40 @@ export interface TransactionInboxModals {
   handleViewJournalFromDuplicate: (item: TransactionInboxItem) => void;
 }
 
+type InboxModal =
+  | { kind: 'closed' }
+  | { kind: 'duplicate' | 'editReparse'; workplaceId: WorkplaceId; item: TransactionInboxItem };
+
 export function useTransactionInboxModals({
   workplaceId,
   handleImport,
 }: UseTransactionInboxModalsProps): TransactionInboxModals {
-  const [selectedDuplicateItem, setSelectedDuplicateItem] = useState<TransactionInboxItem | null>(
-    null,
-  );
-  const [selectedEditReparseItem, setSelectedEditReparseItem] =
-    useState<TransactionInboxItem | null>(null);
+  const [modal, setModal] = useState<InboxModal>({ kind: 'closed' });
+  const selectedDuplicateItem =
+    modal.kind === 'duplicate' && modal.workplaceId === workplaceId ? modal.item : null;
+  const selectedEditReparseItem =
+    modal.kind === 'editReparse' && modal.workplaceId === workplaceId ? modal.item : null;
 
-  const handleOpenDuplicateModal = useCallback((item: TransactionInboxItem) => {
-    setSelectedDuplicateItem(item);
-  }, []);
+  const handleOpenDuplicateModal = useCallback(
+    (item: TransactionInboxItem) => {
+      setModal({ kind: 'duplicate', workplaceId, item });
+    },
+    [workplaceId],
+  );
 
   const handleCloseDuplicateModal = useCallback(() => {
-    setSelectedDuplicateItem(null);
+    setModal(current => (current.kind === 'duplicate' ? { kind: 'closed' } : current));
   }, []);
 
-  const handleOpenEditReparseModal = useCallback((item: TransactionInboxItem) => {
-    setSelectedEditReparseItem(item);
-  }, []);
+  const handleOpenEditReparseModal = useCallback(
+    (item: TransactionInboxItem) => {
+      setModal({ kind: 'editReparse', workplaceId, item });
+    },
+    [workplaceId],
+  );
 
   const handleCloseEditReparseModal = useCallback(() => {
-    setSelectedEditReparseItem(null);
+    setModal(current => (current.kind === 'editReparse' ? { kind: 'closed' } : current));
   }, []);
 
   const handleMergeDuplicate = useCallback(

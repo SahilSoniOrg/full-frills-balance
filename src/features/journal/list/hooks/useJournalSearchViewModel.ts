@@ -21,6 +21,8 @@ export interface JournalSearchViewModel {
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
+  error?: Error | null;
+  retry?: () => void;
   onEndReached?: () => void;
 
   // Filters
@@ -159,6 +161,8 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     items: core.items,
     isLoading: core.isLoading,
     isLoadingMore: core.isLoadingMore,
+    error: core.error,
+    retry: core.retry,
     onEndReached: core.onEndReached,
     ...filters,
     setDateRange,

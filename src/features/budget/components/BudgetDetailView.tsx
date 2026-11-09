@@ -68,6 +68,8 @@ export function BudgetDetailView({
         <JournalEntryListView
           items={vm.items}
           isLoading={vm.isLoadingActivity}
+          error={vm.activityError}
+          retry={vm.retryActivity}
           isLoadingMore={vm.isLoadingMore}
           onEndReached={vm.onEndReached}
           emptyTitle={AppConfig.strings.budget.activityEmptyTitle}

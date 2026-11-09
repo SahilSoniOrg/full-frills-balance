@@ -22,6 +22,8 @@ export interface InsightDetailsViewModel {
   csvExport?: ShareableCsvControl;
   items: JournalListItem[];
   isLoading: boolean;
+  error?: Error | null;
+  retry?: () => void;
   header: InsightDetailsHeaderModel;
   emptyTitle: string;
   emptySubtitle: string;
@@ -70,6 +72,8 @@ export function useInsightDetailsViewModel(
     csvExport: journalList.csvExport,
     items: journalList.items,
     isLoading: journalList.isLoading,
+    error: journalList.error,
+    retry: journalList.retry,
     header,
     emptyTitle: strings.emptyTitle,
     emptySubtitle: strings.emptySubtitle,

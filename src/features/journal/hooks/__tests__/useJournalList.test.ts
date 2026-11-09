@@ -137,6 +137,8 @@ describe('useJournalList', () => {
       timelineRows: undefined,
       isLoading: false,
       isLoadingMore: false,
+      error: null,
+      retry: jest.fn(),
       hasMore: true,
       loadMore: jest.fn(),
       version: 1,
@@ -179,6 +181,32 @@ describe('useJournalList', () => {
         onPress: expect.any(Function),
       }),
     );
+  });
+
+  it('preserves read failures and retry in the rendered list bundle', () => {
+    const failure = new Error('Read failed');
+    const retry = jest.fn();
+    useJournalsMock.mockReturnValue({
+      journals: [],
+      timelineRows: undefined,
+      isLoading: false,
+      isLoadingMore: false,
+      hasMore: true,
+      loadMore: jest.fn(),
+      version: 1,
+      error: failure,
+      retry,
+    });
+    const { result } = renderHook(() =>
+      useJournalList(
+        { emptyState: { title: 'Empty', subtitle: 'None' } },
+        'test-wp' as WorkplaceId,
+      ),
+    );
+    expect(result.current.list.error).toBe(failure);
+    expect(result.current.list.onEndReached).toBeUndefined();
+    result.current.list.retry?.();
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it('passes date range through to the shared pipeline', () => {

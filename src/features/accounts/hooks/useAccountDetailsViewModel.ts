@@ -269,6 +269,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     journalItems,
     journalsLoading: journalList.isLoading,
     journalsLoadingMore: journalList.isLoadingMore,
+    journalError: journalList.error,
+    retryJournals: journalList.retry,
     onLoadMore: journalList.onEndReached,
     subAccounts: hierarchy.subAccounts,
     subAccountsLoading: hierarchy.subAccountsLoading,

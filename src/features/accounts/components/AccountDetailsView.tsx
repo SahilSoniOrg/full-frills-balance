@@ -170,6 +170,8 @@ export function AccountDetailsView({
             items={showJournalRows ? journalItems : []}
             isLoading={showJournalRows && journalsLoading}
             isLoadingMore={journalsLoadingMore}
+            error={vm.journalError}
+            retry={vm.retryJournals}
             suppressEmptyContent={!showJournalRows}
             onEndReached={onLoadMore}
             emptyTitle="No entries yet"

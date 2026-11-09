@@ -275,6 +275,7 @@ export function useObservableWithEnrichment<T, E>(
 
           dataRef.current = enriched;
           setData(enriched);
+          setError(null);
           setVersion(v => v + 1);
           setIsLoading(false);
         } catch (err) {
@@ -285,6 +286,8 @@ export function useObservableWithEnrichment<T, E>(
       },
       error: err => {
         if (!isActive) return;
+        // Pending enrichment must not overwrite this terminal failure.
+        sequence += 1;
         setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },

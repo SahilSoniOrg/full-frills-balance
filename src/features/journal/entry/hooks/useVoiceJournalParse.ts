@@ -4,7 +4,7 @@ import { ingestTransaction } from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 
 export type VoiceJournalApplyParams = {
@@ -26,6 +26,11 @@ export type UseVoiceJournalParseArgs = {
   onVolumeChange?: (volume: number) => void;
 };
 
+type VoiceParseState =
+  | { kind: 'idle' }
+  | { kind: 'parsing'; session: object; text: string }
+  | { kind: 'settled'; session: object; text: string; output: ParserOutput | null };
+
 /**
  * Speech + ingest orchestration for voice journal entry.
  * Presentation (modal chrome / visualizer) stays in VoiceInputModal.
@@ -39,8 +44,18 @@ export function useVoiceJournalParse({
 }: UseVoiceJournalParseArgs) {
   const [transcription, setTranscription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
+  const [parseState, setParseState] = useState<VoiceParseState>({ kind: 'idle' });
+  // A reopened modal is a new session, including the first render before effects run.
+  const session = useMemo(() => ({ workplaceId, visible }), [workplaceId, visible]);
+  const parseSequence = useRef(0);
+  // Transcript updates do not cancel work: only output matching the current text is usable.
+  const isCurrentParse =
+    visible &&
+    parseState.kind !== 'idle' &&
+    parseState.session === session &&
+    parseState.text === transcription.trim();
+  const isParsing = isCurrentParse && parseState.kind === 'parsing';
+  const parserOutput = isCurrentParse && parseState.kind === 'settled' ? parseState.output : null;
 
   useSpeechRecognitionEvent('start', () => setIsRecording(true));
   useSpeechRecognitionEvent('end', () => setIsRecording(false));
@@ -60,15 +75,19 @@ export function useVoiceJournalParse({
   });
 
   useEffect(() => {
+    // Closing, reopening, switching books and unmounting revoke pending results.
+    parseSequence.current += 1;
     if (!visible) return;
     const timer = setTimeout(() => {
       setTranscription('');
       setIsRecording(false);
-      setIsParsing(false);
-      setParserOutput(null);
+      setParseState({ kind: 'idle' });
     }, 0);
-    return () => clearTimeout(timer);
-  }, [visible]);
+    return () => {
+      parseSequence.current += 1;
+      clearTimeout(timer);
+    };
+  }, [visible, workplaceId, setTranscription]);
 
   const startRecording = useCallback(async () => {
     const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -78,7 +97,6 @@ export function useVoiceJournalParse({
       return;
     }
 
-    setParserOutput(null);
     setTranscription('');
     analytics.trackFeatureUsage('voice_journal', 'record_started');
 
@@ -90,7 +108,7 @@ export function useVoiceJournalParse({
         intervalMillis: 50,
       },
     });
-  }, []);
+  }, [setTranscription]);
 
   const stopRecording = useCallback(() => {
     ExpoSpeechRecognitionModule.stop();
@@ -98,29 +116,31 @@ export function useVoiceJournalParse({
 
   const parseTranscription = useCallback(
     async (textToParse: string) => {
-      if (!textToParse.trim()) return;
-      setIsParsing(true);
+      const text = textToParse.trim();
+      if (!visible || !text) return;
+      const request = ++parseSequence.current;
+      setParseState({ kind: 'parsing', session, text });
       Keyboard.dismiss();
 
       try {
         const output = await ingestTransaction(textToParse, workplaceId);
-        setParserOutput(output);
+        if (request !== parseSequence.current) return;
+        setParseState({ kind: 'settled', session, text, output });
         analytics.trackFeatureUsage('voice_journal', 'parsed', {
           success: !!output && output.transactions.length > 0,
           transaction_count: output?.transactions?.length || 0,
           is_ai: false,
         });
       } catch (err) {
+        if (request !== parseSequence.current) return;
         logger.error('[useVoiceJournalParse] Extraction failed', err);
         analytics.trackFeatureUsage('voice_journal', 'parse_failed', {
           error: err instanceof Error ? err.message : String(err),
         });
-        setParserOutput(null);
-      } finally {
-        setIsParsing(false);
+        setParseState({ kind: 'settled', session, text, output: null });
       }
     },
-    [workplaceId],
+    [visible, workplaceId, session],
   );
 
   const selectTemplate = useCallback(
@@ -131,7 +151,7 @@ export function useVoiceJournalParse({
       });
       void parseTranscription(template);
     },
-    [parseTranscription],
+    [parseTranscription, setTranscription],
   );
 
   const applyParsedResult = useCallback(() => {

@@ -366,6 +366,8 @@ export function useBudgetDetailViewModel() {
     isLoading: dbLoading,
     isMissing: !dbLoading && !dbBudgetData,
     isLoadingActivity: journalList.isLoading,
+    activityError: journalList.error,
+    retryActivity: journalList.retry,
     isLoadingMore: journalList.isLoadingMore,
     onEndReached: journalList.onEndReached,
     periodRange: budgetDateRange,

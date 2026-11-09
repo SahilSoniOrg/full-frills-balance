@@ -13,6 +13,9 @@ export const UI_STRINGS = {
   plannedListRedesign: plannedListRedesignStrings,
   plannedDetailRedesign: plannedDetailRedesignStrings,
   common: {
+    listLoadError: 'Could not load entries',
+    listLoadErrorSubtitle: 'Try again to reload this list.',
+    retry: 'Retry',
     loading: 'Loading…',
     loadingMore: 'Loading…',
     save: 'Save',

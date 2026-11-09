@@ -178,24 +178,25 @@ export function useJournals(
     return mapInitialTimelineRows(initialItems, timelineRowOptions);
   }, [initialItems, timelineRowOptions]);
 
-  const { items, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<
-    EnrichedJournal | JournalTimelineRow,
-    EnrichedJournal | JournalTimelineRow,
-    JournalFilterRange
-  >({
-    enabled,
-    pageSize,
-    filter: effectiveRange,
-    searchQuery,
-    observe,
-    suppressResetOnSearch: true,
-    getFilterKey: f => {
-      if (!f) return 'none';
-      return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}-${f.journalIds?.join(',')}`;
-    },
-    initialItems: paginatedInitialItems as
-      (EnrichedJournal | JournalTimelineRow)[] | (() => (EnrichedJournal | JournalTimelineRow)[]),
-  });
+  const { items, isLoading, isLoadingMore, hasMore, loadMore, version, error, retry } =
+    usePaginatedObservable<
+      EnrichedJournal | JournalTimelineRow,
+      EnrichedJournal | JournalTimelineRow,
+      JournalFilterRange
+    >({
+      enabled,
+      pageSize,
+      filter: effectiveRange,
+      searchQuery,
+      observe,
+      suppressResetOnSearch: true,
+      getFilterKey: f => {
+        if (!f) return 'none';
+        return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}-${f.journalIds?.join(',')}`;
+      },
+      initialItems: paginatedInitialItems as
+        (EnrichedJournal | JournalTimelineRow)[] | (() => (EnrichedJournal | JournalTimelineRow)[]),
+    });
 
   if (timelineRowOptions) {
     const timelineRows = items as JournalTimelineRow[];
@@ -207,6 +208,8 @@ export function useJournals(
       hasMore,
       loadMore,
       version,
+      error,
+      retry,
     };
   }
 
@@ -218,6 +221,8 @@ export function useJournals(
     hasMore,
     loadMore,
     version,
+    error,
+    retry,
   };
 }
 

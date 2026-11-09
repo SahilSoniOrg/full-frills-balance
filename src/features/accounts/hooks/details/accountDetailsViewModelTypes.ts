@@ -93,6 +93,8 @@ export interface AccountDetailsViewModel {
   journalItems: JournalListItem[];
   journalsLoading: boolean;
   journalsLoadingMore: boolean;
+  journalError?: Error | null;
+  retryJournals?: () => void;
   onLoadMore?: () => void;
   subAccounts: SubAccountViewModel[];
   subAccountsLoading: boolean;

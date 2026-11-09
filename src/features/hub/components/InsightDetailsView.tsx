@@ -16,6 +16,8 @@ export function InsightDetailsView({
   csvExport,
   items,
   isLoading,
+  error,
+  retry,
   header,
   emptyTitle,
   emptySubtitle,
@@ -115,6 +117,8 @@ export function InsightDetailsView({
       <JournalEntryListView
         items={items}
         isLoading={isLoading}
+        error={error}
+        retry={retry}
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         emptyTitle={emptyTitle}

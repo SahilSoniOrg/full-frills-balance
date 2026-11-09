@@ -31,6 +31,8 @@ export interface RecentJournalEntries {
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
+  error?: Error | null;
+  retry?: () => void;
   loadingMoreText: string;
   emptyTitle: string;
   emptySubtitle: string;
@@ -176,6 +178,8 @@ export function useDashboardViewModel(): DashboardViewModel {
       items: journalListCore.items,
       isLoading: journalListCore.isLoading,
       isLoadingMore: journalListCore.isLoadingMore,
+      error: journalListCore.error,
+      retry: journalListCore.retry,
       loadingMoreText: strings.common.loading,
       emptyTitle: strings.dashboard.emptyTitle,
       emptySubtitle: strings.dashboard.emptySubtitle,
@@ -190,6 +194,8 @@ export function useDashboardViewModel(): DashboardViewModel {
       journalListCore.items,
       journalListCore.isLoading,
       journalListCore.isLoadingMore,
+      journalListCore.error,
+      journalListCore.retry,
       journalListCore.onEndReached,
       journalListCore.selectedIds,
       journalListCore.isSelectionModeActive,

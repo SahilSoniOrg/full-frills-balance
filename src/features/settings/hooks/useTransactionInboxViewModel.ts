@@ -35,6 +35,8 @@ export interface TransactionInboxViewModel extends TransactionInboxModals {
   items: TransactionInboxItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
+  error: Error | null;
+  retry: () => void;
   hasMore: boolean;
   hasOlderMessages: boolean;
   handleLoadMore: () => void;
@@ -87,14 +89,12 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     [workplaceId],
   );
 
-  const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<
-    PlainInboxRecord,
-    TransactionInboxItem
-  >({
-    pageSize: PAGE_SIZE,
-    observe,
-    enrich,
-  });
+  const { items, isLoading, isLoadingMore, hasMore, loadMore, error, retry } =
+    usePaginatedObservable<PlainInboxRecord, TransactionInboxItem>({
+      pageSize: PAGE_SIZE,
+      observe,
+      enrich,
+    });
 
   useEffect(() => {
     let isMounted = true;
@@ -117,6 +117,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   }, [workplaceId]);
 
   const handleRefresh = useCallback(async () => {
+    retry();
     setIsRefreshing(true);
     analytics.trackFeatureUsage('sms', 'inbox_bulk_sync', { mode: 'refresh' });
     try {
@@ -132,7 +133,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     } finally {
       setIsRefreshing(false);
     }
-  }, [workplaceId]);
+  }, [workplaceId, retry]);
 
   const handleLoadOlder = useCallback(async () => {
     if (isScanningOlder) return;
@@ -231,6 +232,8 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
           ),
     isLoading,
     isLoadingMore,
+    error,
+    retry,
     hasMore,
     hasOlderMessages,
     handleLoadMore: loadMore,

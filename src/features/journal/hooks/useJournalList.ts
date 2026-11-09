@@ -110,6 +110,8 @@ export function useJournalList(
       items: core.items,
       isLoading: core.isLoading,
       isLoadingMore: core.isLoadingMore,
+      error: core.error,
+      retry: core.retry,
       loadingMoreText,
       emptyTitle: emptyState.title,
       emptySubtitle: periodLabel
@@ -122,6 +124,8 @@ export function useJournalList(
       core.items,
       core.isLoading,
       core.isLoadingMore,
+      core.error,
+      core.retry,
       core.onEndReached,
       loadingMoreText,
       emptyState.title,

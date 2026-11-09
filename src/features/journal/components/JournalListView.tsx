@@ -20,6 +20,8 @@ export type JournalListBundle = {
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
+  error?: Error | null;
+  retry?: () => void;
   loadingMoreText: string;
   emptyTitle: string;
   emptySubtitle: string;
@@ -84,6 +86,8 @@ export function JournalListView(props: JournalListViewProps) {
           items={list.items}
           isLoading={list.isLoading}
           isLoadingMore={list.isLoadingMore}
+          error={list.error}
+          retry={list.retry}
           loadingMoreText={list.loadingMoreText}
           emptyTitle={list.emptyTitle}
           emptySubtitle={list.emptySubtitle}

@@ -6,7 +6,7 @@ import {
   FilterChipButton,
   Icon,
 } from '@/src/components/core';
-import { Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { DuplicateConflictResolutionModal } from '@/src/features/settings/components/DuplicateConflictResolutionModal';
 import { EditReparseSmsModal } from '@/src/features/settings/components/EditReparseSmsModal';
@@ -30,6 +30,8 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     items,
     isLoading,
     isLoadingMore,
+    error,
+    retry,
     hasMore,
     hasOlderMessages,
     handleLoadMore,
@@ -53,6 +55,14 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
   } = vm;
 
   const isAndroid = Platform.OS === 'android';
+  const loadFailure = error ? (
+    <EmptyStateView
+      title={AppConfig.strings.common.listLoadError}
+      subtitle={AppConfig.strings.common.listLoadErrorSubtitle}
+      primaryActionLabel={AppConfig.strings.common.retry}
+      onPrimaryAction={retry}
+    />
+  ) : null;
 
   return (
     <View style={styles.container} testID="transaction-inbox-screen">
@@ -111,7 +121,9 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
             )}
             contentContainerStyle={styles.content}
             ListEmptyComponent={
-              isLoading ? (
+              loadFailure ? (
+                loadFailure
+              ) : isLoading ? (
                 <View style={styles.center}>
                   <ActivityIndicator color={theme.primary} />
                   <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
@@ -131,7 +143,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
               )
             }
             ListFooterComponent={
-              hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
+              error ? (
+                items.length > 0 ? (
+                  loadFailure
+                ) : null
+              ) : hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
                 <Stack space="lg" style={styles.footer}>
                   {(isLoadingMore || isScanningOlder) && (
                     <ActivityIndicator color={theme.primary} />

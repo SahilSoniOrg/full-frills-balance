@@ -31,10 +31,12 @@ export function useJournalSuggestions(
   const [enabled, setEnabled] = useState(false);
   const [settledRequest, setSettledRequest] = useState<{
     key: string;
+    scopeKey: string;
     suggestions: JournalSuggestion[];
     error: Error | null;
   } | null>(null);
   const normalizedQuery = searchQuery.trim().toLowerCase();
+  const scopeKey = JSON.stringify([workplaceId, page, activeTabType]);
   const requestKey = JSON.stringify([workplaceId, normalizedQuery, page, activeTabType]);
 
   const loadSuggestions = useCallback(() => setEnabled(true), []);
@@ -54,13 +56,14 @@ export function useJournalSuggestions(
             limit: 50,
           })
           .then(results => {
-            if (current) setSettledRequest({ key: requestKey, suggestions: results, error: null });
+            if (current)
+              setSettledRequest({ key: requestKey, scopeKey, suggestions: results, error: null });
           })
           .catch(reason => {
             if (!current) return;
             const nextError =
               reason instanceof Error ? reason : new Error('Suggestions unavailable');
-            setSettledRequest({ key: requestKey, suggestions: [], error: nextError });
+            setSettledRequest({ key: requestKey, scopeKey, suggestions: [], error: nextError });
             logger.error('Failed to fetch journal suggestions:', reason);
           });
       },
@@ -71,15 +74,15 @@ export function useJournalSuggestions(
       current = false;
       clearTimeout(timeout);
     };
-  }, [activeTabType, enabled, normalizedQuery, page, requestKey, workplaceId]);
+  }, [activeTabType, enabled, normalizedQuery, page, requestKey, scopeKey, workplaceId]);
 
   const isCurrentRequestSettled = settledRequest?.key === requestKey;
-  // Keep the last successful list on screen while a new query is in flight.
+  // Retain results across text edits only; account routes belong to a workplace and mode.
   const error = isCurrentRequestSettled ? settledRequest.error : null;
   const isLoading = enabled && Boolean(workplaceId) && !isCurrentRequestSettled;
 
   const rankedSuggestions = useMemo(() => {
-    const suggestions = settledRequest?.suggestions ?? [];
+    const suggestions = settledRequest?.scopeKey === scopeKey ? settledRequest.suggestions : [];
     const query = normalizedQuery.toLowerCase();
     return [...suggestions].sort((a, b) => {
       const rank = (description: string) => {
@@ -96,7 +99,7 @@ export function useJournalSuggestions(
         b.history.lastUsedAt - a.history.lastUsedAt
       );
     });
-  }, [normalizedQuery, settledRequest?.suggestions]);
+  }, [normalizedQuery, scopeKey, settledRequest]);
 
   const suggestionState = resolveJournalSuggestionState({
     query: searchQuery,

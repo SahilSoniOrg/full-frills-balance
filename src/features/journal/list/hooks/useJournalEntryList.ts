@@ -58,6 +58,8 @@ export interface JournalEntryListCore {
   journals: EnrichedJournal[];
   isLoading: boolean;
   isLoadingMore: boolean;
+  error: Error | null;
+  retry: () => void;
   hasMore: boolean;
   onEndReached?: () => void;
   selectedIds: Set<JournalId>;
@@ -112,15 +114,8 @@ export function useJournalEntryList({
     [enabled, queryOptions, initialItems, timelineRowOptions],
   );
 
-  const { journals, timelineRows, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
-    workplaceId,
-    pageSize,
-    dateRange,
-    searchQuery,
-    statuses,
-    undefined,
-    journalOptions,
-  );
+  const { journals, timelineRows, isLoading, isLoadingMore, hasMore, loadMore, error, retry } =
+    useJournals(workplaceId, pageSize, dateRange, searchQuery, statuses, undefined, journalOptions);
 
   const selectionControl = useSelection<JournalId>();
   const csvQuery = useMemo(
@@ -261,16 +256,16 @@ export function useJournalEntryList({
 
   const onEndReached = useMemo(() => {
     if (paginationPolicy === 'default') {
-      if (searchQuery || !hasMore) return undefined;
+      if (error || searchQuery || !hasMore) return undefined;
       return loadMore;
     }
 
-    if (!hasMore) return undefined;
+    if (error || !hasMore) return undefined;
     return () => {
       if (isLoadingMore) return;
       loadMore();
     };
-  }, [paginationPolicy, searchQuery, hasMore, loadMore, isLoadingMore]);
+  }, [error, paginationPolicy, searchQuery, hasMore, loadMore, isLoadingMore]);
 
   return {
     csvExport,
@@ -278,6 +273,8 @@ export function useJournalEntryList({
     journals,
     isLoading,
     isLoadingMore,
+    error,
+    retry,
     hasMore,
     onEndReached,
     selectedIds,

@@ -196,6 +196,8 @@ export function DashboardScreenView({
           items={items}
           isLoading={isLoading}
           isLoadingMore={isLoadingMore}
+          error={recentJournalEntries.error}
+          retry={recentJournalEntries.retry}
           loadingMoreText={loadingMoreText}
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}

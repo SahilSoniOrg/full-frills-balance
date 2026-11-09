@@ -34,12 +34,13 @@ export function useJournalEditorLoader({
   // Derive loading from the id we have finished hydrating — avoids setState-in-effect
   // when journalId changes (edit → edit) while still blocking UI on the new id.
   const [loadResult, setLoadResult] = useState<{
+    workplaceId: WorkplaceId;
     journalId: JournalId;
     state: Exclude<JournalEditorLoadState, 'idle' | 'loading'>;
   } | null>(null);
   const loadState: JournalEditorLoadState = !journalId
     ? 'idle'
-    : loadResult?.journalId === journalId
+    : loadResult?.journalId === journalId && loadResult.workplaceId === workplaceId
       ? loadResult.state
       : 'loading';
 
@@ -69,14 +70,14 @@ export function useJournalEditorLoader({
             isGuidedMode: forceAdvancedMode ? false : undefined,
             status: journal.status,
           });
-          setLoadResult({ journalId, state: 'loaded' });
+          setLoadResult({ workplaceId, journalId, state: 'loaded' });
         } else {
-          setLoadResult({ journalId, state: 'not_found' });
+          setLoadResult({ workplaceId, journalId, state: 'not_found' });
         }
       } catch {
         if (isActive) {
           showErrorAlert('Failed to load transaction');
-          setLoadResult({ journalId, state: 'error' });
+          setLoadResult({ workplaceId, journalId, state: 'error' });
         }
       }
     };

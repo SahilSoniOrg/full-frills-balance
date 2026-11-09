@@ -77,7 +77,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
         <View style={styles.footerActions}>
           <AppButton
             variant="primary"
-            disabled={!parserOutput || isParsing}
+            disabled={!parserOutput?.transactions.length || isParsing}
             onPress={applyParsedResult}
           >
             Confirm & Apply
