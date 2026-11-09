@@ -58,6 +58,7 @@ const SETTINGS_SCREEN_ACTIONS: SettingsActions = {
   onProfile: AppNavigation.toPersonalizationSettings,
   onAppearance: AppNavigation.toAppearanceSettings,
   onCaptureWorkspace: AppNavigation.toCaptureWorkspace,
+  onSpendingReminders: AppNavigation.toSpendingReminderSettings,
   onSmsSettings: AppNavigation.toSmsSettings,
   onSmsInbox: AppNavigation.toTransactionInbox,
   onPrivacy: AppNavigation.toPrivacySecuritySettings,

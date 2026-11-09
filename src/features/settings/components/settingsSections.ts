@@ -9,6 +9,7 @@ export type SettingsActions = {
   onProfile: (target?: string) => void;
   onAppearance: (target?: string) => void;
   onCaptureWorkspace: (target?: string) => void;
+  onSpendingReminders: (target?: string) => void;
   onSmsSettings: (target?: string) => void;
   onSmsInbox: () => void;
   onPrivacy: (target?: string) => void;
@@ -88,13 +89,19 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     row('safe-to-spend-forecast', Icon.Safe, me.forecastTitle, me.forecastDesc, ['workplace', 'money', 'safe to spend', 'forecast', 'horizon', '30 days', '60 days', '90 days']),
   ]),
   ...screen('Transactions', 'onCaptureWorkspace', [
-    row('notifications', Icon.Notifications, s.notifications.title, s.notifications.description, ['notification', 'reminder', 'schedule', 'daily', 'weekly'], {
+    row('capture-review', Icon.Zap, transactionCaptureStrings.title, transactionCaptureStrings.description, ['capture', 'review', 'transactions', 'automatic', 'matching'], {
+      focusId: 'capture-review',
       hub: { testID: 'settings-capture-review', title: transactionCaptureStrings.title, description: transactionCaptureStrings.description },
     }),
   ]),
+  ...screen('Notifications', 'onSpendingReminders', [
+    row('spending-reminders', Icon.Notifications, s.notifications.title, s.notifications.description, ['notification', 'reminder', 'schedule', 'daily', 'weekly', 'spending', 'safe to spend', 'log transactions'], {
+      focusId: 'notifications',
+      hub: { testID: 'settings-spending-reminders' },
+    }),
+  ]),
   ...screen('Transactions', 'onCaptureWorkspace', [
-    row('transaction-capture-enabled', Icon.Zap, transactionCaptureStrings.captureTitle, transactionCaptureStrings.captureDescription, ['capture', 'categorization', 'automatic', 'transactions', 'automation'], ANDROID),
-    row('transaction-capture-activity', Icon.History, transactionCaptureStrings.activityTitle, transactionCaptureStrings.activityDescription, ['capture', 'journal', 'activity', 'transactions']),
+    row('transaction-capture-enabled', Icon.Zap, transactionCaptureStrings.captureTitle, transactionCaptureStrings.captureDescription, ['capture', 'categorization', 'automatic', 'transactions', 'automation']),
     row('transaction-capture-inbox', Icon.MessageSquare, transactionCaptureStrings.inboxTitle, transactionCaptureStrings.inboxDescription, ['capture', 'review', 'inbox', 'transactions']),
   ]),
   ...screen('Preferences', 'onAppearance', [

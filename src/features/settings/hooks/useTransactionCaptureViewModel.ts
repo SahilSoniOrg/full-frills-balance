@@ -18,7 +18,7 @@ import { transactionCaptureService } from '@/src/services/transaction-intelligen
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { analytics } from '@/src/services/analytics';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
@@ -37,7 +37,6 @@ type CaptureSnapshot = {
   descriptionDefaults: DescriptionDefaults;
   categoryCandidates: CaptureItems['categoryCandidates'];
   descriptionCandidates: CaptureItems['descriptionCandidates'];
-  possibleMerchantMatches: CaptureItems['possibleMerchantMatches'];
   historicalCategorySuggestions: CaptureItems['historicalCategorySuggestions'];
   mixedHistoricalCategoryPatterns: CaptureItems['mixedHistoricalCategoryPatterns'];
   mixedHistoricalCategoryCount: CaptureItems['mixedHistoricalCategoryCount'];
@@ -55,13 +54,23 @@ export function useTransactionCaptureViewModel({
   const { workplaceId } = useWorkplace();
   const generation = useRef(0);
   const [snapshot, setSnapshot] = useState<CaptureSnapshot | null>(null);
+  const snapshotRef = useRef<CaptureSnapshot | null>(null);
+  const needsRefresh = useRef(true);
+  const isFocused = useRef(false);
+  const changeRevision = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [settingsError, setSettingsError] = useState(false);
 
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
   const refresh = useCallback(async () => {
     const request = ++generation.current;
-    setLoading(true);
+    const cached = snapshotRef.current?.workplaceId === workplaceId ? snapshotRef.current : null;
+    const revisionAtStart = changeRevision.current;
+    if (!cached) setLoading(true);
     setError(false);
     try {
       const [settings, items, reviewCount, categoryDefaults] = await Promise.allSettled([
@@ -73,13 +82,13 @@ export function useTransactionCaptureViewModel({
         loadCategoryDefaults ? listCaptureCategoryDefaults(workplaceId) : Promise.resolve([]),
       ]);
       if (request !== generation.current) return;
-      setSettingsError(settings.status === 'rejected');
-      setError(
+      const hasError =
         settings.status === 'rejected' ||
-          items.status === 'rejected' ||
-          reviewCount.status === 'rejected' ||
-          categoryDefaults.status === 'rejected',
-      );
+        items.status === 'rejected' ||
+        reviewCount.status === 'rejected' ||
+        categoryDefaults.status === 'rejected';
+      setSettingsError(settings.status === 'rejected');
+      setError(hasError);
       if (settings.status === 'fulfilled') {
         setSnapshot({
           workplaceId,
@@ -89,55 +98,87 @@ export function useTransactionCaptureViewModel({
               ? items.value.review.length
               : reviewCount.status === 'fulfilled'
                 ? reviewCount.value
-                : 0,
-          review: items.status === 'fulfilled' && items.value ? items.value.review : [],
-          defaulted: items.status === 'fulfilled' && items.value ? items.value.defaulted : [],
-          categoryDefaults: categoryDefaults.status === 'fulfilled' ? categoryDefaults.value : [],
+                : (cached?.reviewCount ?? 0),
+          review:
+            items.status === 'fulfilled' && items.value
+              ? items.value.review
+              : (cached?.review ?? []),
+          defaulted:
+            items.status === 'fulfilled' && items.value
+              ? items.value.defaulted
+              : (cached?.defaulted ?? []),
+          categoryDefaults:
+            categoryDefaults.status === 'fulfilled'
+              ? categoryDefaults.value
+              : (cached?.categoryDefaults ?? []),
           descriptionDefaults: listCaptureDescriptionDefaults(workplaceId),
           categoryCandidates:
-            items.status === 'fulfilled' && items.value ? items.value.categoryCandidates : [],
+            items.status === 'fulfilled' && items.value
+              ? items.value.categoryCandidates
+              : (cached?.categoryCandidates ?? []),
           descriptionCandidates:
-            items.status === 'fulfilled' && items.value ? items.value.descriptionCandidates : [],
-          possibleMerchantMatches:
-            items.status === 'fulfilled' && items.value ? items.value.possibleMerchantMatches : [],
+            items.status === 'fulfilled' && items.value
+              ? items.value.descriptionCandidates
+              : (cached?.descriptionCandidates ?? []),
           historicalCategorySuggestions:
             items.status === 'fulfilled' && items.value
               ? items.value.historicalCategorySuggestions
-              : [],
+              : (cached?.historicalCategorySuggestions ?? []),
           mixedHistoricalCategoryPatterns:
             items.status === 'fulfilled' && items.value
               ? items.value.mixedHistoricalCategoryPatterns
-              : [],
+              : (cached?.mixedHistoricalCategoryPatterns ?? []),
           mixedHistoricalCategoryCount:
             items.status === 'fulfilled' && items.value
               ? items.value.mixedHistoricalCategoryCount
-              : 0,
+              : (cached?.mixedHistoricalCategoryCount ?? 0),
         });
       }
+      needsRefresh.current = hasError || changeRevision.current !== revisionAtStart;
     } catch {
       if (request === generation.current) {
         setError(true);
         setSettingsError(true);
+        needsRefresh.current = true;
       }
     } finally {
       if (request === generation.current) setLoading(false);
     }
   }, [workplaceId, loadReviewItems, loadCategoryDefaults, loadHistoricalSuggestions]);
 
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeToCaptureChanges(() => {
+      changeRevision.current += 1;
+      needsRefresh.current = true;
+      if (!isFocused.current) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = undefined;
+        if (isFocused.current && needsRefresh.current) void refresh();
+      }, 250);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
+  }, [refresh]);
+
   useFocusEffect(
     useCallback(() => {
-      void refresh();
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const unsubscribe = subscribeToCaptureChanges(() => {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(() => void refresh(), 250);
-      });
+      isFocused.current = true;
+      if (snapshotRef.current?.workplaceId !== workplaceId || needsRefresh.current) void refresh();
       return () => {
-        unsubscribe();
-        if (timer) clearTimeout(timer);
-        ++generation.current;
+        isFocused.current = false;
       };
-    }, [refresh]),
+    }, [refresh, workplaceId]),
+  );
+
+  useEffect(
+    () => () => {
+      ++generation.current;
+    },
+    [],
   );
 
   const current = snapshot?.workplaceId === workplaceId ? snapshot : null;
@@ -174,6 +215,7 @@ export function useTransactionCaptureViewModel({
 
   return {
     workplaceId,
+    hasSnapshot: !!current,
     enabled: current?.settings.enabled ?? false,
     enabledAt: current?.settings.enabledAt,
     needsAccountSetup: current?.settings.needsAccountSetup ?? false,
@@ -184,7 +226,6 @@ export function useTransactionCaptureViewModel({
     descriptionDefaults: current?.descriptionDefaults ?? [],
     categoryCandidates: current?.categoryCandidates ?? [],
     descriptionCandidates: current?.descriptionCandidates ?? [],
-    possibleMerchantMatches: current?.possibleMerchantMatches ?? [],
     historicalCategorySuggestions: current?.historicalCategorySuggestions ?? [],
     mixedHistoricalCategoryPatterns: current?.mixedHistoricalCategoryPatterns ?? [],
     mixedHistoricalCategoryCount: current?.mixedHistoricalCategoryCount ?? 0,
@@ -274,7 +315,7 @@ export function useTransactionCaptureViewModel({
             pattern.journalCount,
             pattern.sourceCount,
           ),
-          confirmText: strings.rememberCategoryAction,
+          confirmText: strings.rememberHistoricalCategoryAction,
           cancelText: strings.cancel,
         },
         async currentWorkplaceId => {

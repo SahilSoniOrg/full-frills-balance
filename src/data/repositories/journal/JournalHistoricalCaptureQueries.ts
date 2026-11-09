@@ -27,6 +27,7 @@ export interface HistoricalCategoryPattern {
   financialAccountName: string;
   kind: 'expense' | 'income';
   currencyCode: string;
+  latestJournalDate: number;
   journalCount: number;
   sourceCount: number;
   categories: {
@@ -35,6 +36,8 @@ export interface HistoricalCategoryPattern {
     journalCount: number;
   }[];
 }
+
+const MIN_HISTORICAL_PATTERN_JOURNALS = 2;
 
 function displayMerchant(value?: string | null): string | undefined {
   const merchant = value?.trim();
@@ -288,7 +291,8 @@ export class JournalHistoricalCaptureQueries {
         financialAccountName: string;
         kind: 'expense' | 'income';
         currencyCode: string;
-        journals: Set<JournalId>;
+        latestJournalDate: number;
+        journals: Map<JournalId, number>;
         sourceIds: Set<string>;
         categories: Map<AccountId, { name: string; journals: Set<JournalId> }>;
       }
@@ -381,13 +385,15 @@ export class JournalHistoricalCaptureQueries {
             financialAccountName: financialAccount.name,
             kind,
             currencyCode: journal.currencyCode,
-            journals: new Set(),
+            latestJournalDate: journal.journalDate,
+            journals: new Map(),
             sourceIds: new Set(),
             categories: new Map(),
           };
           groups.set(key, group);
         }
-        group.journals.add(journal.id);
+        group.journals.set(journal.id, journal.journalDate);
+        group.latestJournalDate = Math.max(group.latestJournalDate, journal.journalDate);
         for (const source of sources) {
           if (group.sourceIds.has(source.sourceId)) continue;
           group.sourceIds.add(source.sourceId);
@@ -401,27 +407,36 @@ export class JournalHistoricalCaptureQueries {
       }
     }
 
-    return [...groups.entries()]
-      .map(([key, group]) => ({
-        key,
-        merchant: group.merchant,
-        journalIds: [...group.journals],
-        financialAccountId: group.financialAccountId,
-        financialAccountName: group.financialAccountName,
-        kind: group.kind,
-        currencyCode: group.currencyCode,
-        journalCount: group.journals.size,
-        sourceCount: group.sourceIds.size,
-        categories: [...group.categories.entries()].map(([accountId, value]) => ({
-          accountId,
-          name: value.name,
-          journalCount: value.journals.size,
-        })),
-      }))
-      .sort(
-        (left, right) =>
-          left.merchant.localeCompare(right.merchant) || right.journalCount - left.journalCount,
-      );
+    return (
+      [...groups.entries()]
+        .map(([key, group]) => ({
+          key,
+          merchant: group.merchant,
+          journalIds: [...group.journals.entries()]
+            .sort((left, right) => right[1] - left[1])
+            .map(([journalId]) => journalId),
+          financialAccountId: group.financialAccountId,
+          financialAccountName: group.financialAccountName,
+          kind: group.kind,
+          currencyCode: group.currencyCode,
+          latestJournalDate: group.latestJournalDate,
+          journalCount: group.journals.size,
+          sourceCount: group.sourceIds.size,
+          categories: [...group.categories.entries()].map(([accountId, value]) => ({
+            accountId,
+            name: value.name,
+            journalCount: value.journals.size,
+          })),
+        }))
+        // A pattern needs repeat transactions, not just repeated SMS evidence for one journal.
+        .filter(pattern => pattern.journalCount >= MIN_HISTORICAL_PATTERN_JOURNALS)
+        .sort(
+          (left, right) =>
+            right.latestJournalDate - left.latestJournalDate ||
+            right.journalCount - left.journalCount ||
+            left.merchant.localeCompare(right.merchant),
+        )
+    );
   }
 }
 

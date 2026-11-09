@@ -449,6 +449,11 @@ export const AppNavigation = {
     router.push(buildRoute('/transaction-capture', { focus }));
   },
 
+  /** Navigate to device-wide spending reminder preferences. */
+  toSpendingReminderSettings: (focus?: string) => {
+    router.push(buildRoute('/notification-settings', { focus }));
+  },
+
   /** Navigate to the captured transactions that still need a category. */
   toCategorizationReview: () => {
     router.push('/categorization-review');
@@ -457,6 +462,16 @@ export const AppNavigation = {
   /** Open the queue of transaction category and naming suggestions. */
   toCaptureSuggestions: () => {
     router.push('/capture-suggestions');
+  },
+
+  /** Open repeated category patterns inferred from SMS-linked transactions. */
+  toCaptureHistorySuggestions: () => {
+    router.push('/capture-history-suggestions');
+  },
+
+  /** Open merchants whose historical transactions use multiple categories. */
+  toCaptureMixedSuggestions: () => {
+    router.push('/capture-mixed-suggestions');
   },
 
   /** Navigate to SMS source access, listening, and notification settings. */

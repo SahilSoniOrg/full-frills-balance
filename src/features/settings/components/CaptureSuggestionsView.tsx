@@ -1,11 +1,11 @@
 import {
   AppButton,
   AppCard,
-  AppSegmentedControl,
   AppText,
   Badge,
   ListGroup,
   ListRow,
+  PressScaleTouchable,
 } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
@@ -21,7 +21,6 @@ import { Fragment, useState } from 'react';
 
 const PAGE_SIZE = 20;
 type SuggestionsTab = 'review' | 'saved';
-
 interface CaptureSuggestionsViewProps {
   capture: TransactionCaptureViewModel;
 }
@@ -38,37 +37,37 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
   const savedCount = capture.categoryDefaults.length + capture.descriptionDefaults.length;
 
   return (
-    <SettingsLayout title={strings.suggestionsTitle} hideFooter>
+    <SettingsLayout title={strings.suggestionsTitle}>
       <Stack space="lg">
-        <AppCard variant="secondary" paddingSize="md">
-          <Stack space="sm">
-            <AppText variant="bodySmall" color="secondary">
-              {strings.suggestionsPageDescription}
-            </AppText>
-          </Stack>
-        </AppCard>
+        <Stack space="sm">
+          <SuggestionsSectionCard
+            id="review"
+            title={strings.suggestionsReviewTab()}
+            description={strings.suggestionsReviewCardDescription}
+            count={reviewCount}
+            selected={tab === 'review'}
+            showCount={capture.hasSnapshot && !privateMode}
+            onPress={() => setTab('review')}
+          />
+          <SuggestionsSectionCard
+            id="saved"
+            title={strings.suggestionsSavedTab()}
+            description={strings.suggestionsSavedCardDescription}
+            count={savedCount}
+            selected={tab === 'saved'}
+            showCount={capture.hasSnapshot && !privateMode}
+            onPress={() => setTab('saved')}
+          />
+        </Stack>
 
-        <AppSegmentedControl<SuggestionsTab>
-          options={[
-            {
-              id: 'review',
-              label: strings.suggestionsReviewTab(privateMode ? undefined : reviewCount),
-            },
-            {
-              id: 'saved',
-              label: strings.suggestionsSavedTab(privateMode ? undefined : savedCount),
-            },
-          ]}
-          value={tab}
-          onChange={setTab}
-          flex
-          testID="capture-suggestions-tabs"
-        />
-
-        {capture.loading ? <AppText color="secondary">{strings.loading}</AppText> : null}
+        {capture.loading && !capture.hasSnapshot ? (
+          <AppText color="secondary">{strings.loading}</AppText>
+        ) : null}
         {capture.error ? (
           <Stack space="sm">
-            <AppText color="secondary">{strings.loadError}</AppText>
+            <AppText color="secondary">
+              {capture.hasSnapshot ? strings.refreshError : strings.loadError}
+            </AppText>
             <AppButton variant="secondary" onPress={() => void capture.onRetry()}>
               {strings.retry}
             </AppButton>
@@ -81,13 +80,65 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
               {strings.suggestionsHiddenInPrivateMode}
             </AppText>
           </AppCard>
-        ) : capture.error || capture.loading ? null : tab === 'review' ? (
+        ) : capture.hasSnapshot && tab === 'review' ? (
           <ReviewSuggestions capture={capture} reviewCount={reviewCount} />
-        ) : (
+        ) : capture.hasSnapshot ? (
           <SavedCaptureDefaults capture={capture} savedCount={savedCount} />
-        )}
+        ) : null}
       </Stack>
     </SettingsLayout>
+  );
+}
+
+function SuggestionsSectionCard({
+  id,
+  title,
+  description,
+  count,
+  selected,
+  showCount,
+  onPress,
+}: {
+  id: SuggestionsTab;
+  title: string;
+  description: string;
+  count: number;
+  selected: boolean;
+  showCount: boolean;
+  onPress: () => void;
+}) {
+  const accessibilityLabel = showCount
+    ? `${title}, ${count}. ${description}`
+    : `${title}. ${description}`;
+
+  return (
+    <PressScaleTouchable
+      haptic="selection"
+      pressScale="subtle"
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected }}
+      testID={`capture-suggestions-${id}-card`}
+    >
+      <AppCard variant={selected ? 'ghost' : 'outline'} paddingSize="md">
+        <Stack space="xs">
+          <Box flexDirection="row" alignItems="center" justifyContent="space-between" gap="sm">
+            <AppText variant="body" weight="semibold">
+              {title}
+            </AppText>
+            {showCount ? (
+              <Badge variant={selected ? 'primary' : 'default'} size="sm">
+                {count}
+              </Badge>
+            ) : null}
+          </Box>
+          <AppText variant="bodySmall" color="secondary">
+            {description}
+          </AppText>
+        </Stack>
+      </AppCard>
+    </PressScaleTouchable>
   );
 }
 
@@ -100,15 +151,14 @@ function ReviewSuggestions({
 }) {
   const [visibleDefaulted, setVisibleDefaulted] = useState(PAGE_SIZE);
   const [visibleCategory, setVisibleCategory] = useState(PAGE_SIZE);
-  const [visibleHistorical, setVisibleHistorical] = useState(PAGE_SIZE);
-  const [visibleMixed, setVisibleMixed] = useState(PAGE_SIZE);
   const [visibleDescription, setVisibleDescription] = useState(PAGE_SIZE);
-  const [visibleVariants, setVisibleVariants] = useState(PAGE_SIZE);
-  const hasReviewSuggestions = reviewCount > 0;
+  const hasHistoricalPatterns =
+    capture.historicalCategorySuggestions.length + capture.mixedHistoricalCategoryPatterns.length >
+    0;
 
   return (
     <Stack space="xl">
-      {!hasReviewSuggestions ? (
+      {reviewCount === 0 ? (
         <AppCard variant="secondary" paddingSize="md">
           <Stack space="sm">
             <AppText variant="body" weight="semibold">
@@ -121,127 +171,35 @@ function ReviewSuggestions({
         </AppCard>
       ) : null}
 
-      {capture.possibleMerchantMatches.length > 0 ? (
-        <PossibleMerchantMatches
-          capture={capture}
-          visibleCount={visibleVariants}
-          onShowMore={() => setVisibleVariants(count => count + PAGE_SIZE)}
-        />
-      ) : null}
-
-      {capture.historicalCategorySuggestions.length > 0 ? (
-        <ListGroup variant="card" header={strings.historicalCategoryHeader}>
-          <ListRow title={strings.historicalCategoryHint} tone="utility" wrap />
-          {capture.historicalCategorySuggestions.slice(0, visibleHistorical).map(pattern => {
-            const category = pattern.categories[0];
-            return (
-              <Fragment key={pattern.key}>
-                <ListRow
-                  icon={Icon.MessageSquare}
-                  title={pattern.merchant}
-                  subtitle={strings.historicalCategoryDetails(
-                    pattern.journalCount,
-                    pattern.sourceCount,
-                    pattern.financialAccountName,
-                    pattern.currencyCode,
-                    pattern.kind,
-                  )}
-                  trailing={
-                    <Badge variant="default" size="sm">
-                      {category.name}
-                    </Badge>
-                  }
-                  chevron
-                  onPress={() => {
-                    const journalId = pattern.journalIds[0];
-                    if (!journalId) return;
-                    AppNavigation.toJournalEntry({ journalId, workplaceId: capture.workplaceId });
-                  }}
-                  wrap
-                />
-                <Box paddingHorizontal="md">
-                  <AppButton
-                    variant="secondary"
-                    disabled={capture.busy || capture.loading}
-                    onPress={() => capture.onRememberHistoricalCategory(pattern)}
-                  >
-                    {strings.historicalCategoryAction(category.name)}
-                  </AppButton>
-                  <AppButton
-                    variant="ghost"
-                    disabled={capture.busy || capture.loading}
-                    onPress={() => void capture.onSetHistoricalMerchantsOpen(pattern, true)}
-                  >
-                    {strings.keepMerchantOpen}
-                  </AppButton>
-                </Box>
-              </Fragment>
-            );
-          })}
-          {capture.historicalCategorySuggestions.length > visibleHistorical ? (
-            <AppButton
-              variant="ghost"
-              onPress={() => setVisibleHistorical(count => count + PAGE_SIZE)}
-            >
-              {strings.showMore}
-            </AppButton>
-          ) : null}
-        </ListGroup>
-      ) : null}
-
-      {capture.mixedHistoricalCategoryPatterns.length > 0 ? (
-        <ListGroup variant="card" header={strings.historicalMixedHeader}>
-          <ListRow
-            title={strings.historicalMixedHint(capture.mixedHistoricalCategoryCount)}
-            tone="utility"
-            wrap
-          />
-          {capture.mixedHistoricalCategoryPatterns.slice(0, visibleMixed).map(pattern => (
-            <Fragment key={pattern.key}>
+      {capture.defaulted.length > 0 ? (
+        <ListGroup variant="card" header={strings.defaultedHeader}>
+          <ListRow title={strings.defaultedHint} tone="utility" wrap />
+          {capture.defaulted.slice(0, visibleDefaulted).map(item => (
+            <Fragment key={item.journalId}>
               <ListRow
-                icon={Icon.MessageSquare}
-                title={pattern.merchant}
-                subtitle={strings.historicalCategoryDetails(
-                  pattern.journalCount,
-                  pattern.sourceCount,
-                  pattern.financialAccountName,
-                  pattern.currencyCode,
-                  pattern.kind,
-                )}
-                trailing={
-                  <Badge variant="warning" size="sm">
-                    {strings.historicalMixedBadge}
-                  </Badge>
-                }
-                chevron
-                onPress={() => {
-                  const journalId = pattern.journalIds[0];
-                  if (!journalId) return;
-                  AppNavigation.toJournalEntry({ journalId, workplaceId: capture.workplaceId });
-                }}
+                icon={Icon.Document}
+                title={item.description || strings.privateDescription}
+                subtitle={`${strings.reviewTransaction} · ${formatDate(item.journalDate)} · ${item.currentCategoryNames?.join(', ') || strings.defaultedReview}`}
+                trailing={<MoneyText amount={item.totalAmount} currencyCode={item.currencyCode} />}
+                onPress={() => AppNavigation.toJournalDetails(item.journalId)}
                 wrap
               />
-              <ListRow
-                title={strings.historicalCategoryBreakdown}
-                subtitle={pattern.categories
-                  .map(category => `${category.name} (${category.journalCount})`)
-                  .join(' · ')}
-                tone="utility"
-                wrap
-              />
-              <Box paddingHorizontal="md">
+              {item.confirmCategoryKey && item.currentCategoryNames?.length ? (
                 <AppButton
-                  variant="ghost"
+                  variant="secondary"
                   disabled={capture.busy || capture.loading}
-                  onPress={() => void capture.onSetHistoricalMerchantsOpen(pattern, true)}
+                  onPress={() => void capture.onConfirmCategories(item)}
                 >
-                  {strings.keepMerchantOpen}
+                  {strings.confirmCurrentCategories(item.currentCategoryNames.join(', '))}
                 </AppButton>
-              </Box>
+              ) : null}
             </Fragment>
           ))}
-          {capture.mixedHistoricalCategoryPatterns.length > visibleMixed ? (
-            <AppButton variant="ghost" onPress={() => setVisibleMixed(count => count + PAGE_SIZE)}>
+          {capture.defaulted.length > visibleDefaulted ? (
+            <AppButton
+              variant="ghost"
+              onPress={() => setVisibleDefaulted(count => count + PAGE_SIZE)}
+            >
               {strings.showMore}
             </AppButton>
           ) : null}
@@ -256,24 +214,24 @@ function ReviewSuggestions({
               <ListRow
                 icon={Icon.Document}
                 title={item.description || strings.privateDescription}
-                subtitle={`${formatDate(item.journalDate)}${item.suggestedCategoryName ? ` · ${item.suggestedCategoryName}` : ''}`}
+                subtitle={`${strings.viewExample} · ${formatDate(item.journalDate)}${item.suggestedCategoryName ? ` · ${item.suggestedCategoryName}` : ''}`}
                 trailing={<MoneyText amount={item.totalAmount} currencyCode={item.currencyCode} />}
-                onPress={() =>
-                  AppNavigation.toJournalEntry({
-                    journalId: item.journalId,
-                    workplaceId: capture.workplaceId,
-                  })
-                }
+                onPress={() => AppNavigation.toJournalDetails(item.journalId)}
                 wrap
               />
               {!item.keepOpen && item.suggestedDefault && item.suggestedDefaultAccountName ? (
-                <AppButton variant="ghost" onPress={() => capture.onRememberCategory(item)}>
+                <AppButton
+                  variant="secondary"
+                  disabled={capture.busy || capture.loading}
+                  onPress={() => capture.onRememberCategory(item)}
+                >
                   {strings.rememberCategory}
                 </AppButton>
               ) : null}
               {item.merchantKey ? (
                 <AppButton
                   variant="ghost"
+                  disabled={capture.busy || capture.loading}
                   onPress={() => void capture.onSetMerchantOpen(item.merchantKey!, !item.keepOpen)}
                 >
                   {item.keepOpen ? strings.allowMerchantSuggestions : strings.keepMerchantOpen}
@@ -292,6 +250,41 @@ function ReviewSuggestions({
         </ListGroup>
       ) : null}
 
+      {hasHistoricalPatterns ? (
+        <ListGroup variant="card" header={strings.historicalPagesHeader}>
+          {capture.historicalCategorySuggestions.length > 0 ? (
+            <ListRow
+              icon={Icon.MessageSquare}
+              title={strings.historicalCategoryHeader}
+              subtitle={strings.historicalCategoryPageDescription}
+              trailing={
+                <Badge variant="default" size="sm">
+                  {capture.historicalCategorySuggestions.length}
+                </Badge>
+              }
+              chevron
+              onPress={AppNavigation.toCaptureHistorySuggestions}
+              wrap
+            />
+          ) : null}
+          {capture.mixedHistoricalCategoryPatterns.length > 0 ? (
+            <ListRow
+              icon={Icon.MessageSquare}
+              title={strings.historicalMixedHeader}
+              subtitle={strings.historicalMixedPageDescription}
+              trailing={
+                <Badge variant="warning" size="sm">
+                  {capture.mixedHistoricalCategoryCount}
+                </Badge>
+              }
+              chevron
+              onPress={AppNavigation.toCaptureMixedSuggestions}
+              wrap
+            />
+          ) : null}
+        </ListGroup>
+      ) : null}
+
       {capture.descriptionCandidates.length > 0 ? (
         <ListGroup variant="card" header={strings.descriptionCandidatesHeader}>
           <ListRow title={strings.descriptionCandidatesHint} tone="utility" wrap />
@@ -300,19 +293,15 @@ function ReviewSuggestions({
               <ListRow
                 icon={Icon.Document}
                 title={item.description || strings.privateDescription}
-                subtitle={`${formatDate(item.journalDate)}${item.merchantKey ? ` · ${item.merchantKey}` : ''}`}
+                subtitle={`${strings.viewExample} · ${formatDate(item.journalDate)}${item.merchantKey ? ` · ${item.merchantKey}` : ''}`}
                 trailing={<MoneyText amount={item.totalAmount} currencyCode={item.currencyCode} />}
-                onPress={() =>
-                  AppNavigation.toJournalEntry({
-                    journalId: item.journalId,
-                    workplaceId: capture.workplaceId,
-                  })
-                }
+                onPress={() => AppNavigation.toJournalDetails(item.journalId)}
                 wrap
               />
               {item.descriptionDefaultKey && item.description ? (
                 <AppButton
-                  variant="ghost"
+                  variant="secondary"
+                  disabled={capture.busy || capture.loading}
                   onPress={() =>
                     capture.onSetDescriptionDefault(item.descriptionDefaultKey!, item.description)
                   }
@@ -323,6 +312,7 @@ function ReviewSuggestions({
               {item.merchantKey ? (
                 <AppButton
                   variant="ghost"
+                  disabled={capture.busy || capture.loading}
                   onPress={() => void capture.onSetMerchantOpen(item.merchantKey!, true)}
                 >
                   {strings.keepMerchantOpen}
@@ -340,95 +330,7 @@ function ReviewSuggestions({
           ) : null}
         </ListGroup>
       ) : null}
-
-      {capture.defaulted.length > 0 ? (
-        <ListGroup variant="card" header={strings.defaultedHeader}>
-          <ListRow title={strings.defaultedHint} tone="utility" wrap />
-          {capture.defaulted.slice(0, visibleDefaulted).map(item => (
-            <Fragment key={item.journalId}>
-              <ListRow
-                icon={Icon.Document}
-                title={item.description || strings.privateDescription}
-                subtitle={`${formatDate(item.journalDate)} · ${item.currentCategoryNames?.join(', ') || strings.defaultedReview}`}
-                trailing={<MoneyText amount={item.totalAmount} currencyCode={item.currencyCode} />}
-                onPress={() =>
-                  AppNavigation.toJournalEntry({
-                    journalId: item.journalId,
-                    workplaceId: capture.workplaceId,
-                  })
-                }
-                wrap
-              />
-              {item.confirmCategoryKey && item.currentCategoryNames?.length ? (
-                <AppButton variant="ghost" onPress={() => void capture.onConfirmCategories(item)}>
-                  {strings.confirmCurrentCategories(item.currentCategoryNames.join(', '))}
-                </AppButton>
-              ) : null}
-            </Fragment>
-          ))}
-          {capture.defaulted.length > visibleDefaulted ? (
-            <AppButton
-              variant="ghost"
-              onPress={() => setVisibleDefaulted(count => count + PAGE_SIZE)}
-            >
-              {strings.showMore}
-            </AppButton>
-          ) : null}
-        </ListGroup>
-      ) : null}
     </Stack>
-  );
-}
-
-function PossibleMerchantMatches({
-  capture,
-  visibleCount,
-  onShowMore,
-}: {
-  capture: TransactionCaptureViewModel;
-  visibleCount: number;
-  onShowMore: () => void;
-}) {
-  return (
-    <ListGroup
-      variant="card"
-      header={strings.historicalVariantCandidatesHeader(capture.possibleMerchantMatches.length)}
-    >
-      <ListRow title={strings.historicalVariantCandidatesHint} tone="utility" wrap />
-      {capture.possibleMerchantMatches.slice(0, visibleCount).map(candidate => (
-        <Fragment key={candidate.key}>
-          <ListRow
-            title={strings.historicalVariantPair(candidate.names.map(name => name.name))}
-            tone="utility"
-            wrap
-          />
-          {candidate.names.map(name => (
-            <ListRow
-              key={`${candidate.key}:${name.name}`}
-              icon={Icon.MessageSquare}
-              title={name.name}
-              subtitle={strings.historicalNameLinkDetails(name.journalCount, name.sourceCount)}
-              trailing={
-                <Badge variant="default" size="sm">
-                  {strings.reviewLink}
-                </Badge>
-              }
-              onPress={() => {
-                const journalId = name.journalIds[0];
-                if (!journalId) return;
-                AppNavigation.toJournalEntry({ journalId, workplaceId: capture.workplaceId });
-              }}
-              wrap
-            />
-          ))}
-        </Fragment>
-      ))}
-      {capture.possibleMerchantMatches.length > visibleCount ? (
-        <AppButton variant="ghost" onPress={onShowMore}>
-          {strings.showMore}
-        </AppButton>
-      ) : null}
-    </ListGroup>
   );
 }
 
@@ -490,14 +392,19 @@ function SavedCaptureDefaults({
                   ))}
                 </>
               ) : null}
-              <AppButton variant="ghost" onPress={() => void capture.onForgetCategory(value.key)}>
-                {strings.forgetCategory}
-              </AppButton>
               <AppButton
-                variant="ghost"
+                variant="secondary"
+                disabled={capture.busy || capture.loading}
                 onPress={() => void capture.onSetMerchantOpen(value.merchant, !value.paused)}
               >
                 {value.paused ? strings.allowMerchantSuggestions : strings.keepMerchantOpen}
+              </AppButton>
+              <AppButton
+                variant="ghost"
+                disabled={capture.busy || capture.loading}
+                onPress={() => void capture.onForgetCategory(value.key)}
+              >
+                {strings.forgetCategory}
               </AppButton>
             </Fragment>
           ))}
@@ -522,17 +429,22 @@ function SavedCaptureDefaults({
                 }
                 wrap
               />
-              <AppButton variant="ghost" onPress={() => capture.onSetDescriptionDefault(value.key)}>
-                {strings.forgetName}
-              </AppButton>
               {value.merchant ? (
                 <AppButton
-                  variant="ghost"
+                  variant="secondary"
+                  disabled={capture.busy || capture.loading}
                   onPress={() => void capture.onSetMerchantOpen(value.merchant!, !value.paused)}
                 >
                   {value.paused ? strings.allowMerchantSuggestions : strings.keepMerchantOpen}
                 </AppButton>
               ) : null}
+              <AppButton
+                variant="ghost"
+                disabled={capture.busy || capture.loading}
+                onPress={() => capture.onSetDescriptionDefault(value.key)}
+              >
+                {strings.forgetName}
+              </AppButton>
             </Fragment>
           ))}
         </ListGroup>

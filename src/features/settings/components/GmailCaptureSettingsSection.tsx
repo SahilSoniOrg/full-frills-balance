@@ -13,7 +13,7 @@ export function GmailCaptureSettingsSection({
   if (Platform.OS === 'web') return null;
 
   return (
-    <ListGroup variant="card" header={strings.title}>
+    <ListGroup variant="plain">
       <ListRow
         focusId="transaction-capture-gmail"
         icon={Icon.Mail}

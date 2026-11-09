@@ -1,12 +1,11 @@
 export const transactionCaptureStrings = {
   title: 'Capture & review',
-  description: 'Manage transaction sources, category review, and future matching defaults.',
-  workspaceDescription:
-    'SMS messages that cannot be safely captured stay in the inbox. Captured entries are already in your books; entries needing a category appear below. Saved defaults affect future matches only.',
+  description:
+    'Set up automatic capture, review incoming messages and transactions that need a category, and choose defaults for future matches.',
   captureHeader: 'Automatic capture',
   captureTitle: 'Capture new transactions',
   captureDescription:
-    'Post supported transactions to this workplace when their accounts and movement are clear. Uncertain categories go to Uncategorized for you to review.',
+    'Add supported new transactions to this workplace automatically when the account and transaction details are clear. Transactions with uncertain categories go to Uncategorized for review.',
   enableTitle: 'Enable automatic capture?',
   enableMessage:
     'Supported new messages from sources you connect will create journal entries in this workplace. Unknown categories need review. Existing messages stay in the inbox for manual import.',
@@ -17,36 +16,45 @@ export const transactionCaptureStrings = {
   accountSetupHint:
     'Some accounts need an Uncategorized category before their transactions can be captured.',
   accountSetupAction: 'Set up account categories',
-  reviewHeader: 'Review work',
-  reviewOpenTitle: 'Review categories',
+  attentionHeader: 'Needs attention',
+  reviewPageTitle: 'Transactions to categorize',
+  reviewOpenTitle: 'Transactions to categorize',
   reviewLoading: 'Checking for transactions to categorize…',
   reviewCount: (count: number) =>
-    count === 1 ? '1 transaction needs a category' : `${count} transactions need a category`,
+    count === 1
+      ? '1 captured transaction needs a category'
+      : `${count} captured transactions need a category`,
   reviewHint:
-    'Choose a category on the existing entry. Editing its description alone does not confirm its category.',
-  emptyReview: 'No captured entries need categorization.',
-  suggestionsTitle: 'Future suggestions',
+    'Open a transaction to choose its category, or confirm the categories already assigned below.',
+  emptyReview: 'No transactions need a category.',
+  matchingHeader: 'Future matching',
+  suggestionsTitle: 'Matching suggestions',
   suggestionsOverviewDescription:
-    'Review category and name suggestions separately from your capture settings.',
-  suggestionsPageDescription:
-    'Review patterns from past entries before saving them. Saved defaults apply to future matches only; existing entries do not change.',
+    'Review category and name suggestions, then save the defaults you want used for future matches.',
   suggestionsReviewTab: (count?: number) => (count == null ? 'To review' : `To review · ${count}`),
-  suggestionsSavedTab: (count?: number) => (count == null ? 'Saved' : `Saved · ${count}`),
+  suggestionsSavedTab: (count?: number) =>
+    count == null ? 'Saved defaults' : `Saved defaults · ${count}`,
+  suggestionsReviewCardDescription:
+    'Check captured examples, then confirm or save a rule for future matches.',
+  suggestionsSavedCardDescription:
+    'Manage rules for future matches. Pause a merchant or remove a rule.',
   suggestionsHiddenInPrivateMode: 'Suggestions are hidden while Privacy Mode is on.',
   suggestionsEmptyTitle: 'No suggestions to review',
   suggestionsEmptyDescription:
     'When useful patterns appear in confirmed entries or linked SMS history, they will show up here.',
   savedSuggestionsEmptyTitle: 'No saved defaults yet',
   savedSuggestionsEmptyDescription:
-    'When you save a category or name suggestion, you can pause or remove it here.',
+    'Save a category or name suggestion to create a future default. Saved defaults will appear here so you can pause or remove them.',
   privateDescription: 'Captured transaction',
   reviewAction: 'Choose a category',
   suggestedCategory: (name: string) => `Suggested: ${name}`,
   confirmCurrentCategories: (names: string) => `Confirm ${names}`,
-  defaultedHeader: 'Automatically categorized',
+  defaultedHeader: 'Confirm automatic categories',
   defaultedHint:
-    'These entries used a saved category. Confirm an entry if you want it to inform future suggestions.',
-  defaultedReview: 'Open entry to review the category',
+    'These entries used a saved category. Confirm the ones that look right to inform future suggestions.',
+  defaultedReview: 'Category needs review',
+  reviewTransaction: 'Review transaction',
+  viewExample: 'View example',
   rememberCategory: 'Use this category for future matches',
   rememberCategoryTitle: 'Use this category automatically?',
   rememberCategoryMessage: (
@@ -70,15 +78,21 @@ export const transactionCaptureStrings = {
   categoryCandidatesHint:
     'Save a confirmed category for future matches with the same merchant, account, currency, and transaction type. Existing entries stay unchanged.',
   historicalCategoryHeader: 'Suggestions from SMS history',
+  historicalPagesHeader: 'SMS history',
+  historicalCategoryPageDescription: 'Review repeated categories from past SMS-linked entries.',
+  historicalMixedPageDescription:
+    'Review entries where the same merchant used different categories.',
+  historicalPageEmpty: 'No repeated SMS history patterns are available.',
   historicalCategoryHint:
-    'These are categories used on posted journals linked to SMS. Tap a name to inspect an example entry; save only if the history fits future transactions.',
-  historicalVariantCandidatesHeader: (count: number) => `Possible SMS name matches · ${count}`,
-  historicalVariantCandidatesHint:
-    'Names that normalize to the same spelling link to their own past entries. Opening a link never changes them; saved defaults use the existing case-insensitive matcher.',
-  historicalVariantPair: (names: string[]) => `Possible match: ${names.join(' · ')}`,
-  historicalNameLinkDetails: (journalCount: number, sourceCount: number) =>
-    `${journalCount === 1 ? '1 past entry' : `${journalCount} past entries`} · ${sourceCount === 1 ? '1 SMS message' : `${sourceCount} SMS messages`} · Open a linked entry`,
-  reviewLink: 'Review',
+    'These categories come from past transactions linked to SMS. Review the matching entries before saving a future default.',
+  historicalSearchPlaceholder: 'Search merchants, categories, or accounts',
+  historicalSearchNoResults: 'No SMS history matches that search.',
+  historicalSortBy: 'Sort by',
+  historicalSortLatest: 'Latest',
+  historicalSortAlphabetical: 'A–Z',
+  historicalSortRepeats: 'Most repeats',
+  historicalOpenEntries: 'Open matching entries',
+  historicalLatestEntry: (date: string) => `Latest entry ${date}`,
   historicalCategoryDetails: (
     journalCount: number,
     sourceCount: number,
@@ -86,14 +100,17 @@ export const transactionCaptureStrings = {
     currency: string,
     kind: string,
   ) =>
-    `${journalCount === 1 ? '1 past entry' : `${journalCount} past entries`} · ${sourceCount === 1 ? '1 SMS message' : `${sourceCount} SMS messages`} · ${account} · ${currency} ${kind}`,
+    `${journalCount === 1 ? '1 past entry' : `${journalCount} past entries`} · ${sourceCount === 1 ? '1 SMS' : `${sourceCount} SMS`} · ${account} · ${currency} ${kind}`,
   historicalCategoryAction: (category: string) => `Use ${category} for future matches`,
-  historicalMixedHeader: 'Category history disagrees',
+  historicalCategoryCompactAction: 'Save default',
+  historicalKeepReviewAction: 'Always review',
+  historicalMixedHeader: 'Different past categories',
   historicalMixedHint: (count: number) =>
-    `${count} merchant groups have more than one past category. They stay visible for review and will not suggest a default.`,
+    `${count} merchant groups have different categories in past transactions. No default is suggested; keep these merchants in review and choose a category each time.`,
   historicalMixedBadge: 'Mixed',
   historicalCategoryBreakdown: 'Past categories',
-  rememberHistoricalCategoryTitle: 'Save this historical suggestion?',
+  rememberHistoricalCategoryTitle: 'Save this category default?',
+  rememberHistoricalCategoryAction: 'Save default',
   rememberHistoricalCategoryMessage: (
     category: string,
     merchant: string,
@@ -106,7 +123,7 @@ export const transactionCaptureStrings = {
     const entries = count === 1 ? `1 past ${kind} entry` : `${count} past ${kind} entries`;
     const messages =
       sourceCount === 1 ? '1 linked SMS message' : `${sourceCount} linked SMS messages`;
-    return `${entries} and ${messages} show ${merchant} on ${account} using ${category}. Save this category for future ${currency} ${kind} matches? Existing entries will not change. Merchant matching ignores case and does not create aliases for other spellings.`;
+    return `${entries} and ${messages} show ${merchant} on ${account} in ${category}. This default applies to future entries matching the merchant, account, type (${kind}), and currency (${currency}), whether captured from SMS or Gmail. SMS matchers help recognize the account; this default does not select or change a matcher. Past entries are unchanged. Merchant matching ignores case; other spellings are separate.`;
   },
   descriptionCandidatesHeader: 'Name suggestions',
   descriptionCandidatesHint:
@@ -134,17 +151,22 @@ export const transactionCaptureStrings = {
     'Future entries with this merchant, amount, currency, and transaction type will use this name. You can keep the merchant open to pause automatic naming.',
   rememberNameAction: 'Use this name',
   showMore: 'Show more entries',
-  reviewActivityHeader: 'Review and history',
   sourcesHeader: 'Message sources',
   inboxTitle: 'Transaction inbox',
-  inboxDescription: 'Unimported messages, duplicates, and import errors.',
-  activityTitle: 'Journal activity',
-  activityDescription: 'Browse transactions already in your books.',
-  smsTitle: 'SMS source settings',
-  smsDescription: 'Manage SMS access and review alerts on this device.',
-  sourcesUnavailable: 'Automatic SMS capture is available on Android.',
+  inboxDescription: 'Messages waiting to be imported, duplicates, and messages with import errors.',
+  smsTitle: 'SMS settings',
+  smsDescription: 'Manage SMS access, automatic import, and review alerts on this device.',
+  captureUnavailable: 'Automatic capture is available in the mobile app.',
   loading: 'Loading capture settings and review…',
   loadError: 'Capture settings or review could not be loaded.',
+  refreshError: 'Could not refresh suggestions. Showing the last loaded data.',
   updateErrorTitle: 'Capture settings not updated',
+  checkingSources: 'Checking message sources…',
+  captureSourceRequiredAndroid:
+    'Enable automatic SMS import or Gmail capture under Message sources to use automatic capture for this workplace.',
+  captureSourceRequired:
+    'Connect Gmail and enable Gmail capture under Message sources to use automatic capture for this workplace.',
+  noAutomaticSourceEnabled:
+    'No message source is enabled for automatic capture. Enable a source above, or turn off this workplace setting.',
   retry: 'Try again',
 } as const;

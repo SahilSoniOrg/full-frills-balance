@@ -648,8 +648,10 @@ export const UI_STRINGS = {
       selectTitle: 'Select Currency',
     },
     notifications: {
-      title: 'Notifications',
-      description: 'Scheduled reminders to review recent activity',
+      title: 'Spending reminders',
+      description:
+        'Choose when to be reminded to log recent transactions and keep Safe to Spend current. Applies across Workplaces.',
+      pageTitle: 'Notifications',
       automationTitle: 'Notifications & Automation',
       automationDescription: 'Reminder schedules and SMS settings',
       none: 'None',

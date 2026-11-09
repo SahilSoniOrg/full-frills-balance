@@ -8,7 +8,6 @@ import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWri
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { journalHistoricalCaptureQueries } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
-import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import {
   categoryDefaultKey,
   type CaptureCategoryDefault,
@@ -24,58 +23,6 @@ export function countCaptureReviewItems(workplaceId: WorkplaceId): Promise<numbe
 
 const HISTORICAL_SMS_BACKFILL_VERSION = 1;
 const historicalBackfills = new Map<string, Promise<void>>();
-
-export interface HistoricalMerchantNameLink {
-  name: string;
-  journalIds: JournalId[];
-  journalCount: number;
-  sourceCount: number;
-}
-
-export interface PossibleHistoricalMerchantMatch {
-  key: string;
-  names: HistoricalMerchantNameLink[];
-}
-
-function possibleVariantKey(value: string): string {
-  return value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[\s\p{P}\p{S}]+/gu, '');
-}
-
-/** Finds review-only cosmetic name matches. It never changes a pattern or saved default. */
-function possibleHistoricalMerchantMatches(
-  patterns: readonly HistoricalCategoryPattern[],
-): PossibleHistoricalMerchantMatch[] {
-  const candidates = new Map<string, Map<string, HistoricalMerchantNameLink>>();
-  for (const pattern of patterns) {
-    const key = possibleVariantKey(pattern.merchant);
-    if (!key) continue;
-    const names = candidates.get(key) ?? new Map<string, HistoricalMerchantNameLink>();
-    const value = names.get(pattern.merchant) ?? {
-      name: pattern.merchant,
-      journalIds: [],
-      journalCount: 0,
-      sourceCount: 0,
-    };
-    const journals = new Set([...value.journalIds, ...pattern.journalIds]);
-    value.journalIds = [...journals];
-    value.journalCount = journals.size;
-    value.sourceCount += pattern.sourceCount;
-    names.set(pattern.merchant, value);
-    candidates.set(key, names);
-  }
-
-  return [...candidates.entries()]
-    .filter(([, names]) => names.size > 1)
-    .map(([key, names]) => ({
-      key,
-      names: [...names.values()].sort((left, right) => left.name.localeCompare(right.name)),
-    }))
-    .sort((left, right) => left.names[0].name.localeCompare(right.names[0].name));
-}
 
 async function ensureHistoricalSmsBackfill(workplaceId: WorkplaceId): Promise<void> {
   if (
@@ -174,7 +121,6 @@ export async function listCaptureItems(
   const historicalPatterns = options.includeHistorical
     ? await journalHistoricalCaptureQueries.listCategoryPatterns(workplaceId)
     : [];
-  const possibleMerchantMatches = possibleHistoricalMerchantMatches(historicalPatterns);
   const visibleHistoricalPatterns = historicalPatterns.filter(pattern => {
     const merchantOpen = openMerchants.has(pattern.merchant.trim().toLowerCase());
     const category = pattern.categories.length === 1 ? pattern.categories[0] : undefined;
@@ -203,7 +149,6 @@ export async function listCaptureItems(
     defaulted: items.filter(item => item.reviewState === 'defaulted'),
     categoryCandidates,
     descriptionCandidates,
-    possibleMerchantMatches,
     historicalCategorySuggestions: visibleHistoricalPatterns.filter(
       pattern => pattern.categories.length === 1,
     ),

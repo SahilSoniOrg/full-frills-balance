@@ -40,9 +40,8 @@ exports[`settings screens keep their e2e testIDs and search focus targets appear
 exports[`settings screens keep their e2e testIDs and search focus targets automation 1`] = `
 {
   "focusIds": [
-    "notifications",
+    "capture-review",
     "sms-settings",
-    "transaction-capture-activity",
     "transaction-capture-enabled",
     "transaction-capture-gmail",
     "transaction-capture-inbox",
@@ -77,11 +76,12 @@ exports[`settings screens keep their e2e testIDs and search focus targets hub 1`
   "focusIds": [
     "about-support",
     "appearance",
+    "capture-review",
     "data-management",
     "maintenance",
-    "notifications",
     "privacy-security",
     "profile",
+    "spending-reminders",
     "workplace",
   ],
   "testIDs": [
@@ -95,6 +95,7 @@ exports[`settings screens keep their e2e testIDs and search focus targets hub 1`
     "settings-privacy-security",
     "settings-profile",
     "settings-search-input",
+    "settings-spending-reminders",
   ],
 }
 `;

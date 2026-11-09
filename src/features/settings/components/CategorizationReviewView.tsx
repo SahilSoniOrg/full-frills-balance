@@ -17,7 +17,7 @@ export function CategorizationReviewView({ capture }: { capture: TransactionCapt
   const privateMode = useEffectivePrivacyMode();
 
   return (
-    <SettingsLayout title={strings.reviewHeader}>
+    <SettingsLayout title={strings.reviewPageTitle}>
       <Stack space="lg">
         {capture.loading ? <AppText color="secondary">{strings.loading}</AppText> : null}
         {capture.error ? (
@@ -62,7 +62,11 @@ export function CategorizationReviewView({ capture }: { capture: TransactionCapt
                 </AppText>
               ) : null}
               {!privateMode && item.confirmCategoryKey && item.currentCategoryNames?.length ? (
-                <AppButton variant="ghost" onPress={() => void capture.onConfirmCategories(item)}>
+                <AppButton
+                  variant="secondary"
+                  disabled={capture.busy || capture.loading}
+                  onPress={() => void capture.onConfirmCategories(item)}
+                >
                   {strings.confirmCurrentCategories(item.currentCategoryNames.join(', '))}
                 </AppButton>
               ) : null}
@@ -70,13 +74,18 @@ export function CategorizationReviewView({ capture }: { capture: TransactionCapt
               !item.keepOpen &&
               item.suggestedDefault &&
               item.suggestedDefaultAccountName ? (
-                <AppButton variant="ghost" onPress={() => capture.onRememberCategory(item)}>
+                <AppButton
+                  variant="secondary"
+                  disabled={capture.busy || capture.loading}
+                  onPress={() => capture.onRememberCategory(item)}
+                >
                   {strings.rememberCategory}
                 </AppButton>
               ) : null}
               {!privateMode && item.merchantKey ? (
                 <AppButton
                   variant="ghost"
+                  disabled={capture.busy || capture.loading}
                   onPress={() => capture.onSetMerchantOpen(item.merchantKey!, !item.keepOpen)}
                 >
                   {item.keepOpen ? strings.allowMerchantSuggestions : strings.keepMerchantOpen}
@@ -89,6 +98,7 @@ export function CategorizationReviewView({ capture }: { capture: TransactionCapt
               item.description.trim().toLowerCase() !== item.merchantKey ? (
                 <AppButton
                   variant="ghost"
+                  disabled={capture.busy || capture.loading}
                   onPress={() =>
                     capture.onSetDescriptionDefault(
                       item.descriptionDefaultKey!,

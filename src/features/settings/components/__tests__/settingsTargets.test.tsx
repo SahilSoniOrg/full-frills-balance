@@ -34,6 +34,7 @@ jest.mock('@/src/features/accounts', () => ({ CurrencySelector: () => null }));
 const fn = () => jest.fn();
 const emptyCaptureViewModel: TransactionCaptureViewModel = {
   workplaceId: asWorkplaceId('wp'),
+  hasSnapshot: false,
   enabled: false,
   enabledAt: undefined,
   needsAccountSetup: false,
@@ -44,7 +45,6 @@ const emptyCaptureViewModel: TransactionCaptureViewModel = {
   descriptionDefaults: [],
   categoryCandidates: [],
   descriptionCandidates: [],
-  possibleMerchantMatches: [],
   historicalCategorySuggestions: [],
   mixedHistoricalCategoryPatterns: [],
   mixedHistoricalCategoryCount: 0,
@@ -68,6 +68,7 @@ const actions = {
   onProfile: fn(),
   onAppearance: fn(),
   onCaptureWorkspace: fn(),
+  onSpendingReminders: fn(),
   onSmsSettings: fn(),
   onSmsInbox: fn(),
   onPrivacy: fn(),
@@ -166,19 +167,10 @@ const screens: Record<string, () => ReactElement> = {
   devices: () => <DeviceSettingsView />,
   automation: () => (
     <AutomationSettingsView
-      notifications={
-        {
-          notificationCadence: 'daily',
-          notificationHour: 9,
-          notificationMinute: 0,
-          notificationWeekday: 1,
-          onUpdateNotificationCadence: fn(),
-          onUpdateNotificationTime: fn(),
-          onSendTestNotification: fn(),
-        } as any
-      }
       onOpenSmsSettings={fn()}
       capture={emptyCaptureViewModel}
+      hasAutomaticCaptureSource
+      captureSourceLoading={false}
       gmailSection={
         <GmailCaptureSettingsSection
           gmail={{

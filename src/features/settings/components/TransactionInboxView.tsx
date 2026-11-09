@@ -13,6 +13,7 @@ import { EditReparseSmsModal } from '@/src/features/settings/components/EditRepa
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
+import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -66,7 +67,12 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
 
   return (
     <View style={styles.container} testID="transaction-inbox-screen">
-      <SettingsLayout title="Inbox" headerActions={headerActions} scrollable={false} hideFooter>
+      <SettingsLayout
+        title={strings.inboxTitle}
+        headerActions={headerActions}
+        scrollable={false}
+        hideFooter
+      >
         <View style={styles.container}>
           {!isAndroid && filter === 'pending' ? (
             <View style={styles.platformNoticeWrap}>

@@ -1,12 +1,8 @@
 import { AppButton, AppCard, AppText, Badge, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
-import { Stack } from '@/src/design-system';
-import { NotificationPreferenceView } from '@/src/features/settings/components/NotificationPreferenceView';
+import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import {
-  useNotificationSettingsViewModel,
-  type NotificationSettingsViewModel,
-} from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
+import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { AppNavigation } from '@/src/utils/navigation';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import {
@@ -15,6 +11,7 @@ import {
 } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
+import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { formatDate } from '@/src/utils/dateUtils';
 import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
@@ -22,28 +19,31 @@ import { Platform } from 'react-native';
 import type { ReactNode } from 'react';
 
 interface AutomationSettingsViewProps {
-  notifications: NotificationSettingsViewModel;
   onOpenSmsSettings: () => void;
   capture: TransactionCaptureViewModel;
   gmailSection: ReactNode;
+  hasAutomaticCaptureSource: boolean;
+  captureSourceLoading: boolean;
 }
 
 export function AutomationSettingsView({
-  notifications,
   onOpenSmsSettings,
   capture,
   gmailSection,
+  hasAutomaticCaptureSource,
+  captureSourceLoading,
 }: AutomationSettingsViewProps) {
   const { resolvedHourCycle } = useHourCyclePrefs();
   return (
-    <SettingsLayout title={strings.title} hideFooter>
+    <SettingsLayout title={strings.title}>
       <Stack space="lg">
-        <AppCard variant="secondary" paddingSize="sm">
-          <AppText variant="bodySmall" color="secondary">
-            {strings.workspaceDescription}
-          </AppText>
-        </AppCard>
-        {capture.loading ? <AppText color="secondary">{strings.loading}</AppText> : null}
+        <FocusTarget targetId="capture-review">
+          <ConnectedSourcesSection
+            onOpenSmsSettings={onOpenSmsSettings}
+            gmailSection={gmailSection}
+          />
+        </FocusTarget>
+
         {capture.error ? (
           <Stack space="sm">
             <AppText color="secondary">{strings.loadError}</AppText>
@@ -52,50 +52,69 @@ export function AutomationSettingsView({
             </AppButton>
           </Stack>
         ) : null}
-        {Platform.OS !== 'web' ? (
-          <ListGroup
-            variant="card"
-            header={strings.captureHeader}
-            headerAccessory={
-              <Badge
-                variant={capture.enabled ? 'success' : 'default'}
-                size="sm"
-                icon={capture.enabled ? Icon.Check : undefined}
-              >
-                {capture.enabled ? 'On' : 'Off'}
-              </Badge>
-            }
-            footer={
-              capture.enabled && capture.enabledAt
-                ? strings.enabledSince(
-                    formatDate(capture.enabledAt, {
-                      includeTime: true,
-                      hourCycle: resolvedHourCycle,
-                    }),
-                  )
-                : strings.disabledHint
-            }
-          >
-            <ListRow
-              focusId="transaction-capture-enabled"
-              icon={Icon.Zap}
-              title={strings.captureTitle}
-              subtitle={strings.captureDescription}
-              disabled={capture.loading || capture.busy || capture.settingsError}
-              testID="transaction-capture-toggle"
-              trailing={
-                <ListRow.Toggle value={capture.enabled} onValueChange={capture.onToggleEnabled} />
+        <FocusTarget targetId="transaction-capture-enabled">
+          {Platform.OS === 'web' ? (
+            <AppCard variant="secondary" paddingSize="sm">
+              <AppText variant="bodySmall" color="secondary">
+                {strings.captureUnavailable}
+              </AppText>
+            </AppCard>
+          ) : hasAutomaticCaptureSource || capture.enabled ? (
+            <ListGroup
+              variant="plain"
+              header={strings.captureHeader}
+              headerAccessory={
+                <Badge
+                  variant={capture.enabled ? 'success' : 'default'}
+                  size="sm"
+                  icon={capture.enabled ? Icon.Check : undefined}
+                >
+                  {capture.enabled ? 'On' : 'Off'}
+                </Badge>
               }
-              wrap
-            />
-          </ListGroup>
-        ) : (
-          <AppCard variant="secondary" paddingSize="sm">
-            <AppText variant="bodySmall" color="secondary">
-              {strings.sourcesUnavailable}
+              footer={
+                capture.loading
+                  ? strings.loading
+                  : captureSourceLoading
+                    ? strings.checkingSources
+                    : capture.enabled && !hasAutomaticCaptureSource
+                      ? strings.noAutomaticSourceEnabled
+                      : capture.enabled && capture.enabledAt
+                        ? strings.enabledSince(
+                            formatDate(capture.enabledAt, {
+                              includeTime: true,
+                              hourCycle: resolvedHourCycle,
+                            }),
+                          )
+                        : strings.disabledHint
+              }
+            >
+              <ListRow
+                icon={Icon.Zap}
+                title={strings.captureTitle}
+                subtitle={strings.captureDescription}
+                disabled={capture.loading || capture.busy || capture.settingsError}
+                testID="transaction-capture-toggle"
+                trailing={
+                  <ListRow.Toggle value={capture.enabled} onValueChange={capture.onToggleEnabled} />
+                }
+                wrap
+              />
+            </ListGroup>
+          ) : capture.loading || captureSourceLoading ? (
+            <AppText color="secondary">
+              {capture.loading ? strings.loading : strings.checkingSources}
             </AppText>
-          </AppCard>
-        )}
+          ) : (
+            <AppCard variant="secondary" paddingSize="sm">
+              <AppText variant="bodySmall" color="secondary">
+                {Platform.OS === 'android'
+                  ? strings.captureSourceRequiredAndroid
+                  : strings.captureSourceRequired}
+              </AppText>
+            </AppCard>
+          )}
+        </FocusTarget>
         {capture.enabled && capture.needsAccountSetup ? (
           <AppCard variant="secondary">
             <Stack space="md">
@@ -113,7 +132,7 @@ export function AutomationSettingsView({
           </AppCard>
         ) : null}
 
-        <ListGroup variant="card" header={strings.reviewHeader}>
+        <ListGroup variant="plain" header={strings.attentionHeader}>
           <ListRow
             icon={Icon.Tag}
             title={strings.reviewOpenTitle}
@@ -150,6 +169,17 @@ export function AutomationSettingsView({
             wrap
           />
           <ListRow
+            focusId="transaction-capture-inbox"
+            icon={Icon.MessageSquare}
+            title={strings.inboxTitle}
+            subtitle={strings.inboxDescription}
+            onPress={AppNavigation.toTransactionInbox}
+            wrap
+          />
+        </ListGroup>
+
+        <ListGroup variant="plain" header={strings.matchingHeader}>
+          <ListRow
             icon={Icon.Zap}
             title={strings.suggestionsTitle}
             subtitle={strings.suggestionsOverviewDescription}
@@ -159,47 +189,8 @@ export function AutomationSettingsView({
             wrap
           />
         </ListGroup>
-
-        <ReviewActivitySection />
-        <ConnectedSourcesSection
-          onOpenSmsSettings={onOpenSmsSettings}
-          gmailSection={gmailSection}
-        />
-
-        <NotificationPreferenceView
-          cadence={notifications.notificationCadence}
-          hour={notifications.notificationHour}
-          minute={notifications.notificationMinute}
-          weekday={notifications.notificationWeekday}
-          onUpdateCadence={notifications.onUpdateNotificationCadence}
-          onUpdateTime={notifications.onUpdateNotificationTime}
-          onSendTest={notifications.onSendTestNotification}
-        />
       </Stack>
     </SettingsLayout>
-  );
-}
-
-function ReviewActivitySection() {
-  return (
-    <ListGroup variant="card" header={strings.reviewActivityHeader}>
-      <ListRow
-        focusId="transaction-capture-inbox"
-        icon={Icon.MessageSquare}
-        title={strings.inboxTitle}
-        subtitle={strings.inboxDescription}
-        onPress={AppNavigation.toTransactionInbox}
-        wrap
-      />
-      <ListRow
-        focusId="transaction-capture-activity"
-        icon={Icon.History}
-        title={strings.activityTitle}
-        subtitle={strings.activityDescription}
-        onPress={() => AppNavigation.toPrimaryPage('activity')}
-        wrap
-      />
-    </ListGroup>
   );
 }
 
@@ -214,9 +205,14 @@ function ConnectedSourcesSection({
   const showGmail = Platform.OS !== 'web';
   if (!showSms && !showGmail) return null;
   return (
-    <Stack space="md">
+    <Stack space="sm">
+      <Box paddingHorizontal="md">
+        <AppText variant="overline" color="secondary" accessibilityRole="header">
+          {strings.sourcesHeader}
+        </AppText>
+      </Box>
       {showSms ? (
-        <ListGroup variant="card" header={strings.sourcesHeader}>
+        <ListGroup variant="plain">
           <ListRow
             focusId="sms-settings"
             icon={Icon.MessageSquare}
@@ -234,22 +230,40 @@ function ConnectedSourcesSection({
 }
 
 function CaptureWorkspaceScreen() {
-  const notifications = useNotificationSettingsViewModel();
   const capture = useTransactionCaptureViewModel();
+  if (Platform.OS === 'web') {
+    return (
+      <AutomationSettingsView
+        key={capture.workplaceId}
+        onOpenSmsSettings={AppNavigation.toSmsSettings}
+        capture={capture}
+        gmailSection={null}
+        hasAutomaticCaptureSource={false}
+        captureSourceLoading={false}
+      />
+    );
+  }
+
+  return <NativeCaptureWorkspaceView capture={capture} />;
+}
+
+function NativeCaptureWorkspaceView({ capture }: { capture: TransactionCaptureViewModel }) {
+  const smsPrefs = useSmsPrefs();
+  const gmail = useGmailCaptureViewModel();
+  const hasAutomaticCaptureSource =
+    (Platform.OS === 'android' && smsPrefs.isAutomaticSmsImportEnabled) ||
+    (gmail.connected && gmail.automaticCaptureEnabled);
+
   return (
     <AutomationSettingsView
       key={capture.workplaceId}
-      notifications={notifications}
       onOpenSmsSettings={AppNavigation.toSmsSettings}
       capture={capture}
-      gmailSection={<ConnectedGmailSection />}
+      gmailSection={<GmailCaptureSettingsSection gmail={gmail} />}
+      hasAutomaticCaptureSource={hasAutomaticCaptureSource}
+      captureSourceLoading={!hasAutomaticCaptureSource && gmail.loading}
     />
   );
-}
-
-function ConnectedGmailSection() {
-  const gmail = useGmailCaptureViewModel();
-  return <GmailCaptureSettingsSection gmail={gmail} />;
 }
 
 export default withPrivacyScope(CaptureWorkspaceScreen);
