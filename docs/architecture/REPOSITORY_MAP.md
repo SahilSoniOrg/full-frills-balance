@@ -1,5 +1,8 @@
 # Repository Layer Map
 
+Stateful workflows have a separate [ownership catalogue and audit](STATE_MACHINES.md)
+and [generated discovery inventory](STATE_MACHINE_INVENTORY.md). Discovery coverage does not certify lifecycle correctness.
+
 This map describes the persistence owners after the repository-layer refactor. It is a guide to where behavior belongs, not a requirement to create one repository per table.
 
 ## Ownership and contracts
