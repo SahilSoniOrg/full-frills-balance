@@ -1,7 +1,7 @@
 import { storage } from '@/src/utils/storage';
 import type { WorkplaceId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { connectGmail, gmailAccessToken } from './gmailAuthorization';
+import { connectGmail, disconnectGmail, gmailAccessToken } from './gmailAuthorization';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/utils/gmailBindingKey';
 
@@ -140,11 +140,17 @@ export async function connectGmailForWorkplace(
   return true;
 }
 
-/** Disconnect this Workplace without revoking a different Workplace's Google session. */
-export async function disconnectGmailForWorkplace(workplaceId: WorkplaceId): Promise<void> {
+/** Disconnect this Workplace and revoke Google access when no Workplace still uses it. */
+export async function disconnectGmailForWorkplace(
+  workplaceId: WorkplaceId,
+): Promise<'not_needed' | 'revoked' | 'failed'> {
+  let shouldRevoke = false;
   await runAccountingWriteSession(async () => {
     storage.remove(gmailBindingKey(workplaceId));
+    shouldRevoke = connectedGmailAccountIds().size === 0;
   });
+  if (!shouldRevoke) return 'not_needed';
+  return (await disconnectGmail()) ? 'revoked' : 'failed';
 }
 
 export function advanceGmailHistory(

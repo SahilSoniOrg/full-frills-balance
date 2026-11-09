@@ -1,18 +1,18 @@
 Privacy Policy for Full Frills Balance
 
-Effective Date: October 4, 2026
+Effective Date: November 9, 2026
 
-Last Updated: October 4, 2026
+Last Updated: November 9, 2026
 
 Public copy: https://full-frills-landing.vercel.app/privacy.html
 
 Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Balance handles your information and protects your privacy.
 
-Policy update (October 4, 2026): This update explains optional automatic SMS import on Android, including inbox checks at app startup and when new messages arrive. It also explains local retention of original transaction SMS for journal details, privacy-preserving maintenance, and allowlisted diagnostic and analytics practices. The September 7 update's local-first and future-sync statements remain in force; planned sync behavior does not mean that feature is available today.
+Policy update (November 9, 2026): This update explains optional Google sign-in and Gmail read-only access for transaction email capture, including on-device Inbox checks and parsing, locally retained matched-email details, optional automatic and background capture, how disconnecting and dismissing affect saved data, and how to remove local records. The October 4 update's SMS and analytics disclosures remain in force.
 
 1. Overview
 
-Full Frills Balance is designed primarily as an offline personal money management application. It does not connect to bank accounts; financial records are based on information you enter or files you choose to import.
+Full Frills Balance is designed primarily as an offline personal money management application. It does not connect to bank accounts; financial records are based on information you enter, SMS messages you choose to import, files you choose to import, or transaction emails you choose to connect.
 
 Most financial data entered or generated inside the app remains stored locally on your device and is not uploaded to external servers.
 
@@ -32,7 +32,7 @@ categories
 
 transaction descriptions
 
-imported transaction records
+imported transaction records, including selected details from matched Gmail messages
 
 rule-based tagging preferences
 
@@ -68,7 +68,19 @@ We do not intentionally upload full SMS content, sender details, or message bodi
 
 Retained SMS source content has no automatic expiry. Importing, auto-posting, dismissing a message, or disabling automatic import does not delete it. It remains until you clear the app data, use Factory Reset, or uninstall the app. Privacy Mode hides the original SMS body in journal details. Backups you explicitly export may include original SMS content associated with the exported workplace records, including older journal source fields; the shared Device pending feed is not part of a workplace backup. These files remain under your control and are not encrypted by the app. Clearing app data does not delete backup files you previously saved or shared. SMS rule configuration may retain conditions you chose.
 
-4. Analytics and Telemetry
+4. Gmail Access and Transaction Email Import
+
+On supported iOS and Android devices, you may connect a Google account and grant Full Frills Balance the Google `gmail.readonly` permission. This permission can read messages across your Gmail mailbox, not only transaction emails. The app's capture search is limited to Inbox messages received after you connect it to a Workplace, and it may inspect unrelated Inbox messages on your device while matching. Google does not offer a read-only permission limited to transaction emails. Connecting Gmail is optional. The app remains usable without it. Automatic transaction capture and background Gmail checks on supported devices are separate optional settings.
+
+When Gmail is connected, the app checks Inbox messages received after you connect Gmail for a Workplace. It may inspect messages unrelated to transactions to decide whether they match. The app reads message sender, subject, received time, message identifiers, and message text for this on-device check. For a matched transaction email, it processes the content on your device to identify transaction direction, amount, currency, merchant, reference number, and possible account. A transaction goes to the local inbox for review unless you separately enable automatic capture and the message meets the app's verification and matching requirements. Automatic capture applies only to eligible messages received after you enable it.
+
+The app does not send Gmail message content or your financial records to Full Frills Balance servers. Email parsing and transaction matching happen on your device. The app does not save the full email body as a transaction record. For a matched email, it stores selected details locally: sender, subject, received time, Gmail message identifiers, parsed transaction fields, processing status, and account-recognition details used for matching. These details are kept in the local transaction inbox and may also be present in related journal records and exported backups. Disconnecting Gmail or dismissing an inbox item does not delete its saved details. Gmail inbox items have no separate delete control; to remove those local records from this device, use Factory Reset or clear app data, which also removes other local app data. Enabled Apple or Android device backups may retain a copy of app data, including these details. Workplace backups you explicitly export may include saved transaction inbox and journal details; the app does not encrypt exported backups. Unmatched messages are not saved by the app. Message content temporarily fetched for parsing, previews, or signature checks is processed in memory and is not intentionally written to the app database, logs, or analytics.
+
+Google processes sign-in and Gmail API requests under Google's own terms and privacy policy. The app uses Google's sign-in components and Gmail API directly from your device; analytics and crash-reporting providers do not receive Gmail bodies, sender details, subjects, access tokens, or parsed transaction content. Google's sign-in components provide and cache access credentials; the app does not write tokens to transaction records, logs, analytics, or exported backups. If you enable verified automatic capture, the app queries Google Public DNS with the sender domain and DKIM key selector to look up a public signing key; it does not send email content in that DNS request. The app stores a local association between the selected Workplace and Google account identifier, along with the Gmail history cursor and local capture settings.
+
+You can turn off automatic capture and background checks in Gmail settings, or disconnect Gmail from a Workplace. Disconnecting stops future checks for that Workplace and removes its local connection and history cursor. If no other Workplace uses the same Google account, the app also asks Google Sign-In to revoke the app's access and signs out. Disconnecting does not erase transaction inbox details or journals already created. To remove saved Gmail inbox details from this device, use Factory Reset or clear app data; this also removes other local app data. You can review or revoke Google access from your Google Account security settings. Exported files and enabled device backups are managed separately and may retain copies.
+
+5. Analytics and Telemetry
 
 We use PostHog and Expo Insights for product analytics and technical improvement.
 
@@ -83,6 +95,8 @@ journal and budget creation (event counts only, not monetary values)
 import and export actions (counts and formats, not row contents)
 
 SMS import setting changes (enabled or disabled) and whether an SMS rule auto-posted a transaction (boolean values only)
+
+Gmail feature setting changes, sync success or failure, and counts of captured transactions (channel and counts only; no email content or parsed transaction values)
 
 in-app account creation events (account type and currency code only)
 
@@ -118,7 +132,7 @@ PostHog session replay is disabled. We do not record in-app screenshots or scree
 
 **Sentry (crash reporting)** is separate from PostHog. When enabled, error reports and performance traces may include error types, code locations (function names, file paths and line numbers from the app's own code), and navigation timing; error message text is removed before sending. Native crash reporting is disabled because its reports bypass the JavaScript privacy filters. Native crashes, freezes and out-of-memory terminations are not reported through the native SDK. We do not attach screenshots or screen layouts, and we do not enable Sentry session replay or screen recording.
 
-5. Internet Use
+6. Internet Use
 
 Although Full Frills Balance is primarily offline, internet access is used for limited features:
 
@@ -126,9 +140,13 @@ retrieving currency exchange rates from ExchangeRate-API
 
 sending analytics telemetry
 
+connecting to Google for sign-in and, only if you connect Gmail, reading Inbox messages for transaction capture
+
+looking up email signature keys through Google Public DNS when verified Gmail automatic capture is enabled (sender domain and DKIM key selector only)
+
 Exchange-rate requests do not include your transaction history or personal financial records.
 
-6. Export and Backup
+7. Export and Backup
 
 You may export app data as ZIP backup files containing your personal records.
 
@@ -136,9 +154,11 @@ Exported files remain under your control on your device.
 
 Backups are not encrypted by the app, so you are responsible for protecting exported files.
 
-7. No Account Registration
+If iCloud Backup or Android device backup is enabled, Apple or Android may include the app's local data in a backup associated with your account. This may include saved Gmail transaction details. These backups are controlled by your device and account settings, not by Full Frills Balance, and may retain copies after you clear app data or use Factory Reset. The app cannot access or remove those backup copies.
 
-Currently, Full Frills Balance does not require:
+8. No Required App Account
+
+Full Frills Balance does not require an app account or sign-in for ordinary local use. Gmail capture is optional and requires you to connect a Google account and grant Gmail read-only access. The app does not require:
 
 login
 
@@ -148,23 +168,27 @@ phone number verification
 
 cloud account
 
-8. Data Sharing
+9. Data Sharing
 
 We do not sell personal data.
 
-Limited technical analytics may be processed by third-party providers strictly for app improvement.
+Limited technical analytics may be processed by third-party providers strictly for app improvement. If you connect Gmail, Google processes sign-in and Gmail API requests so the app can read messages you authorize. When verified Gmail automatic capture is enabled, Google Public DNS receives the sender domain and DKIM key selector so the app can look up the email's public signing key; this lookup contains no email body or parsed transaction data. Full Frills Balance does not send Gmail message content or parsed transactions to its own servers or analytics providers.
 
-9. Permissions
+10. Permissions
 
 Depending on features you choose to use, the app may request:
 
 SMS permission for transaction import
 
+Google Public DNS lookups for sender domain and DKIM key selector, if you enable verified Gmail automatic capture
+
+Google sign-in and Gmail read-only access, if you connect Gmail
+
 storage access for export and backup
 
 Permissions are optional where possible and used only for app functionality.
 
-10. Planned Future Online Features (Not Currently Available)
+11. Planned Future Online Features (Not Currently Available)
 
 The current app does not offer account registration, online sync, or cloud backup. Future versions may offer optional encrypted backup or multi-device sync. If introduced, the intended privacy principles are:
 
@@ -179,19 +203,19 @@ The current app does not offer account registration, online sync, or cloud backu
 
 If online sync is introduced, this Privacy Policy and the in-app disclosure will be updated before the feature is enabled. Stopping sync would stop future uploads, but it would not automatically recall data already downloaded to a device or delete a server backup unless a separate deletion process is completed.
 
-11. Security
+12. Security
 
-Your financial records remain primarily on your own device.
+Your financial records and Gmail-derived transaction details remain on your own device.
 
 You are responsible for securing your device and exported backup files.
 
-12. Children’s Privacy
+13. Children’s Privacy
 
 Full Frills Balance is not directed to children. If you are below the age at which you can provide valid consent under the law that applies to you, use the app only with a parent or legal guardian involved.
 
-13. Privacy Requests and Contact
+14. Privacy Requests and Contact
 
-Your local financial records are stored on your device, so we generally cannot access or recover them from our servers. Use the app’s Settings controls for export, restore, and factory reset.
+Your local financial records and Gmail-derived transaction details are stored on your device, so we generally cannot access or recover them from our servers. Use the app’s Settings controls for export, restore, factory reset, and Gmail disconnection. Disconnecting stops future checks but does not delete transaction records already saved locally. You can revoke Google access in your Google Account settings.
 
 For data processed by Full Frills Balance or its service providers, you may contact us about privacy questions or requests such as access, correction, deletion, or withdrawal of consent where applicable. We may need to verify a request and may retain information where required by law.
 
@@ -199,12 +223,13 @@ Sahil Soni
 
 sscsps@gmail.com
 
-14. Changes to This Policy
+15. Changes to This Policy
 
 This Privacy Policy may be updated when app features or data practices change. When an update materially changes how data is handled, we will update the effective and last-updated dates and provide an in-app or other appropriate notice where practical.
 
 Update history:
 
+- November 9, 2026 — documented optional Google sign-in and Gmail read-only access, on-device Inbox checks and transaction parsing, locally retained matched-email details, optional automatic and background capture, and the effect of disconnecting, dismissing, Factory Reset, and clearing app data.
 - October 4, 2026 — documented optional automatic SMS import on Android at startup and on new-message arrival; documented retention of original transaction SMS for journal details and user-controlled backups, privacy maintenance, and allowlisted diagnostics and analytics.
 - September 7, 2026 — clarified current local-first and no-bank behavior, export files, analytics and crash reporting, and planned privacy principles for optional encrypted sync. No sync feature was enabled by this update.
 - March 5, 2026 — initial policy published.

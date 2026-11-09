@@ -11,6 +11,7 @@ import { registerGmailBackgroundTask } from '@/src/services/email/gmailBackgroun
 import { cancelGmailSync, syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { analytics } from '@/src/services/analytics';
+import { toast } from '@/src/utils/alerts';
 import type { WorkplaceId } from '@/src/types/ids';
 
 type MutationRunner = ReturnType<typeof useCaptureMutationRunner>;
@@ -45,8 +46,9 @@ export function useGmailCaptureActions({
         async currentWorkplaceId => {
           if (connected) {
             cancelGmailSync(currentWorkplaceId);
-            await disconnectGmailForWorkplace(currentWorkplaceId);
+            const result = await disconnectGmailForWorkplace(currentWorkplaceId);
             analytics.trackFeatureUsage('gmail', 'disconnect');
+            if (result === 'failed') toast.warning(strings.disconnectRevocationFailed);
           } else if (await connectGmailForWorkplace(currentWorkplaceId)) {
             analytics.trackFeatureUsage('gmail', 'connect');
             void syncGmailForWorkplace(currentWorkplaceId).catch(() => {});

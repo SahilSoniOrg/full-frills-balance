@@ -24,11 +24,13 @@ export const gmailCaptureStrings = {
   automaticAction: 'Enable Gmail capture',
   connectTitle: 'Connect Gmail?',
   connectMessage:
-    'On the first Gmail connection, Google asks for read-only mailbox access. The app checks new Inbox messages, including unrelated mail, while open on this device. Each Workplace has its own Gmail cutoff and capture setting, but Google Sign-In uses one account across the app; use the same Google account for every connected Workplace. Email transactions need review unless you separately enable verified capture. Full email bodies and access tokens are not saved in your books. You can stop syncing for this workplace at any time.',
+    'Google’s gmail.readonly permission can read messages across your whole Gmail mailbox, not only transaction email. The app’s capture search checks only Inbox messages received after you connect it to a Workplace, including unrelated Inbox messages it may inspect on this device while matching. Each Workplace has its own Gmail cutoff and capture setting, but Google Sign-In uses one account across the app; use the same Google account for every connected Workplace. Email transactions need review unless you separately enable verified capture. For matched emails, the app saves the sender, subject, message IDs, and selected transaction details in its local inbox; it does not save full email bodies. Dismissing an inbox item or disconnecting Gmail does not erase its saved details. Use Factory Reset or clear app data to remove local copies. If Apple or Android device backup is enabled, it may keep a backup copy. Workplace backups may include saved transaction details but not full email bodies or Google access tokens. Google sign-in components handle access credentials; the app does not include them in your books or exported backups. Disconnect the Workplace to stop future Gmail checks.',
   connectAction: 'Connect Gmail',
   disconnectTitle: 'Stop Gmail for this workplace?',
   disconnectMessage:
-    'This stops checking mail for this workplace. Your existing entries remain. You can revoke the app’s Google access separately in your Google Account.',
+    'This stops checking mail for this workplace. Your existing entries remain. If this is the last connected Workplace, the app also asks Google to revoke access and sign out. You can manage Full Frills Balance access in your Google Account.',
+  disconnectRevocationFailed:
+    'Gmail checks are stopped on this device, but Google access could not be revoked. Remove Full Frills Balance from your Google Account security settings.',
   disconnectAction: 'Stop syncing',
   error: 'Gmail could not be connected. Check the Google sign-in configuration and try again.',
   accountConflict:

@@ -67,9 +67,25 @@ export async function invalidateGmailAccessToken(accessToken: string): Promise<v
   }
 }
 
-/** Called only following the user's explicit Disconnect action. */
-export async function disconnectGmail(): Promise<void> {
-  const client = await google();
-  await client.revokeAccess();
-  await client.signOut();
+/** Called only after the last Workplace disconnects; revoke first, then clear local sign-in. */
+export async function disconnectGmail(): Promise<boolean> {
+  let client: Awaited<ReturnType<typeof google>>;
+  try {
+    client = await google();
+  } catch {
+    return false;
+  }
+  let revoked = false;
+  try {
+    await client.revokeAccess();
+    revoked = true;
+  } catch {
+    // Local disconnection still succeeds; the user can revoke access in Google Account settings.
+  }
+  try {
+    await client.signOut();
+  } catch {
+    // Do not leave the app's local Workplace connection in place if sign-out fails.
+  }
+  return revoked;
 }
