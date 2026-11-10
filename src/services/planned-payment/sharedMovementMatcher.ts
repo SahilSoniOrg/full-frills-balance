@@ -1,9 +1,7 @@
-import { database } from '@/src/data/database/Database';
 import type Account from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
-import JournalMetadata from '@/src/data/models/JournalMetadata';
+import type JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment, { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
@@ -36,7 +34,6 @@ import {
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { Q } from '@nozbe/watermelondb';
 import { inferSimpleJournalTypeFromAccounts } from './inferSimpleJournalTypeFromAccounts';
 import { projectPlannedOccurrencesForHorizon } from './plannedOccurrenceHorizon';
 import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
@@ -97,43 +94,18 @@ function defaultDeps(): SharedMovementMatchLoaderDeps {
       transactionInboxRepository.findRecentPendingEmail(workplaceId, limit),
     findReferenceMatches: findCaptureReferenceMatches,
     findReferenceCandidates: findCaptureReferenceCandidates,
-    loadJournalMetadata: loadJournalMetadataRows,
-    findInboxLinkedToJournals: loadInboxLinksForJournals,
+    loadJournalMetadata: (workplaceId, journalIds) =>
+      journalPlannedQueries.findMetadataByJournalIds(workplaceId, journalIds),
+    findInboxLinkedToJournals: async (workplaceId, journalIds) => {
+      const links = await transactionInboxRepository.findLinksForJournals(workplaceId, journalIds);
+      return links.map(link => ({
+        journalId: link.journalId,
+        channel: link.channel as MovementChannel,
+        reference: link.reference,
+      }));
+    },
     now: () => Date.now(),
   };
-}
-
-async function loadJournalMetadataRows(
-  workplaceId: WorkplaceId,
-  journalIds: JournalId[],
-): Promise<JournalMetadata[]> {
-  if (journalIds.length === 0) return [];
-  return database.collections
-    .get<JournalMetadata>('journal_metadata')
-    .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(journalIds)))
-    .fetch();
-}
-
-async function loadInboxLinksForJournals(
-  workplaceId: WorkplaceId,
-  journalIds: JournalId[],
-): Promise<{ journalId: JournalId; channel: MovementChannel; reference?: string | null }[]> {
-  if (journalIds.length === 0) return [];
-  const records = await database.collections
-    .get<TransactionInboxRecord>('transaction_inbox_records')
-    .query(Q.where('workplace_id', workplaceId), Q.where('linked_journal_id', Q.oneOf(journalIds)))
-    .fetch();
-  return records.flatMap(row =>
-    row.linkedJournalId
-      ? [
-          {
-            journalId: row.linkedJournalId,
-            channel: row.channel as MovementChannel,
-            reference: row.referenceNumber ?? null,
-          },
-        ]
-      : [],
-  );
 }
 
 function intervalDays(intervalN: number, intervalType: PlannedPaymentInterval): number {

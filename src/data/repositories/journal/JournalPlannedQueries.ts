@@ -127,16 +127,24 @@ export class JournalPlannedQueries {
     return due.filter(journal => auto.has(journal.id));
   }
 
+  /** Workplace-scoped journal_metadata rows for the given journals. */
+  async findMetadataByJournalIds(
+    workplaceId: WorkplaceId,
+    journalIds: JournalId[],
+  ): Promise<JournalMetadata[]> {
+    if (journalIds.length === 0) return [];
+    return database.collections
+      .get<JournalMetadata>('journal_metadata')
+      .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(journalIds)))
+      .fetch();
+  }
+
   private async originalPlannedDates(
     workplaceId: WorkplaceId,
     journalIds: JournalId[],
   ): Promise<Map<JournalId, number>> {
     const originalDateByJournalId = new Map<JournalId, number>();
-    if (journalIds.length === 0) return originalDateByJournalId;
-    const metadata = await database.collections
-      .get<JournalMetadata>('journal_metadata')
-      .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(journalIds)))
-      .fetch();
+    const metadata = await this.findMetadataByJournalIds(workplaceId, journalIds);
     for (const row of metadata) {
       const metadataJson = safeParseJSON<Record<string, unknown>>(row.metadataJson, {});
       const rawOriginalDate = metadataJson[MetadataKeys.ORIGINAL_PLANNED_DATE];
