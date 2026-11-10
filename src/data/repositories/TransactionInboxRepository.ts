@@ -336,6 +336,31 @@ export class TransactionInboxRepository {
     return records.map(inboxSnapshotFromRecord);
   }
 
+  /** Inbox rows already linked to any of the given journals (any channel). */
+  async findLinksForJournals(
+    workplaceId: WorkplaceId,
+    journalIds: JournalId[],
+  ): Promise<{ journalId: JournalId; channel: string; reference?: string | null }[]> {
+    if (journalIds.length === 0) return [];
+    const records = await this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('linked_journal_id', Q.oneOf(journalIds)),
+      )
+      .fetch();
+    return records.flatMap(row =>
+      row.linkedJournalId
+        ? [
+            {
+              journalId: row.linkedJournalId,
+              channel: row.channel,
+              reference: row.referenceNumber ?? null,
+            },
+          ]
+        : [],
+    );
+  }
+
   async findRecentPendingSms(
     workplaceId: WorkplaceId,
     limit: number,

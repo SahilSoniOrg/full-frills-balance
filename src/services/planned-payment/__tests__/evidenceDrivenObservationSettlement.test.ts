@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 import { JournalStatus } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type {
@@ -388,8 +391,6 @@ describe('applyEvidenceDrivenObservationSettlement', () => {
 
 describe('pipeline import smoke', () => {
   it('wires SMS and Gmail writers to the shared helper and skips double hard staging', () => {
-    const fs = require('fs') as typeof import('fs');
-    const path = require('path') as typeof import('path');
     const root = path.join(__dirname, '..', '..');
     const sms = fs.readFileSync(path.join(root, 'sms/pipeline/smsSyncPipeline.ts'), 'utf8');
     const gmail = fs.readFileSync(path.join(root, 'email/gmailIngestion.ts'), 'utf8');
