@@ -42,6 +42,9 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     handleUndismiss,
     handleImport,
     handleOpenJournal,
+    handleRepairOldUpiMerchants,
+    isRepairingOldUpiMerchants,
+    showOldUpiMerchantRepair,
     selectedDuplicateItem,
     selectedEditReparseItem,
     handleOpenDuplicateModal,
@@ -109,6 +112,23 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                     />
                   ))}
                 </ScrollView>
+                {(filter === 'processed' || filter === 'auto_posted') &&
+                showOldUpiMerchantRepair ? (
+                  <Stack space="sm" style={styles.repairSection}>
+                    <AppText variant="caption" color="secondary">
+                      Fixes old SMS merchant names cut at a period inside a UPI ID. Posted journal
+                      entries stay unchanged.
+                    </AppText>
+                    <AppButton
+                      variant="secondary"
+                      size="sm"
+                      onPress={handleRepairOldUpiMerchants}
+                      loading={isRepairingOldUpiMerchants}
+                    >
+                      Repair old UPI merchant names
+                    </AppButton>
+                  </Stack>
+                ) : null}
               </View>
             }
             renderItem={({ item }) => (
@@ -218,6 +238,9 @@ const styles = StyleSheet.create({
   listHeader: {
     gap: Spacing.sm,
     marginBottom: Spacing.sm,
+  },
+  repairSection: {
+    marginTop: Spacing.xs,
   },
   platformNoticeWrap: {
     marginBottom: Spacing.sm,

@@ -10,6 +10,7 @@ export interface WorkplacePreferences {
   captureDescriptionDefaults?: Record<string, string>;
   captureCategoryDefaults?: CaptureCategoryDefault[];
   historicalSmsCaptureBackfillVersion?: number;
+  historicalSmsMerchantRepairVersion?: number;
   lastSelectedAccountId?: AccountId;
   lastDateRange?: {
     startDate: number;
@@ -61,6 +62,7 @@ export const WORKPLACE_PREFERENCE_KEYS = [
   'captureDescriptionDefaults',
   'captureCategoryDefaults',
   'historicalSmsCaptureBackfillVersion',
+  'historicalSmsMerchantRepairVersion',
   'lastSelectedAccountId',
   'lastDateRange',
   'lastUsedSourceAccountId',

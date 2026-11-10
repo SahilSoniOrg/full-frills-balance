@@ -7,9 +7,11 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { readCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
 import {
   mergeHistoricalSmsSources,
+  repairHistoricalSmsMerchant,
   readHistoricalSmsEvidence,
   withHistoricalSmsEvidence,
   withoutHistoricalSmsEvidence,
+  type HistoricalSmsMerchantRepair,
   type HistoricalSmsSourceEvidence,
 } from '@/src/domain/transaction-intelligence/historicalSmsEvidence';
 import { AccountType, JournalStatus } from '@/src/types/enums';
@@ -250,6 +252,48 @@ export class JournalHistoricalCaptureQueries {
       await database.batch(...operations);
     }
     return updates.length + creates.length;
+  }
+
+  async repairSmsEvidenceMerchants(
+    workplaceId: WorkplaceId,
+    repairs: readonly HistoricalSmsMerchantRepair[],
+  ): Promise<number> {
+    if (!repairs.length) return 0;
+
+    return database.write(async () => {
+      const rows = await this.metadata
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('metadata_json', Q.like('%\"historicalSmsEvidence\"%')),
+        )
+        .fetch();
+      const now = new Date();
+      const prepareUpdates: (() => JournalMetadata)[] = [];
+      const repairedSources = new Set<string>();
+
+      for (const row of rows) {
+        let nextJson = row.metadataJson;
+        for (const repair of repairs) {
+          const repairedJson = repairHistoricalSmsMerchant(nextJson, repair);
+          if (!repairedJson) continue;
+          nextJson = repairedJson;
+          repairedSources.add(repair.sourceId);
+        }
+        if (nextJson === row.metadataJson) continue;
+        prepareUpdates.push(() =>
+          row.prepareUpdate(entry => {
+            entry.metadataJson = nextJson;
+            entry.updatedAt = now;
+          }),
+        );
+      }
+
+      for (let index = 0; index < prepareUpdates.length; index += 100) {
+        const operations = prepareUpdates.slice(index, index + 100).map(prepare => prepare());
+        await database.batch(...operations);
+      }
+      return repairedSources.size;
+    });
   }
 
   async listCategoryPatterns(workplaceId: WorkplaceId): Promise<HistoricalCategoryPattern[]> {

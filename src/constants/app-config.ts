@@ -20,6 +20,9 @@ export const AppConfig = {
 
   // Versioning
   appVersion: '1.0.0',
+  migrations: {
+    historicalSmsMerchantRepair: 1,
+  },
 
   // Animation durations (in ms)
   animation: {

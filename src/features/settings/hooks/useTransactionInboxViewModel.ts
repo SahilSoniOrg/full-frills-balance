@@ -1,4 +1,5 @@
 import type { SmsInboxCursor } from '@/src/types/smsInbox';
+import { AppConfig } from '@/src/constants/app-config';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccounts } from '@/src/components/account-selection';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
@@ -10,6 +11,7 @@ import {
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics';
 import { smsService, type SmsInboxFilterStatus } from '@/src/services/sms-service';
+import { preferences } from '@/src/services/preferences';
 import {
   recognitionRefreshState,
   refreshSmsRecognitionBestEffort,
@@ -18,12 +20,12 @@ import {
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Platform } from 'react-native';
 import { syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
-import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 export type InboxFilter = SmsInboxFilterStatus;
 
@@ -48,6 +50,9 @@ export interface TransactionInboxViewModel extends TransactionInboxModals {
   handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
   handleImport: (item: TransactionInboxItem) => void;
   handleOpenJournal: (item: TransactionInboxItem) => void;
+  handleRepairOldUpiMerchants: () => void;
+  isRepairingOldUpiMerchants: boolean;
+  showOldUpiMerchantRepair: boolean;
   filterButtons: { key: InboxFilter; label: string }[];
   defaultCurrencyCode: string;
 }
@@ -64,6 +69,21 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const [scanCursor, setScanCursor] = useState<SmsInboxCursor | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScanningOlder, setIsScanningOlder] = useState(false);
+  const [isRepairingOldUpiMerchants, setIsRepairingOldUpiMerchants] = useState(false);
+  const showOldUpiMerchantRepair = useSyncExternalStore(
+    onStoreChange => {
+      const subscription = preferences.workplace
+        .observe(workplaceId, 'historicalSmsMerchantRepairVersion')
+        .subscribe(onStoreChange);
+      return () => subscription.unsubscribe();
+    },
+    () =>
+      preferences.workplace.getSnapshot(workplaceId).historicalSmsMerchantRepairVersion !==
+      AppConfig.migrations.historicalSmsMerchantRepair,
+    () =>
+      preferences.workplace.getSnapshot(workplaceId).historicalSmsMerchantRepairVersion !==
+      AppConfig.migrations.historicalSmsMerchantRepair,
+  );
   const [recognitionState, setRecognitionState] = useState<RecognitionRefreshState>(
     () => recognitionRefreshState(workplaceId).value,
   );
@@ -183,6 +203,31 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     AppNavigation.toJournalDetails(item.linkedJournal.journalId);
   }, []);
 
+  const handleRepairOldUpiMerchants = useCallback(() => {
+    if (isRepairingOldUpiMerchants) return;
+    confirm.show({
+      title: 'Repair old UPI merchant names?',
+      message:
+        'This repairs linked SMS merchant details and Suggestions from SMS history in this workspace when the old parser cut a UPI ID at its first period. Amounts and posted journal entries will not change.',
+      confirmText: 'Repair names',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        setIsRepairingOldUpiMerchants(true);
+        void smsService
+          .repairLegacyUpiMerchants(workplaceId)
+          .then(count => {
+            toast.success(
+              count
+                ? `Repaired ${count} old SMS merchant ${count === 1 ? 'name' : 'names'}`
+                : 'No truncated UPI merchant names found',
+            );
+          })
+          .catch(error => showErrorAlert(error, 'Repair old SMS merchant names', true))
+          .finally(() => setIsRepairingOldUpiMerchants(false));
+      },
+    });
+  }, [isRepairingOldUpiMerchants, workplaceId]);
+
   useEffect(() => {
     if (!reviewRecordId || areAccountsLoading || reviewing.current === reviewRecordId) return;
     let cancelled = false;
@@ -245,6 +290,9 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     handleUndismiss,
     handleImport,
     handleOpenJournal,
+    handleRepairOldUpiMerchants,
+    isRepairingOldUpiMerchants,
+    showOldUpiMerchantRepair,
     filterButtons,
     defaultCurrencyCode,
     ...modals,

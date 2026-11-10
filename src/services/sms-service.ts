@@ -8,6 +8,7 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
+import { repairLegacyUpiMerchants } from '@/src/services/sms/repairLegacyUpiMerchants';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { map, Observable } from 'rxjs';
 
@@ -115,6 +116,10 @@ class SmsService {
 
   parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
     return Promise.resolve(SmsParser.parse(sms));
+  }
+
+  repairLegacyUpiMerchants(workplaceId: WorkplaceId): Promise<number> {
+    return repairLegacyUpiMerchants(workplaceId);
   }
 
   private getProcessingStatusesForFilter(

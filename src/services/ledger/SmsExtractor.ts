@@ -101,22 +101,29 @@ export class SmsExtractor implements TransactionExtractor {
     body: string,
     direction: 'debit' | 'credit' | 'unknown',
   ): string | undefined {
+    // Keep a VPA intact. Its dots are part of the identifier, not merchant boundaries.
+    const upiMatch = body.match(
+      /\b(?:at|to|from|vpa|upi\s+id)\b\s*[:=-]?\s*([a-z0-9_][a-z0-9._+-]*@[a-z0-9][a-z0-9.-]*)/i,
+    );
+    const upiMerchant = upiMatch?.[1]?.replace(/[.,;:!?]+$/, '');
+    if (upiMerchant) return upiMerchant;
+
     // Specific location/merchant prepositions take precedence over ambiguous prepositions like "to"
     const patterns =
       direction === 'credit'
         ? [
-            /\b(?:from|by|kutoka|de|dari)\b\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|txn|bal|no\.?|date|avbl)|$)/i,
+            /\b(?:from|by|kutoka|de|dari)\b\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|txn|bal|no\.?|date|avbl)|$)/i,
           ]
         : [
             // Venue / Merchant location keywords (at, @, vpa, di)
-            /(?:\b(?:at|vpa|di)\b|@)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+            /(?:\b(?:at|vpa|di)\b|@)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
             // Generic recipient keywords (to, kwa, para, ke)
-            /(?:\b(?:to|kwa|para|ke)\b|\binfo\b:?)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,.]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+            /(?:\b(?:to|kwa|para|ke)\b|\binfo\b:?)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
           ];
 
     for (const regex of patterns) {
       const match = body.match(regex);
-      const value = match?.[1]?.trim();
+      const value = match?.[1]?.trim().replace(/\.+$/, '');
       if (value && value.length > 1) {
         // Discard matches that are actually account/card references
         if (/^(?:card|account|a\/c|acc)\b/i.test(value)) {

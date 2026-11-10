@@ -36,6 +36,12 @@ interface InboxAuditContext {
   correlationId?: string;
 }
 
+export interface ParsedMerchantRepair {
+  recordId: string;
+  previousMerchant: string;
+  correctedMerchant: string;
+}
+
 function isProcessedStatus(status: InboxProcessingStatus): boolean {
   return (
     status === InboxProcessingStatus.IMPORTED ||
@@ -266,6 +272,7 @@ export class TransactionInboxRepository {
         .observeWithColumns([
           'processing_status',
           'linked_journal_id',
+          'parsed_merchant',
           'duplicate_journal_id',
           'duplicate_confidence',
           'last_scanned_at',
@@ -392,6 +399,65 @@ export class TransactionInboxRepository {
         Q.take(limit),
       )
       .fetch();
+  }
+
+  async findLinkedProcessedSmsPage(
+    workplaceId: WorkplaceId,
+    afterId: string | undefined,
+    limit: number,
+  ): Promise<TransactionInboxRecord[]> {
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.where(
+          'processing_status',
+          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
+        ),
+        Q.where('linked_journal_id', Q.notEq(null)),
+        ...(afterId ? [Q.where('id', Q.gt(afterId))] : []),
+        Q.sortBy('id'),
+        Q.take(limit),
+      )
+      .fetch();
+  }
+
+  async repairParsedSmsMerchants(
+    workplaceId: WorkplaceId,
+    repairs: readonly ParsedMerchantRepair[],
+  ): Promise<number> {
+    if (!repairs.length) return 0;
+    const repairsById = new Map(repairs.map(repair => [repair.recordId, repair]));
+
+    return database.write(async () => {
+      const records = await this.inbox
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('channel', 'sms'),
+          Q.where('id', Q.oneOf([...repairsById.keys()])),
+        )
+        .fetch();
+      const updates = records.flatMap(record => {
+        const repair = repairsById.get(record.id);
+        if (
+          !repair ||
+          !record.linkedJournalId ||
+          ![InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED].includes(
+            record.processingStatus,
+          ) ||
+          record.parsedMerchant !== repair.previousMerchant
+        ) {
+          return [];
+        }
+        return [
+          record.prepareUpdate(entry => {
+            entry.parsedMerchant = repair.correctedMerchant;
+          }),
+        ];
+      });
+      if (updates.length) await database.batch(...updates);
+      return updates.length;
+    });
   }
 
   prepareLink(

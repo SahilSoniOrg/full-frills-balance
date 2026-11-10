@@ -18,6 +18,12 @@ export interface HistoricalSmsEvidence {
   sources: HistoricalSmsSourceEvidence[];
 }
 
+export interface HistoricalSmsMerchantRepair {
+  sourceId: string;
+  previousMerchant: string;
+  correctedMerchant: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -102,5 +108,31 @@ export function withHistoricalSmsEvidence(
 export function withoutHistoricalSmsEvidence(json: string | undefined): string {
   const metadata = readObject(json);
   delete metadata.historicalSmsEvidence;
+  return JSON.stringify(metadata);
+}
+
+/** Replace one stale parsed merchant while preserving the journal's other metadata. */
+export function repairHistoricalSmsMerchant(
+  json: string | undefined,
+  repair: HistoricalSmsMerchantRepair,
+): string | undefined {
+  const evidence = readHistoricalSmsEvidence(json);
+  if (!evidence) return undefined;
+
+  let changed = false;
+  const sources = evidence.sources.map(source => {
+    if (
+      source.sourceId !== repair.sourceId ||
+      source.merchant?.trim().toLowerCase() !== repair.previousMerchant.trim().toLowerCase()
+    ) {
+      return source;
+    }
+    changed = true;
+    return { ...source, merchant: repair.correctedMerchant.slice(0, 200) };
+  });
+  if (!changed) return undefined;
+
+  const metadata = readObject(json);
+  metadata.historicalSmsEvidence = { ...evidence, sources };
   return JSON.stringify(metadata);
 }

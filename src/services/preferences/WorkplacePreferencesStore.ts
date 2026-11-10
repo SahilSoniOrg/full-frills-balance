@@ -130,6 +130,16 @@ export class WorkplacePreferencesStore {
       sanitized.historicalSmsCaptureBackfillVersion =
         sanitized.historicalSmsCaptureBackfillVersion === 1 ? 1 : undefined;
     }
+    if ('historicalSmsMerchantRepairVersion' in sanitized) {
+      const version = sanitized.historicalSmsMerchantRepairVersion;
+      sanitized.historicalSmsMerchantRepairVersion =
+        typeof version === 'number' &&
+        Number.isSafeInteger(version) &&
+        version > 0 &&
+        version <= AppConfig.migrations.historicalSmsMerchantRepair
+          ? version
+          : undefined;
+    }
     if ('captureDescriptionDefaults' in sanitized) {
       const value = sanitized.captureDescriptionDefaults;
       sanitized.captureDescriptionDefaults =
