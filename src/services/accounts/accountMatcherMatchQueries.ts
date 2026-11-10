@@ -4,27 +4,19 @@ import {
   compileAccountMatcher,
   matchCompiledAccountMatcher,
 } from '@/src/services/sms/recognition/accountMatcherEvaluator';
-import type { TextSpan } from '@/src/types/accountMatcher';
-import type { AccountId, JournalId } from '@/src/types/ids';
 import type {
   AccountMatcherLinkedJournal,
-  AccountMatcherPageData,
-} from './accountMatcherEvidenceQueries';
-import type { AccountMatcherMessage } from './accountMatcherMembership';
+  AccountMatcherMatchedMessage,
+  AccountMatcherMatches,
+} from '@/src/types/accountMatcher';
+import type { AccountId, JournalId } from '@/src/types/ids';
+import type { AccountMatcherPageData } from './accountMatcherEvidenceQueries';
 
-export type { AccountMatcherLinkedJournal } from './accountMatcherEvidenceQueries';
-
-export interface AccountMatcherMatchedMessage {
-  message: AccountMatcherMessage;
-  spans: TextSpan[];
-  journal?: AccountMatcherLinkedJournal;
-}
-
-export interface AccountMatcherMatches {
-  messages: AccountMatcherMatchedMessage[];
-  journals: AccountMatcherLinkedJournal[];
-  indeterminateCount: number;
-}
+export type {
+  AccountMatcherLinkedJournal,
+  AccountMatcherMatchedMessage,
+  AccountMatcherMatches,
+} from '@/src/types/accountMatcher';
 
 export type AccountMatcherMatchData = Pick<
   AccountMatcherPageData,

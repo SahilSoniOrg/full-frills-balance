@@ -22,9 +22,8 @@ import { MatcherMessageChoice } from './AccountMatcherMessageViews';
 import { AccountMatcherEvidencePreview } from './AccountMatcherEvidencePreview';
 import { displayPrivate } from '../helpers/displayPrivate';
 import { canChooseOlderAccountMatcherMessages } from './accountMatcherPickerPlatform';
-import type { useAccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/useAccountMatcherEditorViewModel';
-
-type EditorViewModel = ReturnType<typeof useAccountMatcherEditorViewModel>;
+import type { AccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/details/types';
+import { ShowMoreButton, useShowMorePager } from './ShowMorePager';
 
 const flowOptions = [
   { id: 'either', label: copy.flowEither },
@@ -40,7 +39,7 @@ export function AccountMatcherEditorView({
   onResolveOverlap,
   onForget,
 }: {
-  vm: EditorViewModel;
+  vm: AccountMatcherEditorViewModel;
   chrome: ScreenNavChrome;
   showOverlapWarning: boolean;
   onSave: () => void;
@@ -50,7 +49,7 @@ export function AccountMatcherEditorView({
   const { theme } = useTheme();
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [visibleMessageCount, setVisibleMessageCount] = useState(20);
+  const messagePager = useShowMorePager(vm.messages.length, { initial: 20, step: 20 });
   const validationMessage = vm.validation.valid
     ? undefined
     : (vm.validation.error ?? copy.invalidCondition);
@@ -62,12 +61,12 @@ export function AccountMatcherEditorView({
       }
     return [...matches.entries()].map(([id, accountName]) => ({ id, accountName }));
   }, [vm.overlaps]);
-  const chooseMessage = (message: EditorViewModel['messages'][number]) => {
+  const chooseMessage = (message: AccountMatcherEditorViewModel['messages'][number]) => {
     vm.selectMessage(message);
     setIsPickerVisible(false);
   };
   const togglePicker = () => {
-    setVisibleMessageCount(20);
+    messagePager.reset(20);
     setIsPickerVisible(value => !value);
   };
 
@@ -145,7 +144,7 @@ export function AccountMatcherEditorView({
               <View testID="account-matcher-sms-picker">
                 {vm.messages.length ? (
                   vm.messages
-                    .slice(0, visibleMessageCount)
+                    .slice(0, messagePager.visibleCount)
                     .map(message => (
                       <MatcherMessageChoice
                         key={message.id}
@@ -161,14 +160,12 @@ export function AccountMatcherEditorView({
                   </AppText>
                 )}
               </View>
-              {visibleMessageCount < vm.messages.length ? (
-                <AppButton
-                  variant="ghost"
-                  onPress={() => setVisibleMessageCount(count => count + 20)}
+              {messagePager.hasMore ? (
+                <ShowMoreButton
+                  onPress={messagePager.showMore}
+                  label={copy.loadMore}
                   testID="load-more-account-matcher-sms"
-                >
-                  {copy.loadMore}
-                </AppButton>
+                />
               ) : null}
               {canChooseOlderAccountMatcherMessages(Platform.OS) ? (
                 <View style={styles.section} testID="account-matcher-older-sms-picker">

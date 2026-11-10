@@ -1,20 +1,16 @@
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { getEligibleMatcherAccountIds } from './accountMatcherEligibility';
-
-export interface AccountMatcherMessage extends InboxRecordSnapshot {
-  linkedAccountIds: AccountId[];
-  linkedAccountNames: string[];
-}
 
 /** Hydrates only the selected SMS journals, using one financial-account membership policy. */
 export async function projectAccountMatcherMembership(
   workplaceId: WorkplaceId,
   messages: readonly InboxRecordSnapshot[],
   accounts: readonly PlainAccount[],
-): Promise<AccountMatcherMessage[]> {
+): Promise<AccountMatcherPreviewMessage[]> {
   const journalIds = [
     ...new Set(
       messages.flatMap(message => (message.linkedJournalId ? [message.linkedJournalId] : [])),

@@ -1,29 +1,21 @@
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
-  AccountMatcherConflictError,
-  AccountMatcherProposalUnavailableError,
-  forgetAccountMatcher,
-  saveAccountMatcher,
-} from '@/src/services/accounts/accountMatcherCommands';
-import {
   loadAccountMatcherPreviewData,
   type AccountMatcherPreviewData,
-  type AccountMatcherPreviewMessage,
 } from '@/src/services/accounts/accountMatcherPreviewQueries';
 import {
   validateAccountMatcherDefinition,
   parseStoredMatcherDefinition,
 } from '@/src/services/sms/recognition/accountMatcherDefinition';
 import { validateSafeAccountMatcherRegex } from '@/src/services/sms/recognition/safeAccountMatcherRegex';
-import {
-  loadAccountMatcherDiscovery,
-  projectAccountMatcherDiscovery,
-} from '@/src/services/accounts/accountMatcherDiscoveryQueries';
+import { projectAccountMatcherDiscovery } from '@/src/services/accounts/accountMatcherDiscoveryQueries';
 import { evaluateMatcher } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import type {
   AccountMatcherDefinitionV1,
   AccountMatcherFlow,
+  AccountMatcherPreviewMessage,
+  AccountMatcherProposal,
   AccountMatcherSnapshot,
 } from '@/src/types/accountMatcher';
 import type { AccountId } from '@/src/types/ids';
@@ -31,15 +23,16 @@ import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMat
 import type { SmsTextSpan } from '@/src/services/journal/smsTextSpans';
 import { fragmentsFromSmsSpans } from '@/src/services/journal/smsTextSpans';
 import { findMatcherFragmentSpans } from '@/src/services/sms/recognition/accountMatcherNormalization';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { buildMatcherPreviewModel } from '../helpers/buildMatcherPreviewModel';
+import type { AccountMatcherEditorViewModel } from './details/types';
 import { useAccountMatcherOlderMessages } from './useAccountMatcherOlderMessages';
+import { useAccountMatcherSave, type AccountMatcherSaveResult } from './useAccountMatcherSave';
 
 export type { AccountMatcherOverlap } from '../helpers/buildMatcherPreviewModel';
-
-export type AccountMatcherSaveResult = 'saved' | 'invalid' | 'overlap' | 'error';
+export type { AccountMatcherSaveResult };
+export type { AccountMatcherEditorViewModel } from './details/types';
 
 function splitFragments(value: string): string[] {
   return value
@@ -75,9 +68,8 @@ export function useAccountMatcherEditorViewModel(
   accountId: AccountId,
   matcherId?: string,
   proposalKey?: string,
-) {
+): AccountMatcherEditorViewModel {
   const { workplaceId } = useWorkplace();
-  const { assertBound } = useBoundWorkplaceSaveGate();
   const privateMode = useEffectivePrivacyMode();
   const older = useAccountMatcherOlderMessages(workplaceId);
   const loadKey = JSON.stringify([workplaceId, accountId, matcherId ?? null, proposalKey ?? null]);
@@ -85,55 +77,56 @@ export function useAccountMatcherEditorViewModel(
     key: string;
     previewData: AccountMatcherPreviewData | null;
     existingMatcher: AccountMatcherSnapshot | null;
-    proposal: Awaited<ReturnType<typeof loadAccountMatcherDiscovery>>['proposals'][number] | null;
+    proposal: AccountMatcherProposal | null;
     loadError: string | null;
   } | null>(null);
   const [selectedExample, setSelectedExample] = useState<AccountMatcherPreviewMessage | null>(null);
   const [sender, setSender] = useState('');
-  const [flowDraft, setFlowDraft] = useState<{
-    key: string;
-    flow: AccountMatcherFlow | 'either';
-  }>({ key: loadKey, flow: 'either' });
-  const flow = flowDraft.key === loadKey ? flowDraft.flow : 'either';
-  const setFlow = useCallback(
-    (next: AccountMatcherFlow | 'either') => setFlowDraft({ key: loadKey, flow: next }),
-    [loadKey],
-  );
+  const [flow, setFlowState] = useState<AccountMatcherFlow | 'either'>('either');
+  const setFlow = useCallback((next: AccountMatcherFlow | 'either') => setFlowState(next), []);
   const [senderWasEdited, setSenderWasEdited] = useState(Boolean(matcherId));
   const [fragmentsText, setFragmentsText] = useState('');
   const [regexMode, setRegexMode] = useState(false);
   const [regexPattern, setRegexPattern] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftKey, setDraftKey] = useState(loadKey);
+  const draftEpoch = useRef(0);
+  // Synchronous draft reset on identity change — async hydrate must not clobber later keystrokes.
+  if (draftKey !== loadKey) {
+    setDraftKey(loadKey);
+    setSelectedExample(null);
+    setSender('');
+    setFlowState('either');
+    setSenderWasEdited(Boolean(matcherId));
+    setFragmentsText('');
+    setRegexMode(false);
+    setRegexPattern('');
+  }
   const isLoading = loaded?.key !== loadKey;
   const previewData = loaded?.key === loadKey ? loaded.previewData : null;
   const existingMatcher = loaded?.key === loadKey ? loaded.existingMatcher : null;
   const proposal = loaded?.key === loadKey ? loaded.proposal : null;
   const loadError = loaded?.key === loadKey ? loaded.loadError : null;
+  const markDraftEdited = useCallback(() => {
+    draftEpoch.current += 1;
+  }, []);
 
   useEffect(() => {
     let active = true;
-    const resetDraft = () => {
-      setSelectedExample(null);
-      setSender('');
-      setFlow('either');
-      setSenderWasEdited(Boolean(matcherId));
-      setFragmentsText('');
-      setRegexMode(false);
-      setRegexPattern('');
-      setSaveError(null);
+    // Bump first so any in-flight hydrate from the previous identity cannot apply.
+    const epochAtStart = ++draftEpoch.current;
+    const hydrateDraft = (apply: () => void) => {
+      if (draftEpoch.current === epochAtStart) apply();
     };
     loadAccountMatcherPreviewData(workplaceId, accountId)
       .then(loadedPreviewData => {
         if (!active) return;
-        resetDraft();
         const discovery = proposalKey
           ? projectAccountMatcherDiscovery(workplaceId, accountId, loadedPreviewData)
           : null;
-        const proposal = proposalKey
+        const nextProposal = proposalKey
           ? (discovery?.proposals.find(item => item.proposalKey === proposalKey) ?? null)
           : null;
-        if (proposalKey && !proposal) {
+        if (proposalKey && !nextProposal) {
           setLoaded({
             key: loadKey,
             previewData: loadedPreviewData,
@@ -144,7 +137,7 @@ export function useAccountMatcherEditorViewModel(
           return;
         }
         const proposalMessages =
-          proposal?.examples.map(({ message }) => ({
+          nextProposal?.examples.map(({ message }) => ({
             ...message,
             linkedAccountNames: message.linkedAccountNames ?? [],
           })) ?? [];
@@ -174,15 +167,17 @@ export function useAccountMatcherEditorViewModel(
             return;
           }
           const definition = parseStoredMatcherDefinition(found.definitionJson);
-          setFlow(definition?.flow ?? 'either');
-          setSender(definition?.sender?.value ?? '');
-          setSenderWasEdited(true);
-          setFragmentsText(
-            definition?.body?.kind === 'fragments' ? definition.body.fragments.join('\n') : '',
-          );
-          setRegexMode(definition?.body?.kind === 'regex');
-          setRegexPattern(definition?.body?.kind === 'regex' ? definition.body.pattern : '');
-          setSelectedExample(representativeMessage(accountId, definition, data.messages));
+          hydrateDraft(() => {
+            setFlow(definition?.flow ?? 'either');
+            setSender(definition?.sender?.value ?? '');
+            setSenderWasEdited(true);
+            setFragmentsText(
+              definition?.body?.kind === 'fragments' ? definition.body.fragments.join('\n') : '',
+            );
+            setRegexMode(definition?.body?.kind === 'regex');
+            setRegexPattern(definition?.body?.kind === 'regex' ? definition.body.pattern : '');
+            setSelectedExample(representativeMessage(accountId, definition, data.messages));
+          });
           setLoaded({
             key: loadKey,
             previewData: data,
@@ -192,32 +187,33 @@ export function useAccountMatcherEditorViewModel(
           });
           return;
         }
-        if (proposal) {
-          setFlow(proposal.definition.flow ?? 'either');
-          setSender(proposal.definition.sender?.value ?? '');
-          setSenderWasEdited(false);
-          setFragmentsText(
-            proposal.definition.body?.kind === 'fragments'
-              ? proposal.definition.body.fragments.join('\n')
-              : '',
-          );
-          setRegexMode(false);
-          setRegexPattern('');
-          setSelectedExample(
-            representativeMessage(accountId, proposal.definition, proposalMessages),
-          );
+        if (nextProposal) {
+          hydrateDraft(() => {
+            setFlow(nextProposal.definition.flow ?? 'either');
+            setSender(nextProposal.definition.sender?.value ?? '');
+            setSenderWasEdited(false);
+            setFragmentsText(
+              nextProposal.definition.body?.kind === 'fragments'
+                ? nextProposal.definition.body.fragments.join('\n')
+                : '',
+            );
+            setRegexMode(false);
+            setRegexPattern('');
+            setSelectedExample(
+              representativeMessage(accountId, nextProposal.definition, proposalMessages),
+            );
+          });
         }
         setLoaded({
           key: loadKey,
           previewData: data,
           existingMatcher: null,
-          proposal,
+          proposal: nextProposal,
           loadError: null,
         });
       })
       .catch(() => {
         if (active) {
-          resetDraft();
           setLoaded({
             key: loadKey,
             previewData: null,
@@ -292,92 +288,73 @@ export function useAccountMatcherEditorViewModel(
 
   const selectMessage = useCallback(
     (message: AccountMatcherPreviewMessage) => {
+      markDraftEdited();
       setSelectedExample(message);
       if (!senderWasEdited) setSender(message.senderAddress ?? '');
     },
-    [senderWasEdited],
+    [markDraftEdited, senderWasEdited],
   );
-  const changeSender = useCallback((value: string) => {
-    setSenderWasEdited(true);
-    setSender(value);
-  }, []);
+  const changeSender = useCallback(
+    (value: string) => {
+      markDraftEdited();
+      setSenderWasEdited(true);
+      setSender(value);
+    },
+    [markDraftEdited],
+  );
   const changeSelectedSpans = useCallback(
     (spans: SmsTextSpan[]) => {
+      markDraftEdited();
       setFragmentsText(fragmentsFromSmsSpans(selectedExample?.rawBody ?? '', spans).join('\n'));
     },
-    [selectedExample],
+    [markDraftEdited, selectedExample],
   );
-  const changeRegexPattern = useCallback((value: string) => setRegexPattern(value), []);
-
-  const save = useCallback(
-    async (resolution?: {
-      keepBoth?: boolean;
-      moveMatcherId?: string;
-    }): Promise<AccountMatcherSaveResult> => {
-      if (!validation.valid) return 'invalid';
-      if (preview.overlaps.length && !resolution) return 'overlap';
-      setSaveError(null);
-      setIsSaving(true);
-      try {
-        assertBound();
-        await saveAccountMatcher(workplaceId, {
-          ...(matcherId ? { id: matcherId } : {}),
-          accountId,
-          definition,
-          ...(proposalKey ? { proposalKey } : {}),
-          ...(!matcherId
-            ? {
-                provenance: proposalKey
-                  ? 'discovered'
-                  : selectedExample
-                    ? 'selected_message'
-                    : 'manual',
-              }
-            : {}),
-          ...(resolution?.moveMatcherId ? { moveMatcherId: resolution.moveMatcherId } : {}),
-        });
-        return 'saved';
-      } catch (error) {
-        setSaveError(
-          error instanceof AccountMatcherConflictError
-            ? copy.duplicateMatcher
-            : error instanceof AccountMatcherProposalUnavailableError
-              ? copy.proposalUnavailable
-              : copy.saveError,
-        );
-        return 'error';
-      } finally {
-        setIsSaving(false);
-      }
+  const changeRegexPattern = useCallback(
+    (value: string) => {
+      markDraftEdited();
+      setRegexPattern(value);
     },
-    [
-      accountId,
-      assertBound,
-      definition,
-      matcherId,
-      proposalKey,
-      preview.overlaps.length,
-      selectedExample,
-      validation.valid,
-      workplaceId,
-    ],
+    [markDraftEdited],
+  );
+  const changeFragmentsText = useCallback(
+    (value: string) => {
+      markDraftEdited();
+      setFragmentsText(value);
+    },
+    [markDraftEdited],
+  );
+  const changeRegexMode = useCallback(
+    (value: boolean) => {
+      markDraftEdited();
+      setRegexMode(value);
+    },
+    [markDraftEdited],
+  );
+  const changeFlow = useCallback(
+    (next: AccountMatcherFlow | 'either') => {
+      markDraftEdited();
+      setFlow(next);
+    },
+    [markDraftEdited, setFlow],
   );
 
-  const forget = useCallback(async () => {
-    if (!matcherId) return false;
-    setIsSaving(true);
+  const { isSaving, saveError, setSaveError, save, forget } = useAccountMatcherSave({
+    workplaceId,
+    accountId,
+    matcherId,
+    proposalKey,
+    definition,
+    validationValid: validation.valid,
+    overlapCount: preview.overlaps.length,
+    selectedExampleId: selectedExample?.id,
+    provenance: proposalKey ? 'discovered' : selectedExample ? 'selected_message' : 'manual',
+  });
+
+  const [saveErrorKey, setSaveErrorKey] = useState(loadKey);
+  if (saveErrorKey !== loadKey) {
+    setSaveErrorKey(loadKey);
     setSaveError(null);
-    try {
-      assertBound();
-      await forgetAccountMatcher(workplaceId, matcherId);
-      return true;
-    } catch {
-      setSaveError(copy.forgetError);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [assertBound, matcherId, workplaceId]);
+  }
 
   const eligible = previewData
     ? getEligibleMatcherAccountIds(previewData.accounts).has(accountId)
@@ -397,14 +374,14 @@ export function useAccountMatcherEditorViewModel(
     sender,
     setSender: changeSender,
     flow,
-    setFlow,
+    setFlow: changeFlow,
     fragmentsText,
     regexMode,
-    setRegexMode,
+    setRegexMode: changeRegexMode,
     regexPattern,
     changeRegexPattern,
     regexValidation: validateSafeAccountMatcherRegex(regexPattern),
-    setFragmentsText,
+    setFragmentsText: changeFragmentsText,
     fragments,
     definition,
     draftFingerprint,

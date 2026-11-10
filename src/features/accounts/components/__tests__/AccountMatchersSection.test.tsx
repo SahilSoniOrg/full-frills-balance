@@ -6,7 +6,7 @@ import { asAccountId } from '@/src/types/ids';
 import type {
   AccountMatcherProposal,
   SuppressedAccountMatcherProposal,
-} from '@/src/services/sms/recognition/accountMatcherDiscovery';
+} from '@/src/types/accountMatcher';
 
 jest.mock('@/src/hooks/useObservable', () => ({
   useObservable: () => ({ data: [], isLoading: false, error: null, version: 0, retry: jest.fn() }),
@@ -52,8 +52,6 @@ const discovery = {
   inspectedCount: 0,
   inspectedDates: null,
   recognitions: [],
-  retry: jest.fn(),
-  latestLinkTime: 0,
   refresh: jest.fn(),
   dismiss: jest.fn(),
   restore: jest.fn(),

@@ -13,7 +13,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type {
   AccountMatcherProposal,
   SuppressedAccountMatcherProposal,
-} from '@/src/services/sms/recognition/accountMatcherDiscovery';
+} from '@/src/types/accountMatcher';
 import { StyleSheet, View } from 'react-native';
 import { accountMatcherPresentation } from '../helpers/accountMatcherSummary';
 import { displayPrivate } from '../helpers/displayPrivate';

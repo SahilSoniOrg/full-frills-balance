@@ -2,7 +2,7 @@ import { AppIcon, AppText, Icon, ListRow, PressScaleTouchable } from '@/src/comp
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { AccountMatcherPreviewMessage } from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';

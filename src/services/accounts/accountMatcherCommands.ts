@@ -99,7 +99,7 @@ async function saveAccountMatcherCore(
     await assertEligibleOwner(workplaceId, input.accountId);
     const existing = input.id ? await findOwnedMatcher(workplaceId, input.id) : null;
     if (existing && existing.accountId !== input.accountId) {
-      throw new Error('Use moveAccountMatcher to change an account matcher owner');
+      throw new Error('Account matcher owner cannot change via id; pass moveMatcherId instead');
     }
     // Validate the replacement, not the broken definition it is intended to repair.
     const moving = input.moveMatcherId
@@ -172,33 +172,6 @@ async function forgetAccountMatcherCore(
   });
 }
 
-async function moveAccountMatcherCore(
-  workplaceId: WorkplaceId,
-  matcherId: string,
-  targetAccountId: AccountId,
-): Promise<AccountMatcher> {
-  const moved = await runAccountingWriteSession(async session => {
-    const current = await findOwnedMatcher(workplaceId, matcherId);
-    await assertEligibleOwner(workplaceId, targetAccountId);
-    const definition = validateStoredDefinition(current);
-    if (current.accountId === targetAccountId) return current;
-    return accountMatcherRepository.saveInSession(
-      session,
-      workplaceId,
-      {
-        accountId: targetAccountId,
-        definition,
-        conditionsKey: current.conditionsKey,
-        isEnabled: current.isEnabled,
-        provenance: current.provenance,
-      },
-      null,
-      current,
-    );
-  });
-  return moved;
-}
-
 export async function saveAccountMatcher(
   ...args: Parameters<typeof saveAccountMatcherCore>
 ): Promise<AccountMatcher> {
@@ -233,11 +206,4 @@ export async function forgetAccountMatcher(
 ): Promise<void> {
   await withAccountRecognitionRefresh(args[0], () => forgetAccountMatcherCore(...args));
   analytics.trackFeatureUsage('account_matcher', 'forget');
-}
-export async function moveAccountMatcher(
-  ...args: Parameters<typeof moveAccountMatcherCore>
-): Promise<AccountMatcher> {
-  const moved = await withAccountRecognitionRefresh(args[0], () => moveAccountMatcherCore(...args));
-  analytics.trackFeatureUsage('account_matcher', 'move');
-  return moved;
 }

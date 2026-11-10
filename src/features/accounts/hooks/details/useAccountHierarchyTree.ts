@@ -1,4 +1,3 @@
-import { IconName } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
@@ -9,25 +8,9 @@ import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/ac
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
+import type { AncestorAccountViewModel, SubAccountViewModel } from './types';
 
-export interface SubAccountViewModel {
-  id: AccountId;
-  name: string;
-  accountType: string;
-  icon: IconName;
-  balanceAmount: number;
-  currencyCode: string;
-  categoryColor: string;
-  accountColor: string;
-  level: number;
-  isGroup: boolean;
-}
-
-export interface AncestorAccountViewModel {
-  id: AccountId;
-  name: string;
-  isArchived: boolean;
-}
+export type { AncestorAccountViewModel, SubAccountViewModel } from './types';
 
 export interface UseAccountHierarchyTreeOptions {
   accountId: AccountId;

@@ -1,15 +1,13 @@
-import { AppButton, AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
+import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { formatDate } from '@/src/utils/dateUtils';
-import { Fragment, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { AccountMatcherEditorViewModel } from '../hooks/details/types';
 import { MatcherEvidenceDisclosure, MatcherPreviewMessage } from './AccountMatcherMessageViews';
-import type { useAccountMatcherEditorViewModel } from '../hooks/useAccountMatcherEditorViewModel';
-
-const EVIDENCE_FIRST_PAGE = 3;
-const EVIDENCE_PAGE_STEP = 10;
+import { ShowMoreList } from './ShowMorePager';
 
 function PagedEvidenceList<T>({
   title,
@@ -24,30 +22,15 @@ function PagedEvidenceList<T>({
   keyExtractor: (item: T) => string;
   renderItem: (item: T) => ReactNode;
 }) {
-  const [visibleCount, setVisibleCount] = useState(EVIDENCE_FIRST_PAGE);
   if (!items.length) return null;
   return (
     <MatcherEvidenceDisclosure title={title} count={items.length} testID={testID}>
-      {items.slice(0, visibleCount).map(item => (
-        <Fragment key={keyExtractor(item)}>{renderItem(item)}</Fragment>
-      ))}
-      {visibleCount < items.length ? (
-        <AppButton
-          variant="ghost"
-          onPress={() => setVisibleCount(count => count + EVIDENCE_PAGE_STEP)}
-        >
-          {copy.showMoreMessages}
-        </AppButton>
-      ) : null}
+      <ShowMoreList items={items} keyExtractor={keyExtractor} renderItem={renderItem} />
     </MatcherEvidenceDisclosure>
   );
 }
 
-export function AccountMatcherEvidencePreview({
-  vm,
-}: {
-  vm: ReturnType<typeof useAccountMatcherEditorViewModel>;
-}) {
+export function AccountMatcherEvidencePreview({ vm }: { vm: AccountMatcherEditorViewModel }) {
   const [showPreviewDetails, setShowPreviewDetails] = useState(false);
   const range = vm.inspectedDates
     ? copy.dateRange(

@@ -1,7 +1,13 @@
-import type { AccountMatcherDefinitionV1 } from '@/src/types/accountMatcher';
+import type {
+  AccountMatcherDefinitionV1,
+  AccountMatcherDiscoveryExample,
+  AccountMatcherDiscoveryMatcher,
+  AccountMatcherDiscoveryMessage,
+  AccountMatcherProposal,
+  SuppressedAccountMatcherProposal,
+} from '@/src/types/accountMatcher';
 import type { AccountMatcherSuppression } from '@/src/services/preferences/workplaceTypes';
 import type { AccountId } from '@/src/types/ids';
-import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { findSmsHighlightRanges } from '@/src/services/journal/smsHighlightRanges';
 import { tokenizeSmsWords } from '@/src/services/journal/smsTextSpans';
@@ -17,43 +23,17 @@ import {
   normalizeSenderHeader,
 } from './accountMatcherNormalization';
 
+export type {
+  AccountMatcherDiscoveryExample,
+  AccountMatcherDiscoveryMatcher,
+  AccountMatcherDiscoveryMessage,
+  AccountMatcherProposal,
+  SuppressedAccountMatcherProposal,
+} from '@/src/types/accountMatcher';
+
 // The LCS table below is quadratic in token count. Skip unusually dense messages
 // instead of blocking the JS thread or deriving a matcher from partial tokens.
 const MAX_DISCOVERY_TOKENS = 128;
-
-export interface AccountMatcherDiscoveryMessage extends InboxRecordSnapshot {
-  /** Account membership is derived from current, non-deleted journal transactions. */
-  linkedAccountIds: AccountId[];
-  linkedAccountNames?: string[];
-  contentDigest?: string;
-}
-
-export interface AccountMatcherDiscoveryMatcher {
-  id: string;
-  accountId: AccountId;
-  definition: unknown;
-  conditionsKey: string;
-  isEnabled: boolean;
-}
-
-export interface AccountMatcherDiscoveryExample {
-  message: AccountMatcherDiscoveryMessage;
-  provenance: 'auto_posted' | 'created_or_reviewed';
-}
-
-export interface AccountMatcherProposal {
-  proposalKey: string;
-  accountId: AccountId;
-  definition: AccountMatcherDefinitionV1;
-  examples: AccountMatcherDiscoveryExample[];
-  supportJournalIds: string[];
-  overlaps: { messageId: string; accountIds: AccountId[] }[];
-  allExamplesAutoPosted: boolean;
-}
-
-export interface SuppressedAccountMatcherProposal extends AccountMatcherProposal {
-  suppression: AccountMatcherSuppression;
-}
 
 export interface DiscoverAccountMatcherProposalsInput {
   accountId: AccountId;

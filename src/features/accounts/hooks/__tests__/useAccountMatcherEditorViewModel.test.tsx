@@ -6,10 +6,8 @@ import {
   TransactionDirection,
 } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
-import type {
-  AccountMatcherPreviewData,
-  AccountMatcherPreviewMessage,
-} from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewData } from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import {
   readLatestAccountMatcherMessages,
   readOlderAccountMatcherMessages,

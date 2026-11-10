@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { AccountMatcherMatchedMessage } from '@/src/services/accounts/accountMatcherMatchQueries';
+import type { AccountMatcherMatchedMessage } from '@/src/types/accountMatcher';
 import { TransactionDirection } from '@/src/types/enums';
 import { formatDate } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';

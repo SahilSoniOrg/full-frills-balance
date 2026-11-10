@@ -3,7 +3,7 @@ import {
   readLatestAccountMatcherMessages,
   readOlderAccountMatcherMessages,
 } from '@/src/services/accounts/accountMatcherOlderMessages';
-import type { AccountMatcherPreviewMessage } from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { SmsInboxCursor } from '@/src/types/smsInbox';
 import { useCallback, useEffect, useRef, useState } from 'react';

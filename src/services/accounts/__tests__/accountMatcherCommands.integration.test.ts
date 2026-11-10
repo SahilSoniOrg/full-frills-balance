@@ -10,7 +10,6 @@ import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import {
   AccountMatcherProposalUnavailableError,
   forgetAccountMatcher,
-  moveAccountMatcher,
   saveAccountMatcher,
   setAccountMatcherEnabled,
 } from '@/src/services/accounts/accountMatcherCommands';
@@ -181,7 +180,7 @@ describe('account matcher commands (integration)', () => {
     expect(await accountMatcherRepository.findForAccount(WP, account.id)).toHaveLength(0);
   });
 
-  it('supports enable, disable, move, and forget with ID-only audit details', async () => {
+  it('supports enable, disable, move via save, and forget with ID-only audit details', async () => {
     const firstAccount = await asset('Checking');
     const secondAccount = await asset('Savings');
     const matcher = await saveAccountMatcher(WP, {
@@ -191,11 +190,15 @@ describe('account matcher commands (integration)', () => {
 
     await setAccountMatcherEnabled(WP, matcher.id, false);
     await setAccountMatcherEnabled(WP, matcher.id, true);
-    const moved = await moveAccountMatcher(WP, matcher.id, secondAccount.id);
+    const moved = await saveAccountMatcher(WP, {
+      accountId: secondAccount.id,
+      definition: DEFINITION,
+      moveMatcherId: matcher.id,
+    });
     expect(moved.accountId).toBe(secondAccount.id);
-    await forgetAccountMatcher(WP, matcher.id);
+    await forgetAccountMatcher(WP, moved.id);
 
-    expect(await accountMatcherRepository.find(WP, matcher.id)).toBeNull();
+    expect(await accountMatcherRepository.find(WP, moved.id)).toBeNull();
     expect(preferences.accountMatchers.list(WP)).toEqual([
       {
         accountId: secondAccount.id,
@@ -203,7 +206,7 @@ describe('account matcher commands (integration)', () => {
         reason: 'forgotten',
       },
     ]);
-    const audits = await auditRepository.findByEntity('account_matcher', matcher.id, WP);
+    const audits = await auditRepository.findByEntity('account_matcher', moved.id, WP);
     expect(audits.map(audit => audit.eventType)).toEqual(
       expect.arrayContaining([
         'account_matcher.created',
@@ -335,7 +338,11 @@ describe('account matcher commands (integration)', () => {
       definition: DEFINITION,
       isEnabled: false,
     });
-    const moved = await moveAccountMatcher(WP, moving.id, target.id);
+    const moved = await saveAccountMatcher(WP, {
+      accountId: target.id,
+      definition: DEFINITION,
+      moveMatcherId: moving.id,
+    });
     expect(moved.id).toBe(kept.id);
     expect(moved.isEnabled).toBe(false);
     expect(await accountMatcherRepository.findForAccount(WP, source.id)).toEqual([]);

@@ -10,9 +10,10 @@ import { preferences } from '@/src/services/preferences';
 import type { AccountMatcherSnapshot } from '@/src/types/accountMatcher';
 import type { AccountId } from '@/src/types/ids';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AccountMatcherManagementViewModel } from './details/types';
 
 const EMPTY_DISCOVERY: Pick<
-  ReturnType<typeof projectAccountMatcherDiscovery>,
+  AccountMatcherManagementViewModel,
   'proposals' | 'suppressedProposals'
 > = { proposals: [], suppressedProposals: [] };
 const EMPTY_MATCHES = new Map();
@@ -22,7 +23,7 @@ export function useAccountMatcherManagementViewModel(
   accountId: AccountId,
   storedMatchers: readonly AccountMatcherSnapshot[],
   matcherVersion: number,
-) {
+): AccountMatcherManagementViewModel {
   const { workplaceId } = useWorkplace();
   const [revision, setRevision] = useState(0);
   const [suppressionVersion, setSuppressionVersion] = useState(0);
@@ -98,9 +99,7 @@ export function useAccountMatcherManagementViewModel(
     recognitions: data?.recentRecognitions ?? [],
     isLoading,
     error: loaded?.key === loadKey ? loaded.error : null,
-    latestLinkTime: data?.latestLinkTime ?? 0,
     refresh,
-    retry: refresh,
     dismiss,
     restore,
   };

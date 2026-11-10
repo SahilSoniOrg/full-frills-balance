@@ -2,14 +2,14 @@ import {
   evaluateAccountMatcherMatches,
   type AccountMatcherMatchData,
 } from '../accountMatcherMatchQueries';
-import type { AccountMatcherMessage } from '../accountMatcherMembership';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 
 const accountId = asAccountId('matching-account');
 const journalId = asJournalId('linked-journal');
 const journal = { id: journalId, description: 'Card payment', journalDate: Date.UTC(2026, 10, 4) };
-function message(id: string, body: string, linked = false): AccountMatcherMessage {
+function message(id: string, body: string, linked = false): AccountMatcherPreviewMessage {
   return {
     id,
     workplaceId: asWorkplaceId('match-query-workplace'),

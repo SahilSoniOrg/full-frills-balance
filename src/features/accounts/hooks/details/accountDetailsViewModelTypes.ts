@@ -6,21 +6,24 @@ import type { JournalListModalsProps } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import { IconName } from '@/src/components/core';
-import {
+import type {
+  AncestorAccountViewModel,
   PeriodMetrics,
   PreviousPeriodMetrics,
-} from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
-import {
-  AncestorAccountViewModel,
   SubAccountViewModel,
-} from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
+} from '@/src/features/accounts/hooks/details/types';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
-export type { AncestorAccountViewModel, PeriodMetrics, SubAccountViewModel };
+export type {
+  AncestorAccountViewModel,
+  PeriodMetrics,
+  PreviousPeriodMetrics,
+  SubAccountViewModel,
+} from '@/src/features/accounts/hooks/details/types';
 
 export interface AccountSummaryCardModel {
   accountName: string;

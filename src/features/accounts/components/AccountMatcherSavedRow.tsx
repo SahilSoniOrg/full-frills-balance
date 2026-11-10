@@ -1,22 +1,15 @@
-import {
-  AppButton,
-  AppIcon,
-  AppText,
-  AppToggle,
-  Icon,
-  PressScaleTouchable,
-} from '@/src/components/core';
+import { AppIcon, AppText, AppToggle, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
-import type { AccountMatcherSnapshot } from '@/src/types/accountMatcher';
+import type { AccountMatcherSnapshot, AccountMatcherMatches } from '@/src/types/accountMatcher';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { AccountMatcherMatches } from '@/src/services/accounts/accountMatcherMatchQueries';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { storedAccountMatcherPresentation } from '../helpers/accountMatcherSummary';
 import { displayPrivate } from '../helpers/displayPrivate';
 import { AccountMatcherConditions } from './AccountMatcherConditions';
 import { AccountMatcherMatchedSmsRow } from './AccountMatcherMatchedSmsRow';
+import { ShowMoreList } from './ShowMorePager';
 
 export function AccountMatcherSavedRow({
   matcher,
@@ -41,7 +34,6 @@ export function AccountMatcherSavedRow({
 }) {
   const { theme } = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(3);
   const [isToggling, setIsToggling] = useState(false);
   const presentation = storedAccountMatcherPresentation(matcher);
   const title = displayPrivate(
@@ -145,21 +137,18 @@ export function AccountMatcherSavedRow({
               {copy.noMatchedMessages}
             </AppText>
           ) : null}
-          {!error &&
-            matches?.messages
-              .slice(0, visibleCount)
-              .map(match => (
+          {!error && matches?.messages.length ? (
+            <ShowMoreList
+              items={matches.messages}
+              keyExtractor={match => match.message.id}
+              renderItem={match => (
                 <AccountMatcherMatchedSmsRow
-                  key={match.message.id}
                   match={match}
                   matcherId={matcher.id}
                   privateMode={privateMode}
                 />
-              ))}
-          {!error && matches && visibleCount < matches.messages.length ? (
-            <AppButton variant="ghost" onPress={() => setVisibleCount(count => count + 10)}>
-              {copy.showMoreMessages}
-            </AppButton>
+              )}
+            />
           ) : null}
         </View>
       ) : null}

@@ -1,6 +1,6 @@
 import type { SmsMessage } from '@/modules/expo-sms-inbox';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
-import type { AccountMatcherPreviewMessage } from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 import type { SmsInboxCursor } from '@/src/types/smsInbox';
 import type { WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';

@@ -5,15 +5,19 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/JournalOb
 import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcherRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import type { AccountMatcherDiscoveryMessage } from '@/src/services/sms/recognition/accountMatcherDiscovery';
-import type { AccountMatcherSnapshot, SmsRecognitionSummary } from '@/src/types/accountMatcher';
+import type {
+  AccountMatcherDiscoveryMessage,
+  AccountMatcherLinkedJournal,
+  AccountMatcherPreviewMessage,
+  AccountMatcherSnapshot,
+  SmsRecognitionSummary,
+} from '@/src/types/accountMatcher';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import { combineLatest, map, merge, skip } from 'rxjs';
-import {
-  projectAccountMatcherMembership,
-  type AccountMatcherMessage,
-} from './accountMatcherMembership';
+import { projectAccountMatcherMembership } from './accountMatcherMembership';
+
+export type { AccountMatcherLinkedJournal } from '@/src/types/accountMatcher';
 
 export const ACCOUNT_MATCHER_EVIDENCE_LIMIT = 200;
 
@@ -23,19 +27,13 @@ export interface AccountMatcherEvidenceData {
   latestLinkTime: number;
 }
 
-export interface AccountMatcherLinkedJournal {
-  id: JournalId;
-  description?: string;
-  journalDate: number;
-}
-
 /**
  * Canonical bounded snapshot for matcher management and editing. Older linked SMS
  * and recent inbox SMS are projected together so every view sees the same evidence.
  */
 export interface AccountMatcherPageData extends AccountMatcherEvidenceData {
   accounts: PlainAccount[];
-  messages: AccountMatcherMessage[];
+  messages: AccountMatcherPreviewMessage[];
   matchers: AccountMatcherSnapshot[];
   journalsById: ReadonlyMap<JournalId, AccountMatcherLinkedJournal>;
   /** Includes unavailable links so a restored journal can invalidate the view. */

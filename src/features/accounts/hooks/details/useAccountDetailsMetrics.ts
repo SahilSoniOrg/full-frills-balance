@@ -21,19 +21,9 @@ import { DateRange, describePeriodRange } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { combineLatest, map, of } from 'rxjs';
+import type { PeriodMetrics, PreviousPeriodMetrics } from './types';
 
-export interface PeriodMetrics {
-  totalIncrease: number;
-  totalDecrease: number;
-  netChange: number;
-  dailyAverage: number | null;
-  isLoading: boolean;
-}
-
-export interface PreviousPeriodMetrics {
-  label: string;
-  netChange: number;
-}
+export type { PeriodMetrics, PreviousPeriodMetrics } from './types';
 
 export interface UseAccountDetailsMetricsOptions {
   accountId: AccountId;

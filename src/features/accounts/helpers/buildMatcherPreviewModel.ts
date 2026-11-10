@@ -1,12 +1,10 @@
-import type {
-  AccountMatcherPreviewData,
-  AccountMatcherPreviewMessage,
-} from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherPreviewData } from '@/src/services/accounts/accountMatcherPreviewQueries';
 import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMatcherEligibility';
 import { parseStoredMatcherDefinition } from '@/src/services/sms/recognition/accountMatcherDefinition';
 import { evaluateMatcher } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import type {
   AccountMatcherDefinitionV1,
+  AccountMatcherPreviewMessage,
   AccountMatcherRecord,
   TextSpan,
 } from '@/src/types/accountMatcher';

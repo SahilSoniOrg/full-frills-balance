@@ -1,4 +1,6 @@
-import type { AccountId } from '@/src/types/ids';
+import type { AccountId, JournalId } from '@/src/types/ids';
+import type { AccountMatcherSuppression } from '@/src/services/preferences/workplaceTypes';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 
 /** Money movement relative to the matched Account, independent of the SMS parser's direction. */
 export type AccountMatcherFlow = 'incoming' | 'outgoing';
@@ -95,4 +97,62 @@ export interface AccountMatcherSnapshot {
   readonly definitionJson: string;
   readonly conditionsKey: string;
   readonly isEnabled: boolean;
+}
+
+/** Account membership is derived from current, non-deleted journal transactions. */
+export interface AccountMatcherDiscoveryMessage extends InboxRecordSnapshot {
+  linkedAccountIds: AccountId[];
+  linkedAccountNames?: string[];
+  contentDigest?: string;
+}
+
+/** Hydrated inbox SMS used by matcher editor and management previews. */
+export interface AccountMatcherPreviewMessage extends InboxRecordSnapshot {
+  linkedAccountIds: AccountId[];
+  linkedAccountNames: string[];
+}
+
+export interface AccountMatcherDiscoveryMatcher {
+  id: string;
+  accountId: AccountId;
+  definition: unknown;
+  conditionsKey: string;
+  isEnabled: boolean;
+}
+
+export interface AccountMatcherDiscoveryExample {
+  message: AccountMatcherDiscoveryMessage;
+  provenance: 'auto_posted' | 'created_or_reviewed';
+}
+
+export interface AccountMatcherProposal {
+  proposalKey: string;
+  accountId: AccountId;
+  definition: AccountMatcherDefinitionV1;
+  examples: AccountMatcherDiscoveryExample[];
+  supportJournalIds: string[];
+  overlaps: { messageId: string; accountIds: AccountId[] }[];
+  allExamplesAutoPosted: boolean;
+}
+
+export interface SuppressedAccountMatcherProposal extends AccountMatcherProposal {
+  suppression: AccountMatcherSuppression;
+}
+
+export interface AccountMatcherLinkedJournal {
+  id: JournalId;
+  description?: string;
+  journalDate: number;
+}
+
+export interface AccountMatcherMatchedMessage {
+  message: AccountMatcherPreviewMessage;
+  spans: TextSpan[];
+  journal?: AccountMatcherLinkedJournal;
+}
+
+export interface AccountMatcherMatches {
+  messages: AccountMatcherMatchedMessage[];
+  journals: AccountMatcherLinkedJournal[];
+  indeterminateCount: number;
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { AccountMatcherEditorView } from '../AccountMatcherEditorView';
-import type { useAccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/useAccountMatcherEditorViewModel';
+import type { AccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/details/types';
 
 jest.mock('@/src/components/core', () => {
   const ReactModule = jest.requireActual<typeof import('react')>('react');
@@ -134,7 +134,7 @@ const makeViewModel = () =>
     proposalKey: undefined,
     save: jest.fn(),
     forget: jest.fn(),
-  }) as unknown as ReturnType<typeof useAccountMatcherEditorViewModel>;
+  }) as unknown as AccountMatcherEditorViewModel;
 
 describe('AccountMatcherEditorView older-message affordance', () => {
   const originalPlatform = Platform.OS;

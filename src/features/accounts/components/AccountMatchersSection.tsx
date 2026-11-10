@@ -1,21 +1,15 @@
-import type { AccountMatcherSnapshot } from '@/src/types/accountMatcher';
-import { observeAccountMatcherSnapshots } from '@/src/services/accounts/accountMatcherPreviewQueries';
+import type { AccountMatcherSnapshot, AccountMatcherProposal } from '@/src/types/accountMatcher';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useObservable } from '@/src/hooks/useObservable';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
-import { setAccountMatcherEnabled } from '@/src/services/accounts/accountMatcherCommands';
-import type { AccountMatcherProposal } from '@/src/services/sms/recognition/accountMatcherDiscovery';
 import type { AccountId } from '@/src/types/ids';
-import { toast } from '@/src/utils/alerts';
 import { StyleSheet, View } from 'react-native';
 import { accountMatcherNeedsAttention } from '../helpers/accountMatcherAttention';
-import { useAccountMatcherManagementViewModel } from '../hooks/useAccountMatcherManagementViewModel';
-import { useState } from 'react';
+import { useAccountMatchersSection } from '../hooks/useAccountMatchersSection';
+import type { AccountMatchersSectionModel } from '../hooks/details/types';
 import {
   AccountMatcherProposalActions,
   AccountMatcherProposalRow,
@@ -24,8 +18,6 @@ import {
 import { AccountMatcherSavedRow } from './AccountMatcherSavedRow';
 import { formatDate } from '@/src/utils/dateUtils';
 
-const INITIAL_SUGGESTIONS = 1;
-
 export function AccountMatchersSection({
   accountId,
   eligible,
@@ -33,42 +25,42 @@ export function AccountMatchersSection({
   accountId: AccountId;
   eligible: boolean;
 }) {
-  const { workplaceId } = useWorkplace();
+  const model = useAccountMatchersSection(accountId);
+  return <AccountMatchersSectionView accountId={accountId} eligible={eligible} model={model} />;
+}
+
+/** Props-only surface; writes and observation live in useAccountMatchersSection. */
+export function AccountMatchersSectionView({
+  accountId,
+  eligible,
+  model,
+}: {
+  accountId: AccountId;
+  eligible: boolean;
+  model: AccountMatchersSectionModel;
+}) {
   const { theme } = useTheme();
   const privateMode = useEffectivePrivacyMode();
-  const { data: matchers, version: matcherVersion } = useObservable(
-    () => observeAccountMatcherSnapshots(workplaceId, accountId),
-    [accountId, workplaceId],
-    [] as AccountMatcherSnapshot[],
-    { resetKey: JSON.stringify([workplaceId, accountId]) },
-  );
-  const matcherData = useAccountMatcherManagementViewModel(accountId, matchers, matcherVersion);
-  const discovery = matcherData;
-  const matchedMessages = matcherData;
-  const [hiddenForVisit, setHiddenForVisit] = useState<Set<string>>(() => new Set());
-  const recognitions = matcherData.recognitions;
-  const [actionProposal, setActionProposal] = useState<AccountMatcherProposal | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [showDismissed, setShowDismissed] = useState(false);
-  const proposals = discovery.proposals
-    .filter(proposal => !hiddenForVisit.has(proposal.proposalKey))
-    .sort(
-      (left, right) =>
-        right.supportJournalIds.length - left.supportJournalIds.length ||
-        right.examples.length - left.examples.length ||
-        left.proposalKey.localeCompare(right.proposalKey),
-    );
-  const visibleProposals = showAll ? proposals : proposals.slice(0, INITIAL_SUGGESTIONS);
+  const {
+    matchers,
+    management,
+    proposals,
+    visibleProposals,
+    initialSuggestions,
+    actionProposal,
+    setActionProposal,
+    showAll,
+    setShowAll,
+    showDismissed,
+    setShowDismissed,
+    hideProposalForVisit,
+    changeEnabled,
+  } = model;
+  const recognitions = management.recognitions;
+  const matchedMessages = management;
+  const discovery = management;
   const openProposal = (proposal: AccountMatcherProposal) =>
     AppNavigation.toAccountMatcherEditor(accountId, undefined, proposal.proposalKey);
-
-  const changeEnabled = async (matcherId: string, isEnabled: boolean) => {
-    try {
-      await setAccountMatcherEnabled(workplaceId, matcherId, isEnabled);
-    } catch {
-      toast.error(copy.saveError);
-    }
-  };
 
   return (
     <View style={styles.section} testID="account-matchers-section">
@@ -103,7 +95,7 @@ export function AccountMatchersSection({
 
       {matchers.length ? (
         <View style={[styles.group, { backgroundColor: theme.surface }]}>
-          {matchers.map((matcher, index) => {
+          {matchers.map((matcher: AccountMatcherSnapshot, index: number) => {
             const attention = accountMatcherNeedsAttention(matcher, recognitions);
             const warning =
               attention === 'invalid'
@@ -142,7 +134,7 @@ export function AccountMatchersSection({
         matchedMessages.error ? (
           <PressScaleTouchable
             style={styles.statusRow}
-            onPress={matchedMessages.retry}
+            onPress={matchedMessages.refresh}
             accessibilityRole="button"
           >
             <AppText variant="caption" color="secondary" style={styles.flex}>
@@ -212,7 +204,7 @@ export function AccountMatchersSection({
               />
             ))}
           </View>
-          {proposals.length > INITIAL_SUGGESTIONS ? (
+          {proposals.length > initialSuggestions ? (
             <PressScaleTouchable
               style={styles.disclosure}
               accessibilityRole="button"
@@ -223,7 +215,7 @@ export function AccountMatchersSection({
               <AppText variant="bodySmall" color="primary">
                 {showAll
                   ? copy.showFewer
-                  : copy.moreSuggestions(proposals.length - INITIAL_SUGGESTIONS)}
+                  : copy.moreSuggestions(proposals.length - initialSuggestions)}
               </AppText>
             </PressScaleTouchable>
           ) : null}
@@ -279,7 +271,7 @@ export function AccountMatchersSection({
           openProposal(proposal);
         }}
         onLater={proposal => {
-          setHiddenForVisit(previous => new Set(previous).add(proposal.proposalKey));
+          hideProposalForVisit(proposal.proposalKey);
           setActionProposal(null);
         }}
         onDismiss={proposal => {

@@ -4,8 +4,8 @@ import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
 import { loadAccountMatcherPageData } from './accountMatcherEvidenceQueries';
 
+export type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
 export type AccountMatcherPreviewData = Awaited<ReturnType<typeof loadAccountMatcherPageData>>;
-export type AccountMatcherPreviewMessage = AccountMatcherPreviewData['messages'][number];
 
 export function observeAccountMatcherSnapshots(workplaceId: WorkplaceId, accountId: AccountId) {
   return accountMatcherRepository.observeForAccount(workplaceId, accountId).pipe(
