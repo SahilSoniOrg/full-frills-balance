@@ -124,10 +124,6 @@ export function matchSharedMovement(facts: MovementMatchFacts): MovementMatchRes
   const conflict: MovementOccurrence[] = [];
   const fx: MovementOccurrence[] = [];
   for (const o of eligible) {
-    if (o.fxMode) {
-      fx.push(o);
-      continue;
-    }
     const related = facts.journals.filter(j => j.planLinked && j.id === o.id);
     if (related.some(j => refConflict(obs, j))) continue;
     const amount = o.visibleAmount ?? o.amount;
@@ -139,6 +135,13 @@ export function matchSharedMovement(facts: MovementMatchFacts): MovementMatchRes
     )
       continue;
     const dayDelta = dayDistance(obs.date, o.date);
+    const softLimit = windowDays(o.intervalDays, MOVEMENT_MATCH_WINDOWS.softDays);
+    if (dayDelta > softLimit) continue;
+    // FX plans never settle unattended; only route a real account/date match to review.
+    if (o.fxMode) {
+      fx.push(o);
+      continue;
+    }
     const limit = windowDays(o.intervalDays, MOVEMENT_MATCH_WINDOWS.strictDays);
     if (o.structure && obs.economicKind && o.structure !== obs.economicKind) {
       conflict.push(o);
@@ -148,10 +151,9 @@ export function matchSharedMovement(facts: MovementMatchFacts): MovementMatchRes
     const amountStrict = amount === obs.amount;
     if (dateStrict && amountStrict) strict.push(o);
     else if (
-      dayDelta <= windowDays(o.intervalDays, MOVEMENT_MATCH_WINDOWS.softDays) &&
-      ((dayDelta > limit && amountStrict) ||
-        (dateStrict &&
-          Math.abs(amount - obs.amount) <= amount * MOVEMENT_MATCH_WINDOWS.softAmountRatio))
+      (dayDelta > limit && amountStrict) ||
+      (dateStrict &&
+        Math.abs(amount - obs.amount) <= amount * MOVEMENT_MATCH_WINDOWS.softAmountRatio)
     )
       soft.push(o);
   }
