@@ -21,6 +21,7 @@ import {
   toTransactionDirection,
   toTransactionType,
 } from '@/src/data/repositories/importValueParsers';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type {
   BatchImportData,
   CanonicalAccount,
@@ -310,6 +311,7 @@ export function prepareAuxiliaryImportRecords(
       record.originalSmsSender = metadata.originalSmsSender;
       record.originalSmsBody = metadata.originalSmsBody;
       record.metadataJson = hashSmsMetadataFingerprints(metadata.metadataJson);
+      applyJournalMetadataProjections(record);
       record._raw._status = 'synced';
       setRecordTimestamps(record, { createdAt: metadata.createdAt, updatedAt: metadata.updatedAt });
     }),

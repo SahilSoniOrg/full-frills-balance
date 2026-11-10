@@ -32,10 +32,10 @@ import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';
-import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { stageJournalCaptureMetadataWrite } from '@/src/data/repositories/AccountingWriteSession';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import {
   mergeCaptureMetadataJson,
   readCaptureMetadata,
@@ -125,7 +125,7 @@ function assignMetadata(record: JournalMetadata, metadata: JournalWriteMetadata,
   if ('originalSmsSender' in metadata) record.originalSmsSender = metadata.originalSmsSender;
   if ('originalSmsBody' in metadata) record.originalSmsBody = metadata.originalSmsBody;
   record.metadataJson = hashSmsMetadataFingerprints(metadata.metadataJson);
-  record.referenceNumber = referenceNumberFromMetadataJson(record.metadataJson);
+  applyJournalMetadataProjections(record);
   record.updatedAt = now;
 }
 
@@ -533,6 +533,7 @@ export async function stagePost(
       existingMetadata
         ? existingMetadata.prepareUpdate(record => {
             record.metadataJson = metadataJson;
+            applyJournalMetadataProjections(record);
             record.importSource = MetadataSources.MANUAL_POST;
             record.updatedAt = now;
           })
@@ -541,6 +542,7 @@ export async function stagePost(
             record.workplaceId = workplaceId;
             record.importSource = MetadataSources.MANUAL_POST;
             record.metadataJson = metadataJson ?? originalMetadataJson;
+            applyJournalMetadataProjections(record);
             record.createdAt = now;
             record.updatedAt = now;
           }),

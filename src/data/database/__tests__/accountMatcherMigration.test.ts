@@ -21,13 +21,13 @@ function stepsTo(versions: number[]) {
 
 describe('account matcher schema (v36)', () => {
   it('registers a single v36 step and final matcher layout', () => {
-    expect(schema.version).toBe(37);
-    expect(migrations.maxVersion).toBe(37);
+    expect(schema.version).toBe(38);
+    expect(migrations.maxVersion).toBe(38);
     expect(
       migrations.sortedMigrations
         .filter(migration => migration.toVersion >= 36)
         .map(migration => migration.toVersion),
-    ).toEqual([36, 37]);
+    ).toEqual([36, 37, 38]);
     expect(schema.tables.account_matchers.columnArray.map(column => column.name)).toEqual(
       MATCHER_COLUMNS,
     );

@@ -18,6 +18,7 @@ import { AccountType, JournalStatus } from '@/src/types/enums';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '@/src/data/repositories/fetchSequentiallyInChunks';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
 
@@ -231,6 +232,7 @@ export class JournalHistoricalCaptureQueries {
               record.metadataJson = clear
                 ? withoutHistoricalSmsEvidence(record.metadataJson)
                 : withHistoricalSmsEvidence(record.metadataJson, sources ?? []);
+              applyJournalMetadataProjections(record);
               record.updatedAt = now;
             }),
       ),
@@ -242,6 +244,7 @@ export class JournalHistoricalCaptureQueries {
               record.journalId = journalId;
               record.importSource = 'sms';
               record.metadataJson = withHistoricalSmsEvidence(undefined, sources);
+              applyJournalMetadataProjections(record);
               record.createdAt = now;
               record.updatedAt = now;
             }),
@@ -262,10 +265,7 @@ export class JournalHistoricalCaptureQueries {
 
     return database.write(async () => {
       const rows = await this.metadata
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('metadata_json', Q.like('%\"historicalSmsEvidence\"%')),
-        )
+        .query(Q.where('workplace_id', workplaceId), Q.where('has_historical_sms_evidence', true))
         .fetch();
       const now = new Date();
       const prepareUpdates: (() => JournalMetadata)[] = [];
@@ -283,6 +283,7 @@ export class JournalHistoricalCaptureQueries {
         prepareUpdates.push(() =>
           row.prepareUpdate(entry => {
             entry.metadataJson = nextJson;
+            applyJournalMetadataProjections(entry);
             entry.updatedAt = now;
           }),
         );
@@ -303,7 +304,7 @@ export class JournalHistoricalCaptureQueries {
       const rows = await this.metadata
         .query(
           Q.where('workplace_id', workplaceId),
-          Q.where('metadata_json', Q.like('%"historicalSmsEvidence"%')),
+          Q.where('has_historical_sms_evidence', true),
           Q.sortBy('id', Q.asc),
           Q.take(METADATA_BATCH_SIZE),
           ...(offset > 0 ? [Q.skip(offset)] : []),

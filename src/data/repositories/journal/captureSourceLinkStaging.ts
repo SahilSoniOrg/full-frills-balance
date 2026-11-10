@@ -9,6 +9,7 @@ import {
   stageJournalCaptureMetadataWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 
@@ -50,6 +51,7 @@ export async function stageLinkedCaptureSource(
     metadataJson => [
       metadata.prepareUpdate(record => {
         record.metadataJson = metadataJson;
+        applyJournalMetadataProjections(record);
         record.updatedAt = new Date();
       }),
     ],

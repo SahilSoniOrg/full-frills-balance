@@ -19,6 +19,10 @@ export default class JournalMetadata extends BaseScopedModel {
   @field('original_sms_body') originalSmsBody?: string;
   @field('metadata_json') metadataJson?: string;
   @field('reference_number') referenceNumber?: string;
+  /** Projected from metadata_json.transactionCapture for indexed capture queries. */
+  @field('capture_review_state') captureReviewState?: string;
+  /** Projected from metadata_json.historicalSmsEvidence for indexed historical scans. */
+  @field('has_historical_sms_evidence') hasHistoricalSmsEvidence?: boolean;
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

@@ -38,6 +38,7 @@ import {
   withoutCaptureMetadata,
 } from '@/src/domain/transaction-intelligence/captureMetadata';
 import { transitionCapture } from '@/src/domain/transaction-intelligence/captureTransition';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { Q } from '@nozbe/watermelondb';
 
@@ -220,6 +221,7 @@ export async function stageMerge(
         record.journalId = mergedJournalId;
         if (readCaptureMetadata(record.metadataJson)) {
           record.metadataJson = withoutCaptureMetadata(record.metadataJson);
+          applyJournalMetadataProjections(record);
         }
         record.updatedAt = now;
       }),
@@ -319,6 +321,7 @@ export async function stageReassignAccounts(
       linkedMetadataJson => [
         metadata.prepareUpdate(record => {
           record.metadataJson = linkedMetadataJson;
+          applyJournalMetadataProjections(record);
           record.updatedAt = now;
         }),
       ],
@@ -386,10 +389,7 @@ export async function stageRetargetAccountsForMerge(
   const now = new Date();
   const transactionsByJournal = groupTransactionsByJournal(journalTransactions);
   const metadataRows = await journalTables.metadata
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('metadata_json', Q.like('%"transactionCapture"%')),
-    )
+    .query(Q.where('workplace_id', workplaceId), Q.where('capture_review_state', Q.notEq(null)))
     .fetch();
   const captureUpdates = metadataRows.flatMap(metadata => {
     const capture = readCaptureMetadata(metadata.metadataJson);
@@ -416,6 +416,7 @@ export async function stageRetargetAccountsForMerge(
       linkedMetadataJson => [
         metadata.prepareUpdate(record => {
           record.metadataJson = linkedMetadataJson;
+          applyJournalMetadataProjections(record);
           record.updatedAt = now;
         }),
       ],

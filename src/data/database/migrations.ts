@@ -1081,5 +1081,36 @@ END;`),
         unsafeExecuteSql('DROP TABLE IF EXISTS sms_auto_post_rules;'),
       ],
     },
+    {
+      toVersion: 38,
+      steps: [
+        addColumns({
+          table: 'journal_metadata',
+          columns: [
+            { name: 'capture_review_state', type: 'string', isOptional: true, isIndexed: true },
+            {
+              name: 'has_historical_sms_evidence',
+              type: 'boolean',
+              isOptional: true,
+              isIndexed: true,
+            },
+          ],
+        }),
+        // Project queryable capture flags from the JSON audit payload. JSON1 is already
+        // required by the v29 reference_number backfill on supported installs.
+        unsafeExecuteSql(`
+          UPDATE journal_metadata
+          SET capture_review_state = json_extract(metadata_json, '$.transactionCapture.reviewState')
+          WHERE metadata_json IS NOT NULL
+            AND json_extract(metadata_json, '$.transactionCapture.reviewState') IS NOT NULL;
+        `),
+        unsafeExecuteSql(`
+          UPDATE journal_metadata
+          SET has_historical_sms_evidence = 1
+          WHERE metadata_json IS NOT NULL
+            AND json_extract(metadata_json, '$.historicalSmsEvidence') IS NOT NULL;
+        `),
+      ],
+    },
   ],
 });

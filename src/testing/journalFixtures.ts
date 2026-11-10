@@ -8,7 +8,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { CreateJournalData } from '@/src/types/journalWrite';
-import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
 import { resetDatabase } from '@/src/testing/resetDatabase';
@@ -126,7 +126,7 @@ export async function createJournalFixture(
         record.originalSmsSender = data.metadata!.originalSmsSender;
         record.originalSmsBody = data.metadata!.originalSmsBody;
         record.metadataJson = data.metadata!.metadataJson;
-        record.referenceNumber = referenceNumberFromMetadataJson(data.metadata!.metadataJson);
+        applyJournalMetadataProjections(record);
         record.createdAt = now;
         record.updatedAt = now;
       }),

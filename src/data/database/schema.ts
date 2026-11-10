@@ -3,7 +3,7 @@ import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 import { CREATE_LEDGER_READ_INDEXES_SQL, DROP_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 
 export const schema = appSchema({
-  version: 37,
+  version: 38,
   unsafeSql: (sql, kind) =>
     `${sql}\n${kind === 'drop_indices' ? DROP_LEDGER_READ_INDEXES_SQL : CREATE_LEDGER_READ_INDEXES_SQL}`,
   tables: [
@@ -314,6 +314,8 @@ END;`,
         { name: 'original_sms_body', type: 'string', isOptional: true },
         { name: 'metadata_json', type: 'string', isOptional: true },
         { name: 'reference_number', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'capture_review_state', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'has_historical_sms_evidence', type: 'boolean', isOptional: true, isIndexed: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'workplace_id', type: 'string', isIndexed: true },

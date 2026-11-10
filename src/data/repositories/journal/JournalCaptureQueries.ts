@@ -50,13 +50,22 @@ export class JournalCaptureQueries {
     return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
-  async countNeedsCategorization(workplaceId: WorkplaceId): Promise<number> {
-    const rows = await this.metadata
+  private async fetchCaptureMetadata(
+    workplaceId: WorkplaceId,
+    reviewStates?: readonly string[],
+  ): Promise<JournalMetadata[]> {
+    return this.metadata
       .query(
         Q.where('workplace_id', workplaceId),
-        Q.where('metadata_json', Q.like('%"transactionCapture"%')),
+        ...(reviewStates?.length
+          ? [Q.where('capture_review_state', Q.oneOf([...reviewStates]))]
+          : [Q.where('capture_review_state', Q.notEq(null))]),
       )
       .fetch();
+  }
+
+  async countNeedsCategorization(workplaceId: WorkplaceId): Promise<number> {
+    const rows = await this.fetchCaptureMetadata(workplaceId, ['needs_categorization']);
     const journalIds = [
       ...new Set(
         rows
@@ -85,12 +94,12 @@ export class JournalCaptureQueries {
     workplaceId: WorkplaceId,
     includeConfirmed = false,
   ): Promise<CaptureReviewItem[]> {
-    const metadata = await this.metadata
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('metadata_json', Q.like('%"transactionCapture"%')),
-      )
-      .fetch();
+    const metadata = await this.fetchCaptureMetadata(
+      workplaceId,
+      includeConfirmed
+        ? ['needs_categorization', 'confirmed', 'defaulted']
+        : ['needs_categorization'],
+    );
     if (
       !includeConfirmed &&
       !metadata.some(
