@@ -31,7 +31,6 @@ export function useTransactionCaptureViewModel(options: CaptureLoadOptions = {})
     mixedHistoricalCategoryPatterns: currentLists?.mixedHistoricalCategoryPatterns ?? [],
     mixedHistoricalCategoryCount: currentLists?.mixedHistoricalCategoryCount ?? 0,
     loading,
-    busy: mutations.busy,
     error: settings.error || lists.error,
     settingsError: settings.error,
     onRetry: workspace.refresh,

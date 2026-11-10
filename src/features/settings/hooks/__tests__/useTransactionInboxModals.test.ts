@@ -147,7 +147,7 @@ describe('useTransactionInboxModals', () => {
 
   it('invalidates modal selection on workplace swap', () => {
     const { result, rerender } = renderHook(
-      ({ workplaceId }) =>
+      ({ workplaceId }: { workplaceId: WorkplaceId }) =>
         useTransactionInboxModals({
           workplaceId,
           items: [mockItem],
