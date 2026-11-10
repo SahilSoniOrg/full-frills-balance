@@ -89,9 +89,10 @@ class TransactionCaptureService {
   async setEnabled(workplaceId: WorkplaceId, enabled: boolean): Promise<void> {
     const generation = (this.generations.get(workplaceId) ?? 0) + 1;
     this.generations.set(workplaceId, generation);
-    // Account provisioning stays in the accounting writer; consent MMKV uses the workplace mutex.
+    // Serialize revocation with scans so a decision made under the old consent
+    // cannot commit after this call reports capture as disabled.
     if (!enabled) {
-      await workplaceWriteCoordinator.run(workplaceId, async () => {
+      await runAccountingWriteSession(async () => {
         if (this.generations.get(workplaceId) !== generation) return;
         const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
         preferences.workplace.update(workplaceId, {
