@@ -6,7 +6,7 @@ import { InboxProcessingStatus, TransactionType } from '@/src/types/enums';
 import { asAccountId, type AccountId } from '@/src/types/ids';
 import { makeParsedTx } from '../../__tests__/smsParsedTransaction.helpers';
 import { decideSms, projectRecognition } from '../smsDecision';
-import type { SmsDecisionContext } from '../smsDecisionContext';
+import type { CaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { computeSmsFingerprint } from '../smsFingerprint';
 
 jest.mock('../smsFingerprint', () => ({
@@ -39,7 +39,7 @@ function matcher(id: string, accountId: AccountId, flow?: AccountMatcherFlow) {
   return { ...record, compiled: compileAccountMatcher(record) };
 }
 
-function context(overrides: Partial<SmsDecisionContext> = {}): SmsDecisionContext {
+function context(overrides: Partial<CaptureContext> = {}): CaptureContext {
   return {
     matchers: { matchers: [matcher('card', card)], eligibleAccountIds: [card, savings] },
     sourceAccountCurrency: () => 'INR',
@@ -151,15 +151,12 @@ describe('automatic capture', () => {
       'opposing declared account flow',
       { matchers: { matchers: [matcher('card-in', card, 'incoming')] } },
     ],
-  ] satisfies [string, Partial<SmsDecisionContext>][])(
-    'retains review for %s',
-    (_name, overrides) => {
-      expect(
-        decideSms(message, parsed, context(overrides), InboxProcessingStatus.PENDING, true).kind,
-      ).toBe('review');
-      expect(computeSmsFingerprint).not.toHaveBeenCalled();
-    },
-  );
+  ] satisfies [string, Partial<CaptureContext>][])('retains review for %s', (_name, overrides) => {
+    expect(
+      decideSms(message, parsed, context(overrides), InboxProcessingStatus.PENDING, true).kind,
+    ).toBe('review');
+    expect(computeSmsFingerprint).not.toHaveBeenCalled();
+  });
 
   it('does not post during a review-only/manual scan even when capture is enabled', () => {
     expect(decideSms(message, parsed, context(), InboxProcessingStatus.PENDING, false).kind).toBe(

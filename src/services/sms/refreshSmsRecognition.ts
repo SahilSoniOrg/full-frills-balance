@@ -11,7 +11,7 @@ import { BehaviorSubject } from 'rxjs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 
 import { projectRecognition } from './pipeline/smsDecision';
-import { loadSmsDecisionContext } from './pipeline/smsDecisionContext';
+import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 
 const BATCH_SIZE = 200;
 
@@ -161,7 +161,7 @@ export async function refreshSmsRecognition(
         if (!isCurrent()) return null;
         // Context, page, projection, and staged updates share the database's one writer.
         const [context, page] = await Promise.all([
-          loadSmsDecisionContext(workplaceId),
+          loadCaptureContext(workplaceId),
           transactionInboxRepository.findPendingSmsPage(workplaceId, cursor, batchSize),
         ]);
         if (!isCurrent()) return null;

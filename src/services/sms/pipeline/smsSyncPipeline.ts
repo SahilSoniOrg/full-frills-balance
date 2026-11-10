@@ -33,7 +33,7 @@ import {
 import { processScanBatchItem, prepareUpsertInboxRecord } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult, SmsContentReservation, SmsFuzzyReservation } from './types';
 import type { SmsScanOrigin } from '@/src/types/smsInbox';
-import { loadSmsDecisionContext } from './smsDecisionContext';
+import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { projectRecognition } from './smsDecision';
 
 export interface SmsScanOptions {
@@ -186,7 +186,7 @@ export class SmsSyncPipeline {
             latestByReference,
             latestFuzzyCandidates,
           ] = await Promise.all([
-            loadSmsDecisionContext(workplaceId),
+            loadCaptureContext(workplaceId),
             transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
             smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
             findRedeliveredJournals(analysisResults, workplaceId),

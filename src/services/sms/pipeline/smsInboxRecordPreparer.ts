@@ -23,7 +23,7 @@ import { resolveProcessingStatus } from './smsFingerprint';
 import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { SmsAnalysisResult, SmsContentReservation, SmsFuzzyReservation } from './types';
 import { decideSms, type SmsDecision } from './smsDecision';
-import type { SmsDecisionContext } from './smsDecisionContext';
+import type { CaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 
 export function prepareUpsertInboxRecord(
   sms: SmsMessage,
@@ -84,7 +84,7 @@ export function prepareUpsertInboxRecord(
 export async function processScanBatchItem(params: {
   session: AccountingWriteSession;
   result: SmsAnalysisResult;
-  decisionContext: SmsDecisionContext;
+  decisionContext: CaptureContext;
   latestRecord: InboxRecordSnapshot | null;
   latestJournal: Journal | null;
   latestReferenceDuplicate?: DuplicateMatch;

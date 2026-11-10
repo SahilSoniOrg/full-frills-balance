@@ -7,7 +7,7 @@ import {
 } from '../refreshSmsRecognition';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
-import { loadSmsDecisionContext } from '../pipeline/smsDecisionContext';
+import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { projectRecognition } from '../pipeline/smsDecision';
 import { asWorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
@@ -27,14 +27,16 @@ jest.mock('@/src/data/repositories/AccountingWriteSession', () => ({
   runAccountingWriteSession: (work: (session: never) => Promise<unknown>) =>
     mockRunAccountingWriteSession(work),
 }));
-jest.mock('../pipeline/smsDecisionContext', () => ({ loadSmsDecisionContext: jest.fn() }));
+jest.mock('@/src/services/transaction-intelligence/captureContext', () => ({
+  loadCaptureContext: jest.fn(),
+}));
 jest.mock('../pipeline/smsDecision', () => ({ projectRecognition: jest.fn() }));
 
 const workplace = asWorkplaceId('refresh-workplace');
 const page = jest.mocked(transactionInboxRepository.findPendingSmsPage);
 const stage = jest.mocked(deviceSmsInboxRepository.stagePendingRecognitionUpdates);
 const stagedUpdates: SmsRecognitionReviewUpdate[][] = [];
-const context = jest.mocked(loadSmsDecisionContext);
+const context = jest.mocked(loadCaptureContext);
 const projection = jest.mocked(projectRecognition);
 const record = (id: string) => ({
   deviceInboxId: id,

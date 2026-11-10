@@ -12,8 +12,8 @@ import {
   readCaptureMetadata,
   withCaptureMetadata,
 } from '@/src/domain/transaction-intelligence/captureMetadata';
-import { extractSmsEconomicEvidence } from './smsEconomicEvidence';
-import type { SmsDecisionContext } from './smsDecisionContext';
+import { extractMessageEconomicEvidence } from '@/src/domain/transaction-intelligence/messageEconomicEvidence';
+import type { CaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { computeSmsFingerprint } from './smsFingerprint';
 
 interface SuggestedAccounts {
@@ -68,7 +68,7 @@ function project(
 export function projectRecognition(
   message: SmsMessage,
   parsed: ParsedTransaction,
-  context: SmsDecisionContext,
+  context: CaptureContext,
 ): SmsRecognitionProjection {
   return project(
     recognizeSmsAccounts(context.matchers, {
@@ -82,7 +82,7 @@ export function projectRecognition(
 export function decideSms(
   message: SmsMessage,
   parsed: ParsedTransaction,
-  context: SmsDecisionContext,
+  context: CaptureContext,
   processingStatus: InboxProcessingStatus,
   allowAutoPost: boolean,
 ): SmsDecision {
@@ -114,7 +114,7 @@ export function decideSms(
       amount: parsed.amount,
       currencyCode: parsed.currencyCode,
       merchant: parsed.merchant,
-      economicEvidence: extractSmsEconomicEvidence(message.body),
+      economicEvidence: extractMessageEconomicEvidence(message.body),
       parsed: parsed.parseStatus === InboxParseStatus.PARSED,
       pending: processingStatus === InboxProcessingStatus.PENDING,
     },

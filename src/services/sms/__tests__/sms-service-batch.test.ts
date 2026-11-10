@@ -5,7 +5,7 @@ import { AppConfig } from '@/src/constants';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
-import { loadSmsDecisionContext } from '../pipeline/smsDecisionContext';
+import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { compileAccountMatcher } from '../recognition/accountMatcherEvaluator';
 import type { AccountMatcherRecord } from '@/src/types/accountMatcher';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -93,8 +93,8 @@ jest.mock('@/src/data/repositories/account', () => ({
   },
 }));
 
-jest.mock('@/src/services/sms/pipeline/smsDecisionContext', () => ({
-  loadSmsDecisionContext: jest.fn(),
+jest.mock('@/src/services/transaction-intelligence/captureContext', () => ({
+  loadCaptureContext: jest.fn(),
 }));
 jest.mock('@/src/data/repositories/journal/captureSourceLinkStaging', () => ({
   stageLinkedCaptureSource: jest.fn().mockResolvedValue(undefined),
@@ -139,7 +139,7 @@ async function enableSupportedCapture() {
     eligible: true,
     definition: { version: 1, sender: { op: 'contains', value: 'BANK' } },
   };
-  jest.mocked(loadSmsDecisionContext).mockResolvedValue({
+  jest.mocked(loadCaptureContext).mockResolvedValue({
     matchers: {
       matchers: [{ ...matcher, compiled: compileAccountMatcher(matcher) }],
       eligibleAccountIds: [asAccountId('acc-1')],
@@ -155,7 +155,7 @@ async function enableSupportedCapture() {
 describe('SmsService Batching', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(loadSmsDecisionContext).mockResolvedValue({
+    jest.mocked(loadCaptureContext).mockResolvedValue({
       matchers: { matchers: [], eligibleAccountIds: [] },
       sourceAccountCurrency: () => 'INR',
       isFinancialLeaf: () => true,
