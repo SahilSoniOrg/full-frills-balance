@@ -508,7 +508,7 @@ export async function stageUndoPlanAttach(
   const restoredNotes =
     before.notes === null || before.notes === undefined ? undefined : String(before.notes);
   const restoredLines = beforeTransactions.map(line => ({
-    accountId: line.accountId as AccountId,
+    accountId: line.accountId,
     amount: Number(line.amount),
     transactionType: line.transactionType as Transaction['transactionType'],
     notes: typeof line.notes === 'string' ? line.notes : undefined,
