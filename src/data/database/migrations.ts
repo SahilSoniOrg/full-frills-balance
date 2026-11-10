@@ -1096,19 +1096,59 @@ END;`),
             },
           ],
         }),
-        // Project queryable capture flags from the JSON audit payload. JSON1 is already
-        // required by the v29 reference_number backfill on supported installs.
+        // Project queryable capture flags from the JSON audit payload. CASE keeps
+        // malformed legacy JSON from aborting the upgrade. Derive review state from
+        // allocations to match readCaptureMetadata; its stored summary is not trusted.
         unsafeExecuteSql(`
           UPDATE journal_metadata
-          SET capture_review_state = json_extract(metadata_json, '$.transactionCapture.reviewState')
-          WHERE metadata_json IS NOT NULL
-            AND json_extract(metadata_json, '$.transactionCapture.reviewState') IS NOT NULL;
+          SET capture_review_state = CASE
+            WHEN json_valid(metadata_json) = 0 THEN NULL
+            WHEN COALESCE(json_type(metadata_json, '$.transactionCapture'), '') != 'object' THEN NULL
+            WHEN json_extract(metadata_json, '$.transactionCapture.version') IS NOT 1 THEN NULL
+            WHEN COALESCE(json_extract(metadata_json, '$.transactionCapture.economicKind'), '')
+              NOT IN ('expense', 'income', 'transfer') THEN NULL
+            WHEN COALESCE(json_extract(metadata_json, '$.transactionCapture.reviewState'), '')
+              NOT IN ('needs_categorization', 'confirmed', 'defaulted', 'not_applicable') THEN NULL
+            WHEN COALESCE(json_type(metadata_json, '$.transactionCapture.allocations'), '') != 'array' THEN NULL
+            WHEN json_array_length(metadata_json, '$.transactionCapture.allocations') = 0 THEN
+              CASE
+                WHEN json_extract(metadata_json, '$.transactionCapture.economicKind') = 'transfer'
+                  THEN 'not_applicable'
+                ELSE 'needs_categorization'
+              END
+            WHEN NOT EXISTS (
+              SELECT 1
+              FROM json_each(metadata_json, '$.transactionCapture.allocations') AS allocation
+              WHERE CASE
+                WHEN allocation.type != 'object' THEN 1
+                WHEN json_extract(allocation.value, '$.origin') = 'user'
+                  AND json_type(allocation.value, '$.confirmedAt') IS NOT NULL THEN 0
+                ELSE 1
+              END = 1
+            ) THEN 'confirmed'
+            WHEN NOT EXISTS (
+              SELECT 1
+              FROM json_each(metadata_json, '$.transactionCapture.allocations') AS allocation
+              WHERE CASE
+                WHEN allocation.type != 'object' THEN 1
+                WHEN json_extract(allocation.value, '$.origin') = 'default' THEN 0
+                WHEN json_extract(allocation.value, '$.origin') = 'user'
+                  AND json_type(allocation.value, '$.confirmedAt') IS NOT NULL THEN 0
+                ELSE 1
+              END = 1
+            ) THEN 'defaulted'
+            ELSE 'needs_categorization'
+          END
+          WHERE metadata_json IS NOT NULL;
         `),
         unsafeExecuteSql(`
           UPDATE journal_metadata
-          SET has_historical_sms_evidence = 1
-          WHERE metadata_json IS NOT NULL
-            AND json_extract(metadata_json, '$.historicalSmsEvidence') IS NOT NULL;
+          SET has_historical_sms_evidence = CASE
+            WHEN json_valid(metadata_json) = 0 THEN NULL
+            WHEN json_extract(metadata_json, '$.historicalSmsEvidence') IS NOT NULL THEN 1
+            ELSE NULL
+          END
+          WHERE metadata_json IS NOT NULL;
         `),
       ],
     },
