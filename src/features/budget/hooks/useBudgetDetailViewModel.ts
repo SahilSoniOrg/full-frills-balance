@@ -226,7 +226,7 @@ export function useBudgetDetailViewModel() {
       expenseAccounts,
     ],
     null,
-    { keepPreviousData: false },
+    { keepPreviousData: false, resetKey: workplaceId },
   );
   const chartData = chartError ? null : loadedChartData;
 
@@ -257,7 +257,7 @@ export function useBudgetDetailViewModel() {
       expenseAccounts,
     ],
     null,
-    { keepPreviousData: false },
+    { keepPreviousData: false, resetKey: workplaceId },
   );
   const previousChartData = shouldHidePreviousChart(
     previousChartError,

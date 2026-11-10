@@ -110,6 +110,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     },
     [workplaceId, dateRange, triggerObservable, targetCurrency, accountIds],
     [],
+    { resetKey: workplaceId },
   );
 
   // Load full report snapshot (slower, richer)
@@ -177,6 +178,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
       hasUnvaluedEntries: false,
       previousIncomeVsExpense: null,
     },
+    { resetKey: workplaceId },
   );
 
   const loading = loadingNetWorth || loadingSnapshot;
@@ -230,6 +232,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     async () => await accountQueries.findAll(workplaceId),
     [workplaceId],
     [],
+    { resetKey: workplaceId },
   );
 
   return {

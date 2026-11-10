@@ -210,8 +210,8 @@ export function useObservableWithEnrichment<T, E>(
   observableFactory: () => Observable<T>,
   enricher: (data: T) => Promise<E>,
   deps: DependencyList,
-  initialValue: E,
-  options: UseObservableOptions = {},
+  initialValue: E | (() => E),
+  options: UseScopedObservableOptions = {},
 ): UseObservableResult<E> {
   const factoryRef = useRef(observableFactory);
   const enricherRef = useRef(enricher);
@@ -223,12 +223,26 @@ export function useObservableWithEnrichment<T, E>(
   const stableFactory = useCallback(() => factoryRef.current(), []);
   const stableEnricher = useCallback((d: T) => enricherRef.current(d), []);
 
-  const [data, setData] = useState<E>(initialValue);
+  const resolveInitialValue = () =>
+    typeof initialValue === 'function' ? (initialValue as () => E)() : initialValue;
+  const [initialSeed, setInitialSeed] = useState(() => ({
+    key: options.resetKey,
+    value: resolveInitialValue(),
+  }));
+  let resolvedInitialValue = initialSeed.value;
+  if (!Object.is(initialSeed.key, options.resetKey)) {
+    resolvedInitialValue = resolveInitialValue();
+    setInitialSeed({ key: options.resetKey, value: resolvedInitialValue });
+  }
+
+  const [data, setData] = useState<E>(resolvedInitialValue);
+  const [dataIdentity, setDataIdentity] = useState(() => options.resetKey);
   const dataRef = useRef(data);
   useLayoutEffect(() => {
     dataRef.current = data;
   });
 
+  // Enrichment always starts loading; sync observables may seed a placeholder immediately.
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
@@ -246,24 +260,28 @@ export function useObservableWithEnrichment<T, E>(
     optionsRef.current = options;
   });
 
-  // We capture the initial seed only once to use as a baseline for resets
-  const initialSeedRef = useRef(initialValue);
-
-  const depsRevision = useDependencyRevision(deps);
+  const depsRevision = useDependencyRevision([options.resetKey, ...deps], () => setError(null));
+  const identityChanged = !Object.is(dataIdentity, options.resetKey);
+  const visibleData = identityChanged ? resolvedInitialValue : data;
 
   useEffect(() => {
     let isActive = true;
     let sequence = 0;
-    const { keepPreviousData = true } = optionsRef.current;
+    const { keepPreviousData = true, resetKey } = optionsRef.current;
+    const resetIdentityChanged = !Object.is(dataIdentity, resetKey);
 
-    if (!keepPreviousData) {
-      setData(initialSeedRef.current);
-      setIsLoading(true);
-    } else if (dataRef.current === initialSeedRef.current) {
+    if (resetIdentityChanged || !keepPreviousData) {
+      setDataIdentity(() => resetKey);
+      dataRef.current = resolvedInitialValue;
+      setData(resolvedInitialValue);
+      setIsLoading(resetIdentityChanged ? isPlaceholderInitial(resolvedInitialValue) : true);
+    } else if (
+      dataRef.current === resolvedInitialValue &&
+      isPlaceholderInitial(resolvedInitialValue)
+    ) {
       setIsLoading(true);
     }
 
-    // Reset error state
     setError(null);
 
     const subscription = stableFactory().subscribe({
@@ -297,7 +315,14 @@ export function useObservableWithEnrichment<T, E>(
       isActive = false;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stableFactory, stableEnricher, depsRevision, retryVersion]);
 
-  return { data, isLoading, error, version, retry };
+  return {
+    data: visibleData,
+    isLoading: identityChanged || isLoading,
+    error: identityChanged ? null : error,
+    version,
+    retry,
+  };
 }
