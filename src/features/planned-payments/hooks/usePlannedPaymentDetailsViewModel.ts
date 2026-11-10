@@ -30,7 +30,7 @@ import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaym
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { findPlanAttachCandidateForOccurrence } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { attachCaptureJournalToPlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentPlanAttach';
+import { linkCaptureJournalToPlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentPlanAttach';
 import { analytics } from '@/src/services/analytics';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
@@ -296,6 +296,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         id: candidate.captureJournalId,
         plannedPaymentId: item.id,
         journalId: candidate.captureJournalId,
+        plannedOccurrenceJournalId: candidate.plannedJournalId,
         kind: 'posted',
         isPlanLinked: false,
         isPosted: true,
@@ -332,6 +333,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
             id: completed.candidate.captureJournalId,
             plannedPaymentId: item.id,
             journalId: completed.candidate.captureJournalId,
+            plannedOccurrenceJournalId: completed.candidate.plannedJournalId,
             kind: 'posted',
             isPlanLinked: false,
             isPosted: true,
@@ -357,14 +359,15 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const handleLinkInstead = useCallback(async () => {
     if (!item || !planCandidate?.journalId) return;
     const target = resolvePlannedPaymentActionTarget(item);
-    if (!target?.journalId) return;
+    if (!target) return;
     await runAction(
       'record',
       async () => {
-        await attachCaptureJournalToPlannedOccurrence(workplaceId, {
+        await linkCaptureJournalToPlannedOccurrence(workplaceId, {
           captureJournalId: planCandidate.journalId as JournalId,
           plannedPaymentId: item.id,
-          plannedJournalId: target.journalId!,
+          plannedJournalId:
+            (planCandidate.plannedOccurrenceJournalId as JournalId | undefined) ?? target.journalId,
           occurrenceDay: target.occurrenceDate,
         });
         setPlanCandidate(undefined);

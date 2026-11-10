@@ -92,6 +92,21 @@ describe('matchSharedMovement', () => {
     expect(
       matchSharedMovement(facts({ occurrences: [occurrence({ fxMode: 'manual' })] })).kind,
     ).toBe('soft'));
+  it('does not soft-match unrelated FX occurrences on other accounts', () =>
+    expect(
+      matchSharedMovement(
+        facts({
+          occurrences: [
+            occurrence({
+              id: 'fx-other',
+              accountId: 'other-bank',
+              toAccountId: 'expense',
+              fxMode: 'manual',
+            }),
+          ],
+        }),
+      ).kind,
+    ).toBe('none'));
   it('does not silently attach same-channel second observation', () =>
     expect(
       matchSharedMovement(

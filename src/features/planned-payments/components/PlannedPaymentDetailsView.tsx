@@ -212,12 +212,14 @@ export function PlannedPaymentDetailsView({
                   onPress: () => {
                     if (vm.planCandidate && vm.onPost) {
                       confirm.show({
-                        title: 'Matching transaction found',
-                        message: 'This matches an existing transaction — link instead?',
-                        confirmText: 'Post',
-                        cancelText: 'Link instead',
+                        title: copy.linkInsteadTitle,
+                        message: copy.linkInsteadMessage,
+                        confirmText: copy.postAnywayConfirm,
+                        cancelText: copy.linkInsteadConfirm,
                         onConfirm: vm.onPost,
                         onCancel: () => vm.onLinkInstead?.(),
+                        // Backdrop / Escape dismiss must not run Link instead.
+                        onClose: () => {},
                       });
                     } else {
                       vm.onPost?.();

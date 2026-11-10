@@ -63,7 +63,7 @@ jest.mock('@/src/services/planned-payment/plannedOccurrenceSettlement', () => ({
   findPlanAttachCandidateForOccurrence: jest.fn(async () => undefined),
 }));
 jest.mock('@/src/services/planned-payment/plannedPaymentPlanAttach', () => ({
-  attachCaptureJournalToPlannedOccurrence: jest.fn(),
+  linkCaptureJournalToPlannedOccurrence: jest.fn(),
 }));
 jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
   skipPlannedPaymentOccurrence: jest.fn(),
