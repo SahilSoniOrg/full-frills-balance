@@ -9,6 +9,7 @@ import { showErrorAlert, toast } from '@/src/utils/alerts';
 
 interface UseTransactionInboxModalsProps {
   workplaceId: WorkplaceId;
+  items: readonly TransactionInboxItem[];
   handleImport: (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => void;
 }
 
@@ -26,21 +27,27 @@ export interface TransactionInboxModals {
 
 type InboxModal =
   | { kind: 'closed' }
-  | { kind: 'duplicate' | 'editReparse'; workplaceId: WorkplaceId; item: TransactionInboxItem };
+  | { kind: 'duplicate' | 'editReparse'; workplaceId: WorkplaceId; itemId: string };
 
 export function useTransactionInboxModals({
   workplaceId,
+  items,
   handleImport,
 }: UseTransactionInboxModalsProps): TransactionInboxModals {
   const [modal, setModal] = useState<InboxModal>({ kind: 'closed' });
-  const selectedDuplicateItem =
-    modal.kind === 'duplicate' && modal.workplaceId === workplaceId ? modal.item : null;
-  const selectedEditReparseItem =
-    modal.kind === 'editReparse' && modal.workplaceId === workplaceId ? modal.item : null;
+
+  // Workplace mismatch keeps the modal closed without an effect reset.
+  const resolveSelected = (kind: 'duplicate' | 'editReparse') => {
+    if (modal.kind !== kind || modal.workplaceId !== workplaceId) return null;
+    return items.find(item => item.id === modal.itemId) ?? null;
+  };
+
+  const selectedDuplicateItem = resolveSelected('duplicate');
+  const selectedEditReparseItem = resolveSelected('editReparse');
 
   const handleOpenDuplicateModal = useCallback(
     (item: TransactionInboxItem) => {
-      setModal({ kind: 'duplicate', workplaceId, item });
+      setModal({ kind: 'duplicate', workplaceId, itemId: item.id });
     },
     [workplaceId],
   );
@@ -51,7 +58,7 @@ export function useTransactionInboxModals({
 
   const handleOpenEditReparseModal = useCallback(
     (item: TransactionInboxItem) => {
-      setModal({ kind: 'editReparse', workplaceId, item });
+      setModal({ kind: 'editReparse', workplaceId, itemId: item.id });
     },
     [workplaceId],
   );

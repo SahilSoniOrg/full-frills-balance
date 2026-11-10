@@ -65,6 +65,7 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
+        items: [mockItem],
         handleImport: mockHandleImport,
       }),
     );
@@ -86,6 +87,7 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
+        items: [mockItem],
         handleImport: mockHandleImport,
       }),
     );
@@ -103,10 +105,71 @@ describe('useTransactionInboxModals', () => {
     expect(result.current.selectedEditReparseItem).toBeNull();
   });
 
+  it('resolves the live item from items after list updates', () => {
+    let items = [mockItem];
+    const { result, rerender } = renderHook(() =>
+      useTransactionInboxModals({
+        workplaceId: mockWorkplaceId,
+        items,
+        handleImport: mockHandleImport,
+      }),
+    );
+
+    act(() => {
+      result.current.handleOpenDuplicateModal(mockItem);
+    });
+    expect(result.current.selectedDuplicateItem?.parsedMerchant).toBe('Cafe');
+
+    items = [{ ...mockItem, parsedMerchant: 'Cafe Updated' }];
+    rerender({});
+    expect(result.current.selectedDuplicateItem?.parsedMerchant).toBe('Cafe Updated');
+  });
+
+  it('clears the selected modal item when it leaves the live list', () => {
+    let items: TransactionInboxItem[] = [mockItem];
+    const { result, rerender } = renderHook(() =>
+      useTransactionInboxModals({
+        workplaceId: mockWorkplaceId,
+        items,
+        handleImport: mockHandleImport,
+      }),
+    );
+
+    act(() => {
+      result.current.handleOpenDuplicateModal(mockItem);
+    });
+    expect(result.current.selectedDuplicateItem).toEqual(mockItem);
+
+    items = [];
+    rerender({});
+    expect(result.current.selectedDuplicateItem).toBeNull();
+  });
+
+  it('invalidates modal selection on workplace swap', () => {
+    const { result, rerender } = renderHook(
+      ({ workplaceId }) =>
+        useTransactionInboxModals({
+          workplaceId,
+          items: [mockItem],
+          handleImport: mockHandleImport,
+        }),
+      { initialProps: { workplaceId: mockWorkplaceId } },
+    );
+
+    act(() => {
+      result.current.handleOpenDuplicateModal(mockItem);
+    });
+    expect(result.current.selectedDuplicateItem).toEqual(mockItem);
+
+    rerender({ workplaceId: 'wp-2' as WorkplaceId });
+    expect(result.current.selectedDuplicateItem).toBeNull();
+  });
+
   it('merges duplicate item and marks SMS processed', async () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
+        items: [mockItem],
         handleImport: mockHandleImport,
       }),
     );
@@ -122,6 +185,7 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
+        items: [mockItem],
         handleImport: mockHandleImport,
       }),
     );
@@ -137,6 +201,7 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
+        items: [mockItem],
         handleImport: mockHandleImport,
       }),
     );

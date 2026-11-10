@@ -1,3 +1,3 @@
-import { SmsInboxScreen } from '@/src/features/settings'
+import { TransactionInboxScreen } from '@/src/features/settings';
 
-export default SmsInboxScreen
+export default TransactionInboxScreen;
