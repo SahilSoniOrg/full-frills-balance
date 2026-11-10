@@ -99,6 +99,17 @@ jest.mock('@/src/services/transaction-intelligence/captureContext', () => ({
 jest.mock('@/src/data/repositories/journal/captureSourceLinkStaging', () => ({
   stageLinkedCaptureSource: jest.fn().mockResolvedValue(undefined),
 }));
+// Batching tests assert write/batch packing, not planned-payment matching. Settlement
+// loads planned_payments via repositories; keep it a passthrough so the mock DB stays thin.
+jest.mock('@/src/services/planned-payment/evidenceDrivenObservationSettlement', () => {
+  const actual = jest.requireActual(
+    '@/src/services/planned-payment/evidenceDrivenObservationSettlement',
+  ) as typeof import('@/src/services/planned-payment/evidenceDrivenObservationSettlement');
+  return {
+    ...actual,
+    applyEvidenceDrivenObservationSettlement: jest.fn().mockResolvedValue({ kind: 'passthrough' }),
+  };
+});
 jest.mock('@/src/services/analytics');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/WorkplaceService', () => ({
