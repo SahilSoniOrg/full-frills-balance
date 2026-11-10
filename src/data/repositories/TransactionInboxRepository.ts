@@ -319,6 +319,23 @@ export class TransactionInboxRepository {
     return this.project(workplaceId, devices, copies).slice(0, limit);
   }
 
+  /** Workplace-scoped pending email observations for two-sided uniqueness checks. */
+  async findRecentPendingEmail(
+    workplaceId: WorkplaceId,
+    limit: number,
+  ): Promise<InboxRecordSnapshot[]> {
+    const records = await this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'email'),
+        Q.where('processing_status', InboxProcessingStatus.PENDING),
+        Q.sortBy('input_date', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
+    return records.map(inboxSnapshotFromRecord);
+  }
+
   async findRecentPendingSms(
     workplaceId: WorkplaceId,
     limit: number,

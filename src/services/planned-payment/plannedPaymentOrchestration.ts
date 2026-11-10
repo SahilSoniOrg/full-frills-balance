@@ -11,7 +11,9 @@ import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPl
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   settlePlannedOccurrence,
+  type PlanCaptureAttachCandidate,
   type PlannedOccurrenceAction,
+  type PlannedOccurrenceSettlement,
 } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
@@ -21,34 +23,29 @@ import { logger } from '@/src/utils/logger';
 
 const dueProcessingByWorkplace = new Map<WorkplaceId, Promise<void>>();
 
+export type PostPlannedOccurrenceResult =
+  | { status: 'posted' | 'skipped' }
+  | { status: 'attach_candidate'; candidate: PlanCaptureAttachCandidate };
+
 async function settleManualOccurrence(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
   action: Exclude<PlannedOccurrenceAction, { kind: 'generate' }>,
-): Promise<void> {
+): Promise<PlannedOccurrenceSettlement> {
   const quote = await preparePlannedPaymentFxQuote(
     workplaceId,
     plannedPaymentId,
     occurrenceDate,
     action,
   );
-  const journal = await runAccountingWriteSession(
-    async session =>
-      (
-        await settlePlannedOccurrence(
-          session,
-          workplaceId,
-          plannedPaymentId,
-          occurrenceDate,
-          action,
-          quote,
-        )
-      ).journal,
+  const settlement = await runAccountingWriteSession(async session =>
+    settlePlannedOccurrence(session, workplaceId, plannedPaymentId, occurrenceDate, action, quote),
   );
-  if (journal?.status === JournalStatus.POSTED) {
-    journalPersistenceService.afterAtomicWriteCommit([journal], workplaceId);
+  if (settlement.journal?.status === JournalStatus.POSTED) {
+    journalPersistenceService.afterAtomicWriteCommit([settlement.journal], workplaceId);
   }
+  return settlement;
 }
 
 async function postOccurrence(
@@ -58,17 +55,22 @@ async function postOccurrence(
   journalId?: JournalId,
   review?: PlannedPaymentFxReview,
   options?: PlannedJournalPostOptions,
-): Promise<void> {
+): Promise<PostPlannedOccurrenceResult> {
   const postedAt = options?.postedAt ?? Date.now();
   try {
-    await settleManualOccurrence(workplaceId, plannedPaymentId, occurrenceDate, {
+    const settlement = await settleManualOccurrence(workplaceId, plannedPaymentId, occurrenceDate, {
       kind: 'post',
       postedAt,
       journalId,
       review,
       auditMetadata: options?.auditMetadata,
       expectedCurrent: options?.expectedCurrent,
+      confirmPostDespiteCandidate: options?.confirmPostDespiteCandidate,
     });
+    if (settlement.attachCandidate) {
+      return { status: 'attach_candidate', candidate: settlement.attachCandidate };
+    }
+    return { status: settlement.journal ? 'posted' : 'skipped' };
   } catch (error) {
     if (error instanceof PlannedPaymentFxReviewRequiredError) throw error;
     const message = error instanceof Error ? error.message : String(error);
@@ -81,6 +83,8 @@ export interface PlannedJournalPostOptions {
   postedAt?: number;
   auditMetadata?: AuditEventMetadata;
   expectedCurrent?: Record<string, unknown>;
+  /** User confirmed Post after a "link instead?" prompt. */
+  confirmPostDespiteCandidate?: boolean;
 }
 
 /** Posts the exact scheduled journal selected from a planned-occurrence list. */
@@ -91,7 +95,7 @@ export function postPlannedJournalOccurrence(
   occurrenceDate: number,
   review?: PlannedPaymentFxReview,
   options?: PlannedJournalPostOptions,
-): Promise<void> {
+): Promise<PostPlannedOccurrenceResult> {
   return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, journalId, review, options);
 }
 
@@ -101,8 +105,9 @@ export function postPlannedPaymentOccurrence(
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
   review?: PlannedPaymentFxReview,
-): Promise<void> {
-  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, undefined, review);
+  options?: PlannedJournalPostOptions,
+): Promise<PostPlannedOccurrenceResult> {
+  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, undefined, review, options);
 }
 
 /**
@@ -121,6 +126,8 @@ export async function skipPlannedPaymentOccurrence(
     throw error;
   }
 }
+
+export type { PlanCaptureAttachCandidate };
 
 /**
  * Process all active planned payments and generate journals for any due occurrences.

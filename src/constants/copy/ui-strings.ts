@@ -1196,6 +1196,7 @@ export const UI_STRINGS = {
       'journal.reverted_to_planned': 'Moved to planned',
       'journal.status_changed': 'Status changed',
       'journal.accounts_retargeted': 'Accounts updated',
+      'journal.planned_payment_attached': 'Linked to planned payment',
       'budget.created': 'Created',
       'budget.imported': 'Imported',
       'budget.updated': 'Updated',
@@ -1308,7 +1309,8 @@ export const UI_STRINGS = {
     selectAccount: 'Account',
     recurrenceTitle: 'Recurrence',
     intervalLabel: 'Interval',
-    autoPostLabel: 'Post Automatically',
+    autoPostLabel:
+      'Post automatically on schedule (matching SMS or email can still record when capture is on)',
     saveLabel: 'Save Rule',
     savingLabel: 'Saving…',
     nextOccurrence: (date: string) => `Next occurrence: ${date}`,

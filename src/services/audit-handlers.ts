@@ -5,6 +5,8 @@ import {
 } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
@@ -22,6 +24,7 @@ import { AccountAuditState, TransactionAuditState } from '@/src/types/audit';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { getAuditEventFieldDeltas, isAuditEventPayload } from '@/src/domain/audit/auditEvents';
+import type { AuditJsonObject } from '@/src/types/auditEvents';
 import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 type AuditChanges = Record<string, unknown> & {
@@ -151,6 +154,9 @@ const canRevertJournal: RevertCapability = (action, rawChanges) => {
     changes.eventType === 'journal.opening_balance_created'
   ) {
     return false;
+  }
+  if (changes.eventType === 'journal.planned_payment_attached' && action === AuditAction.UPDATE) {
+    return !!changes.before && !!changes.after;
   }
   return capabilityForFields(journalRevertibleFields)(action, rawChanges);
 };
@@ -349,6 +355,22 @@ export function registerAuditHandlers(): void {
 
       const before = changes.before;
       if (changes.eventType === 'journal.reversed') return false;
+      if (changes.eventType === 'journal.planned_payment_attached') {
+        const undoResult = await runAccountingWriteSession(session =>
+          journalPersistenceRepository.undoPlanAttachInSession(
+            session,
+            workplaceId,
+            journalId,
+            {
+              before: asRecord(changes.before) as AuditJsonObject | undefined,
+              after: asRecord(changes.after) as AuditJsonObject | undefined,
+            },
+            { source: 'app', revertsLogId: context?.auditLogId },
+          ),
+        );
+        journalPersistenceService.afterAtomicWriteCommit([undoResult], workplaceId);
+        return true;
+      }
       const currentJournal = await journalQueryRepository.find(workplaceId, journalId);
       if (!currentJournal) throw new Error('Journal not found');
       const currentTransactions = await transactionQueryRepository.findByJournal(

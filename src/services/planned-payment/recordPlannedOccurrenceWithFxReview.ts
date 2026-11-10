@@ -3,6 +3,8 @@ import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plann
 import {
   postPlannedJournalOccurrence,
   postPlannedPaymentOccurrence,
+  type PlannedJournalPostOptions,
+  type PostPlannedOccurrenceResult,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
@@ -11,14 +13,23 @@ export async function recordPlannedOccurrenceWithFxReview(
   planId: PlannedPaymentId,
   occurrenceDate: number,
   journalId?: JournalId,
-): Promise<boolean | void> {
+  options?: PlannedJournalPostOptions,
+): Promise<false | PostPlannedOccurrenceResult> {
   const post = (review?: PlannedPaymentFxReview) =>
     journalId
-      ? review
-        ? postPlannedJournalOccurrence(workplaceId, planId, journalId, occurrenceDate, review)
-        : postPlannedJournalOccurrence(workplaceId, planId, journalId, occurrenceDate)
-      : review
-        ? postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate, review)
-        : postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate);
-  return withPlannedPaymentFxReview(post);
+      ? postPlannedJournalOccurrence(
+          workplaceId,
+          planId,
+          journalId,
+          occurrenceDate,
+          review,
+          options,
+        )
+      : postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate, review, options);
+  let last: PostPlannedOccurrenceResult | undefined;
+  const completed = await withPlannedPaymentFxReview(async review => {
+    last = await post(review);
+  });
+  if (!completed) return false;
+  return last ?? { status: 'posted' };
 }

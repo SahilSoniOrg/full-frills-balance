@@ -185,6 +185,7 @@ export const FEATURE_EVENT_CATALOG = {
       'skip',
       'occurrence_paid',
       'occurrence_skipped',
+      'link_instead',
     ] as const,
     schema: {
       status: 'token',

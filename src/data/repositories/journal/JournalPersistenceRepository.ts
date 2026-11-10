@@ -8,6 +8,12 @@ import {
   stageRetargetAccountsForMerge,
 } from '@/src/data/repositories/journal/journalCrossJournalOperations';
 import {
+  stagePlanAttach,
+  stageUndoPlanAttach,
+  type PlanAttachInput,
+  type PlanAttachResult,
+} from '@/src/data/repositories/journal/journalPlanAttachOperations';
+import {
   stageBulkDelete,
   stageBulkRestore,
   stageDelete,
@@ -35,9 +41,9 @@ import {
 import { JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
-import type { AuditEventMetadata } from '@/src/types/auditEvents';
+import type { AuditEventMetadata, AuditJsonObject } from '@/src/types/auditEvents';
 
-export type { BulkDeleteResult };
+export type { BulkDeleteResult, PlanAttachInput, PlanAttachResult };
 
 /**
  * Persistence boundary for journal create/update/post and lifecycle commands.
@@ -262,6 +268,26 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
   ): Promise<void> {
     return stageNonPostedStatuses(session, workplaceId, updates, auditMetadata);
+  }
+
+  /** Capture journal becomes the occurrence journal; retires the PLANNED twin. */
+  async attachToPlannedOccurrenceInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    input: PlanAttachInput,
+    auditMetadata?: AuditEventMetadata,
+  ): Promise<PlanAttachResult> {
+    return stagePlanAttach(session, workplaceId, input, auditMetadata);
+  }
+
+  async undoPlanAttachInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    captureJournalId: JournalId,
+    changes: { before?: AuditJsonObject; after?: AuditJsonObject },
+    auditMetadata?: AuditEventMetadata,
+  ): Promise<JournalPersistenceResult> {
+    return stageUndoPlanAttach(session, workplaceId, captureJournalId, changes, auditMetadata);
   }
 }
 

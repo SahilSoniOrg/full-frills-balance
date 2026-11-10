@@ -3,6 +3,7 @@ import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { JournalStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
@@ -175,6 +176,43 @@ export class SmsJournalQueries {
       clauses.unshift(Q.where('id', Q.notEq(excludeJournalId)));
     }
 
+    return this.journals.query(...clauses).fetch();
+  }
+
+  /**
+   * POSTED capture-window journals with no Planned Payment link. Used by the shared
+   * movement matcher for two-sided uniqueness against unlinked capture journals.
+   */
+  async findUnlinkedPostedNear(
+    params: {
+      centerDate: number;
+      windowMs: number;
+      amount?: number;
+      amounts?: number[];
+      excludeJournalId?: string;
+      limit?: number | null;
+    },
+    workplaceId: WorkplaceId,
+  ): Promise<Journal[]> {
+    const { centerDate, windowMs, amount, amounts, excludeJournalId, limit = null } = params;
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('status', JournalStatus.POSTED),
+      Q.where('planned_payment_id', Q.eq(null)),
+      Q.where('journal_date', Q.gte(centerDate - windowMs)),
+      Q.where('journal_date', Q.lte(centerDate + windowMs)),
+      Q.where('workplace_id', workplaceId),
+      Q.sortBy('journal_date', 'desc'),
+    ];
+    if (limit !== null) clauses.push(Q.take(limit));
+    if (typeof amount === 'number') {
+      clauses.unshift(Q.where('total_amount', amount));
+    } else if (amounts && amounts.length > 0) {
+      clauses.unshift(Q.where('total_amount', Q.oneOf(amounts)));
+    }
+    if (excludeJournalId) {
+      clauses.unshift(Q.where('id', Q.notEq(excludeJournalId)));
+    }
     return this.journals.query(...clauses).fetch();
   }
 }
