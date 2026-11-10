@@ -18,7 +18,7 @@ import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmail
 import { Platform } from 'react-native';
 import type { ReactNode } from 'react';
 
-interface AutomationSettingsViewProps {
+interface CaptureWorkspaceViewProps {
   onOpenSmsSettings: () => void;
   capture: TransactionCaptureViewModel;
   gmailSection: ReactNode;
@@ -26,13 +26,13 @@ interface AutomationSettingsViewProps {
   captureSourceLoading: boolean;
 }
 
-export function AutomationSettingsView({
+export function CaptureWorkspaceView({
   onOpenSmsSettings,
   capture,
   gmailSection,
   hasAutomaticCaptureSource,
   captureSourceLoading,
-}: AutomationSettingsViewProps) {
+}: CaptureWorkspaceViewProps) {
   const { resolvedHourCycle } = useHourCyclePrefs();
   return (
     <SettingsLayout title={strings.title}>
@@ -233,7 +233,7 @@ function CaptureWorkspaceScreen() {
   const capture = useTransactionCaptureViewModel();
   if (Platform.OS === 'web') {
     return (
-      <AutomationSettingsView
+      <CaptureWorkspaceView
         key={capture.workplaceId}
         onOpenSmsSettings={AppNavigation.toSmsSettings}
         capture={capture}
@@ -255,7 +255,7 @@ function NativeCaptureWorkspaceView({ capture }: { capture: TransactionCaptureVi
     (gmail.connected && gmail.automaticCaptureEnabled);
 
   return (
-    <AutomationSettingsView
+    <CaptureWorkspaceView
       key={capture.workplaceId}
       onOpenSmsSettings={AppNavigation.toSmsSettings}
       capture={capture}

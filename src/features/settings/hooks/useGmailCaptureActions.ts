@@ -1,5 +1,5 @@
-import { gmailCaptureStrings as strings } from '@/src/constants/copy/domains/gmailCaptureStrings';
-import { transactionCaptureStrings as captureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { gmailCaptureStrings } from '@/src/constants/copy/domains/gmailCaptureStrings';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import {
   GmailAccountBindingConflictError,
   connectGmailForWorkplace,
@@ -18,10 +18,10 @@ type MutationRunner = ReturnType<typeof useCaptureMutationRunner>;
 
 function gmailError(error: unknown): string {
   return error instanceof GmailAccountBindingConflictError
-    ? strings.accountConflict
+    ? gmailCaptureStrings.accountConflict
     : error instanceof Error
       ? error.message
-      : strings.error;
+      : gmailCaptureStrings.error;
 }
 
 export function useGmailCaptureActions({
@@ -38,17 +38,21 @@ export function useGmailCaptureActions({
       if (loading) return;
       mutations.confirmAndRun(
         {
-          title: connected ? strings.disconnectTitle : strings.connectTitle,
-          message: connected ? strings.disconnectMessage : strings.connectMessage,
-          confirmText: connected ? strings.disconnectAction : strings.connectAction,
-          cancelText: captureStrings.cancel,
+          title: connected ? gmailCaptureStrings.disconnectTitle : gmailCaptureStrings.connectTitle,
+          message: connected
+            ? gmailCaptureStrings.disconnectMessage
+            : gmailCaptureStrings.connectMessage,
+          confirmText: connected
+            ? gmailCaptureStrings.disconnectAction
+            : gmailCaptureStrings.connectAction,
+          cancelText: transactionCaptureStrings.cancel,
         },
         async currentWorkplaceId => {
           if (connected) {
             cancelGmailSync(currentWorkplaceId);
             const result = await disconnectGmailForWorkplace(currentWorkplaceId);
             analytics.trackFeatureUsage('gmail', 'disconnect');
-            if (result === 'failed') toast.warning(strings.disconnectRevocationFailed);
+            if (result === 'failed') toast.warning(gmailCaptureStrings.disconnectRevocationFailed);
           } else if (await connectGmailForWorkplace(currentWorkplaceId)) {
             analytics.trackFeatureUsage('gmail', 'connect');
             void syncGmailForWorkplace(currentWorkplaceId).catch(() => {});
@@ -73,7 +77,7 @@ export function useGmailCaptureActions({
       if (loading || !connected) return;
       const apply = async (currentWorkplaceId: WorkplaceId) => {
         if (enabled && !(await registerGmailBackgroundTask()))
-          throw new Error(strings.backgroundUnavailable);
+          throw new Error(gmailCaptureStrings.backgroundUnavailable);
         await setGmailBackgroundEnabled(currentWorkplaceId, enabled);
         analytics.trackFeatureUsage('gmail', 'toggle_background', { enabled });
         if (!enabled) cancelGmailSync(currentWorkplaceId);
@@ -81,21 +85,21 @@ export function useGmailCaptureActions({
       if (enabled) {
         mutations.confirmAndRun(
           {
-            title: strings.backgroundTitle,
-            message: strings.backgroundMessage,
-            confirmText: strings.backgroundAction,
-            cancelText: captureStrings.cancel,
+            title: gmailCaptureStrings.backgroundTitle,
+            message: gmailCaptureStrings.backgroundMessage,
+            confirmText: gmailCaptureStrings.backgroundAction,
+            cancelText: transactionCaptureStrings.cancel,
           },
           apply,
           {
             errorMessage: error =>
-              error instanceof Error ? error.message : strings.backgroundUnavailable,
+              error instanceof Error ? error.message : gmailCaptureStrings.backgroundUnavailable,
           },
         );
       } else {
         void mutations.run(apply, {
           errorMessage: error =>
-            error instanceof Error ? error.message : strings.backgroundUnavailable,
+            error instanceof Error ? error.message : gmailCaptureStrings.backgroundUnavailable,
         });
       }
     },
@@ -109,15 +113,15 @@ export function useGmailCaptureActions({
       if (enabled) {
         mutations.confirmAndRun(
           {
-            title: strings.automaticTitle,
-            message: strings.automaticMessage,
-            confirmText: strings.automaticAction,
-            cancelText: captureStrings.cancel,
+            title: gmailCaptureStrings.automaticTitle,
+            message: gmailCaptureStrings.automaticMessage,
+            confirmText: gmailCaptureStrings.automaticAction,
+            cancelText: transactionCaptureStrings.cancel,
           },
           apply,
           {
             errorMessage: error =>
-              error instanceof Error ? error.message : captureStrings.loadError,
+              error instanceof Error ? error.message : transactionCaptureStrings.loadError,
           },
         );
       } else {

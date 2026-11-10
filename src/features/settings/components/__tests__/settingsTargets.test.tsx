@@ -1,7 +1,7 @@
 import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { AboutSupportSettingsView } from '@/src/features/settings/components/AboutSupportSettingsView';
 import { AppearanceSettingsView } from '@/src/features/settings/components/AppearanceSettingsView';
-import { AutomationSettingsView } from '@/src/features/settings/components/AutomationSettingsView';
+import { CaptureWorkspaceView } from '@/src/features/settings/components/CaptureWorkspaceView';
 import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { WorkplaceSettingsView } from '@/src/features/settings/components/WorkplaceSettingsView';
 import { DeviceSettingsView } from '@/src/features/settings/components/DeviceSettingsView';
@@ -166,7 +166,7 @@ const screens: Record<string, () => ReactElement> = {
   ),
   devices: () => <DeviceSettingsView />,
   automation: () => (
-    <AutomationSettingsView
+    <CaptureWorkspaceView
       onOpenSmsSettings={fn()}
       capture={emptyCaptureViewModel}
       hasAutomaticCaptureSource

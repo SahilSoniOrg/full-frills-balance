@@ -7,15 +7,12 @@ import {
   AppText,
   Badge,
   ListGroup,
-  type ListRowItem,
 } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useState } from 'react';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
-import { alert } from '@/src/utils/alerts';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
@@ -25,6 +22,7 @@ import { EmailPreviewModal } from './EmailPreviewModal';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { useInboxItemActions } from '@/src/features/settings/hooks/useInboxItemActions';
 
 interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
@@ -60,7 +58,11 @@ export function TransactionInboxItemCardView({
   const channelIcon =
     item.channel === 'voice' ? Icon.Mic : item.channel === 'email' ? Icon.Mail : Icon.MessageSquare;
   const channelLabel =
-    item.channel === 'voice' ? 'Spoken' : item.channel === 'email' ? 'Email' : 'SMS';
+    item.channel === 'voice'
+      ? transactionCaptureStrings.inboxChannelSpoken
+      : item.channel === 'email'
+        ? transactionCaptureStrings.inboxChannelEmail
+        : transactionCaptureStrings.inboxChannelSms;
   const linkedJournalUnavailable =
     item.linkedJournal?.status === 'DELETED' || item.linkedJournal?.status === 'MISSING';
   const linkedJournalColor = linkedJournalUnavailable ? theme.warning : theme.success;
@@ -71,85 +73,24 @@ export function TransactionInboxItemCardView({
         ? 'unavailable journal'
         : 'linked journal';
 
-  const id = item.deviceSourceId;
-  const dismissed = item.processingStatus === InboxProcessingStatus.DISMISSED;
-  const sms = item.channel === 'sms';
   const title = privateMode
     ? transactionCaptureStrings.privateDescription
     : item.channel === 'voice'
-      ? 'Spoken Draft'
-      : item.parsedMerchant || item.senderAddress || 'Unknown Origin';
-  const run = (fn: (item: TransactionInboxItem) => unknown) => () => {
-    setMenuOpen(false);
-    void fn(item);
-  };
-  // ponytail: first applicable action is the primary button; the rest go in the More sheet.
-  const [primary, ...more] = (
-    [
-      item.linkedJournal &&
-        !linkedJournalUnavailable && {
-          id: 'open',
-          title: 'Open Journal',
-          icon: Icon.Document,
-          onPress: run(onOpenJournal),
-        },
-      dismissed && {
-        id: 'undo',
-        title: 'Undo Dismiss',
-        icon: Icon.History,
-        onPress: run(handleUndismiss),
-      },
-      !item.linkedJournal &&
-        item.duplicateCandidate && {
-          id: 'compare',
-          title: 'Compare duplicate',
-          icon: Icon.Merge,
-          onPress: run(onCompareDuplicate),
-          testID: `inbox-compare-duplicate-${id}`,
-        },
-      !item.linkedJournal &&
-        (item.processingStatus !== InboxProcessingStatus.PARSE_FAILED ||
-          item.channel === 'email') && {
-          id: 'import',
-          title: 'Import / Review',
-          icon: Icon.Check,
-          onPress: run(handleImport),
-        },
-      sms &&
-        !item.linkedJournal && {
-          id: 'reparse',
-          title: 'Edit & Re-parse',
-          icon: Icon.Edit,
-          onPress: run(onEditReparse),
-          testID: `inbox-edit-reparse-btn-${id}`,
-        },
-      !item.linkedJournal &&
-        !!item.parsedAmount && {
-          id: 'split',
-          title: 'Split',
-          icon: Icon.SwapHorizontal,
-          onPress: run(onSplitImport),
-          testID: `inbox-split-btn-${id}`,
-        },
-      !dismissed && { id: 'dismiss', title: 'Dismiss', icon: Icon.X, onPress: run(handleDismiss) },
-      !privateMode &&
-        item.channel !== 'email' && {
-          id: 'raw',
-          title: 'View Raw',
-          icon: Icon.MessageSquare,
-          onPress: run(() =>
-            alert.show({
-              title:
-                item.channel === 'voice'
-                  ? 'Raw Voice Transcript'
-                  : item.senderAddress || 'Raw Message',
-              message: item.rawBody || '',
-            }),
-          ),
-        },
-    ] as (ListRowItem | false | null | undefined)[]
-  ).filter((a): a is ListRowItem => !!a) as [ListRowItem, ...ListRowItem[]];
-  const split = primary.id === 'import' ? more.find(a => a.id === 'split') : undefined;
+      ? transactionCaptureStrings.inboxSpokenDraft
+      : item.parsedMerchant || item.senderAddress || transactionCaptureStrings.inboxUnknownOrigin;
+  const { primary, more, split } = useInboxItemActions(
+    item,
+    {
+      handleDismiss,
+      handleUndismiss,
+      handleImport,
+      onCompareDuplicate,
+      onOpenJournal,
+      onSplitImport,
+      onEditReparse,
+    },
+    { onBeforeAction: () => setMenuOpen(false) },
+  );
 
   return (
     <AppCard style={styles.card} testID={testID}>
@@ -342,7 +283,7 @@ export function TransactionInboxItemCardView({
             testID={`inbox-more-${item.deviceSourceId}`}
             style={styles.actionButton}
           >
-            More
+            {transactionCaptureStrings.inboxActionMore}
           </AppButton>
         ) : null}
       </View>
