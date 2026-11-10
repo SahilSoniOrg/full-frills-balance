@@ -36,7 +36,7 @@ Each Workplace scopes its accounts and capture preferences. Android can read SMS
 
 ## Evidence on Hand
 
-- `src/features/settings/components/AutomationSettingsView.tsx` contains the current Capture & review workflow.
+- `src/features/settings/components/CaptureWorkspaceView.tsx` contains the current Capture & review workflow.
 - `src/data/repositories/journal/JournalHistoricalCaptureQueries.ts` builds review-only suggestions from linked SMS evidence and posted journals.
 - Existing virtual-device data includes SMS-linked journal history; it is test data, not product proof.
 

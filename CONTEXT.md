@@ -213,8 +213,20 @@ Separate Workplaces linking or dismissing the same source observation in their o
 _Avoid_: Resurface; show consumed as pending (the feed already shows them)
 
 **Source observation**:
-One source's evidence of a money movement, such as a bank SMS. Several observations may describe one journal; an observation is not itself a category confirmation.
-_Avoid_: Journal; duplicate transaction (before reconciliation establishes identity)
+One source's evidence of a money movement, such as a bank SMS. Several observations may describe one journal; an observation is not itself a category confirmation. Linking an observation to a journal is separate from linking that journal to a Planned Payment.
+_Avoid_: Journal; duplicate transaction (before reconciliation establishes identity); tag (for observation↔journal identity)
+
+**Planned Payment**:
+A Workplace schedule for an expected money movement and its occurrence journals. A journal may link to at most one Planned Payment; that link is not a Source observation.
+_Avoid_: Recurring rule; subscription (as the domain name); tag
+
+**Planned payment auto-post**:
+A Planned Payment setting that posts due occurrence journals on the schedule without waiting for Source observation evidence. Evidence-driven settlement of a matching observation is a separate path.
+_Avoid_: Capture enablement; SMS auto-import (as synonyms for this setting)
+
+**Evidence-driven settlement**:
+Posting or creating a Planned Payment occurrence journal because a uniquely matching Source observation (SMS or email) shows the movement already happened. It runs only when Automatic transaction capture would itself have posted that observation, may run even when Planned payment auto-post is off, and uses the Planned Payment's accounts as the journal shape. Planned Payments with currency conversion are not settled this way.
+_Avoid_: Tag; merge (unless the User is choosing an existing journal in inbox review); capture auto-post as a synonym; Device SMS listen as permission to settle
 
 **Economic kind**:
 Whether an established money movement is an expense, income, transfer, or refund/reversal. Account debit/credit direction alone does not establish its economic kind.
@@ -222,7 +234,7 @@ _Avoid_: Direction; category
 
 **Automatic transaction capture**:
 Creation of a journal from established source facts and resolved financial Accounts under the Workplace's explicit capture permission. Its category may still need review.
-_Avoid_: SMS rule; category confirmation; Device SMS listen
+_Avoid_: SMS rule; category confirmation; Device SMS listen; Planned payment auto-post
 
 **Transaction intelligence**:
 The shared interpretation of source observations, Account evidence, and confirmed journal classifications. It supplies capture and review decisions across sources within a Workplace.

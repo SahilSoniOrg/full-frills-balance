@@ -1,8 +1,8 @@
 # Automatic transaction capture
 
 **Date:** 2026-11-07
-**Status:** Capture, review, and historical SMS suggestion backfill are implemented; integration validation and rollout remain pending. Tests have not been run for this change.
-**Related:** [Glossary](../../../CONTEXT.md), [Account matchers](../account-matcher-discovery/spec.md)
+**Status:** Capture, review, and historical SMS suggestion backfill are implemented; integration validation and rollout remain pending. Tests have not been run for this change. Cross-movement identity with Planned Payments is specified separately and not yet implemented.
+**Related:** [Glossary](../../../CONTEXT.md), [Account matchers](../account-matcher-discovery/spec.md), [Evidence-driven Planned Payment settlement](../evidence-driven-planned-payment-settlement/spec.md), [ADR 0010](../../adr/0010-evidence-driven-planned-payment-settlement.md)
 
 ## Boundary
 
@@ -87,7 +87,7 @@ Historical SMS source facts use a separate versioned `historicalSmsEvidence` val
 - Later corrections replace affected labels while preserving unchanged confirmed allocations. Merges and Account retargeting preserve source identity and update allocation references.
 - An additional observation does not reopen completed category review or count as another independent User classification.
 
-Source links, posting status, and categorization review are separate concerns. Similar merchant and amount may suggest reconciliation; they do not prove transaction identity or authorize another journal.
+Source links, posting status, and categorization review are separate concerns. Similar merchant and amount may suggest reconciliation; they do not by themselves prove transaction identity or authorize another journal. Unique Planned Payment occurrence matches are a separate identity path owned by [Evidence-driven Planned Payment settlement](../evidence-driven-planned-payment-settlement/spec.md): a uniquely matching SMS or email may link to or settle that occurrence without minting a second journal, and a Planned Payment may attach to an existing capture journal under the same uniqueness rules. When an observation only soft-matches a Planned Payment occurrence (near date, near amount, or structural conflict), capture does not auto-post it; it goes to review with the occurrence offered as a target.
 
 ## Automation and manual review
 
@@ -107,7 +107,8 @@ Voice retains parse → apply to draft → User save. Parsing/applying creates n
 - Capture settings restore disabled with their cutoff cleared; valid role IDs are remapped. Restored settings are not renewed consent to unattended writes.
 - The historical SMS evidence and backfill version survive native backup/restore. Source IDs have no Account references to remap; current journal lines and Accounts are revalidated before a suggestion is shown.
 - A database migration drops the obsolete SMS rule tables. Capture configuration, category defaults, and historical SMS evidence use the current Workplace preference and journal-metadata contracts.
+- Planned Payment links remain `journals.planned_payment_id`. They are not Source observation channels. Forward-looking observation↔plan identity is specified in [Evidence-driven Planned Payment settlement](../evidence-driven-planned-payment-settlement/spec.md); this capture spec does not authorize that settlement path until that work ships.
 
 ## Validation still required
 
-No tests were run for this implementation. Before rollout, verify classification positives/confusing alternatives, explicit consent/cutoff and queued-disable behavior, missing Account mappings, same-source replay, transfer-side observations, review after edits/splits, historical SMS backfill idempotency, multiple SMS observations for one journal, conflicting source IDs, mixed-category suppression, privacy, deletion/restore, voice draft/import behavior, cross-source reconciliation, and native backup/restore. Type checking alone does not establish runtime accounting or device behavior.
+No tests were run for this implementation. Before rollout, verify classification positives/confusing alternatives, explicit consent/cutoff and queued-disable behavior, missing Account mappings, same-source replay, transfer-side observations, review after edits/splits, historical SMS backfill idempotency, multiple SMS observations for one journal, conflicting source IDs, mixed-category suppression, privacy, deletion/restore, voice draft/import behavior, cross-source reconciliation (SMS↔email reference and soft duplicates), and native backup/restore. Type checking alone does not establish runtime accounting or device behavior. Planned Payment evidence-driven settlement acceptance lives in that feature's spec and plan, not in this capture rollout checklist.
