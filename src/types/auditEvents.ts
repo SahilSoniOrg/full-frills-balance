@@ -43,6 +43,7 @@ export const AUDIT_DOMAIN_EVENT_TYPES = [
   'journal.reverted_to_planned',
   'journal.status_changed',
   'journal.accounts_retargeted',
+  'journal.planned_payment_attached',
   'exchange_rate.manual_set',
   'budget.created',
   'budget.imported',

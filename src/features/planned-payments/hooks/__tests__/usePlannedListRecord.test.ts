@@ -56,9 +56,10 @@ function setWorkplace(id: WorkplaceId) {
 }
 
 function deferred() {
-  let resolve!: () => void;
+  type Result = false | { status: 'posted' | 'skipped' };
+  let resolve!: (value: Result) => void;
   let reject!: (error: Error) => void;
-  const promise = new Promise<void>((res, rej) => {
+  const promise = new Promise<Result>((res, rej) => {
     resolve = res;
     reject = rej;
   });
@@ -77,7 +78,7 @@ describe('usePlannedListRecord', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setWorkplace(workplaceId);
-    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue(true);
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue({ status: 'posted' });
   });
 
   it('posts the displayed saved journal occurrence with its own date and currency-specific saved row', async () => {
@@ -117,7 +118,7 @@ describe('usePlannedListRecord', () => {
     });
     expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(1);
     expect(result.current.pendingPlanIds.has(occurrence.payment.id)).toBe(true);
-    await act(async () => pending.resolve());
+    await act(async () => pending.resolve({ status: 'posted' }));
     expect(result.current.pendingPlanIds.has(occurrence.payment.id)).toBe(false);
   });
 
@@ -125,7 +126,7 @@ describe('usePlannedListRecord', () => {
     jest
       .mocked(recordPlannedOccurrenceWithFxReview)
       .mockRejectedValueOnce(new Error('write failed'))
-      .mockResolvedValueOnce(true);
+      .mockResolvedValueOnce({ status: 'posted' });
     const { result } = renderListRecordHook(workplaceId);
     await act(async () => result.current.recordOccurrence(occurrence));
     expect(result.current.errors[occurrence.occurrenceId]).toBeTruthy();
@@ -181,7 +182,7 @@ describe('usePlannedListRecord', () => {
     expect(result.current.pendingPlanIds.size).toBe(0);
     expect(result.current.errors).toEqual({});
     rerender({ id: workplaceId });
-    await act(async () => pending.resolve());
+    await act(async () => pending.resolve({ status: 'posted' }));
 
     expect(result.current.pendingIds.size).toBe(0);
     expect(result.current.pendingPlanIds.size).toBe(0);

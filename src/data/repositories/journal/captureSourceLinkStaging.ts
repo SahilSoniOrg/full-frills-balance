@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import type { CaptureSourceObservation } from '@/src/domain/transaction-intelligence/captureMetadata';
 import { readCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
 import {
@@ -12,6 +13,35 @@ import {
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+
+/** True when this observation is already attached to the journal via capture sources or inbox. */
+export async function journalAlreadyHasCaptureSource(
+  workplaceId: WorkplaceId,
+  journalId: JournalId,
+  source: CaptureSourceObservation,
+): Promise<boolean> {
+  const [metadataRows, inboxRows] = await Promise.all([
+    database.collections
+      .get<JournalMetadata>('journal_metadata')
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+      .fetch(),
+    database.collections
+      .get<TransactionInboxRecord>('transaction_inbox_records')
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('device_source_id', source.sourceId),
+        Q.where('linked_journal_id', journalId),
+      )
+      .fetch(),
+  ]);
+  if (inboxRows.length > 0) return true;
+  const capture = metadataRows.map(row => readCaptureMetadata(row.metadataJson)).find(Boolean);
+  return (
+    capture?.sources.some(
+      existing => existing.channel === source.channel && existing.sourceId === source.sourceId,
+    ) === true
+  );
+}
 
 /** Adds source evidence to the session accumulator; the session emits one metadata write per row. */
 export async function stageLinkedCaptureSource(

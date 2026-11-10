@@ -59,6 +59,15 @@ jest.mock('../usePlannedPaymentRecord', () => ({ usePlannedPaymentRecord: jest.f
 jest.mock('@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview', () => ({
   recordPlannedOccurrenceWithFxReview: jest.fn(),
 }));
+jest.mock('@/src/services/planned-payment/plannedOccurrenceSettlement', () => ({
+  findPlanAttachCandidateForOccurrence: jest.fn(async () => undefined),
+}));
+jest.mock('@/src/services/planned-payment/plannedPaymentPlanAttach', () => ({
+  attachCaptureJournalToPlannedOccurrence: jest.fn(),
+}));
+jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
+  skipPlannedPaymentOccurrence: jest.fn(),
+}));
 jest.mock('@/src/services/planned-payment/plannedPaymentDetailService', () => ({
   plannedPaymentDetailService: {
     observeActivity: jest.fn(() => jest.requireActual('rxjs').of([])),
@@ -126,13 +135,13 @@ describe('planned payment detail actions', () => {
     jest
       .mocked(plannedPaymentDetailService.observeActivity)
       .mockReturnValue(jest.requireActual('rxjs').of([plannedJournal]));
-    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue(true);
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue({ status: 'posted' });
   });
 
   it('locks concurrent actions and keeps the page open after recording', async () => {
     let finish!: () => void;
-    const postPromise = new Promise<boolean | void>(resolve => {
-      finish = () => resolve(true);
+    const postPromise = new Promise<false | { status: 'posted' | 'skipped' }>(resolve => {
+      finish = () => resolve({ status: 'posted' });
     });
     jest.mocked(recordPlannedOccurrenceWithFxReview).mockReturnValue(postPromise);
     const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
@@ -161,6 +170,7 @@ describe('planned payment detail actions', () => {
       'plan',
       100,
       'unpaid',
+      { confirmPostDespiteCandidate: false },
     );
     await act(async () => {
       finish();

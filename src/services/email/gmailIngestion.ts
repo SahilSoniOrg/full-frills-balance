@@ -9,6 +9,10 @@ import { decideCapture } from '@/src/domain/transaction-intelligence/decideCaptu
 import { extractMessageEconomicEvidence } from '@/src/domain/transaction-intelligence/messageEconomicEvidence';
 import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import {
+  applyEvidenceDrivenObservationSettlement,
+  movementObservationFromCapture,
+} from '@/src/services/planned-payment/evidenceDrivenObservationSettlement';
 import { recognizeEmailAccounts } from './emailAccountRecognition';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import { findManyDuplicateCandidates } from '@/src/services/sms/smsDuplicateDetection';
@@ -193,64 +197,122 @@ export async function ingestGmailObservation(
     } else if (duplicateId) {
       status = InboxProcessingStatus.DUPLICATE_FLAGGED;
     } else if (!consumedElsewhere) {
-      const decision = decideCapture(
-        {
-          source: {
-            channel: 'email',
-            sourceId,
-            occurredAt: message.receivedAt,
-            merchant: parsed.merchant,
-            authentication: verifiedForCapture ? 'dkim' : undefined,
-          },
-          direction: parsed.direction,
-          amount: parsed.amount,
-          currencyCode: parsed.currencyCode,
+      const captureObservation = {
+        source: {
+          channel: 'email' as const,
+          sourceId,
+          occurredAt: message.receivedAt,
           merchant: parsed.merchant,
-          economicEvidence: extractMessageEconomicEvidence(message.text),
-          parsed: parsed.parseStatus === InboxParseStatus.PARSED,
-          pending: true,
+          authentication: verifiedForCapture ? ('dkim' as const) : undefined,
         },
-        {
-          status: recognition.status,
-          accountIds: recognition.accountIds,
-          outgoingAccountId: roles.sourceAccountId,
-          incomingAccountId: roles.destinationAccountId,
-          ambiguous: roles.isAmbiguous,
-        },
-        {
-          enabled: context.captureEnabled === true,
-          enabledAt: captureCutoff,
-          allowAutomaticCapture: verifiedForCapture,
-          sourceAccountCurrency: context.sourceAccountCurrency,
-          isFinancialLeaf: context.isFinancialLeaf,
-          uncategorizedAccount: context.uncategorizedAccount,
-          categoryDefault: context.categoryDefault,
-          descriptionDefaults: context.descriptionDefaults,
-          openMerchants: context.openMerchants,
-        },
-        now,
-      );
-      if (decision.kind === 'review')
-        reviewReason = !parsed.amountReliableForCapture
-          ? 'Review the transaction amount; this email contains ambiguous amounts.'
-          : recognition.status === 'none'
-            ? 'No account was recognized. Choose the account used for this transaction.'
-            : (decision.reason ?? 'Review this email before creating a journal.');
-      if (decision.kind === 'post') {
-        if (reference && decision.journalData.metadata?.metadataJson) {
-          decision.journalData.metadata.metadataJson = JSON.stringify({
-            ...JSON.parse(decision.journalData.metadata.metadataJson),
-            referenceNumber: reference,
-          });
-        }
-        result = await journalPersistenceService.putInSession(
+        direction: parsed.direction,
+        amount: parsed.amount,
+        currencyCode: parsed.currencyCode,
+        merchant: parsed.merchant,
+        economicEvidence: extractMessageEconomicEvidence(message.text),
+        parsed: parsed.parseStatus === InboxParseStatus.PARSED,
+        pending: true,
+      };
+      const captureAccounts = {
+        status: recognition.status,
+        accountIds: recognition.accountIds,
+        outgoingAccountId: roles.sourceAccountId,
+        incomingAccountId: roles.destinationAccountId,
+        ambiguous: roles.isAmbiguous,
+      };
+      const capturePolicy = {
+        enabled: context.captureEnabled === true,
+        enabledAt: captureCutoff,
+        allowAutomaticCapture: verifiedForCapture,
+        sourceAccountCurrency: context.sourceAccountCurrency,
+        isFinancialLeaf: context.isFinancialLeaf,
+        uncategorizedAccount: context.uncategorizedAccount,
+        categoryDefault: context.categoryDefault,
+        descriptionDefaults: context.descriptionDefaults,
+        openMerchants: context.openMerchants,
+      };
+      const evidenceAccountId =
+        roles.sourceAccountId ??
+        roles.destinationAccountId ??
+        (recognition.status === 'recognized' && recognition.accountIds.length === 1
+          ? recognition.accountIds[0]
+          : undefined);
+      let evidenceHandled = false;
+      if (
+        evidenceAccountId &&
+        parsed.amount != null &&
+        parsed.currencyCode &&
+        parsed.parseStatus === InboxParseStatus.PARSED
+      ) {
+        const evidence = await applyEvidenceDrivenObservationSettlement({
           session,
-          decision.journalData,
           workplaceId,
-          { eventType: 'journal.automatically_captured', source: 'system', undoable: false },
-        );
-        linkedJournalId = result.journal.id;
-        status = InboxProcessingStatus.AUTO_POSTED;
+          observation: movementObservationFromCapture({
+            id: sourceId,
+            channel: 'email',
+            amount: parsed.amount,
+            currency: parsed.currencyCode,
+            accountId: evidenceAccountId,
+            direction: parsed.direction,
+            date: message.receivedAt,
+            reference: reference ?? null,
+          }),
+          captureGate: {
+            observation: captureObservation,
+            accounts: captureAccounts,
+            policy: capturePolicy,
+            now,
+          },
+        });
+        if (evidence.kind === 'settled' || evidence.kind === 'linked') {
+          linkedJournalId = evidence.journalId;
+          status = InboxProcessingStatus.IMPORTED;
+          if (evidence.kind === 'settled') result = evidence.journalResult;
+          // Hard identity already staged (or no-op'd) inside settlement — do not stage twice.
+          if (!(evidence.kind === 'linked' && evidence.hardIdentity)) {
+            await stageLinkedCaptureSource(session, workplaceId, linkedJournalId, {
+              channel: 'email',
+              sourceId,
+              occurredAt: message.receivedAt,
+              merchant: parsed.merchant,
+              authentication: 'dkim',
+            });
+          }
+          evidenceHandled = true;
+        } else if (evidence.kind === 'review') {
+          evidenceHandled = true;
+          reviewReason = evidence.reason;
+          if (evidence.flagDuplicate) {
+            status = InboxProcessingStatus.DUPLICATE_FLAGGED;
+          } else {
+            status = InboxProcessingStatus.PENDING;
+          }
+        }
+      }
+      if (!evidenceHandled) {
+        const decision = decideCapture(captureObservation, captureAccounts, capturePolicy, now);
+        if (decision.kind === 'review')
+          reviewReason = !parsed.amountReliableForCapture
+            ? 'Review the transaction amount; this email contains ambiguous amounts.'
+            : recognition.status === 'none'
+              ? 'No account was recognized. Choose the account used for this transaction.'
+              : (decision.reason ?? 'Review this email before creating a journal.');
+        if (decision.kind === 'post') {
+          if (reference && decision.journalData.metadata?.metadataJson) {
+            decision.journalData.metadata.metadataJson = JSON.stringify({
+              ...JSON.parse(decision.journalData.metadata.metadataJson),
+              referenceNumber: reference,
+            });
+          }
+          result = await journalPersistenceService.putInSession(
+            session,
+            decision.journalData,
+            workplaceId,
+            { eventType: 'journal.automatically_captured', source: 'system', undoable: false },
+          );
+          linkedJournalId = result.journal.id;
+          status = InboxProcessingStatus.AUTO_POSTED;
+        }
       }
     }
     const data: TransactionInboxRecordWriteData = {
@@ -287,7 +349,14 @@ export async function ingestGmailObservation(
         gmailMessageId: message.id,
         ...(message.internetMessageId ? { internetMessageId: message.internetMessageId } : {}),
         ...(status === InboxProcessingStatus.DUPLICATE_FLAGGED
-          ? { duplicateReasons: ['A similar transaction was already recorded'] }
+          ? {
+              duplicateReasons: reviewReason
+                ? [reviewReason]
+                : ['A similar transaction was already recorded'],
+            }
+          : {}),
+        ...(reviewReason && status === InboxProcessingStatus.PENDING
+          ? { captureAutoPostBlocked: true, captureReviewReason: reviewReason }
           : {}),
         ...(recognitionEvidence ? { emailRecognition: recognitionEvidence } : {}),
       }),

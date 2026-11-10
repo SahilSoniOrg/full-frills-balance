@@ -34,6 +34,16 @@ import { processScanBatchItem, prepareUpsertInboxRecord } from './smsInboxRecord
 import { SmsAnalysisResult, SmsContentReservation, SmsFuzzyReservation } from './types';
 import type { SmsScanOrigin } from '@/src/types/smsInbox';
 import { loadCaptureContext } from '@/src/services/transaction-intelligence/captureContext';
+import { extractMessageEconomicEvidence } from '@/src/domain/transaction-intelligence/messageEconomicEvidence';
+import { findActiveJournal } from '@/src/data/repositories/journal/journalPersistenceSupport';
+import {
+  applyEvidenceDrivenObservationSettlement,
+  movementObservationFromCapture,
+  type EvidenceDrivenObservationDisposition,
+} from '@/src/services/planned-payment/evidenceDrivenObservationSettlement';
+import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
+import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { projectRecognition } from './smsDecision';
 
 export interface SmsScanOptions {
@@ -276,6 +286,105 @@ export class SmsSyncPipeline {
                 )
               : null;
 
+            let evidenceJournal: Journal | undefined;
+            let evidenceSettlement: EvidenceDrivenObservationDisposition | undefined;
+            let blockCaptureAutoPost = false;
+            const allowArrivalCapture = origin === 'arrival' || origin === 'catch_up';
+            if (
+              !latestJournal &&
+              !crossSourceJournal &&
+              !latestRecord?.linkedJournalId &&
+              (!latestRecord || latestRecord.processingStatus === InboxProcessingStatus.PENDING) &&
+              !latestRecord?.consumedWorkplaces?.length &&
+              result.parsed.parseStatus === InboxParseStatus.PARSED &&
+              result.parsed.amount != null &&
+              result.parsed.currencyCode
+            ) {
+              const projected = projectRecognition(result.message, result.parsed, decisionContext);
+              const accountId =
+                projected.suggestedAccounts?.suggestedSourceAccountId ??
+                (projected.recognition.accountIds.length === 1
+                  ? projected.recognition.accountIds[0]
+                  : undefined);
+              if (
+                accountId &&
+                projected.recognition.status === 'recognized' &&
+                !projected.recognition.hold
+              ) {
+                const recognition = recognizeSmsAccounts(decisionContext.matchers, {
+                  senderAddress: result.message.address,
+                  rawBody: result.message.body,
+                });
+                const roles = resolveAccountFlowRoles(recognition);
+                const alreadyHeldForReview =
+                  safeParseJSON<Record<string, unknown>>(latestRecord?.metadataJson ?? '{}', {})
+                    ?.captureAutoPostBlocked === true;
+                evidenceSettlement = await applyEvidenceDrivenObservationSettlement({
+                  session,
+                  workplaceId,
+                  observation: movementObservationFromCapture({
+                    id: result.message.id,
+                    channel: 'sms',
+                    amount: result.parsed.amount,
+                    currency: result.parsed.currencyCode,
+                    accountId,
+                    direction: result.parsed.type,
+                    date: result.message.date,
+                    reference: result.parsed.referenceNumber
+                      ? normalizeSmsReferenceNumber(result.parsed.referenceNumber)
+                      : null,
+                  }),
+                  captureGate: {
+                    observation: {
+                      source: {
+                        channel: 'sms',
+                        sourceId: result.message.id,
+                        occurredAt: result.message.date,
+                        fingerprint: result.fingerprint,
+                        merchant: result.parsed.merchant,
+                      },
+                      direction: result.parsed.type,
+                      amount: result.parsed.amount,
+                      currencyCode: result.parsed.currencyCode,
+                      merchant: result.parsed.merchant,
+                      economicEvidence: extractMessageEconomicEvidence(result.message.body),
+                      parsed: true,
+                      pending: true,
+                    },
+                    accounts: {
+                      status: recognition.status,
+                      accountIds: recognition.accountIds,
+                      outgoingAccountId: roles.sourceAccountId,
+                      incomingAccountId: roles.destinationAccountId,
+                      ambiguous: roles.isAmbiguous || !!projected.recognition.hold,
+                    },
+                    policy: {
+                      enabled: decisionContext.captureEnabled === true,
+                      enabledAt: decisionContext.captureEnabledAt,
+                      allowAutomaticCapture:
+                        allowArrivalCapture &&
+                        !latestRecord?.consumedWorkplaces?.length &&
+                        !alreadyHeldForReview &&
+                        result.parsed.amountReliableForCapture === true,
+                      sourceAccountCurrency: decisionContext.sourceAccountCurrency,
+                      isFinancialLeaf: decisionContext.isFinancialLeaf,
+                      uncategorizedAccount: decisionContext.uncategorizedAccount,
+                      categoryDefault: decisionContext.categoryDefault,
+                      descriptionDefaults: decisionContext.descriptionDefaults,
+                      openMerchants: decisionContext.openMerchants,
+                    },
+                  },
+                });
+                if (evidenceSettlement.kind === 'settled' || evidenceSettlement.kind === 'linked') {
+                  evidenceJournal =
+                    (await findActiveJournal(evidenceSettlement.journalId, workplaceId)) ??
+                    undefined;
+                } else if (evidenceSettlement.kind === 'review') {
+                  blockCaptureAutoPost = evidenceSettlement.blockCaptureAutoPost;
+                }
+              }
+            }
+
             const item = await processScanBatchItem({
               session,
               result: {
@@ -287,7 +396,7 @@ export class SmsSyncPipeline {
               },
               decisionContext,
               latestRecord,
-              latestJournal: latestJournal ?? crossSourceJournal ?? null,
+              latestJournal: latestJournal ?? crossSourceJournal ?? evidenceJournal ?? null,
               latestReferenceDuplicate,
               latestProcessedIds,
               reservedDeviceIds,
@@ -295,8 +404,41 @@ export class SmsSyncPipeline {
               reservedReferences,
               reservedFuzzy,
               workplaceId,
-              allowAutomaticCapture: origin === 'arrival' || origin === 'catch_up',
+              allowAutomaticCapture: allowArrivalCapture && !blockCaptureAutoPost,
             });
+            if (
+              evidenceSettlement?.kind === 'review' &&
+              evidenceSettlement.flagDuplicate &&
+              !item.inboxRecord.linkedJournalId &&
+              item.inboxRecord.processingStatus !== InboxProcessingStatus.DISMISSED
+            ) {
+              item.inboxRecord.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
+              const metadata = safeParseJSON<Record<string, unknown>>(
+                item.inboxRecord.metadataJson ?? '{}',
+                {},
+              );
+              item.inboxRecord.metadataJson = JSON.stringify({
+                ...metadata,
+                captureAutoPostBlocked: true,
+                captureReviewReason: evidenceSettlement.reason,
+                plannedPaymentMatchKind: evidenceSettlement.matchKind,
+              });
+            } else if (
+              evidenceSettlement?.kind === 'review' &&
+              !item.inboxRecord.linkedJournalId &&
+              item.inboxRecord.processingStatus === InboxProcessingStatus.PENDING
+            ) {
+              const metadata = safeParseJSON<Record<string, unknown>>(
+                item.inboxRecord.metadataJson ?? '{}',
+                {},
+              );
+              item.inboxRecord.metadataJson = JSON.stringify({
+                ...metadata,
+                captureAutoPostBlocked: true,
+                captureReviewReason: evidenceSettlement.reason,
+                plannedPaymentMatchKind: evidenceSettlement.matchKind,
+              });
+            }
             await transactionInboxRepository.stageUpsertInSession(
               session,
               item.inboxRecord,
@@ -315,12 +457,18 @@ export class SmsSyncPipeline {
                 recognition: item.decision.recognition,
               },
             );
+            const linkedEvidenceOrCross = evidenceJournal ?? crossSourceJournal;
+            // Hard identity already staged (or no-op'd) inside settlement — do not stage twice.
+            const hardIdentityAlreadyLinked =
+              evidenceSettlement?.kind === 'linked' && evidenceSettlement.hardIdentity === true;
             if (
-              crossSourceJournal &&
-              item.inboxRecord.linkedJournalId === crossSourceJournal.id &&
-              item.inboxRecord.processingStatus === InboxProcessingStatus.IMPORTED
+              linkedEvidenceOrCross &&
+              !hardIdentityAlreadyLinked &&
+              item.inboxRecord.linkedJournalId === linkedEvidenceOrCross.id &&
+              (item.inboxRecord.processingStatus === InboxProcessingStatus.IMPORTED ||
+                item.inboxRecord.processingStatus === InboxProcessingStatus.AUTO_POSTED)
             ) {
-              await stageLinkedCaptureSource(session, workplaceId, crossSourceJournal.id, {
+              await stageLinkedCaptureSource(session, workplaceId, linkedEvidenceOrCross.id, {
                 channel: 'sms',
                 sourceId: result.message.id,
                 occurredAt: result.message.date,
@@ -328,7 +476,9 @@ export class SmsSyncPipeline {
                 merchant: result.parsed.merchant,
               });
             }
-            if (item.autoPosted) stagedImportedCount += 1;
+            if (item.autoPosted || evidenceSettlement?.kind === 'settled') stagedImportedCount += 1;
+            if (evidenceSettlement?.kind === 'settled')
+              journalResults.push(evidenceSettlement.journalResult);
             if (item.journalResult) journalResults.push(item.journalResult);
           }
           if (signal?.aborted) throw new SmsScanCancelledError();

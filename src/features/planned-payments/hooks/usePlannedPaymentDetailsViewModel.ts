@@ -1,5 +1,6 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import { AppConfig } from '@/src/constants';
+import type { ProvisionalPlannedPaymentCandidate } from '@/src/services/planned-payment/provisionalPlannedPaymentCandidates';
 import { Theme } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -27,7 +28,9 @@ import {
 } from '@/src/services/sharing/JournalShareProvider';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
+import { findPlanAttachCandidateForOccurrence } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { attachCaptureJournalToPlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentPlanAttach';
 import { analytics } from '@/src/services/analytics';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
@@ -45,7 +48,7 @@ import {
 import { observeAuditTrail } from '@/src/services/audit-service';
 import type { Money } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
@@ -122,6 +125,10 @@ export interface PlannedPaymentDetailsViewModel {
   };
   onPost?: () => void;
   onSkip?: () => void;
+  /** Provisional candidate (if any) for the "link instead?" prompt. */
+  planCandidate?: ProvisionalPlannedPaymentCandidate;
+  /** Attach the capture journal instead of posting the PLANNED occurrence. */
+  onLinkInstead?: () => void;
   onToggleStatus?: () => void;
   onOpenJournal: (journalId: JournalId) => void;
   onOpenAccount: (accountId: AccountId) => void;
@@ -182,10 +189,22 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const actionLock = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [planCandidate, setPlanCandidate] = useState<
+    ProvisionalPlannedPaymentCandidate | undefined
+  >();
+  const planAttachTarget = item ? resolvePlannedPaymentActionTarget(item) : null;
+  const planAttachKey =
+    item && planAttachTarget ? `${item.id}:${planAttachTarget.occurrenceDate}` : null;
+  const [loadedPlanAttachKey, setLoadedPlanAttachKey] = useState<string | null>(null);
+  // Clear stale candidate during render when the occurrence target changes.
+  if (planAttachKey !== loadedPlanAttachKey) {
+    setLoadedPlanAttachKey(planAttachKey);
+    if (planCandidate !== undefined) setPlanCandidate(undefined);
+  }
   const runAction = useCallback(
     async (
       action: PendingAction,
-      operation: () => Promise<void | boolean>,
+      operation: () => Promise<void | boolean | false>,
       successMessage?: string,
     ) => {
       if (actionLock.current) return;
@@ -260,6 +279,38 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       AppNavigation.back();
     });
   }, [item, workplaceId, runAction]);
+  useEffect(() => {
+    if (!item || !planAttachTarget || !planAttachKey) return;
+    let cancelled = false;
+    void findPlanAttachCandidateForOccurrence(
+      workplaceId,
+      item.id,
+      planAttachTarget.occurrenceDate,
+    ).then(candidate => {
+      if (cancelled) return;
+      if (!candidate) {
+        setPlanCandidate(undefined);
+        return;
+      }
+      setPlanCandidate({
+        id: candidate.captureJournalId,
+        plannedPaymentId: item.id,
+        journalId: candidate.captureJournalId,
+        kind: 'posted',
+        isPlanLinked: false,
+        isPosted: true,
+        occurrenceDate: candidate.occurrenceDay,
+        amount: candidate.amount,
+        currencyCode: candidate.currencyCode,
+        softMatch: candidate.matchKind !== 'strict',
+        softMatchReasons: candidate.matchKind === 'strict' ? undefined : [candidate.matchKind],
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [item, workplaceId, activity, planAttachKey, planAttachTarget]);
+
   const handlePostNow = useCallback(async () => {
     if (!item) return;
     const target = resolvePlannedPaymentActionTarget(item);
@@ -272,8 +323,26 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           item.id,
           target.occurrenceDate,
           target.journalId,
+          // Prompt already offered "link instead?"; Post means mint/post anyway.
+          { confirmPostDespiteCandidate: !!planCandidate },
         );
         if (!completed) return false;
+        if (completed.status === 'attach_candidate') {
+          setPlanCandidate({
+            id: completed.candidate.captureJournalId,
+            plannedPaymentId: item.id,
+            journalId: completed.candidate.captureJournalId,
+            kind: 'posted',
+            isPlanLinked: false,
+            isPosted: true,
+            occurrenceDate: completed.candidate.occurrenceDay,
+            amount: completed.candidate.amount,
+            currencyCode: completed.candidate.currencyCode,
+            softMatch: completed.candidate.matchKind !== 'strict',
+          });
+          return false;
+        }
+        setPlanCandidate(undefined);
         analytics.trackFeatureUsage('planned_payment', 'post_now', {
           payment_id: item.id,
           amount: item.amount,
@@ -283,7 +352,31 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       },
       'Occurrence recorded',
     );
-  }, [item, workplaceId, runAction]);
+  }, [item, workplaceId, runAction, planCandidate]);
+
+  const handleLinkInstead = useCallback(async () => {
+    if (!item || !planCandidate?.journalId) return;
+    const target = resolvePlannedPaymentActionTarget(item);
+    if (!target?.journalId) return;
+    await runAction(
+      'record',
+      async () => {
+        await attachCaptureJournalToPlannedOccurrence(workplaceId, {
+          captureJournalId: planCandidate.journalId as JournalId,
+          plannedPaymentId: item.id,
+          plannedJournalId: target.journalId!,
+          occurrenceDay: target.occurrenceDate,
+        });
+        setPlanCandidate(undefined);
+        analytics.trackFeatureUsage('planned_payment', 'link_instead', {
+          payment_id: item.id,
+          capture_journal_id: planCandidate.journalId,
+        });
+      },
+      'Linked to existing transaction',
+    );
+  }, [item, planCandidate, workplaceId, runAction]);
+
   const handleSkip = useCallback(async () => {
     if (!item) return;
     const target = resolvePlannedPaymentActionTarget(item);
@@ -542,6 +635,8 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       headerActions,
       onPost,
       onSkip,
+      planCandidate,
+      onLinkInstead: planCandidate ? handleLinkInstead : undefined,
       onToggleStatus,
 
       ...selectionProps,
@@ -569,6 +664,8 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     handleToggleStatus,
     handlePostNow,
     handleSkip,
+    handleLinkInstead,
+    planCandidate,
     isMissing,
     pDesc,
     pAmount,

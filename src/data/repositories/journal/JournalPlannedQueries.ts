@@ -71,6 +71,31 @@ export class JournalPlannedQueries {
       .fetch();
   }
 
+  /** Plan-linked journals for matcher candidate loading (PLANNED plus recent claims/skips). */
+  async findLinkedForMatcher(
+    workplaceId: WorkplaceId,
+    plannedPaymentIds: PlannedPaymentId[],
+    recentStart: number,
+    recentEnd: number,
+  ): Promise<Journal[]> {
+    if (plannedPaymentIds.length === 0) return [];
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('planned_payment_id', Q.oneOf(plannedPaymentIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.or(
+          Q.where('status', JournalStatus.PLANNED),
+          Q.and(
+            Q.where('status', Q.oneOf([JournalStatus.POSTED, JournalStatus.SKIPPED])),
+            Q.where('journal_date', Q.gte(recentStart)),
+            Q.where('journal_date', Q.lte(recentEnd)),
+          ),
+        ),
+      )
+      .fetch();
+  }
+
   /** Standalone PLANNED journals marked auto-post and dated before `before`. */
   async findDueAutoPostJournals(workplaceId: WorkplaceId, before: number): Promise<Journal[]> {
     const due = await this.journals

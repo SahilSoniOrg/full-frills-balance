@@ -141,6 +141,7 @@ export const journalDetailsStrings = {
     'journal.updated': 'Edited',
     'journal.renamed': 'Edited',
     'journal.accounts_retargeted': 'Edited',
+    'journal.planned_payment_attached': 'Linked to planned payment',
     'journal.posted': 'Posted',
     'journal.planned_payment_skipped': 'Skipped',
     'journal.reverted_to_planned': 'Moved back to scheduled',

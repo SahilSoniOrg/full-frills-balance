@@ -1,6 +1,6 @@
 # Evidence-driven Planned Payment settlement — implementation plan
 
-**Status:** Not started. Design agreed 2026-11-10; revised after design review the same day.
+**Status:** Implementation landed on `t3/evidence-driven-settlement` (slices 1–5 wired; acceptance stubs still todo). Not merged to main.
 **Date:** 2026-11-10
 **Durable contract:** [Evidence-driven Planned Payment settlement spec](../specs/evidence-driven-planned-payment-settlement/spec.md)
 **Decisions:** [ADR 0010](../adr/0010-evidence-driven-planned-payment-settlement.md), [CONTEXT.md](../../CONTEXT.md)

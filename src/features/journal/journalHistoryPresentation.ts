@@ -53,6 +53,7 @@ const DIFFED_EVENTS = [
   'journal.updated',
   'journal.renamed',
   'journal.accounts_retargeted',
+  'journal.planned_payment_attached',
   'journal.reverted',
 ];
 const FIELD_FORMATS: Record<string, JournalHistoryValueFormat> = {

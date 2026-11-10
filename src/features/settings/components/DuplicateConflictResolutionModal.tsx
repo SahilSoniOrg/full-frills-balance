@@ -8,6 +8,7 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
+import type { ProvisionalPlannedPaymentCandidate } from '@/src/services/planned-payment/provisionalPlannedPaymentCandidates';
 
 interface DuplicateConflictResolutionModalProps {
   visible: boolean;
@@ -18,6 +19,8 @@ interface DuplicateConflictResolutionModalProps {
   onMerge: (item: TransactionInboxItem) => Promise<void> | void;
   onPostAnyway: (item: TransactionInboxItem) => void;
   onViewJournal: (item: TransactionInboxItem) => void;
+  /** Provisional plan-linked / soft-match candidates offered as merge targets. */
+  planCandidates?: readonly ProvisionalPlannedPaymentCandidate[];
 }
 
 export function DuplicateConflictResolutionModal({

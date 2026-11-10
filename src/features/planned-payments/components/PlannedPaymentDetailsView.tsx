@@ -17,6 +17,7 @@ import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { confirm } from '@/src/utils/alerts';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -208,7 +209,20 @@ export function PlannedPaymentDetailsView({
                 disabled={pending}
                 primary={{
                   label: copy.recordPayment,
-                  onPress: vm.onPost,
+                  onPress: () => {
+                    if (vm.planCandidate && vm.onPost) {
+                      confirm.show({
+                        title: 'Matching transaction found',
+                        message: 'This matches an existing transaction — link instead?',
+                        confirmText: 'Post',
+                        cancelText: 'Link instead',
+                        onConfirm: vm.onPost,
+                        onCancel: () => vm.onLinkInstead?.(),
+                      });
+                    } else {
+                      vm.onPost?.();
+                    }
+                  },
                   loading: vm.pendingAction === 'record',
                 }}
                 secondary={{

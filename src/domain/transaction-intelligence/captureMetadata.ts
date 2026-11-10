@@ -165,6 +165,13 @@ export function reviewStateFor(
     )
   )
     return 'defaulted';
+  // Plan-driven system resolutions close review without becoming user learning labels.
+  if (
+    allocations.every(
+      allocation => allocation.origin === 'system' && allocation.confirmedAt !== undefined,
+    )
+  )
+    return 'confirmed';
   return 'needs_categorization';
 }
 

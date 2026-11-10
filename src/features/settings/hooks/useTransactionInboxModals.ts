@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { resolveSelectedItemById } from '@/src/features/settings/utils/resolveInboxModalItem';
 import { WorkplaceId } from '@/src/types/ids';
 import { TransactionInboxImportOptions } from '@/src/services/sms/transactionInboxImport';
 import { smsService } from '@/src/services/sms-service';
@@ -39,7 +40,7 @@ export function useTransactionInboxModals({
   // Workplace mismatch keeps the modal closed without an effect reset.
   const resolveSelected = (kind: 'duplicate' | 'editReparse') => {
     if (modal.kind !== kind || modal.workplaceId !== workplaceId) return null;
-    return items.find(item => item.id === modal.itemId) ?? null;
+    return resolveSelectedItemById(items, modal.itemId);
   };
 
   const selectedDuplicateItem = resolveSelected('duplicate');
