@@ -1,6 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   getCaptureWorkspaceSnapshot,
+  refreshIfStale,
   refresh,
   subscribeCaptureWorkspace,
   type CaptureLoadOptions,
@@ -28,8 +29,8 @@ export function useCaptureWorkspace(options: CaptureLoadOptions = {}): CaptureWo
 
   useFocusEffect(
     useCallback(() => {
-      void doRefresh();
-    }, [doRefresh]),
+      void refreshIfStale(workplaceId, optionsRef.current);
+    }, [workplaceId]),
   );
 
   return { ...snapshot, refresh: doRefresh };

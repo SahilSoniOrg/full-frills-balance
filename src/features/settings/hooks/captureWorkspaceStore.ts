@@ -58,10 +58,15 @@ type WorkplaceEntry = {
   listeners: Set<Listener>;
   loadGeneration: number;
   inFlight: Promise<void> | null;
+  loadedAt: number;
+  dirty: boolean;
+  loadedOptions: CaptureLoadOptions;
   options: CaptureLoadOptions;
   unsubscribeChanges: (() => void) | null;
   changeDebounce: ReturnType<typeof setTimeout> | undefined;
 };
+
+const CACHE_MAX_AGE_MS = 30_000;
 
 function emptySnapshot(workplaceId: WorkplaceId): CaptureWorkspaceSnapshot {
   return {
@@ -82,6 +87,9 @@ function entryFor(workplaceId: WorkplaceId): WorkplaceEntry {
       listeners: new Set(),
       loadGeneration: 0,
       inFlight: null,
+      loadedAt: 0,
+      dirty: true,
+      loadedOptions: {},
       options: {},
       unsubscribeChanges: null,
       changeDebounce: undefined,
@@ -103,10 +111,19 @@ function mergeOptions(current: CaptureLoadOptions, next: CaptureLoadOptions): Ca
   };
 }
 
+function coversOptions(loaded: CaptureLoadOptions, requested: CaptureLoadOptions): boolean {
+  return (
+    (!requested.loadReviewItems || loaded.loadReviewItems === true) &&
+    (!requested.loadCategoryDefaults || loaded.loadCategoryDefaults === true) &&
+    (!requested.loadHistoricalSuggestions || loaded.loadHistoricalSuggestions === true)
+  );
+}
+
 async function load(workplaceId: WorkplaceId, options: CaptureLoadOptions): Promise<void> {
   const entry = entryFor(workplaceId);
   entry.options = mergeOptions(entry.options, options);
   const request = ++entry.loadGeneration;
+  const revisionAtStart = entry.snapshot.changeRevision;
   const cached = entry.snapshot;
   const hasSettings = !!cached.settings.data;
   const hasLists = !!cached.lists.data;
@@ -194,9 +211,13 @@ async function load(workplaceId: WorkplaceId, options: CaptureLoadOptions): Prom
         loading: false,
       },
     };
+    entry.loadedAt = Date.now();
+    entry.loadedOptions = loadOptions;
+    entry.dirty = entry.snapshot.changeRevision !== revisionAtStart;
     emit(entry);
   } catch {
     if (request !== entry.loadGeneration) return;
+    entry.dirty = true;
     entry.snapshot = {
       ...entry.snapshot,
       settings: { ...entry.snapshot.settings, error: true, loading: false },
@@ -214,6 +235,7 @@ function ensureSubscribed(workplaceId: WorkplaceId): void {
       ...entry.snapshot,
       changeRevision: entry.snapshot.changeRevision + 1,
     };
+    entry.dirty = true;
     if (entry.changeDebounce) clearTimeout(entry.changeDebounce);
     entry.changeDebounce = setTimeout(() => {
       entry.changeDebounce = undefined;
@@ -250,10 +272,39 @@ export async function refresh(
   options: CaptureLoadOptions = {},
 ): Promise<void> {
   const entry = entryFor(workplaceId);
-  const work = load(workplaceId, options);
+  entry.options = mergeOptions(entry.options, options);
+  while (entry.inFlight) await entry.inFlight;
+  const work = load(workplaceId, entry.options);
   entry.inFlight = work;
-  await work;
-  if (entry.inFlight === work) entry.inFlight = null;
+  try {
+    await work;
+  } finally {
+    if (entry.inFlight === work) entry.inFlight = null;
+  }
+}
+
+/** Refresh on focus only when the cached workplace snapshot is stale or incomplete. */
+export async function refreshIfStale(
+  workplaceId: WorkplaceId,
+  options: CaptureLoadOptions = {},
+): Promise<void> {
+  const entry = entryFor(workplaceId);
+  entry.options = mergeOptions(entry.options, options);
+  while (entry.inFlight) await entry.inFlight;
+
+  const hasSnapshot = !!entry.snapshot.settings.data && !!entry.snapshot.lists.data;
+  const isFresh = Date.now() - entry.loadedAt < CACHE_MAX_AGE_MS;
+  if (
+    hasSnapshot &&
+    isFresh &&
+    !entry.dirty &&
+    !entry.snapshot.settings.error &&
+    !entry.snapshot.lists.error &&
+    coversOptions(entry.loadedOptions, entry.options)
+  )
+    return;
+
+  await refresh(workplaceId, entry.options);
 }
 
 /** Test-only reset between workplaces/cases. */
