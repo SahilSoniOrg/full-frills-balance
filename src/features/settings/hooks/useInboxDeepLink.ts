@@ -42,11 +42,19 @@ export function useInboxDeepLink(args: {
           await handlersRef.current.handleImport(item);
       }
       if (!cancelled) router.setParams({ reviewRecordId: undefined });
-    })().catch(error => {
-      if (!cancelled) showErrorAlert(error, 'SMS review', true);
-    });
+    })()
+      .catch(error => {
+        if (!cancelled) {
+          showErrorAlert(error, 'SMS review', true);
+          router.setParams({ reviewRecordId: undefined });
+        }
+      })
+      .finally(() => {
+        if (!cancelled && reviewing.current === reviewRecordId) reviewing.current = null;
+      });
     return () => {
       cancelled = true;
+      if (reviewing.current === reviewRecordId) reviewing.current = null;
     };
   }, [reviewRecordId, areAccountsLoading]);
 
