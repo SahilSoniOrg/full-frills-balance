@@ -112,13 +112,13 @@ export class SmsExtractor implements TransactionExtractor {
     const patterns =
       direction === 'credit'
         ? [
-            /\b(?:from|by|kutoka|de|dari)\b\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|txn|bal|no\.?|date|avbl)|$)/i,
+            /\b(?:from|by|kutoka|de|dari)\b\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|txn|bal|no\.?|date|avbl)|\.\s+(?=(?:\d{1,2}\s+[a-z]{3,}\b|(?:avail(?:able)?|balance)\b))|$)/i,
           ]
         : [
             // Venue / Merchant location keywords (at, @, vpa, di)
-            /(?:\b(?:at|vpa|di)\b|@)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+            /(?:\b(?:at|vpa|di)\b|@)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|\.\s+(?=(?:\d{1,2}\s+[a-z]{3,}\b|(?:avail(?:able)?|balance)\b))|$)/i,
             // Generic recipient keywords (to, kwa, para, ke)
-            /(?:\b(?:to|kwa|para|ke)\b|\binfo\b:?)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|$)/i,
+            /(?:\b(?:to|kwa|para|ke)\b|\binfo\b:?)\s+([a-zA-Z0-9.\s@&'-]+?)(?:\s*[(,]|\s+(?:on|ref|utr|by|bal|no\.?|date|using|avbl|pada)|\.\s+(?=(?:\d{1,2}\s+[a-z]{3,}\b|(?:avail(?:able)?|balance)\b))|$)/i,
           ];
 
     for (const regex of patterns) {
