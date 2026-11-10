@@ -4,6 +4,7 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { preferences } from '@/src/services/preferences';
+import { workplaceWriteCoordinator } from '@/src/services/preferences/WorkplaceWriteCoordinator';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, type AccountId, type WorkplaceId } from '@/src/types/ids';
 import {
@@ -88,49 +89,52 @@ class TransactionCaptureService {
   async setEnabled(workplaceId: WorkplaceId, enabled: boolean): Promise<void> {
     const generation = (this.generations.get(workplaceId) ?? 0) + 1;
     this.generations.set(workplaceId, generation);
-    // Serialize permission changes with capture writes, including a disable while a scan is queued.
-    const provisioned = await runAccountingWriteSession(async session => {
-      if (this.generations.get(workplaceId) !== generation) return null;
-      const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
-      if (enabled)
-        return {
-          expected: current,
-          mappings: await provisionRoles(
-            session,
-            workplaceId,
-            current?.uncategorizedAccountIds ?? {},
-          ),
-        };
-      preferences.workplace.update(workplaceId, {
-        automaticTransactionCapture: {
-          enabled: false,
-          uncategorizedAccountIds: current?.uncategorizedAccountIds ?? {},
-        },
-      });
-      return null;
-    });
-    if (enabled && provisioned) {
-      // A second serialized writer establishes the activation cutoff after provisioning commits.
-      await runAccountingWriteSession(async () => {
+    // Account provisioning stays in the accounting writer; consent MMKV uses the workplace mutex.
+    if (!enabled) {
+      await workplaceWriteCoordinator.run(workplaceId, async () => {
         if (this.generations.get(workplaceId) !== generation) return;
         const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
-        if (current !== provisioned.expected)
-          throw new Error('Automatic capture settings changed. Review them and try again.');
-        const merged = { ...provisioned.mappings, ...current?.uncategorizedAccountIds };
-        if (!mappingsAreEligible(await accountQueryRepository.findAll(workplaceId), merged))
-          throw new Error('Accounts changed during setup. Review them and try again.');
-        if (this.generations.get(workplaceId) !== generation) return;
-        if (preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture !== current)
-          throw new Error('Automatic capture settings changed. Review them and try again.');
         preferences.workplace.update(workplaceId, {
           automaticTransactionCapture: {
-            enabled: true,
-            enabledAt: Date.now(),
-            uncategorizedAccountIds: merged,
+            enabled: false,
+            uncategorizedAccountIds: current?.uncategorizedAccountIds ?? {},
           },
         });
       });
+      return;
     }
+    const provisioned = await runAccountingWriteSession(async session => {
+      if (this.generations.get(workplaceId) !== generation) return null;
+      const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
+      return {
+        expected: current,
+        mappings: await provisionRoles(
+          session,
+          workplaceId,
+          current?.uncategorizedAccountIds ?? {},
+        ),
+      };
+    });
+    if (!provisioned) return;
+    await workplaceWriteCoordinator.run(workplaceId, async () => {
+      if (this.generations.get(workplaceId) !== generation) return;
+      const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
+      if (current !== provisioned.expected)
+        throw new Error('Automatic capture settings changed. Review them and try again.');
+      const merged = { ...provisioned.mappings, ...current?.uncategorizedAccountIds };
+      if (!mappingsAreEligible(await accountQueryRepository.findAll(workplaceId), merged))
+        throw new Error('Accounts changed during setup. Review them and try again.');
+      if (this.generations.get(workplaceId) !== generation) return;
+      if (preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture !== current)
+        throw new Error('Automatic capture settings changed. Review them and try again.');
+      preferences.workplace.update(workplaceId, {
+        automaticTransactionCapture: {
+          enabled: true,
+          enabledAt: Date.now(),
+          uncategorizedAccountIds: merged,
+        },
+      });
+    });
   }
 
   /** Add roles for new account currencies without granting consent or moving its cutoff. */
@@ -149,7 +153,7 @@ class TransactionCaptureService {
         mappings: await provisionRoles(session, workplaceId, current.uncategorizedAccountIds),
       };
     });
-    await runAccountingWriteSession(async () => {
+    await workplaceWriteCoordinator.run(workplaceId, async () => {
       const current = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
       if (
         !current?.enabled ||

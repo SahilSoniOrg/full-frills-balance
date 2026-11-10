@@ -2,7 +2,7 @@ import { storage } from '@/src/utils/storage';
 import type { WorkplaceId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { connectGmail, disconnectGmail, gmailAccessToken } from './gmailAuthorization';
-import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { workplaceWriteCoordinator } from '@/src/services/preferences/WorkplaceWriteCoordinator';
 import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/utils/gmailBindingKey';
 
 interface GmailBinding {
@@ -62,7 +62,7 @@ export async function setGmailAutomaticCapture(
   workplaceId: WorkplaceId,
   enabled: boolean,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const current = gmailBinding(workplaceId);
     if (!current) throw new Error('Connect Gmail first.');
     storage.set(
@@ -77,7 +77,7 @@ export async function setGmailBackgroundEnabled(
   workplaceId: WorkplaceId,
   enabled: boolean,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const current = gmailBinding(workplaceId);
     if (!current) throw new Error('Connect Gmail first.');
     storage.set(
@@ -119,7 +119,7 @@ export async function connectGmailForWorkplace(
   // scans messages after this consent cutoff, then commits the cursor. This closes
   // the arrival window between recording consent and obtaining a history cursor.
   const connectedAt = Date.now();
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     if ([...connectedGmailAccountIds()].some(accountId => accountId !== result.accountId))
       throw new GmailAccountBindingConflictError();
     if (reauthorize) {
@@ -145,7 +145,7 @@ export async function disconnectGmailForWorkplace(
   workplaceId: WorkplaceId,
 ): Promise<'not_needed' | 'revoked' | 'failed'> {
   let shouldRevoke = false;
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     storage.remove(gmailBindingKey(workplaceId));
     shouldRevoke = connectedGmailAccountIds().size === 0;
   });

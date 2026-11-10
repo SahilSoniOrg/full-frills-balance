@@ -18,9 +18,10 @@ interface ConfirmationCopy {
   cancelText: string;
 }
 
+/** Mutations stay valid across load refreshes; only workplace change/unmount bumps the epoch. */
 export function useCaptureMutationRunner(
   workplaceId: WorkplaceId,
-  generation: MutableRefObject<number>,
+  mutationEpoch: MutableRefObject<number>,
   refresh: () => Promise<void>,
 ) {
   const locked = useRef(false);
@@ -29,14 +30,14 @@ export function useCaptureMutationRunner(
   const run = useCallback(
     async (operation: Operation, options: MutationOptions = {}) => {
       if (locked.current) return;
-      const request = generation.current;
+      const epoch = mutationEpoch.current;
       locked.current = true;
       setBusy(true);
       try {
         await operation(workplaceId);
-        if (request === generation.current) await refresh();
+        if (epoch === mutationEpoch.current) await refresh();
       } catch (error) {
-        if (request === generation.current)
+        if (epoch === mutationEpoch.current)
           alert.show({
             title: strings.updateErrorTitle,
             message: options.errorMessage?.(error) ?? strings.loadError,
@@ -47,21 +48,21 @@ export function useCaptureMutationRunner(
         setBusy(false);
       }
     },
-    [generation, refresh, workplaceId],
+    [mutationEpoch, refresh, workplaceId],
   );
 
   const confirmAndRun = useCallback(
     (copy: ConfirmationCopy, operation: Operation, options: MutationOptions = {}) => {
       if (locked.current) return;
-      const request = generation.current;
+      const epoch = mutationEpoch.current;
       confirm.show({
         ...copy,
         onConfirm: () => {
-          if (request === generation.current) void run(operation, options);
+          if (epoch === mutationEpoch.current) void run(operation, options);
         },
       });
     },
-    [generation, run],
+    [mutationEpoch, run],
   );
 
   return { busy, run, confirmAndRun };

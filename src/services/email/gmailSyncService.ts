@@ -4,15 +4,6 @@ import type { WorkplaceId } from '@/src/types/ids';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 import { gmailAccessToken, invalidateGmailAccessToken } from './gmailAuthorization';
 import { gmailBinding, advanceGmailHistory } from './gmailConnection';
-import { preferences } from '@/src/services/preferences';
-import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatcherContext';
-import { classifyCapture } from '@/src/domain/transaction-intelligence/captureDecision';
-import { extractMessageEconomicEvidence } from '@/src/domain/transaction-intelligence/messageEconomicEvidence';
-import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
-import { InboxParseStatus } from '@/src/types/enums';
-import { recognizeEmailAccounts } from './emailAccountRecognition';
-import { parseGmailTransaction } from './parseGmailTransaction';
-import { GmailDkimLookupError, verifyGmailDkim } from './gmailDkimVerification';
 import {
   GmailApiError,
   UnsupportedGmailContentError,
@@ -20,7 +11,6 @@ import {
   listGmailHistory,
   listGmailMessageIds,
   readGmailMessage,
-  readGmailRawMessage,
 } from './gmailApi';
 import { ingestGmailObservation } from './gmailIngestion';
 import { analytics } from '@/src/services/analytics';
@@ -61,7 +51,6 @@ async function sync(
   if (!credentials || credentials.accountId !== binding.accountId)
     throw new Error('Reconnect Gmail for this workplace.');
   const { accessToken } = credentials;
-  let matcherContext: Awaited<ReturnType<typeof loadAccountMatcherContext>> | undefined;
   let deferHistoryAdvance = false;
   let capturedCount = 0;
   const processIds = async (ids: readonly string[]) => {
@@ -89,95 +78,17 @@ async function sync(
         }
         const message = read.message;
         if (message.receivedAt > binding.connectedAt) {
-          const current = gmailBinding(workplaceId);
-          const capture =
-            preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
-          if (
-            current?.accountId === binding.accountId &&
-            current.connectedAt === binding.connectedAt &&
-            current.automaticCaptureEnabledAt &&
-            capture?.enabled &&
-            capture.enabledAt &&
-            message.receivedAt > Math.max(current.automaticCaptureEnabledAt, capture.enabledAt)
-          ) {
-            const parsed = await parseGmailTransaction(message);
-            logger.debug('[Gmail] Automatic capture prerequisites', {
-              primaryPlainText: !!message.primaryPlainText,
-              transactionDetected: !!parsed,
-              parsed: parsed?.parseStatus === InboxParseStatus.PARSED,
-              amountReliable: !!parsed?.amountReliableForCapture,
-              hasAmount: !!parsed?.amount,
-              hasCurrency: !!parsed?.currencyCode,
-              hasReference: !!parsed?.referenceNumber,
-            });
-            if (
-              message.primaryPlainText &&
-              parsed?.parseStatus === InboxParseStatus.PARSED &&
-              parsed.amountReliableForCapture &&
-              parsed.amount &&
-              parsed.currencyCode &&
-              parsed.referenceNumber
-            ) {
-              matcherContext ??= await loadAccountMatcherContext(workplaceId);
-              const recognition = recognizeEmailAccounts(matcherContext, message);
-              const roles = resolveAccountFlowRoles(recognition);
-              const classification = classifyCapture(
-                extractMessageEconomicEvidence(message.text),
-                parsed.direction,
-                {
-                  status: recognition.status,
-                  accountIds: recognition.accountIds,
-                  outgoingAccountId: roles.sourceAccountId,
-                  incomingAccountId: roles.destinationAccountId,
-                  ambiguous: roles.isAmbiguous,
-                },
-              );
-              logger.debug('[Gmail] Account recognition and classification', {
-                recognition: recognition.status,
-                ambiguousRoles: roles.isAmbiguous,
-                classification: classification.kind,
-              });
-              if (classification.kind !== 'review') {
-                const raw = await readGmailRawMessage(accessToken, id, signal);
-                if (raw) {
-                  try {
-                    message.authenticated = await verifyGmailDkim({
-                      raw,
-                      sender: message.sender,
-                      recipient: credentials.email,
-                      receivedAt: message.receivedAt,
-                      topLevelMimeType: message.topLevelMimeType,
-                      signal,
-                    });
-                    logger.debug('[Gmail] Signature verification', {
-                      verified: message.authenticated,
-                    });
-                  } catch (error) {
-                    // DNS/key lookup failures must not abort the mailbox sync or skip ingest.
-                    message.authenticated = false;
-                    logger.debug('[Gmail] Signature verification', {
-                      verified: false,
-                      reason:
-                        error instanceof GmailDkimLookupError ? 'lookup_failed' : 'verify_failed',
-                    });
-                  }
-                } else
-                  logger.debug('[Gmail] Signature verification skipped', {
-                    reason: 'raw_unavailable',
-                  });
-              }
-            }
-          } else
-            logger.debug('[Gmail] Automatic capture skipped', {
-              reason: 'disabled_or_before_capture_cutoff',
-            });
           const journalResult = await ingestGmailObservation(
             workplaceId,
             binding.accountId,
             binding.connectedAt,
             message,
-            signal,
-            shouldContinue,
+            {
+              signal,
+              shouldContinue,
+              accessToken,
+              recipientEmail: credentials.email,
+            },
           );
           if (journalResult) capturedCount += 1;
         } else logger.debug('[Gmail] Message skipped', { reason: 'before_connection_cutoff' });

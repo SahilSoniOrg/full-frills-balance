@@ -18,10 +18,18 @@ import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
 import type { GmailObservation } from './gmailApi';
+import { ensureGmailMessageAuthenticated, gmailAutomaticCaptureCutoff } from './gmailCapturePolicy';
 import { gmailBinding } from './gmailConnection';
 import { parseGmailTransaction } from './parseGmailTransaction';
 import { buildEmailRecognitionEvidence } from './emailRecognitionEvidence';
 import { logger } from '@/src/utils/logger';
+
+export interface IngestGmailObservationOptions {
+  signal?: AbortSignal;
+  shouldContinue?: () => boolean;
+  accessToken?: string;
+  recipientEmail?: string;
+}
 
 /** A Gmail message is evaluated and linked or posted in one serialized write. */
 export async function ingestGmailObservation(
@@ -29,9 +37,9 @@ export async function ingestGmailObservation(
   accountId: string,
   connectedAt: number,
   message: GmailObservation,
-  signal?: AbortSignal,
-  shouldContinue?: () => boolean,
+  options: IngestGmailObservationOptions = {},
 ): Promise<boolean> {
+  const { signal, shouldContinue, accessToken, recipientEmail } = options;
   if (message.receivedAt <= connectedAt || signal?.aborted || shouldContinue?.() === false)
     return false;
   const parsed = await parseGmailTransaction(message);
@@ -49,6 +57,17 @@ export async function ingestGmailObservation(
     hasAccountHint: !!parsed.accountSource,
     hasReference: !!parsed.referenceNumber,
   });
+  await ensureGmailMessageAuthenticated({
+    workplaceId,
+    accountId,
+    connectedAt,
+    message,
+    parsed,
+    accessToken,
+    recipientEmail,
+    signal,
+  });
+  if (signal?.aborted || shouldContinue?.() === false) return false;
   const sourceId = `gmail:${hashLegacySmsFingerprint(`${accountId}:${message.id}`)}`;
   const reference = parsed.referenceNumber
     ? normalizeSmsReferenceNumber(parsed.referenceNumber)
@@ -68,14 +87,18 @@ export async function ingestGmailObservation(
     // Any copy in another workplace (including PENDING) blocks auto-post/link for this one.
     const consumedElsewhere = copies.some(copy => copy.workplaceId !== workplaceId);
     const context = await loadCaptureContext(workplaceId);
+    const captureCutoff = gmailAutomaticCaptureCutoff({
+      captureEnabledAt: context.captureEnabledAt,
+      automaticCaptureEnabledAt: binding.automaticCaptureEnabledAt,
+      connectedAt,
+    });
     const verifiedForCapture =
       message.authenticated === true &&
       parsed.amountReliableForCapture &&
       context.captureEnabled === true &&
       !!context.captureEnabledAt &&
       !!binding.automaticCaptureEnabledAt &&
-      message.receivedAt >
-        Math.max(context.captureEnabledAt, binding.automaticCaptureEnabledAt, connectedAt);
+      message.receivedAt > captureCutoff;
     const recognition = recognizeEmailAccounts(context.matchers, message);
     const recognitionEvidence = buildEmailRecognitionEvidence(context.matchers, recognition);
     const roles = resolveAccountFlowRoles(recognition);
@@ -196,11 +219,7 @@ export async function ingestGmailObservation(
         },
         {
           enabled: context.captureEnabled === true,
-          enabledAt: Math.max(
-            context.captureEnabledAt ?? 0,
-            connectedAt,
-            binding.automaticCaptureEnabledAt ?? 0,
-          ),
+          enabledAt: captureCutoff,
           allowAutomaticCapture: verifiedForCapture,
           sourceAccountCurrency: context.sourceAccountCurrency,
           isFinancialLeaf: context.isFinancialLeaf,

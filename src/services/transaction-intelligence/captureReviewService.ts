@@ -4,7 +4,7 @@ import {
 } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
-import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { workplaceWriteCoordinator } from '@/src/services/preferences/WorkplaceWriteCoordinator';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { journalHistoricalCaptureQueries } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
@@ -164,7 +164,7 @@ export async function saveHistoricalCaptureCategoryDefault(
   approvedCategoryAccountId: AccountId,
 ): Promise<void> {
   await ensureHistoricalSmsBackfill(workplaceId);
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const pattern = (await journalHistoricalCaptureQueries.listCategoryPatterns(workplaceId)).find(
       value => value.key === patternKey && value.categories.length === 1,
     );
@@ -282,7 +282,7 @@ export async function saveCaptureCategoryDefault(
   journalId: JournalId,
   choice: CaptureCategoryDefault,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const item = (await captureItems(workplaceId)).find(row => row.journalId === journalId);
     if (
       !item?.suggestedDefault ||
@@ -312,7 +312,7 @@ export async function removeCaptureCategoryDefault(
   workplaceId: WorkplaceId,
   key: string,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const current = preferences.workplace.getSnapshot(workplaceId).captureCategoryDefaults ?? [];
     preferences.workplace.update(workplaceId, {
       captureCategoryDefaults: current.filter(value => categoryDefaultKey(value) !== key),
@@ -326,7 +326,7 @@ export async function resolveCaptureCategoryDefaultConflict(
   key: string,
   categoryAccountId: AccountId,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const snapshot = preferences.workplace.getSnapshot(workplaceId);
     const current = snapshot.captureCategoryDefaults ?? [];
     const conflicted = current.find(value => categoryDefaultKey(value) === key);
@@ -362,7 +362,7 @@ export async function setCaptureDescriptionDefault(
   key: string,
   description?: string,
 ): Promise<void> {
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const defaults = {
       ...preferences.workplace.getSnapshot(workplaceId).captureDescriptionDefaults,
     };
@@ -381,7 +381,7 @@ export async function setCaptureMerchantsOpen(
     ...new Set(merchantsToChange.map(merchant => merchant.trim().toLowerCase())),
   ].filter(Boolean);
   if (keys.length === 0) return;
-  await runAccountingWriteSession(async () => {
+  await workplaceWriteCoordinator.run(workplaceId, async () => {
     const merchants = new Set(
       preferences.workplace.getSnapshot(workplaceId).openCaptureMerchants ?? [],
     );

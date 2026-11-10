@@ -4,7 +4,7 @@ import { getGmailSyncState, gmailSyncState } from '@/src/services/email/gmailSyn
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { useGmailCaptureActions } from '@/src/features/settings/hooks/useGmailCaptureActions';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { WorkplaceId } from '@/src/types/ids';
 
 type GmailBinding = ReturnType<typeof gmailBinding>;
@@ -12,7 +12,8 @@ type GmailSnapshot = { workplaceId: WorkplaceId; binding: GmailBinding };
 
 export function useGmailCaptureViewModel() {
   const { workplaceId } = useWorkplace();
-  const generation = useRef(0);
+  const loadGeneration = useRef(0);
+  const mutationEpoch = useRef(0);
   const [snapshot, setSnapshot] = useState<GmailSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const subscribeSyncState = useCallback(
@@ -26,13 +27,13 @@ export function useGmailCaptureViewModel() {
   const syncState = useSyncExternalStore(subscribeSyncState, getSyncState, getSyncState);
 
   const refresh = useCallback(async () => {
-    const request = ++generation.current;
+    const request = ++loadGeneration.current;
     setLoading(true);
     try {
       const binding = gmailBinding(workplaceId);
-      if (request === generation.current) setSnapshot({ workplaceId, binding });
+      if (request === loadGeneration.current) setSnapshot({ workplaceId, binding });
     } finally {
-      if (request === generation.current) setLoading(false);
+      if (request === loadGeneration.current) setLoading(false);
     }
   }, [workplaceId]);
 
@@ -40,13 +41,20 @@ export function useGmailCaptureViewModel() {
     useCallback(() => {
       void refresh();
       return () => {
-        ++generation.current;
+        ++loadGeneration.current;
       };
     }, [refresh]),
   );
 
+  useEffect(
+    () => () => {
+      ++mutationEpoch.current;
+    },
+    [workplaceId],
+  );
+
   const current = snapshot?.workplaceId === workplaceId ? snapshot.binding : undefined;
-  const mutations = useCaptureMutationRunner(workplaceId, generation, refresh);
+  const mutations = useCaptureMutationRunner(workplaceId, mutationEpoch, refresh);
   const actions = useGmailCaptureActions({
     mutations,
     loading: loading || !snapshot || snapshot.workplaceId !== workplaceId,

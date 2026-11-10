@@ -40,5 +40,4 @@ export const gmailCaptureStrings = {
   error: 'Gmail could not be connected. Check the Google sign-in configuration and try again.',
   accountConflict:
     'Gmail uses one Google account across connected Workplaces on this device. Reconnect with the same account. To switch accounts or restore a signed-out connection, disconnect Gmail from every connected Workplace first, then reconnect.',
-  sourcesUnavailable: 'Automatic message capture is available on Android and iOS with Gmail.',
 } as const;
