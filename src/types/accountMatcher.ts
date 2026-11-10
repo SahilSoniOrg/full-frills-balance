@@ -1,9 +1,16 @@
 import type { AccountId, JournalId } from '@/src/types/ids';
 import type { AccountMatcherSuppression } from '@/src/services/preferences/workplaceTypes';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
+import type { AccountMatcherFlow, TextSpan } from '@/src/types/smsRecognition';
 
-/** Money movement relative to the matched Account, independent of the SMS parser's direction. */
-export type AccountMatcherFlow = 'incoming' | 'outgoing';
+export type {
+  AccountMatcherFlow,
+  MatcherOutcome,
+  RecognizedAccountFlow,
+  SmsAccountRecognition,
+  SmsRecognitionSummary,
+  TextSpan,
+} from '@/src/types/smsRecognition';
 
 export interface AccountMatcherDefinitionV1 {
   version: 1;
@@ -13,41 +20,6 @@ export interface AccountMatcherDefinitionV1 {
   flow?: AccountMatcherFlow;
 }
 
-export interface RecognizedAccountFlow {
-  accountId: AccountId;
-  flow: AccountMatcherFlow;
-}
-
-export type TextSpan = { start: number; end: number };
-export type MatcherOutcome =
-  | {
-      status: 'match';
-      matcherId: string;
-      accountId: AccountId;
-      spans: TextSpan[];
-      flow?: AccountMatcherFlow;
-    }
-  | { status: 'no_match'; matcherId: string; accountId: AccountId }
-  | {
-      status: 'indeterminate';
-      matcherId: string;
-      accountId: AccountId;
-      reason: 'invalid_definition' | 'regex_budget';
-    };
-export interface SmsAccountRecognition {
-  status: 'none' | 'recognized' | 'indeterminate';
-  accountIds: AccountId[];
-  outcomes: MatcherOutcome[];
-  flows?: RecognizedAccountFlow[];
-}
-/** Compact review-state form. Never persist matcher conditions or message spans here. */
-export interface SmsRecognitionSummary {
-  status: SmsAccountRecognition['status'];
-  accountIds: AccountId[];
-  matcherIds: string[];
-  flows?: RecognizedAccountFlow[];
-  hold?: 'contradictory' | 'indeterminate';
-}
 export interface AccountMatcherRecord {
   id: string;
   accountId: AccountId;

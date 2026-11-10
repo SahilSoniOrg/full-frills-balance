@@ -1,5 +1,5 @@
 import type { AccountId, WorkplaceId, JournalId } from '@/src/types/ids';
-import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
+import type { SmsRecognitionSummary } from '@/src/types/smsRecognition';
 import type {
   InboxProcessingStatus,
   InboxParseStatus,
