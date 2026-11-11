@@ -15,7 +15,7 @@ import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPay
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { JournalStatus } from '@/src/types/enums';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import type { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import type { JournalId, WorkplaceId } from '@/src/types/ids';
 
 export type { PlanAttachInput, PlanAttachResult };
 
@@ -63,7 +63,7 @@ async function resolvePlannedJournalIdForAttach(
       currencyCode: payment.currencyCode,
       transactions: buildPlannedPaymentTransferLines(payment),
       status: JournalStatus.PLANNED,
-      plannedPaymentId: payment.id as PlannedPaymentId,
+      plannedPaymentId: payment.id,
     },
     workplaceId,
     { source: 'system', correlationId, undoable: false },
