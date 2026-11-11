@@ -1,8 +1,10 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import type { JournalLinkConfirmMode } from '@/src/utils/attachToJournalConfirm';
-import type { EnrichedJournal } from '@/src/types/domainReadModels';
+import type {
+  JournalLinkConfirmMode,
+  JournalLinkConfirmTarget,
+} from '@/src/utils/attachToJournalConfirm';
 import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
@@ -26,7 +28,7 @@ function formatInboxAmount(inbox: PlainInboxRecord, defaultCurrencyCode: string)
 
 type AttachToJournalConfirmContentProps = {
   inbox: PlainInboxRecord | null;
-  journal: EnrichedJournal | null;
+  journal: JournalLinkConfirmTarget | null;
   journalLabel: string;
   hourCycle: ResolvedHourCycle;
   defaultCurrencyCode: string;

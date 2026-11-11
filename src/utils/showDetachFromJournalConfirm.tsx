@@ -3,8 +3,8 @@ import { buildAttachToJournalConfirmMessage } from '@/src/utils/attachToJournalC
 import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { analytics } from '@/src/services/analytics';
 import { smsService } from '@/src/services/sms-service';
-import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type { WorkplaceId } from '@/src/types/ids';
+import type { JournalLinkConfirmTarget } from '@/src/utils/attachToJournalConfirm';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 
@@ -13,7 +13,7 @@ export function showDetachFromJournalConfirm(args: {
   workplaceId: WorkplaceId;
   inboxId: string;
   channel: 'sms' | 'email' | 'voice';
-  journal: EnrichedJournal | null;
+  journal: JournalLinkConfirmTarget | null;
   journalLabel: string;
   hourCycle: ResolvedHourCycle;
   defaultCurrencyCode: string;
