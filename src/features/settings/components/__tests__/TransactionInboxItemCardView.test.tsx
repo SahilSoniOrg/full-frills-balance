@@ -38,6 +38,8 @@ describe('TransactionInboxItemCardView', () => {
     handleUndismiss: jest.fn(),
     handleImport: jest.fn(),
     onCompareDuplicate: jest.fn(),
+    onAttachToJournal: jest.fn(),
+    onDetachFromJournal: jest.fn(),
     onOpenJournal: jest.fn(),
     onSplitImport: jest.fn(),
     onEditReparse: jest.fn(),
@@ -83,6 +85,54 @@ describe('TransactionInboxItemCardView', () => {
 
     fireEvent.press(getByTestId('inbox-compare-duplicate-sms-card-1'));
     expect(defaultProps.onCompareDuplicate).toHaveBeenCalledWith(mockItem);
+  });
+
+  it('exposes Attach to journal under More for pending items without a duplicate candidate', () => {
+    jest.useFakeTimers();
+    const pendingItem: TransactionInboxItem = {
+      ...mockItem,
+      processingStatus: InboxProcessingStatus.PENDING,
+      duplicateCandidate: undefined,
+    };
+    const { getByTestId, getByText, queryByText } = render(
+      <TransactionInboxItemCardView {...defaultProps} item={pendingItem} />,
+    );
+
+    expect(queryByText('Attach to journal')).toBeNull();
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
+    expect(getByText('Attach to journal')).toBeTruthy();
+    fireEvent.press(getByTestId('inbox-attach-journal-sms-card-1'));
+    jest.runOnlyPendingTimers();
+    expect(defaultProps.onAttachToJournal).toHaveBeenCalledWith(pendingItem);
+    jest.useRealTimers();
+  });
+
+  it('exposes Detach from journal under More for linked items', () => {
+    jest.useFakeTimers();
+    const linkedItem: TransactionInboxItem = {
+      ...mockItem,
+      processingStatus: InboxProcessingStatus.IMPORTED,
+      duplicateCandidate: undefined,
+      linkedJournal: {
+        journalId: 'j-1' as JournalId,
+        description: 'Manual Cafe',
+        journalDate: 1786800000000,
+        status: 'POSTED',
+        totalAmount: 1200,
+        currencyCode: 'INR',
+      },
+    };
+    const { getByTestId, getByText, queryByText } = render(
+      <TransactionInboxItemCardView {...defaultProps} item={linkedItem} />,
+    );
+
+    expect(queryByText('Detach from journal')).toBeNull();
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
+    expect(getByText('Detach from journal')).toBeTruthy();
+    fireEvent.press(getByTestId('inbox-detach-journal-sms-card-1'));
+    jest.runOnlyPendingTimers();
+    expect(defaultProps.onDetachFromJournal).toHaveBeenCalledWith(linkedItem);
+    jest.useRealTimers();
   });
 
   it('replaces the raw parse-failure status with a recoverable explanation', () => {

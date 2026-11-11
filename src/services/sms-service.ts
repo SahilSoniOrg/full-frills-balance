@@ -114,6 +114,10 @@ class SmsService {
     await this.linkSmsToJournal(workplaceId, recordId, journalId, InboxProcessingStatus.IMPORTED);
   }
 
+  async unlinkFromJournal(workplaceId: WorkplaceId, recordId: string): Promise<void> {
+    await transactionInboxRepository.persistUnlink(workplaceId, recordId);
+  }
+
   parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
     return Promise.resolve(SmsParser.parse(sms));
   }

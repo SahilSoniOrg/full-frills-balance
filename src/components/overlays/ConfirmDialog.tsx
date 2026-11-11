@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     flexDirection: 'row',
     gap: Spacing.sm,
+    flexShrink: 0,
   },
   actionButton: {
     flex: 1,

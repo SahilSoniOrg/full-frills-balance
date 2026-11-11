@@ -1,15 +1,17 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { combineLatest, from, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { useObservable } from '@/src/hooks/useObservable';
 import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { showDetachFromJournalConfirm } from '@/src/utils/showDetachFromJournalConfirm';
 import { smsService } from '@/src/services/sms-service';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { observeAuditTrail } from '@/src/services/audit-service';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { AccountType } from '@/src/types/enums';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
-import type { DisplayTransaction } from '@/src/types/domainReadModels';
+import type { DisplayTransaction, EnrichedJournal } from '@/src/types/domainReadModels';
+import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { AppNavigation } from '@/src/utils/navigation';
 import type { JournalSourceModel } from '../journalDetailsPresentation';
 import { journalHistoryAccountIds, mapJournalHistory } from '../journalHistoryPresentation';
@@ -20,6 +22,11 @@ export function useJournalSource(
   journalId: JournalId,
   workplaceId: WorkplaceId,
   journalVersion: number,
+  options?: {
+    journal: EnrichedJournal | null | undefined;
+    defaultCurrencyCode: string;
+    hourCycle: ResolvedHourCycle;
+  },
 ) {
   const { data, error, retry } = useObservable<JournalSourceInfo>(
     () =>
@@ -34,6 +41,30 @@ export function useJournalSource(
     { keepPreviousData: false },
   );
   const hasError = !!error;
+  const journal = options?.journal;
+  const defaultCurrencyCode = options?.defaultCurrencyCode;
+  const hourCycle = options?.hourCycle;
+
+  const onDetachSms = useCallback(
+    (inboxRecordId: string) => {
+      if (!journal || !defaultCurrencyCode || !hourCycle) return;
+      const linked = data.sms?.find(item => item.inboxRecordId === inboxRecordId);
+      const channel = linked?.channel === 'email' ? 'email' : 'sms';
+      showDetachFromJournalConfirm({
+        workplaceId,
+        inboxId: inboxRecordId,
+        channel,
+        journal,
+        journalLabel:
+          journal.description?.trim() || journal.semanticLabel?.trim() || 'this journal',
+        hourCycle,
+        defaultCurrencyCode,
+        onSuccess: retry,
+      });
+    },
+    [data.sms, defaultCurrencyCode, hourCycle, journal, retry, workplaceId],
+  );
+
   return useMemo(
     (): JournalSourceModel => ({
       ...data,
@@ -42,8 +73,9 @@ export function useJournalSource(
       onOpenSmsInbox: data.sms?.some(item => item.inboxRecordId)
         ? AppNavigation.toTransactionInbox
         : undefined,
+      onDetachSms: data.sms?.some(item => item.inboxRecordId) ? onDetachSms : undefined,
     }),
-    [data, hasError, retry],
+    [data, hasError, onDetachSms, retry],
   );
 }
 

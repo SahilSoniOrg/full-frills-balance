@@ -131,6 +131,34 @@ describe('TransactionInboxRepository integration', () => {
       },
     );
 
+    it('unlinks a linked inbox item back to pending', async () => {
+      const recordId = await seed('sms-unlink');
+      await repository.persistLink(
+        workplaceId,
+        recordId,
+        'journal-unlink' as JournalId,
+        InboxProcessingStatus.IMPORTED,
+      );
+      const linked = await repository.find(workplaceId, recordId);
+      expect(linked?.linkedJournalId).toBe('journal-unlink');
+      expect(linked?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+
+      await repository.persistUnlink(workplaceId, recordId);
+      const unlinked = await repository.find(workplaceId, recordId);
+      expect(unlinked?.linkedJournalId).toBeFalsy();
+      expect(unlinked?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(unlinked?.processedAt).toBeFalsy();
+      expect(unlinked?.senderAddress).toBe('HDFCBK');
+      expect(unlinked?.rawBody).toBe('Debited INR 500 at SWIGGY');
+    });
+
+    it('refuses unlink when the inbox item is not linked', async () => {
+      const recordId = await seed('sms-unlink-missing');
+      await expect(repository.persistUnlink(workplaceId, recordId)).rejects.toThrow(
+        'This source is not linked to a journal',
+      );
+    });
+
     it('does not apply SMS cleanup to voice records', async () => {
       const recordId = await seed('voice-imported', 'voice');
       await repository.persistStatus(workplaceId, recordId, InboxProcessingStatus.IMPORTED);

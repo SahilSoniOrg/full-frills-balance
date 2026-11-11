@@ -303,6 +303,43 @@ it('masks amounts and rates in splits, history and SMS, and hides the original b
   expect(tree).not.toMatch(/12\.34|83\.577|18,412|Rs\.52/);
 });
 
+it('shows per-message Detach when multiple SMS are linked', () => {
+  const onDetachSms = jest.fn();
+  const details = journalDetailsFixture();
+  const view = render(
+    <JournalSource
+      source={{
+        ...details.source,
+        sms: [
+          {
+            sender: 'HDFCBK',
+            rawBody: 'USD 420.00 debited for CAFE.',
+            amount: 420,
+            currencyCode: 'USD',
+            inboxRecordId: 'sms-a',
+          },
+          {
+            sender: 'HDFCBK',
+            rawBody: 'USD 420.00 tip alert for CAFE.',
+            amount: 420,
+            currencyCode: 'USD',
+            inboxRecordId: 'sms-b',
+          },
+        ],
+        onDetachSms,
+      }}
+    />,
+  );
+
+  expect(view.getByText('2 SMS from HDFCBK')).toBeTruthy();
+  expect(view.getByText('2 messages')).toBeTruthy();
+  fireEvent.press(view.getByTestId('journal-source-row'));
+  expect(view.getByTestId('journal-sms-detach-sms-a')).toBeTruthy();
+  expect(view.getByTestId('journal-sms-detach-sms-b')).toBeTruthy();
+  expect(view.queryByTestId('journal-sms-detach')).toBeNull();
+  fireEvent.press(view.getByTestId('journal-sms-detach-sms-b'));
+});
+
 it('keeps Edit visible and Duplicate/Delete inside the shared overflow', () => {
   const edit = jest.fn(),
     copy = jest.fn(),

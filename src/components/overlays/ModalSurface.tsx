@@ -108,7 +108,9 @@ export function ModalSurface({
           testID={contentTestID}
           contentContainerStyle={[styles.scrollContent, contentStyle]}
           style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
-          showsVerticalScrollIndicator={false}
+          // Fit-height dialogs must still scroll once content hits maxHeight (small phones).
+          showsVerticalScrollIndicator
+          nestedScrollEnabled
         >
           {children}
         </KeyboardAwareScrollView>
@@ -118,7 +120,7 @@ export function ModalSurface({
         </View>
       )}
 
-      {footer}
+      {footer ? <View style={styles.footerSlot}>{footer}</View> : null}
     </AppCard>
   );
 
@@ -225,12 +227,16 @@ const styles = StyleSheet.create({
   },
   modalCardFit: {
     maxHeight: '100%',
+    // Keep header/footer visible; let the scroll region absorb overflow.
+    overflow: 'hidden',
+    flexShrink: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+    flexShrink: 0,
   },
   scrollFixed: {
     marginTop: Spacing.md,
@@ -242,13 +248,20 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 1,
     minHeight: 0,
+    // Bound the scroller to the card's maxHeight so tall confirm bodies scroll
+    // instead of clipping on small screens.
+    maxHeight: '100%',
   },
   scrollContent: {
     gap: Spacing.md,
     paddingBottom: Spacing.md,
+    flexGrow: 0,
   },
   staticContent: {
     marginTop: Spacing.md,
     gap: Spacing.md,
+  },
+  footerSlot: {
+    flexShrink: 0,
   },
 });

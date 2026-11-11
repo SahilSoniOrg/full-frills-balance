@@ -20,16 +20,28 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
         />
       </ListGroup>
     );
-  const sms = source.sms?.[0];
+  const smsList = source.sms ?? [];
+  const sms = smsList[0];
   const imported = source.import;
   if (!sms && !imported) return null;
+  const senders = [
+    ...new Set(smsList.map(item => item.sender).filter((sender): sender is string => !!sender)),
+  ];
   const title = sms
-    ? strings.smsFrom(sms.sender ?? strings.unknownSender)
+    ? smsList.length > 1
+      ? senders.length === 1
+        ? strings.smsFromMany(senders[0], smsList.length)
+        : strings.linkedSmsCount(smsList.length)
+      : strings.smsFrom(sms.sender ?? strings.unknownSender)
     : strings.importedFrom(imported!.name);
   const subtitle = sms
     ? [
-        sms.autoPosted ? strings.autoPosted : strings.imported,
-        sms.referenceNumber ? strings.ref(sms.referenceNumber) : undefined,
+        smsList.length > 1
+          ? strings.linkedMessages(smsList.length)
+          : sms.autoPosted
+            ? strings.autoPosted
+            : strings.imported,
+        smsList.length === 1 && sms.referenceNumber ? strings.ref(sms.referenceNumber) : undefined,
       ]
         .filter(Boolean)
         .join(' · ')
@@ -54,6 +66,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
           onClose={() => setOpen(false)}
           smsInfo={source.sms}
           onOpenSmsInbox={source.onOpenSmsInbox}
+          onDetachSms={source.onDetachSms}
         />
       ) : null}
     </>

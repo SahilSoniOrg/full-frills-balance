@@ -647,6 +647,9 @@ export const AppNavigation = {
     minAmount?: number;
     maxAmount?: number;
     displayType?: string;
+    /** Inbox record to link when the user picks a journal from search. */
+    attachInboxId?: string;
+    attachInboxChannel?: 'sms' | 'email' | 'voice';
     reportScope?: {
       label: string;
       baseStartDate: number;
@@ -673,6 +676,8 @@ export const AppNavigation = {
         minAmount: params?.minAmount,
         maxAmount: params?.maxAmount,
         displayType: params?.displayType,
+        attachInboxId: params?.attachInboxId,
+        attachInboxChannel: params?.attachInboxChannel,
         reportScopeLabel: params?.reportScope?.label,
         reportScopeStartDate: params?.reportScope?.baseStartDate,
         reportScopeEndDate: params?.reportScope?.baseEndDate,

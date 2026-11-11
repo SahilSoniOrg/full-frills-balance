@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useTransactionInboxModals } from '../useTransactionInboxModals';
+import { showDetachFromJournalConfirm } from '@/src/utils/showDetachFromJournalConfirm';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';
@@ -8,6 +9,8 @@ import { AppNavigation } from '@/src/utils/navigation';
 jest.mock('@/src/services/sms-service', () => ({
   smsService: {
     finalizeManualImport: jest.fn().mockResolvedValue(undefined),
+    unlinkFromJournal: jest.fn().mockResolvedValue(undefined),
+    findInboxRecord: jest.fn().mockResolvedValue(null),
   },
 }));
 
@@ -20,14 +23,28 @@ jest.mock('@/src/services/analytics', () => ({
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
     toJournalDetails: jest.fn(),
+    toJournalSearch: jest.fn(),
   },
 }));
 
 jest.mock('@/src/utils/alerts', () => ({
+  confirm: { show: jest.fn() },
   showErrorAlert: jest.fn(),
   toast: {
     success: jest.fn(),
   },
+}));
+
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({ defaultCurrencyCode: 'USD' }),
+}));
+
+jest.mock('@/src/hooks/useHourCyclePrefs', () => ({
+  useHourCyclePrefs: () => ({ resolvedHourCycle: '12-hour' }),
+}));
+
+jest.mock('@/src/utils/showDetachFromJournalConfirm', () => ({
+  showDetachFromJournalConfirm: jest.fn(),
 }));
 
 describe('useTransactionInboxModals', () => {
@@ -211,5 +228,60 @@ describe('useTransactionInboxModals', () => {
     });
 
     expect(AppNavigation.toJournalDetails).toHaveBeenCalledWith('j-dup-1');
+  });
+
+  it('opens journal search in attach mode for the inbox item', () => {
+    const { result } = renderHook(() =>
+      useTransactionInboxModals({
+        workplaceId: mockWorkplaceId,
+        items: [mockItem],
+        handleImport: mockHandleImport,
+      }),
+    );
+
+    act(() => {
+      result.current.handleOpenAttachToJournal(mockItem);
+    });
+
+    expect(AppNavigation.toJournalSearch).toHaveBeenCalledWith({
+      attachInboxId: 'inbox-1',
+      attachInboxChannel: 'sms',
+    });
+  });
+
+  it('confirms detach for a linked inbox item', () => {
+    const linkedItem: TransactionInboxItem = {
+      ...mockItem,
+      processingStatus: 'imported',
+      linkedJournal: {
+        journalId: 'j-1' as JournalId,
+        description: 'Manual Cafe',
+        journalDate: 1_786_800_000_000,
+        status: 'POSTED',
+        totalAmount: 420,
+        currencyCode: 'USD',
+      },
+      duplicateCandidate: undefined,
+    };
+    const { result } = renderHook(() =>
+      useTransactionInboxModals({
+        workplaceId: mockWorkplaceId,
+        items: [linkedItem],
+        handleImport: mockHandleImport,
+      }),
+    );
+
+    act(() => {
+      result.current.handleDetachFromJournal(linkedItem);
+    });
+
+    expect(showDetachFromJournalConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workplaceId: mockWorkplaceId,
+        inboxId: 'inbox-1',
+        channel: 'sms',
+        journalLabel: 'Manual Cafe',
+      }),
+    );
   });
 });

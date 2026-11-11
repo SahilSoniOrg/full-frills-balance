@@ -95,6 +95,7 @@ export interface JournalSourceModel extends JournalSourceInfo {
   error: boolean;
   onRetry: () => void;
   onOpenSmsInbox?: () => void;
+  onDetachSms?: (inboxRecordId: string) => void;
 }
 
 export type JournalLink = ListRowItem;

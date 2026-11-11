@@ -2,6 +2,7 @@ import { applySelectionChrome } from '@/src/components/layout/applySelectionChro
 import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { journalCsvExportHeaderAction } from '@/src/components/journal/JournalCsvExportButton';
+import { transactionCaptureStrings as captureCopy } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { JournalSearchView } from '@/src/features/journal/list/components/JournalSearchView';
 import { useJournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -14,15 +15,19 @@ function JournalSearchScreen() {
   const chrome = useMemo<ScreenNavChrome>(() => {
     const exportAction = journalCsvExportHeaderAction(vm.csvExport);
     return applySelectionChrome(
-      privacyNavChrome('Search', AppNavigation.back, {
-        actions: exportAction ? [exportAction] : [],
-      }),
+      privacyNavChrome(
+        vm.attachMode ? captureCopy.attachToJournalTitle : 'Search',
+        AppNavigation.back,
+        {
+          actions: exportAction ? [exportAction] : [],
+        },
+      ),
       {
         active: vm.isSelectionModeActive,
         onExit: vm.exitSelectionMode,
       },
     );
-  }, [vm.csvExport, vm.exitSelectionMode, vm.isSelectionModeActive]);
+  }, [vm.attachMode, vm.csvExport, vm.exitSelectionMode, vm.isSelectionModeActive]);
 
   return <JournalSearchView {...vm} chrome={chrome} />;
 }

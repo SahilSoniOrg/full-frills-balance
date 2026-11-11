@@ -11,12 +11,14 @@ import { analytics } from '@/src/services/analytics';
 import { smsService, type SmsInboxFilterStatus } from '@/src/services/sms-service';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
 export type { SmsInboxFilterStatus };
 
 export interface TransactionInboxViewModel extends TransactionInboxModals {
+  workplaceId: WorkplaceId;
   filter: SmsInboxFilterStatus;
   setFilter: (filter: SmsInboxFilterStatus) => void;
   items: TransactionInboxItem[];
@@ -105,6 +107,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   });
 
   return {
+    workplaceId: data.workplaceId,
     filter: data.filter,
     setFilter: data.setFilter,
     items: data.items,
