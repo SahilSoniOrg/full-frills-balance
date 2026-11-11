@@ -10,7 +10,8 @@ import { observeAuditTrail } from '@/src/services/audit-service';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { AccountType } from '@/src/types/enums';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
-import type { DisplayTransaction, EnrichedJournal } from '@/src/types/domainReadModels';
+import type { DisplayTransaction } from '@/src/types/domainReadModels';
+import type { JournalLinkConfirmTarget } from '@/src/utils/attachToJournalConfirm';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { AppNavigation } from '@/src/utils/navigation';
 import type { JournalSourceModel } from '../journalDetailsPresentation';
@@ -23,7 +24,7 @@ export function useJournalSource(
   workplaceId: WorkplaceId,
   journalVersion: number,
   options?: {
-    journal: EnrichedJournal | null | undefined;
+    journal: JournalLinkConfirmTarget | null | undefined;
     defaultCurrencyCode: string;
     hourCycle: ResolvedHourCycle;
   },

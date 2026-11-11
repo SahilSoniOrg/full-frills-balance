@@ -1,5 +1,4 @@
 import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
@@ -20,7 +19,16 @@ function formatInboxAmount(inbox: PlainInboxRecord): string | undefined {
   return formatMoneyAmount(inbox.parsedAmount, currency, false, { prefix });
 }
 
-function formatJournalAmount(journal: EnrichedJournal): string {
+/** Fields the attach/detach confirm needs from a journal details or list model. */
+export type JournalLinkConfirmTarget = {
+  totalAmount: number;
+  currencyCode: string;
+  journalDate: number;
+  description?: string;
+  semanticLabel?: string;
+};
+
+function formatJournalAmount(journal: JournalLinkConfirmTarget): string {
   return formatMoneyAmount(journal.totalAmount, journal.currencyCode, false);
 }
 
@@ -29,7 +37,7 @@ export type JournalLinkConfirmMode = 'attach' | 'detach';
 /** Plain-text confirm body: inbox summary + journal target. */
 export function buildAttachToJournalConfirmMessage(args: {
   inbox: PlainInboxRecord | null;
-  journal: EnrichedJournal | null;
+  journal: JournalLinkConfirmTarget | null;
   journalLabel: string;
   hourCycle?: ResolvedHourCycle;
   mode?: JournalLinkConfirmMode;

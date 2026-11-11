@@ -622,7 +622,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     borderRadius: Shape.radius.lg,
     zIndex: 30,
-    elevation: 30,
     ...Shape.elevation.lg,
   },
   selectorActions: { gap: Spacing.xs },
