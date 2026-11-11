@@ -26,6 +26,8 @@ export const E2E_SEED_PROFILES = [
   'sms-ready',
   'sms-sync',
   'matcher-discovery',
+  'evidence-settle-unique',
+  'evidence-settle-soft',
   'merge-edit',
   'picker-ready',
   'first-run-restore',
@@ -37,3 +39,19 @@ export const E2E_SEED_PROFILES = [
 ] as const;
 
 export type E2eSeedProfile = (typeof E2E_SEED_PROFILES)[number];
+
+/** Shared labels for evidence-driven settlement Detox seeds/specs. */
+export const E2E_EVIDENCE_SETTLE = {
+  planName: 'Evidence Rent',
+  amount: 1500,
+  smsId: 'e2e-evidence-settle-sms',
+  softSmsId: 'e2e-evidence-settle-soft-sms',
+  softAmount: 1575,
+  accountToken: 'XX9876',
+  /** Pending (non-duplicate) SMS used to demo free-form attach-to-journal. */
+  pendingAttachSmsId: 'e2e-evidence-attach-pending-sms',
+  /** Second pending SMS so one journal can demo multiple linked sources. */
+  pendingAttachSmsId2: 'e2e-evidence-attach-pending-sms-2',
+  pendingAttachAmount: 420,
+  attachTargetDescription: 'Manual Cafe',
+} as const;

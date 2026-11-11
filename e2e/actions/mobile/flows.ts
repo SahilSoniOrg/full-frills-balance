@@ -82,7 +82,7 @@ export async function createAssetAccount(name: string): Promise<void> {
 
 export async function openBudgetFormFromCommitments(): Promise<void> {
   await openCommitmentsTab();
-  await tapById('commitments-tabs-item-budgets');
+  await tapById('home-v2-subtab-commitments-commitments', LONG_TIMEOUT_MS);
   await tapById(contextualAdd.trigger);
   await tapById(contextualAdd.budget);
   await assertVisibleById(budgets.nameInput);
@@ -111,7 +111,7 @@ export async function openSafeToSpendExplanation(options?: {
 
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();
-  await tapById('commitments-tabs-item-planned');
+  await tapById('home-v2-subtab-commitments-planned-payments', LONG_TIMEOUT_MS);
   await tapById(contextualAdd.trigger);
   await tapById(contextualAdd.plannedPayment);
   await typeById(plannedPayments.heroName, name);
