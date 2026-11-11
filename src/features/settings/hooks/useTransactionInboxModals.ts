@@ -1,7 +1,12 @@
 import { useCallback, useState } from 'react';
-import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { showDetachFromJournalConfirm } from '@/src/utils/showDetachFromJournalConfirm';
 import { resolveSelectedItemById } from '@/src/features/settings/utils/resolveInboxModalItem';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
+import { TransactionInboxItem } from '@/src/types/domainJournal';
+import { JournalDisplayType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import { TransactionInboxImportOptions } from '@/src/services/sms/transactionInboxImport';
 import { smsService } from '@/src/services/sms-service';
 import { analytics } from '@/src/services/analytics';
@@ -21,9 +26,28 @@ export interface TransactionInboxModals {
   handleCloseDuplicateModal: () => void;
   handleOpenEditReparseModal: (item: TransactionInboxItem) => void;
   handleCloseEditReparseModal: () => void;
+  handleOpenAttachToJournal: (item: TransactionInboxItem) => void;
+  handleDetachFromJournal: (item: TransactionInboxItem) => void;
   handleMergeDuplicate: (item: TransactionInboxItem) => Promise<void>;
   handleSplitImport: (item: TransactionInboxItem) => void;
   handleViewJournalFromDuplicate: (item: TransactionInboxItem) => void;
+}
+
+function linkedJournalAsEnriched(
+  linked: NonNullable<TransactionInboxItem['linkedJournal']>,
+): EnrichedJournal | null {
+  if (linked.totalAmount == null || !linked.currencyCode) return null;
+  return {
+    id: linked.journalId,
+    journalDate: linked.journalDate,
+    description: linked.description,
+    currencyCode: linked.currencyCode,
+    status: linked.status,
+    totalAmount: linked.totalAmount,
+    transactionCount: 0,
+    displayType: JournalDisplayType.EXPENSE,
+    accounts: [],
+  };
 }
 
 type InboxModal =
@@ -35,6 +59,8 @@ export function useTransactionInboxModals({
   items,
   handleImport,
 }: UseTransactionInboxModalsProps): TransactionInboxModals {
+  const { defaultCurrencyCode } = useWorkplace();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const [modal, setModal] = useState<InboxModal>({ kind: 'closed' });
 
   // Workplace mismatch keeps the modal closed without an effect reset.
@@ -67,6 +93,33 @@ export function useTransactionInboxModals({
   const handleCloseEditReparseModal = useCallback(() => {
     setModal(current => (current.kind === 'editReparse' ? { kind: 'closed' } : current));
   }, []);
+
+  const handleOpenAttachToJournal = useCallback((item: TransactionInboxItem) => {
+    analytics.trackFeatureUsage('sms', 'inbox_accept', {
+      channel: item.channel,
+      action: 'attach_to_journal_open',
+    });
+    AppNavigation.toJournalSearch({
+      attachInboxId: item.id,
+      attachInboxChannel: item.channel,
+    });
+  }, []);
+
+  const handleDetachFromJournal = useCallback(
+    (item: TransactionInboxItem) => {
+      if (!item.linkedJournal) return;
+      showDetachFromJournalConfirm({
+        workplaceId,
+        inboxId: item.id,
+        channel: item.channel,
+        journal: linkedJournalAsEnriched(item.linkedJournal),
+        journalLabel: item.linkedJournal.description?.trim() || 'this journal',
+        hourCycle: resolvedHourCycle,
+        defaultCurrencyCode,
+      });
+    },
+    [defaultCurrencyCode, resolvedHourCycle, workplaceId],
+  );
 
   const handleMergeDuplicate = useCallback(
     async (item: TransactionInboxItem) => {
@@ -116,6 +169,8 @@ export function useTransactionInboxModals({
     handleCloseDuplicateModal,
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
+    handleOpenAttachToJournal,
+    handleDetachFromJournal,
     handleMergeDuplicate,
     handleSplitImport,
     handleViewJournalFromDuplicate,

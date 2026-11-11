@@ -10,6 +10,8 @@ export type InboxItemActionHandlers = {
   handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
   handleImport: (item: TransactionInboxItem) => void;
   onCompareDuplicate: (item: TransactionInboxItem) => void;
+  onAttachToJournal: (item: TransactionInboxItem) => void;
+  onDetachFromJournal: (item: TransactionInboxItem) => void;
   onOpenJournal: (item: TransactionInboxItem) => void;
   onSplitImport: (item: TransactionInboxItem) => void;
   onEditReparse: (item: TransactionInboxItem) => void;
@@ -52,6 +54,14 @@ export function useInboxItemActions(
           icon: Icon.Document,
           onPress: runAction(handlers.onOpenJournal),
         },
+      item.linkedJournal &&
+        !linkedJournalUnavailable && {
+          id: 'detach',
+          title: copy.inboxActionDetachFromJournal,
+          icon: Icon.History,
+          onPress: runAction(handlers.onDetachFromJournal),
+          testID: `inbox-detach-journal-${id}`,
+        },
       dismissed && {
         id: 'undo',
         title: copy.inboxActionUndoDismiss,
@@ -81,6 +91,14 @@ export function useInboxItemActions(
           icon: Icon.Edit,
           onPress: runAction(handlers.onEditReparse),
           testID: `inbox-edit-reparse-btn-${id}`,
+        },
+      !item.linkedJournal &&
+        !dismissed && {
+          id: 'attach',
+          title: copy.inboxActionAttachToJournal,
+          icon: Icon.Document,
+          onPress: runAction(handlers.onAttachToJournal),
+          testID: `inbox-attach-journal-${id}`,
         },
       !item.linkedJournal &&
         !!item.parsedAmount && {
@@ -114,7 +132,7 @@ export function useInboxItemActions(
     ] as (ListRowItem | false | null | undefined)[]
   ).filter((action): action is ListRowItem => Boolean(action));
 
-  const [primaryCandidate, ...more] = actions;
+  const [primaryCandidate, ...rest] = actions;
   const primary =
     primaryCandidate ??
     ({
@@ -123,11 +141,12 @@ export function useInboxItemActions(
       icon: Icon.X,
       onPress: runAction(handlers.handleDismiss),
     } satisfies ListRowItem);
-  const split = primary.id === 'import' ? more.find(action => action.id === 'split') : undefined;
+  const split = primary.id === 'import' ? rest.find(action => action.id === 'split') : undefined;
+  const more = primaryCandidate ? rest.filter(action => action !== split) : [];
 
   return {
     primary,
-    more: primaryCandidate ? more : [],
+    more,
     split,
     runAction,
   };

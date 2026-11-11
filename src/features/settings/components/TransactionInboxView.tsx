@@ -51,6 +51,8 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     handleCloseDuplicateModal,
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
+    handleOpenAttachToJournal,
+    handleDetachFromJournal,
     handleMergeDuplicate,
     handleSplitImport,
     handleViewJournalFromDuplicate,
@@ -139,6 +141,8 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 handleUndismiss={handleUndismiss}
                 handleImport={handleImport}
                 onCompareDuplicate={handleOpenDuplicateModal}
+                onAttachToJournal={handleOpenAttachToJournal}
+                onDetachFromJournal={handleDetachFromJournal}
                 onOpenJournal={handleOpenJournal}
                 onSplitImport={handleSplitImport}
                 onEditReparse={handleOpenEditReparseModal}

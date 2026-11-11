@@ -50,6 +50,10 @@ export interface UseJournalEntryListParams {
   baseCurrency?: string;
   /** One card row per scoped account leg (e.g. budget with multiple expense accounts). */
   expandScopedLegs?: AccountId[];
+  /** When set, row taps call this instead of opening journal details. */
+  onJournalPress?: (journalId: JournalId) => void;
+  /** Disable long-press multi-select (e.g. attach/pick flows). */
+  disableSelection?: boolean;
 }
 
 export interface JournalEntryListCore {
@@ -90,6 +94,8 @@ export function useJournalEntryList({
   viewer,
   baseCurrency: baseCurrencyOverride,
   expandScopedLegs,
+  onJournalPress,
+  disableSelection = false,
 }: UseJournalEntryListParams): JournalEntryListCore {
   const { isInitialized } = useAppReady();
   const { defaultShareFormat } = useSharePrefs();
@@ -155,9 +161,14 @@ export function useJournalEntryList({
         return;
       }
 
+      if (onJournalPress) {
+        onJournalPress(row.journal.id);
+        return;
+      }
+
       AppNavigation.toJournalDetails(row.journal.id);
     },
-    [isSelectionModeActive, toggleSelection],
+    [isSelectionModeActive, onJournalPress, toggleSelection],
   );
 
   const groupingOptions = useMemo(
@@ -278,8 +289,8 @@ export function useJournalEntryList({
     hasMore,
     onEndReached,
     selectedIds,
-    isSelectionModeActive,
-    onLongPressItem,
+    isSelectionModeActive: disableSelection ? false : isSelectionModeActive,
+    onLongPressItem: disableSelection ? () => undefined : onLongPressItem,
     toggleSelection,
     selectAll,
     clearItems,

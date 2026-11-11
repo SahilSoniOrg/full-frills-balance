@@ -30,7 +30,10 @@ import {
   applyInboxWriteData,
   inboxSnapshotFromRecord,
 } from '@/src/data/repositories/inboxRecordFields';
-import { stageLinkedCaptureSource } from '@/src/data/repositories/journal/captureSourceLinkStaging';
+import {
+  stageLinkedCaptureSource,
+  stageUnlinkedCaptureSource,
+} from '@/src/data/repositories/journal/captureSourceLinkStaging';
 
 interface InboxAuditContext {
   correlationId?: string;
@@ -514,6 +517,14 @@ export class TransactionInboxRepository {
     });
   }
 
+  prepareUnlink(record: TransactionInboxRecord): Model {
+    return record.prepareUpdate(entry => {
+      entry.linkedJournalId = undefined;
+      entry.processingStatus = InboxProcessingStatus.PENDING;
+      entry.processedAt = undefined;
+    });
+  }
+
   prepareStatus(record: TransactionInboxRecord, status: InboxProcessingStatus): Model {
     return record.prepareUpdate(entry => {
       entry.processingStatus = status;
@@ -707,6 +718,32 @@ export class TransactionInboxRepository {
     await runAccountingWriteSession(async session => {
       if (await this.find(workplaceId, recordId))
         await this.stageLinkByIdInSession(session, workplaceId, recordId, journalId, disposition);
+    });
+  }
+
+  async persistUnlink(workplaceId: WorkplaceId, recordId: string): Promise<void> {
+    await runAccountingWriteSession(async session => {
+      const record = await this.find(workplaceId, recordId);
+      if (!record) throw new Error('Inbox record not found');
+      if (!record.linkedJournalId) throw new Error('This source is not linked to a journal');
+      const journalId = record.linkedJournalId;
+      await stageUnlinkedCaptureSource(session, workplaceId, journalId, {
+        channel: record.channel,
+        sourceId: record.deviceSourceId,
+      });
+
+      let model: TransactionInboxRecord | null = null;
+      if (record.channel === 'sms') {
+        const copies = await this.copiesForSourceIds([record.deviceSourceId]);
+        model = copies.find(copy => copy.workplaceId === workplaceId) ?? null;
+      } else {
+        const rows = await this.inbox
+          .query(Q.where('id', record.id), Q.where('workplace_id', workplaceId))
+          .fetch();
+        model = rows[0] ?? null;
+      }
+      if (!model) throw new Error('Inbox record not found');
+      stageModelWrite(session, () => [this.prepareUnlink(model)]);
     });
   }
 

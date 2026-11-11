@@ -14,6 +14,7 @@ describe('JournalSearchView report drill-down scope', () => {
   it('shows a clear action for the active report scope', () => {
     const clearReportScope = jest.fn();
     const vm = {
+      attachMode: false,
       searchQuery: '',
       setSearchQuery: jest.fn(),
       dateRange: null,

@@ -70,7 +70,7 @@ export interface JournalDetailsViewModel {
 
 export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   const { journalId } = useLocalSearchParams<{ journalId: JournalId }>();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const today = useCalendarDay();
 
@@ -84,7 +84,11 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     isLoading: isLoadingJournal,
     version,
   } = useJournal(workplaceId, journalId, true);
-  const source = useJournalSource(journalId, workplaceId, version);
+  const source = useJournalSource(journalId, workplaceId, version, {
+    journal,
+    defaultCurrencyCode,
+    hourCycle: resolvedHourCycle,
+  });
   const budget = useJournalBudgetImpact(workplaceId, transactions, journal?.journalDate, today);
   const history = useJournalHistory(journalId, workplaceId, transactions);
 

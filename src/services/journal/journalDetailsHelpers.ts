@@ -9,6 +9,7 @@ export interface SmsJournalInfoDisplay {
   referenceNumber?: string;
   accountSource?: string;
   inboxRecordId?: string;
+  channel?: 'sms' | 'voice' | 'email';
   merchant?: string;
   autoPosted?: boolean;
   receivedAt?: number;
@@ -40,6 +41,7 @@ export function mapSmsJournalMetadataDisplay(input: {
     metadataJson?: string;
     inputDate?: number;
     id?: string;
+    channel?: 'sms' | 'voice' | 'email';
   } | null;
 }): SmsJournalInfoDisplay {
   const parsedMetadata = safeParseJSON<SmsMetadataFields>(
@@ -59,6 +61,7 @@ export function mapSmsJournalMetadataDisplay(input: {
     referenceNumber: input.inboxRecord?.referenceNumber || parsedMetadata.referenceNumber,
     accountSource: input.inboxRecord?.parsedAccountSource || parsedMetadata.accountSource,
     inboxRecordId: input.inboxRecord?.id,
+    channel: input.inboxRecord?.channel,
     merchant: input.inboxRecord?.parsedMerchant || parsedMetadata.parsedMerchant,
     autoPosted: input.inboxRecord?.processingStatus === InboxProcessingStatus.AUTO_POSTED,
     receivedAt: input.inboxRecord?.inputDate,

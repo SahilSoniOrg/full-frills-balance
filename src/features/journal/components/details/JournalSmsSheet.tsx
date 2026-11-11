@@ -1,4 +1,4 @@
-import { AppText, ListGroup } from '@/src/components/core';
+import { AppButton, AppText, ListGroup } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { DetailRow } from '@/src/components/shared/DetailRow';
@@ -25,7 +25,7 @@ const colors = {
   date: 'primary',
 } as const;
 
-function SmsMessage({ sms }: { sms: SmsJournalInfoDisplay }) {
+function SmsMessage({ sms, onDetach }: { sms: SmsJournalInfoDisplay; onDetach?: () => void }) {
   const { theme, getVariantColors } = useTheme();
   const privateMode = useEffectivePrivacyMode();
   const strings = AppConfig.strings.journalDetails;
@@ -116,8 +116,32 @@ function SmsMessage({ sms }: { sms: SmsJournalInfoDisplay }) {
             <DetailRow key={field.label} label={field.label} value={field.value} selectable />
           ))}
       </ListGroup>
+      {onDetach ? (
+        <AppButton
+          variant="destructive-outline"
+          size="sm"
+          testID={
+            sms.inboxRecordId ? `journal-sms-detach-${sms.inboxRecordId}` : 'journal-sms-detach'
+          }
+          onPress={onDetach}
+          accessibilityLabel={strings.detachSms}
+        >
+          {strings.detachSms}
+        </AppButton>
+      ) : null}
     </Stack>
   );
+}
+
+function sheetTitle(smsInfo: SmsJournalInfoDisplay[]): string {
+  const strings = AppConfig.strings.journalDetails;
+  const count = smsInfo.length;
+  if (count <= 1) return strings.smsFrom(smsInfo[0]?.sender ?? strings.unknownSender);
+  const senders = [
+    ...new Set(smsInfo.map(sms => sms.sender).filter((sender): sender is string => !!sender)),
+  ];
+  if (senders.length === 1) return strings.smsFromMany(senders[0], count);
+  return strings.linkedSmsCount(count);
 }
 
 export function JournalSmsSheet({
@@ -125,18 +149,23 @@ export function JournalSmsSheet({
   onClose,
   smsInfo,
   onOpenSmsInbox,
+  onDetachSms,
 }: {
   visible: boolean;
   onClose: () => void;
   smsInfo: SmsJournalInfoDisplay[];
   onOpenSmsInbox?: () => void;
+  onDetachSms?: (inboxRecordId: string) => void;
 }) {
   const afterDismiss = useAfterDismiss();
   const strings = AppConfig.strings.journalDetails;
+  const detachable = smsInfo.filter(sms => sms.inboxRecordId);
+  // One linked message keeps Detach in the sheet footer; several get a Detach on each card.
+  const footerDetachId = detachable.length === 1 ? detachable[0]?.inboxRecordId : undefined;
   return (
     <InfoSheet
       visible={visible}
-      title={strings.smsFrom(smsInfo[0]?.sender ?? strings.unknownSender)}
+      title={sheetTitle(smsInfo)}
       position="bottomSheet"
       accessibilityCloseLabel={strings.closeSms}
       fixedHeight={false}
@@ -145,6 +174,19 @@ export function JournalSmsSheet({
         onClose();
       }}
       onDismiss={afterDismiss.onDismiss}
+      secondaryAction={
+        footerDetachId && onDetachSms
+          ? {
+              label: strings.detachSms,
+              variant: 'destructive',
+              testID: 'journal-sms-detach',
+              onPress: () => {
+                onClose();
+                afterDismiss.run(() => onDetachSms(footerDetachId));
+              },
+            }
+          : undefined
+      }
       primaryAction={
         onOpenSmsInbox
           ? {
@@ -160,7 +202,18 @@ export function JournalSmsSheet({
     >
       <Stack space="xl">
         {smsInfo.map((sms, index) => (
-          <SmsMessage key={sms.inboxRecordId ?? index} sms={sms} />
+          <SmsMessage
+            key={sms.inboxRecordId ?? index}
+            sms={sms}
+            onDetach={
+              detachable.length > 1 && sms.inboxRecordId && onDetachSms
+                ? () => {
+                    onClose();
+                    afterDismiss.run(() => onDetachSms(sms.inboxRecordId!));
+                  }
+                : undefined
+            }
+          />
         ))}
       </Stack>
     </InfoSheet>

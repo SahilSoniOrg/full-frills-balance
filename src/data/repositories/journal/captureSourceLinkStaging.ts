@@ -2,8 +2,11 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import type { CaptureSourceObservation } from '@/src/domain/transaction-intelligence/captureMetadata';
-import { readCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
+import {
+  readCaptureMetadata,
+  withCaptureMetadata,
+  type CaptureSourceObservation,
+} from '@/src/domain/transaction-intelligence/captureMetadata';
 import {
   addJournalCaptureSources,
   hasJournalCaptureMetadataWrite,
@@ -78,6 +81,50 @@ export async function stageLinkedCaptureSource(
     journalId,
     metadata.id,
     metadata.metadataJson,
+    metadataJson => [
+      metadata.prepareUpdate(record => {
+        record.metadataJson = metadataJson;
+        applyJournalMetadataProjections(record);
+        record.updatedAt = new Date();
+      }),
+    ],
+  );
+}
+
+/** Removes one observation from journal capture metadata when present. */
+export async function stageUnlinkedCaptureSource(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  journalId: JournalId,
+  source: Pick<CaptureSourceObservation, 'channel' | 'sourceId'>,
+): Promise<void> {
+  if (hasJournalCaptureMetadataWrite(session, workplaceId, journalId)) return;
+
+  const rows = await database.collections
+    .get<JournalMetadata>('journal_metadata')
+    .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+    .fetch();
+  const metadata = rows.find(row => readCaptureMetadata(row.metadataJson));
+  if (!metadata) return;
+
+  const capture = readCaptureMetadata(metadata.metadataJson);
+  if (!capture) return;
+  const nextSources = capture.sources.filter(
+    existing => !(existing.channel === source.channel && existing.sourceId === source.sourceId),
+  );
+  if (nextSources.length === capture.sources.length) return;
+
+  const nextJson = withCaptureMetadata(metadata.metadataJson, {
+    ...capture,
+    sources: nextSources,
+  });
+  stageJournalCaptureMetadataWrite(
+    session,
+    workplaceId,
+    journalId,
+    metadata.id,
+    // Writer base is already filtered; empty session accumulator leaves it unchanged.
+    nextJson,
     metadataJson => [
       metadata.prepareUpdate(record => {
         record.metadataJson = metadataJson;

@@ -11,6 +11,7 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
+import { transactionCaptureStrings as captureCopy } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
@@ -28,7 +29,12 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
 
   const filterHeader = useMemo(
     () => (
-      <View style={styles.filterContainer}>
+      <View style={styles.filterContainer} testID="journal-search-screen">
+        {vm.attachMode ? (
+          <AppText variant="caption" color="secondary" testID="journal-search-attach-hint">
+            {captureCopy.attachToJournalHint}
+          </AppText>
+        ) : null}
         {vm.reportScopeLabel ? (
           <View style={styles.reportScopeRow}>
             <AppText variant="caption" weight="semibold" style={styles.reportScopeLabel}>
@@ -53,6 +59,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           onChangeText={vm.setSearchQuery}
           leftIcon={Icon.Search}
           autoFocus
+          testID="journal-search-input"
         />
 
         <ScrollView

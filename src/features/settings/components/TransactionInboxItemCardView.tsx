@@ -9,7 +9,7 @@ import {
   ListGroup,
 } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -24,6 +24,9 @@ import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatch
 import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useInboxItemActions } from '@/src/features/settings/hooks/useInboxItemActions';
 
+/** Android Modal does not fire onDismiss; wait for the More sheet to finish closing. */
+const MENU_CLOSE_BEFORE_ATTACH_MS = Platform.OS === 'android' ? 320 : 0;
+
 interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
   currencyCode: string;
@@ -31,6 +34,8 @@ interface TransactionInboxItemCardViewProps {
   handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
   handleImport: (item: TransactionInboxItem) => void;
   onCompareDuplicate: (item: TransactionInboxItem) => void;
+  onAttachToJournal: (item: TransactionInboxItem) => void;
+  onDetachFromJournal: (item: TransactionInboxItem) => void;
   onOpenJournal: (item: TransactionInboxItem) => void;
   onSplitImport: (item: TransactionInboxItem) => void;
   onEditReparse: (item: TransactionInboxItem) => void;
@@ -44,6 +49,8 @@ export function TransactionInboxItemCardView({
   handleUndismiss,
   handleImport,
   onCompareDuplicate,
+  onAttachToJournal,
+  onDetachFromJournal,
   onOpenJournal,
   onSplitImport,
   onEditReparse,
@@ -54,6 +61,20 @@ export function TransactionInboxItemCardView({
   const privateMode = useEffectivePrivacyMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const pendingAfterMenuClose = useRef<(() => void) | null>(null);
+
+  const flushPendingAfterMenuClose = () => {
+    const next = pendingAfterMenuClose.current;
+    if (!next) return;
+    pendingAfterMenuClose.current = null;
+    next();
+  };
+
+  useEffect(() => {
+    if (menuOpen || !pendingAfterMenuClose.current) return;
+    const timer = setTimeout(flushPendingAfterMenuClose, MENU_CLOSE_BEFORE_ATTACH_MS);
+    return () => clearTimeout(timer);
+  }, [menuOpen]);
 
   const channelIcon =
     item.channel === 'voice' ? Icon.Mic : item.channel === 'email' ? Icon.Mail : Icon.MessageSquare;
@@ -85,6 +106,15 @@ export function TransactionInboxItemCardView({
       handleUndismiss,
       handleImport,
       onCompareDuplicate,
+      // Queue attach until More closes so Android does not stack native modals.
+      onAttachToJournal: attachItem => {
+        pendingAfterMenuClose.current = () => onAttachToJournal(attachItem);
+        setMenuOpen(false);
+      },
+      onDetachFromJournal: detachItem => {
+        pendingAfterMenuClose.current = () => onDetachFromJournal(detachItem);
+        setMenuOpen(false);
+      },
       onOpenJournal,
       onSplitImport,
       onEditReparse,
@@ -275,7 +305,7 @@ export function TransactionInboxItemCardView({
             {split.title}
           </AppButton>
         ) : null}
-        {more.length > (split ? 1 : 0) ? (
+        {more.length > 0 ? (
           <AppButton
             size="sm"
             variant="secondary"
@@ -291,11 +321,12 @@ export function TransactionInboxItemCardView({
         visible={menuOpen}
         title={title}
         onClose={() => setMenuOpen(false)}
+        onDismiss={flushPendingAfterMenuClose}
         position="bottomSheet"
         fixedHeight={false}
         scrollable={false}
       >
-        <ListGroup items={more.filter(a => a !== split)} />
+        <ListGroup items={more} />
       </ModalSurface>
     </AppCard>
   );
