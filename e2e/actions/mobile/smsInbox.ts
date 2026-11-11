@@ -14,8 +14,19 @@ export async function openSmsInboxFromSettings(): Promise<void> {
   await assertVisibleById(smsInbox.screen, LONG_TIMEOUT_MS);
 }
 
-export async function selectInboxFilter(filter: 'pending' | 'duplicates'): Promise<void> {
-  const filterId = filter === 'duplicates' ? smsInbox.filterDuplicates : smsInbox.filterPending;
+export async function selectInboxFilter(
+  filter: 'pending' | 'processed' | 'duplicates' | 'auto_posted' | 'failed',
+): Promise<void> {
+  const filterId =
+    filter === 'duplicates'
+      ? smsInbox.filterDuplicates
+      : filter === 'auto_posted'
+        ? smsInbox.filterAutoPosted
+        : filter === 'processed'
+          ? smsInbox.filterProcessed
+          : filter === 'failed'
+            ? smsInbox.filterFailed
+            : smsInbox.filterPending;
   await tapById(filterId, LONG_TIMEOUT_MS);
 }
 

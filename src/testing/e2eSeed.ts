@@ -9,6 +9,7 @@ import {
   TransactionDirection,
   AccountType,
   TransactionType,
+  PlannedPaymentInterval,
 } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -27,8 +28,8 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { acknowledgeCurrentPrivacyPolicy } from '@/src/services/legal/privacyPolicyAcceptance';
 import { storage } from '@/src/utils/storage';
-import { setE2eSmsInboxMessages } from './e2eSmsInject';
-import { E2eSeedProfile, E2E_DEFAULT_SEED_USER_NAME } from './e2eConstants';
+import { getE2eSmsInboxMessages, setE2eSmsInboxMessages } from './e2eSmsInject';
+import { E2eSeedProfile, E2E_DEFAULT_SEED_USER_NAME, E2E_EVIDENCE_SETTLE } from './e2eConstants';
 import { smsMessageFromFixture } from './smsFixtures';
 import { files } from '@/src/utils/files';
 import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/import/orchestrator';
@@ -45,6 +46,8 @@ import { seedJournalDetailsRedesign } from './journalDetailsSeed';
 import { saveAccountMatcher } from '@/src/services/accounts/accountMatcherCommands';
 import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
+import { createPlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
+import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 
 export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
@@ -558,6 +561,120 @@ async function seedMatcherDiscovery(workplaceId: WorkplaceId): Promise<void> {
   await smsSyncPipeline.scanMessages(workplaceId, messages, undefined, { origin: 'arrival' });
 }
 
+async function seedEvidenceSettlePlan(
+  workplaceId: WorkplaceId,
+  options: { softAmountMismatch: boolean },
+): Promise<void> {
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const bills = await accountQueryRepository.findByName(workplaceId, 'Bills');
+  if (!bank || !bills) {
+    throw new Error('[E2E] evidence-settle seed requires Bank and Bills accounts');
+  }
+
+  // Keep the plan ACTIVE: a one-day daily schedule completes after generation and
+  // sharedMovementMatcher excludes completed plans from settle candidates.
+  const occurrenceDay = normalizeToStartOfDay(Date.now());
+  const recurrenceDay = new Date(occurrenceDay).getDate();
+  await createPlannedPayment(workplaceId, {
+    name: E2E_EVIDENCE_SETTLE.planName,
+    amount: E2E_EVIDENCE_SETTLE.amount,
+    currencyCode: bank.currencyCode,
+    fromAccountId: bank.id,
+    toAccountId: bills.id,
+    intervalN: 1,
+    intervalType: PlannedPaymentInterval.MONTHLY,
+    startDate: occurrenceDay,
+    recurrenceDay,
+    isAutoPost: false,
+  });
+
+  await saveAccountMatcher(workplaceId, {
+    accountId: bank.id,
+    definition: {
+      version: 1,
+      body: { kind: 'fragments', fragments: [E2E_EVIDENCE_SETTLE.accountToken] },
+      flow: 'outgoing',
+    },
+  });
+  await transactionCaptureService.setEnabled(workplaceId, true);
+  const { enabledAt } = await transactionCaptureService.getSettings(workplaceId);
+  const smsDate = Math.max((enabledAt ?? Date.now()) + 1, occurrenceDay + 60 * 60 * 1000);
+  const amount = options.softAmountMismatch
+    ? E2E_EVIDENCE_SETTLE.softAmount
+    : E2E_EVIDENCE_SETTLE.amount;
+  const smsId = options.softAmountMismatch
+    ? E2E_EVIDENCE_SETTLE.softSmsId
+    : E2E_EVIDENCE_SETTLE.smsId;
+  const messages = [
+    smsMessageFromFixture('swiggyNoRef', {
+      id: smsId,
+      date: smsDate,
+      // "spent … Card … at …" is required for purchase economic evidence (capture post gate).
+      body: `${bank.currencyCode} ${amount}.00 spent on Card ${E2E_EVIDENCE_SETTLE.accountToken} at LANDLORD.`,
+    }),
+  ];
+  setE2eSmsInboxMessages(messages);
+  // Arrival origin is required for unattended evidence-driven settle / capture post.
+  await smsSyncPipeline.scanMessages(workplaceId, messages, undefined, { origin: 'arrival' });
+}
+
+async function seedEvidenceSettleUnique(workplaceId: WorkplaceId): Promise<void> {
+  await seedEvidenceSettlePlan(workplaceId, { softAmountMismatch: false });
+}
+
+async function seedEvidenceSettleSoft(workplaceId: WorkplaceId): Promise<void> {
+  await seedEvidenceSettlePlan(workplaceId, { softAmountMismatch: true });
+
+  // Posted journal + unrelated pending SMS so inbox can demo Attach without a duplicate flag.
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const food = await accountQueryRepository.findByName(workplaceId, 'Food & Drink');
+  if (!bank || !food) {
+    throw new Error('[E2E] evidence-settle-soft attach seed requires Bank and Food & Drink');
+  }
+  await journalPersistenceService.put(
+    {
+      description: E2E_EVIDENCE_SETTLE.attachTargetDescription,
+      journalDate: Date.now() - 2 * 60 * 60 * 1000,
+      currencyCode: bank.currencyCode,
+      transactions: [
+        {
+          accountId: bank.id,
+          amount: E2E_EVIDENCE_SETTLE.pendingAttachAmount,
+          transactionType: TransactionType.CREDIT,
+        },
+        {
+          accountId: food.id,
+          amount: E2E_EVIDENCE_SETTLE.pendingAttachAmount,
+          transactionType: TransactionType.DEBIT,
+        },
+      ],
+    },
+    workplaceId,
+  );
+  await rebuildQueueService.flush();
+
+  const { enabledAt } = await transactionCaptureService.getSettings(workplaceId);
+  const pendingDate = (enabledAt ?? Date.now()) + 2;
+  // No "spent … Card … at …" purchase evidence — stays pending instead of settling.
+  // Two messages so attach/detach can demo multiple SMS on the same journal.
+  const pendingMessages = [
+    smsMessageFromFixture('swiggyNoRef', {
+      id: E2E_EVIDENCE_SETTLE.pendingAttachSmsId,
+      date: pendingDate,
+      body: `${bank.currencyCode} ${E2E_EVIDENCE_SETTLE.pendingAttachAmount}.00 debited for CAFE.`,
+    }),
+    smsMessageFromFixture('swiggyNoRef', {
+      id: E2E_EVIDENCE_SETTLE.pendingAttachSmsId2,
+      date: pendingDate + 60_000,
+      body: `${bank.currencyCode} ${E2E_EVIDENCE_SETTLE.pendingAttachAmount}.00 tip alert for CAFE.`,
+    }),
+  ];
+  setE2eSmsInboxMessages([...getE2eSmsInboxMessages(), ...pendingMessages]);
+  await smsSyncPipeline.scanMessages(workplaceId, pendingMessages, undefined, {
+    origin: 'arrival',
+  });
+}
+
 /** Three SMS-originated two-leg journals used to exercise merge → edit losslessness. */
 async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
@@ -662,6 +779,14 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
 
   if (profile === 'matcher-discovery') {
     await seedMatcherDiscovery(workplaceId);
+  }
+
+  if (profile === 'evidence-settle-unique') {
+    await seedEvidenceSettleUnique(workplaceId);
+  }
+
+  if (profile === 'evidence-settle-soft') {
+    await seedEvidenceSettleSoft(workplaceId);
   }
 
   if (profile === 'merge-edit') {
