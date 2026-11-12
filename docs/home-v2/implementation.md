@@ -4,7 +4,7 @@ Home uses one layout: the former Home V2. V1, the version switch, and its saved 
 
 ## Experience
 
-- One native pager moves through Dashboard, Accounts, Categories, Budgets, Planned Payments, and Activity.
+- One native pager moves through Dashboard, Accounts, Categories, Budgets, Planned Payments, and Transactions.
 - A fixed compact header contains the sidebar trigger, the current leaf title, and page actions. Titles and action layers blend with native swipe progress.
 - The workplace name appears beneath the title only when multiple workplaces exist. Expanded search uses the available title space.
 - Paired titles open an anchored menu with descriptions, selected state and a dimmed backdrop. The menu retains its last position and contents during dismissal.
@@ -49,6 +49,6 @@ the selected route. This corrects the preparation wiring; it does not establish 
 measured readiness improvement or guarantee cold queries finish before a rapid swipe.
 
 Manual check: restart the app, pause briefly on each page, and swipe through Dashboard,
-Accounts, Categories, Budgets, Planned Payments and Activity in both directions. Also
+Accounts, Categories, Budgets, Planned Payments and Transactions in both directions. Also
 check rapid swipes, retained scroll position, route params, and lock/workplace changes.
 No tests or native timing measurements were run for this correction.

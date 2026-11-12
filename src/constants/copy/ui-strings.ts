@@ -122,10 +122,10 @@ export const UI_STRINGS = {
   dashboard: {
     emptyTitle: 'A fresh start',
     emptySubtitle: 'Record a coffee, bill, or paycheck to see your balance come alive.',
-    recentJournalEntries: 'Activity',
+    recentJournalEntries: 'Recent transactions',
     searchResults: 'Results',
     greeting: (name: string) => (name ? `Hi, ${name}` : 'Welcome back'),
-    notificationsTitle: 'Notifications',
+    insightsTitle: 'Insights',
     safeToSpendTitle: 'Safe to Spend',
     triggeringTransactionsTitle: 'Source Activity',
     dismissedNotificationsTitle: 'Dismissed',
@@ -322,7 +322,7 @@ export const UI_STRINGS = {
     emptyTitle: 'Clean slate',
     emptySubtitle: 'No entries match the current search or date range.',
     emptyInPeriod: (period: string) => `No entries in ${period}`,
-    transactions: 'Activity',
+    transactions: 'Transactions',
     plannedPayments: 'Planned payments',
     upcoming: 'Scheduled',
     searchResults: 'Results',
@@ -651,7 +651,7 @@ export const UI_STRINGS = {
       title: 'Spending reminders',
       description:
         'Choose when to be reminded to log recent transactions and keep Safe to Spend current. Applies across Workplaces.',
-      pageTitle: 'Notifications',
+      pageTitle: 'Spending reminders',
       automationTitle: 'Notifications & Automation',
       automationDescription: 'Reminder schedules and SMS settings',
       none: 'None',
@@ -1395,13 +1395,11 @@ export const UI_STRINGS = {
     transactionsSection: 'Transactions',
     personalSection: 'Personal',
     deviceSection: 'This device',
-    insights: 'Insights',
-    notificationSettings: 'Notification settings',
     tabDescriptions: {
       dashboard: 'Dashboard: your balance overview and recent activity.',
       accounts: 'Accounts: manage your accounts and categories.',
       commitments: 'Plans: manage budgets and scheduled payments.',
-      activity: 'Activity: browse and search your transactions.',
+      activity: 'Transactions: browse and search your transactions.',
     },
     privacyDescription: (hidden: boolean, overridden: boolean) =>
       `Balances are ${hidden ? 'hidden' : 'visible'} on this page. ${

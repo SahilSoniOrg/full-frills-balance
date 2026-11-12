@@ -85,6 +85,7 @@ jest.mock('@/src/utils/navigation', () => ({
     toPersonalizationSettings: jest.fn(),
     toAppearanceSettings: jest.fn(),
     toCaptureWorkspace: jest.fn(),
+    toSpendingReminderSettings: jest.fn(),
     toTransactionInbox: jest.fn(),
     toWorkplaceManagement: jest.fn(),
     toSettings: jest.fn(),
@@ -131,13 +132,14 @@ describe('NavigationDrawer shell', () => {
     jest.clearAllMocks();
   });
 
-  it('distinguishes notification settings from insights', () => {
+  it('opens spending reminders separately from Review', () => {
     const { onClose } = renderDrawer();
-    fireEvent.press(screen.getByText('Notification settings'));
-    expect(AppNavigation.toCaptureWorkspace).toHaveBeenCalledWith('notifications');
+    fireEvent.press(screen.getByText('Spending reminders'));
+    expect(AppNavigation.toSpendingReminderSettings).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.toCaptureWorkspace).not.toHaveBeenCalled();
     expect(AppNavigation.toHub).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Insights')).toBeTruthy();
+    expect(screen.getByText('Review')).toBeTruthy();
   });
 
   it('honours reduced motion and turns swiping off while the selector is open', () => {

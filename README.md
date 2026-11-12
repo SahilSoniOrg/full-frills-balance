@@ -113,7 +113,7 @@ Component gallery (dev client): [`/_design-preview`](app/_design-preview.tsx).
 app/ (Expo Router)  →  src/features/*  →  src/services/*  →  repositories  →  WatermelonDB / SQLite
 ```
 
-Four main tabs: **Dashboard · Accounts · Plans · Activity**.
+Four main tabs: **Dashboard · Accounts · Plans · Transactions**.
 
 Add actions follow the current tab; workplace switching and Settings are in the navigation drawer.
 

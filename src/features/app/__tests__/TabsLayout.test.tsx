@@ -172,7 +172,7 @@ describe('primary navigation', () => {
     ['dashboard', 'Dashboard: your balance overview and recent activity.'],
     ['accounts', 'Accounts: manage your accounts and categories.'],
     ['commitments', 'Plans: manage budgets and scheduled payments.'],
-    ['activity', 'Activity: browse and search your transactions.'],
+    ['activity', 'Transactions: browse and search your transactions.'],
   ])('explains %s on long press without navigating', (tab, description) => {
     renderTabs();
     fireEvent(screen.getByTestId(`tab-${tab}`), 'longPress');

@@ -4,7 +4,7 @@ Historical proposal: this records the investigation and rollout choices before V
 
 ## Decision
 
-Use one horizontal pager across Dashboard → Accounts → Categories → Budgets → Planned Payments → Activity. Four bottom destinations remain Dashboard, Accounts, Plans, Activity. Accounts and Plans restore their last visited leaf on bottom-tab taps. A fixed header above the pager owns the group title, page actions and sibling selectors. Explicit sibling selectors address canonical leaf routes. A swipe always advances one leaf regardless of its starting position in the page (except deliberate child interactions and system edges).
+Use one horizontal pager across Dashboard → Accounts → Categories → Budgets → Planned Payments → Transactions. Four bottom destinations remain Dashboard, Accounts, Plans, Transactions. Accounts and Plans restore their last visited leaf on bottom-tab taps. A fixed header above the pager owns the group title, page actions and sibling selectors. Explicit sibling selectors address canonical leaf routes. A swipe always advances one leaf regardless of its starting position in the page (except deliberate child interactions and system edges).
 
 Verdict: Fixable. The failure point is competing gesture ownership plus destination readiness, not a lack of animation effects.
 

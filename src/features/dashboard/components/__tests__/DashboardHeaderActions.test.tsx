@@ -2,12 +2,12 @@ import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { DashboardHeaderActions } from '../DashboardHeaderActions';
 
 describe('DashboardHeaderActions', () => {
-  it('announces pending transaction and notification counts', () => {
+  it('announces pending transaction and review insight counts', () => {
     render(
       <DashboardHeaderActions
         onSearchPress={jest.fn()}
-        onNotificationsPress={jest.fn()}
-        notificationCount={3}
+        onReviewPress={jest.fn()}
+        insightCount={3}
         onSmsPress={jest.fn()}
         unreadSmsCount={2}
       />,
@@ -16,9 +16,7 @@ describe('DashboardHeaderActions', () => {
     expect(
       screen.getByRole('button', { name: 'View transaction inbox, 2 items need review' }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'View notifications, 3 notifications' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Review, 3 insights' })).toBeTruthy();
   });
 
   it('keeps concise labels when there are no unread items', () => {
@@ -26,8 +24,8 @@ describe('DashboardHeaderActions', () => {
     render(
       <DashboardHeaderActions
         onSearchPress={jest.fn()}
-        onNotificationsPress={jest.fn()}
-        notificationCount={0}
+        onReviewPress={jest.fn()}
+        insightCount={0}
         onSmsPress={onSmsPress}
         unreadSmsCount={0}
       />,
@@ -35,7 +33,7 @@ describe('DashboardHeaderActions', () => {
 
     const inbox = screen.getByRole('button', { name: 'View transaction inbox' });
     expect(inbox).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'View notifications' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Review' })).toBeTruthy();
     fireEvent.press(inbox);
     expect(onSmsPress).toHaveBeenCalledTimes(1);
   });

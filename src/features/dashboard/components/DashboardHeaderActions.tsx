@@ -6,16 +6,16 @@ import { StyleSheet, View } from 'react-native';
 
 export type DashboardHeaderActionsProps = {
   onSearchPress: () => void;
-  onNotificationsPress: () => void;
-  notificationCount: number;
+  onReviewPress: () => void;
+  insightCount: number;
   onSmsPress?: () => void;
   unreadSmsCount?: number;
 };
 
 export function DashboardHeaderActions({
   onSearchPress,
-  onNotificationsPress,
-  notificationCount,
+  onReviewPress,
+  insightCount,
   onSmsPress,
   unreadSmsCount = 0,
 }: DashboardHeaderActionsProps) {
@@ -57,16 +57,16 @@ export function DashboardHeaderActions({
           name={Icon.Sparkles}
           size={Size.iconSm}
           variant="clear"
-          onPress={onNotificationsPress}
+          onPress={onReviewPress}
           accessibilityRole="button"
           accessibilityLabel={
-            notificationCount > 0
-              ? `View notifications, ${notificationCount} notification${notificationCount === 1 ? '' : 's'}`
-              : 'View notifications'
+            insightCount > 0
+              ? `Open Review, ${insightCount} insight${insightCount === 1 ? '' : 's'}`
+              : 'Open Review'
           }
           iconColor={theme.text}
         />
-        {notificationCount > 0 ? (
+        {insightCount > 0 ? (
           <View style={[styles.badge, { backgroundColor: theme.error }]} />
         ) : null}
       </View>

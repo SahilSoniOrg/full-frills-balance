@@ -56,7 +56,7 @@ ClockWheel and GlyphCarousel share `useScrollSettlement`:
 
 ## Primary page navigation
 
-Home has one six-leaf native pager: Dashboard, Accounts, Categories, Budgets, Planned Payments, Activity. The header and bottom bar remain stationary and blend with native page progress. Accounts/Categories and Budgets/Planned Payments use static subtabs inside their page panes; there are no nested horizontal pagers or boundary handoff strips. Paired header titles also offer an explicit menu. Web retains explicit navigation controls without emulating native swipes.
+Home has one six-leaf native pager: Dashboard, Accounts, Categories, Budgets, Planned Payments, Transactions. The header and bottom bar remain stationary and blend with native page progress. Accounts/Categories and Budgets/Planned Payments use static subtabs inside their page panes; there are no nested horizontal pagers or boundary handoff strips. Paired header titles also offer an explicit menu. Web retains explicit navigation controls without emulating native swipes.
 
 Paging permission accounts for navigator focus, app activity, keyboard, lock, screen reader, workplace switching, selection mode, drawer visibility and screen-owned overlay locks. Losing permission restores the committed page without animation. Reduce Motion skips automatic page travel while direct finger-driven navigation remains available.
 

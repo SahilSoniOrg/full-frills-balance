@@ -51,7 +51,7 @@ export const PRIMARY_PAGES = [
   {
     id: 'activity',
     routeName: 'activity',
-    title: 'Activity',
+    title: 'Transactions',
     group: 'activity',
     order: 5,
     groupDefault: true,

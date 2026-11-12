@@ -67,7 +67,7 @@ export const HubWidget = ({
         <View style={styles.titleRow}>
           <View style={styles.titleGroup}>
             <AppText variant="subheading" color="secondary" style={styles.title}>
-              {AppConfig.strings.dashboard.notificationsTitle}
+              {AppConfig.strings.dashboard.insightsTitle}
             </AppText>
             <View
               style={[

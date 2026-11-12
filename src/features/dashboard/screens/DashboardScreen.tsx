@@ -62,7 +62,7 @@ function DashboardScreen() {
     return () => setPageSwipeLock?.(lockId, false);
   }, [isBlockingSheetOpen, setPageSwipeLock]);
 
-  const notificationCount = (insights?.length || 0) + supplementalInsights.length;
+  const insightCount = (insights?.length || 0) + supplementalInsights.length;
 
   const onSmsPress =
     Platform.OS === 'android' && (isAutomaticSmsImportEnabled || (unreadSmsCount || 0) > 0)
@@ -84,8 +84,8 @@ function DashboardScreen() {
           headerActions: (
             <DashboardHeaderActions
               onSearchPress={AppNavigation.toJournalSearch}
-              onNotificationsPress={AppNavigation.toHub}
-              notificationCount={notificationCount}
+              onReviewPress={AppNavigation.toHub}
+              insightCount={insightCount}
               onSmsPress={onSmsPress}
               unreadSmsCount={unreadSmsCount || 0}
             />
@@ -96,7 +96,7 @@ function DashboardScreen() {
         },
       ),
     [
-      notificationCount,
+      insightCount,
       onSmsPress,
       unreadSmsCount,
       userName,

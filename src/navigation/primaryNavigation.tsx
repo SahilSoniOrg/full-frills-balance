@@ -36,7 +36,7 @@ export const PRIMARY_TABS: readonly {
   {
     tab: 'activity',
     routeName: PRIMARY_GROUP_DEFAULT_ROUTE.activity,
-    label: 'Activity',
+    label: 'Transactions',
     icon: Icon.Activity,
   },
 ];

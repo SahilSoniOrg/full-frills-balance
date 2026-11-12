@@ -582,9 +582,7 @@ export const AppNavigation = {
     router.push('/sms-inbox' as Href);
   },
 
-  /**
-   * Navigate to the Hub (Notifications & Insights).
-   */
+  /** Navigate to the Review hub. */
   toHub: () => {
     router.push('/hub' as Href);
   },
