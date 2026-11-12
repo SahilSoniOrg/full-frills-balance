@@ -77,7 +77,6 @@
     "expo-file-system": "~58.0.11",
     "expo-font": "~58.0.10",
     "expo-haptics": "~58.0.7",
-    "expo-image": "~58.0.17",
     "expo-linking": "~58.0.14",
     "expo-local-authentication": "~58.0.2",
     "expo-localization": "~58.0.5",
@@ -181,6 +180,7 @@
     "@nozbe/watermelondb@0.28.1-0": "patches/@nozbe%2Fwatermelondb@0.28.1-0.patch",
     "react-native-drawer-layout@4.2.12": "patches/react-native-drawer-layout@4.2.12.patch",
     "expo-modules-core@58.0.26": "patches/expo-modules-core@58.0.26.patch",
-    "react-native-pager-view@9.0.7": "patches/react-native-pager-view@9.0.7.patch"
+    "react-native-pager-view@9.0.7": "patches/react-native-pager-view@9.0.7.patch",
+    "expo-file-system@58.0.11": "patches/expo-file-system@58.0.11.patch"
   }
 }

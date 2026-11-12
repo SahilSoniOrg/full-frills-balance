@@ -1,14 +1,14 @@
 Privacy Policy for Full Frills Balance
 
-Effective Date: November 9, 2026
+Effective Date: November 12, 2026
 
-Last Updated: November 9, 2026
+Last Updated: November 12, 2026
 
-Public copy: https://full-frills-landing.vercel.app/privacy.html
+Public copy: https://fullfrills.sahilsoni.in/privacy.html
 
 Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Balance handles your information and protects your privacy.
 
-Policy update (November 9, 2026): This update explains optional Google sign-in and Gmail read-only access for transaction email capture, including on-device Inbox checks and parsing, locally retained matched-email details, optional automatic and background capture, how disconnecting and dismissing affect saved data, and how to remove local records. It also states how Full Frills Balance follows Google's Limited Use requirements. The October 4 update's SMS and analytics disclosures remain in force.
+Policy update (November 12, 2026): This update explains that Apple Speech Recognition may receive iOS voice audio, that Android's selected speech service may process audio online, and that an applied transcript is saved in the local transaction note. It also discloses PostHog's collection of request IP addresses and approximate location, and makes Gmail data-protection, retention, and deletion safeguards explicit.
 
 1. Overview
 
@@ -82,9 +82,13 @@ The app's use of information received from Google APIs follows the [Google API S
 
 You can turn off automatic capture and background checks in Gmail settings, or disconnect Gmail from a Workplace. Disconnecting stops future checks for that Workplace and removes its local connection and history cursor. If no other Workplace uses the same Google account, the app also asks Google Sign-In to revoke the app's access and signs out. Disconnecting does not erase transaction inbox details or journals already created. To remove saved Gmail inbox details from this device, use Factory Reset or clear app data; this also removes other local app data. You can review or revoke Google access from your Google Account security settings. Exported files and enabled device backups are managed separately and may retain copies.
 
-5. Analytics and Telemetry
+5. Voice Entry
 
-We use PostHog and Expo Insights for product analytics and technical improvement.
+Voice entry is optional and asks for microphone and speech-recognition permission only when you start it. On iOS, the app uses Apple Speech Recognition; captured audio may be sent to Apple servers for processing. On Android, the device's selected speech-recognition service (for example Google) may process audio online under that provider's own privacy terms. The service returns transcript text to the app, which parses it on your device. If you apply the voice draft, its transcript is added to the local transaction note and may be included in backups you export. The app does not store audio recordings. Analytics may record that voice entry was started or that permission was denied, but not audio or transcript content.
+
+6. Analytics and Telemetry
+
+We use PostHog for product analytics and Sentry for crash reporting and performance traces.
 
 Analytics may include only allowlisted event fields and values, including:
 
@@ -110,6 +114,8 @@ operating system name and version, and tablet flag
 
 pseudonymous analytics identifiers
 
+the network IP address sent with analytics requests and approximate location inferred from it, such as country, region, city, or postal code. The current PostHog project does not discard IP addresses.
+
 privacy policy acknowledgement events (policy version as event-specific data)
 
 We do not intentionally send:
@@ -134,7 +140,7 @@ PostHog session replay is disabled. We do not record in-app screenshots or scree
 
 **Sentry (crash reporting)** is separate from PostHog. When enabled, error reports and performance traces may include error types, code locations (function names, file paths and line numbers from the app's own code), and navigation timing; error message text is removed before sending. Native crash reporting is disabled because its reports bypass the JavaScript privacy filters. Native crashes, freezes and out-of-memory terminations are not reported through the native SDK. We do not attach screenshots or screen layouts, and we do not enable Sentry session replay or screen recording.
 
-6. Internet Use
+7. Internet Use
 
 Although Full Frills Balance is primarily offline, internet access is used for limited features:
 
@@ -144,11 +150,13 @@ sending analytics telemetry
 
 connecting to Google for sign-in and, only if you connect Gmail, reading Inbox messages for transaction capture
 
+using Apple Speech Recognition on iOS or the selected system speech-recognition service on Android when you start voice entry
+
 looking up email signature keys through Google Public DNS when verified Gmail automatic capture is enabled (sender domain and DKIM key selector only)
 
 Exchange-rate requests do not include your transaction history or personal financial records.
 
-7. Export and Backup
+8. Export and Backup
 
 You may export app data as ZIP backup files containing your personal records.
 
@@ -158,7 +166,7 @@ Backups are not encrypted by the app, so you are responsible for protecting expo
 
 If iCloud Backup or Android device backup is enabled, Apple or Android may include the app's local data in a backup associated with your account. This may include saved Gmail transaction details. These backups are controlled by your device and account settings, not by Full Frills Balance, and may retain copies after you clear app data or use Factory Reset. The app cannot access or remove those backup copies.
 
-8. No Required App Account
+9. No Required App Account
 
 Full Frills Balance does not require an app account or sign-in for ordinary local use. Gmail capture is optional and requires you to connect a Google account and grant Gmail read-only access. The app does not require:
 
@@ -170,13 +178,15 @@ phone number verification
 
 cloud account
 
-9. Data Sharing
+10. Data Sharing
 
 We do not sell personal data.
 
-Limited technical analytics may be processed by third-party providers strictly for app improvement. If you connect Gmail, Google processes sign-in and Gmail API requests so the app can read messages you authorize. When verified Gmail automatic capture is enabled, Google Public DNS receives the sender domain and DKIM key selector so the app can look up the email's public signing key; this lookup contains no email body or parsed transaction data. Full Frills Balance does not send Gmail message content or parsed transactions to its own servers or analytics providers.
+Limited technical analytics may be processed by PostHog and Sentry strictly for app improvement and reliability. PostHog receives the network IP address sent with analytics requests; the current project does not discard it and may infer approximate location such as country, region, and city. If you connect Gmail, Google processes sign-in and Gmail API requests so the app can read messages you authorize. When verified Gmail automatic capture is enabled, Google Public DNS receives the sender domain and DKIM key selector so the app can look up the email's public signing key; this lookup contains no email body or parsed transaction data. Full Frills Balance does not send Gmail message content or parsed transactions to its own servers or analytics providers.
 
-10. Permissions
+When you use voice entry, Apple Speech Recognition on iOS may receive captured audio for processing on Apple's servers. On Android, the selected system speech-recognition service may process audio online. The app parses the returned transcript locally and does not store audio recordings.
+
+11. Permissions
 
 Depending on features you choose to use, the app may request:
 
@@ -186,11 +196,13 @@ Google Public DNS lookups for sender domain and DKIM key selector, if you enable
 
 Google sign-in and Gmail read-only access, if you connect Gmail
 
+microphone and speech-recognition access, when you start voice entry
+
 storage access for export and backup
 
 Permissions are optional where possible and used only for app functionality.
 
-11. Planned Future Online Features (Not Currently Available)
+12. Planned Future Online Features (Not Currently Available)
 
 The current app does not offer account registration, online sync, or cloud backup. Future versions may offer optional encrypted backup or multi-device sync. If introduced, the intended privacy principles are:
 
@@ -205,17 +217,17 @@ The current app does not offer account registration, online sync, or cloud backu
 
 If online sync is introduced, this Privacy Policy and the in-app disclosure will be updated before the feature is enabled. Stopping sync would stop future uploads, but it would not automatically recall data already downloaded to a device or delete a server backup unless a separate deletion process is completed.
 
-12. Security
+13. Security
 
 Your financial records and Gmail-derived transaction details remain on your own device.
 
 You are responsible for securing your device and exported backup files.
 
-13. Children’s Privacy
+14. Children’s Privacy
 
 Full Frills Balance is not directed to children. If you are below the age at which you can provide valid consent under the law that applies to you, use the app only with a parent or legal guardian involved.
 
-14. Privacy Requests and Contact
+15. Privacy Requests and Contact
 
 Your local financial records and Gmail-derived transaction details are stored on your device, so we generally cannot access or recover them from our servers. Use the app’s Settings controls for export, restore, factory reset, and Gmail disconnection. Disconnecting stops future checks but does not delete transaction records already saved locally. You can revoke Google access in your Google Account settings.
 
@@ -225,11 +237,13 @@ Sahil Soni
 
 sscsps@gmail.com
 
-15. Changes to This Policy
+16. Changes to This Policy
 
 This Privacy Policy may be updated when app features or data practices change. When an update materially changes how data is handled, we will update the effective and last-updated dates and provide an in-app or other appropriate notice where practical.
 
 Update history:
+
+- November 12, 2026 — disclosed possible Apple server processing of iOS speech audio, Android system speech-provider processing, local storage of an applied transcript, and PostHog's IP-based approximate location; clarified Gmail data protection and retention.
 
 - November 9, 2026 — documented optional Google sign-in and Gmail read-only access, on-device Inbox checks and transaction parsing, locally retained matched-email details, optional automatic and background capture, the effect of disconnecting, dismissing, Factory Reset, and clearing app data, and adherence to Google's Limited Use requirements.
 - October 4, 2026 — documented optional automatic SMS import on Android at startup and on new-message arrival; documented retention of original transaction SMS for journal details and user-controlled backups, privacy maintenance, and allowlisted diagnostics and analytics.

@@ -1,0 +1,155 @@
+diff --git a/ios/Legacy/EXFileSystemAssetLibraryHandler.h b/Users/sahilsoni/.bun/install/cache/expo-file-system@58.0.11@@@1/ios/Legacy/EXFileSystemAssetLibraryHandler.h
+deleted file mode 100644
+index 156a6af846b1a004ccdb4ccc2776bfbac5eb5605..0000000000000000000000000000000000000000
+diff --git a/ios/Legacy/EXFileSystemAssetLibraryHandler.m b/Users/sahilsoni/.bun/install/cache/expo-file-system@58.0.11@@@1/ios/Legacy/EXFileSystemAssetLibraryHandler.m
+deleted file mode 100644
+index e6789a88a3df598037b165ec3fa1daf0da0b950f..0000000000000000000000000000000000000000
+diff --git a/ios/Legacy/FileSystemHelpers.swift b/ios/Legacy/FileSystemHelpers.swift
+index 79c37f1c19937f082586018a3b82b713b45e1984..1ebc4e815af0e0e8c40d420609826daa48b9db90 100644
+--- a/ios/Legacy/FileSystemHelpers.swift
++++ b/ios/Legacy/FileSystemHelpers.swift
+@@ -1,9 +1,6 @@
+ // Copyright 2023-present 650 Industries. All rights reserved.
+ 
+ import ExpoModulesCore
+-import Photos
+-
+-private let assetIdentifier = "ph://"
+ 
+ internal func ensureFileDirectoryExists(_ fileUrl: URL) throws {
+   let directoryPath = fileUrl.deletingLastPathComponent()
+@@ -82,57 +79,3 @@ internal func ensurePathPermission(_ appContext: AppContext?, path: String, flag
+   }
+ }
+ 
+-internal func isPHAsset(path: String) -> Bool {
+-  return path.contains(assetIdentifier)
+-}
+-
+-internal func copyPHAsset(fromUrl: URL, toUrl: URL, with resourceManager: PHAssetResourceManager, promise: Promise) {
+-  if isPhotoLibraryStatusAuthorized() {
+-    if FileManager.default.fileExists(atPath: toUrl.path) {
+-      promise.reject(FileAlreadyExistsException(toUrl.path))
+-      return
+-    }
+-
+-    let identifier = fromUrl.absoluteString.replacingOccurrences(of: assetIdentifier, with: "")
+-
+-    guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject else {
+-      promise.reject(FailedToFindAssetException(fromUrl.absoluteString))
+-      return
+-    }
+-
+-    // An edited asset carries both its original resource (`.photo`/`.video`) and the
+-    // rendered current version (`.fullSizePhoto`/`.fullSizeVideo`). Prefer the
+-    // rendition matching the asset's media type, since an edited video can also
+-    // include a `.fullSizePhoto` poster image.
+-    let resources = PHAssetResource.assetResources(for: asset)
+-    let isVideo = asset.mediaType == .video
+-    let editedResourceType: PHAssetResourceType = isVideo ? .fullSizeVideo : .fullSizePhoto
+-    let originalResourceType: PHAssetResourceType = isVideo ? .video : .photo
+-    let resource =
+-      resources.first { $0.type == editedResourceType }
+-      ?? resources.first { $0.type == originalResourceType }
+-      ?? resources.first
+-    if let resource {
+-      let resourceOptions = PHAssetResourceRequestOptions()
+-      // Assets that only exist in iCloud have no local resource data to write.
+-      resourceOptions.isNetworkAccessAllowed = true
+-      resourceManager.writeData(for: resource, toFile: toUrl, options: resourceOptions) { error in
+-        if error != nil {
+-          promise.reject(FailedToCopyAssetException(fromUrl.absoluteString))
+-          return
+-        }
+-        promise.resolve()
+-      }
+-    } else {
+-      promise.reject(FailedToCopyAssetException(fromUrl.absoluteString))
+-    }
+-  }
+-}
+-
+-internal func isPhotoLibraryStatusAuthorized() -> Bool {
+-  if #available(iOS 14, tvOS 14, *) {
+-    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+-    return status == .authorized || status == .limited
+-  }
+-  return PHPhotoLibrary.authorizationStatus() == .authorized
+-}
+diff --git a/ios/Legacy/FileSystemLegacyModule.swift b/ios/Legacy/FileSystemLegacyModule.swift
+index 0db6a3f9c25b0344fddc793bfc5e66460ace8bc3..dca82716baed8c3302579ae12d2b5ce90176eaf0 100644
+--- a/ios/Legacy/FileSystemLegacyModule.swift
++++ b/ios/Legacy/FileSystemLegacyModule.swift
+@@ -1,7 +1,6 @@
+ // Copyright 2023-present 650 Industries. All rights reserved.
+ 
+ import ExpoModulesCore
+-import Photos
+ 
+ private let EVENT_DOWNLOAD_PROGRESS = "expo-file-system.downloadProgress"
+ private let EVENT_UPLOAD_PROGRESS = "expo-file-system.uploadProgress"
+@@ -9,7 +8,6 @@ private let EVENT_UPLOAD_PROGRESS = "expo-file-system.uploadProgress"
+ public final class FileSystemLegacyModule: Module {
+   private var sessionTaskDispatcher: EXSessionTaskDispatcher!
+   private lazy var taskHandlersManager = EXTaskHandlersManager()
+-  private lazy var resourceManager = PHAssetResourceManager()
+ 
+   private lazy var backgroundSession = createUrlSession(type: .background, delegate: sessionTaskDispatcher)
+   private lazy var foregroundSession = createUrlSession(type: .foreground, delegate: sessionTaskDispatcher)
+@@ -57,13 +55,6 @@ public final class FileSystemLegacyModule: Module {
+           resolver: promise.legacyResolver,
+           rejecter: promise.legacyRejecter
+         )
+-      case "assets-library", "ph":
+-        EXFileSystemAssetLibraryHandler.getInfoForFile(
+-          url,
+-          withOptions: optionsDict,
+-          resolver: promise.legacyResolver,
+-          rejecter: promise.legacyRejecter
+-        )
+       default:
+         throw UnsupportedSchemeException(url.scheme)
+       }
+@@ -144,31 +135,22 @@ public final class FileSystemLegacyModule: Module {
+     AsyncFunction("copyAsync") { (options: RelocatingOptions, promise: Promise) in
+       let (fromUrl, toUrl) = try options.asTuple()
+ 
+-      if isPHAsset(path: fromUrl.absoluteString) {
+-        copyPHAsset(fromUrl: fromUrl, toUrl: toUrl, with: resourceManager, promise: promise)
+-        return
++      guard fromUrl.isFileURL else {
++        throw InvalidFileUrlException(fromUrl)
++      }
++      guard toUrl.isFileURL else {
++        throw InvalidFileUrlException(toUrl)
+       }
+ 
+       try ensurePathPermission(appContext, path: fromUrl.path, flag: .read)
+       try ensurePathPermission(appContext, path: toUrl.path, flag: .write)
+ 
+-      if fromUrl.scheme == "file" {
+-        EXFileSystemLocalFileHandler.copy(
+-          from: fromUrl,
+-          to: toUrl,
+-          resolver: promise.legacyResolver,
+-          rejecter: promise.legacyRejecter
+-        )
+-      } else if ["ph", "assets-library"].contains(fromUrl.scheme) {
+-        EXFileSystemAssetLibraryHandler.copy(
+-          from: fromUrl,
+-          to: toUrl,
+-          resolver: promise.legacyResolver,
+-          rejecter: promise.legacyRejecter
+-        )
+-      } else {
+-        throw InvalidFileUrlException(fromUrl)
+-      }
++      EXFileSystemLocalFileHandler.copy(
++        from: fromUrl,
++        to: toUrl,
++        resolver: promise.legacyResolver,
++        rejecter: promise.legacyRejecter
++      )
+     }
+ 
+     AsyncFunction("makeDirectoryAsync") { (url: URL, options: MakeDirectoryOptions) in

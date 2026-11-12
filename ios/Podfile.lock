@@ -190,13 +190,6 @@ PODS:
     - ExpoModulesCore
   - ExpoHaptics (58.0.7):
     - ExpoModulesCore
-  - ExpoImage (58.0.17):
-    - ExpoModulesCore
-    - libavif/libdav1d
-    - SDWebImage (~> 5.21.0)
-    - SDWebImageAVIFCoder (~> 0.11.0)
-    - SDWebImageSVGCoder (~> 1.7.0)
-    - SDWebImageWebPCoder (~> 0.14.6)
   - ExpoKeepAwake (58.0.3):
     - ExpoModulesCore
   - ExpoLinking (58.0.14):
@@ -338,23 +331,6 @@ PODS:
   - hermes-engine (260318099.0.4):
     - hermes-engine/Pre-built (= 260318099.0.4)
   - hermes-engine/Pre-built (260318099.0.4)
-  - libavif/core (1.0.0)
-  - libavif/libdav1d (1.0.0):
-    - libavif/core
-    - libdav1d (>= 0.6.0)
-  - libdav1d (1.2.0)
-  - libwebp (1.6.0):
-    - libwebp/demux (= 1.6.0)
-    - libwebp/mux (= 1.6.0)
-    - libwebp/sharpyuv (= 1.6.0)
-    - libwebp/webp (= 1.6.0)
-  - libwebp/demux (1.6.0):
-    - libwebp/webp
-  - libwebp/mux (1.6.0):
-    - libwebp/demux
-  - libwebp/sharpyuv (1.6.0)
-  - libwebp/webp (1.6.0):
-    - libwebp/sharpyuv
   - MMKVCore (2.4.0)
   - NitroMmkv (4.3.2):
     - boost
@@ -3891,17 +3867,6 @@ PODS:
     - SocketRocket
     - SSZipArchive (~> 2.5.5)
     - Yoga
-  - SDWebImage (5.21.7):
-    - SDWebImage/Core (= 5.21.7)
-  - SDWebImage/Core (5.21.7)
-  - SDWebImageAVIFCoder (0.11.1):
-    - libavif/core (>= 0.11.0)
-    - SDWebImage (~> 5.10)
-  - SDWebImageSVGCoder (1.7.0):
-    - SDWebImage/Core (~> 5.6)
-  - SDWebImageWebPCoder (0.14.6):
-    - libwebp (~> 1.0)
-    - SDWebImage/Core (~> 5.17)
   - simdjson (3.9.4)
   - SocketRocket (0.7.1)
   - SSZipArchive (2.5.5)
@@ -3936,7 +3901,6 @@ DEPENDENCIES:
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoGlassEffect (from `../node_modules/expo-glass-effect/ios`)
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
-  - ExpoImage (from `../node_modules/expo-image/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoLocalAuthentication (from `../node_modules/expo-local-authentication/ios`)
@@ -4076,19 +4040,12 @@ SPEC REPOS:
     - GoogleUtilities
     - GTMAppAuth
     - GTMSessionFetcher
-    - libavif
-    - libdav1d
-    - libwebp
     - MMKVCore
     - PostHog
     - PromisesObjC
     - PromisesSwift
     - ReachabilitySwift
     - RecaptchaInterop
-    - SDWebImage
-    - SDWebImageAVIFCoder
-    - SDWebImageSVGCoder
-    - SDWebImageWebPCoder
     - SocketRocket
     - SSZipArchive
     - SwiftUIIntrospect
@@ -4140,8 +4097,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-glass-effect/ios"
   ExpoHaptics:
     :path: "../node_modules/expo-haptics/ios"
-  ExpoImage:
-    :path: "../node_modules/expo-image/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo-keep-awake/ios"
   ExpoLinking:
@@ -4426,7 +4381,6 @@ SPEC CHECKSUMS:
   ExpoFont: b215bc738b2e3fba7ffed79903a6fccf66959dd0
   ExpoGlassEffect: 6594e055df1e0b88d34cc189ba0b21589adec6bf
   ExpoHaptics: c95d1e2162895e710b68dd912eec619900ebdf33
-  ExpoImage: 04f6e13379ea155eec04e99499baefba1c313f77
   ExpoKeepAwake: fd18a5d233329013c578030ad399d8e10b252b5f
   ExpoLinking: 0937be9faa1580dee244062cc4c5a77732dc2c4d
   ExpoLocalAuthentication: ac9c695d877aafc2d7b33b3fdc47ed8fdf90053e
@@ -4460,9 +4414,6 @@ SPEC CHECKSUMS:
   GTMAppAuth: 66e839a30bb63acb109b8986a0c3f642d56d48fd
   GTMSessionFetcher: a6d2b2aa203485893d4511ff64642dc811f7c09f
   hermes-engine: a1158910bb7e300b9e3d2f1e2d433f817ec1a4b5
-  libavif: 5f8e715bea24debec477006f21ef9e95432e254d
-  libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
-  libwebp: af5937a13536ef73f3784d69cc342b98961acf33
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: a623a409cb3716ec838b04c39bbc6fb59fe83a02
   NitroModules: b105ce751aa46cd7e6ae74cc81b932dd0d447fd7
@@ -4564,10 +4515,6 @@ SPEC CHECKSUMS:
   RNSVG: db4855056cc926a48181cd50256704276cadd72c
   RNWorklets: efcee735370b17c283c26771dde752a08815fb1a
   RNZipArchive: dd02aa412d653594c8c83120013e15b4e56c302e
-  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
-  SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
-  SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
-  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4

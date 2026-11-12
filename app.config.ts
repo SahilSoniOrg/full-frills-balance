@@ -166,7 +166,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
-    'expo-image',
     'expo-sharing',
     'expo-sqlite',
     'expo-status-bar',
