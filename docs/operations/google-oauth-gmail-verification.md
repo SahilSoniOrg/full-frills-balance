@@ -1,6 +1,6 @@
 # Google OAuth and Gmail verification
 
-**Operational snapshot: 2026-11-10.** Project and console statuses below record the state supplied for this snapshot; Google policy and process claims are linked inline. No full OAuth client IDs, credentials, or secrets are included.
+**Operational snapshot: 2026-11-12.** Project and console statuses below record the last observed state; Google policy and process claims are linked inline. No full OAuth client IDs, credentials, or secrets are included.
 
 ## Current project and status
 
@@ -10,6 +10,19 @@
 - The submitted app name is **Full Frills Balance**. The consent screen links to the [homepage](https://full-frills-landing.vercel.app/) and [privacy policy](https://full-frills-landing.vercel.app/privacy.html). The current submission uses the approved unlisted [demo video](https://youtube.com/shorts/QvRD07j9xS0).
 - A branding ownership finding on the Vercel homepage was appealed with Search Console HTML-file verification proof. The exact URL-prefix property showed a developer-controlled Google account as a verified owner; the request remains under review, not approved. Google requires an account listed as a GCP project owner or editor to verify authorized-domain ownership in Search Console. Search Console documents HTML-file verification for URL-prefix properties. [Google verification requirements](https://support.google.com/cloud/answer/13464321?hl=en) · [Search Console ownership verification](https://support.google.com/webmasters/answer/9008080)
 - A separate project, `full-frills-balance-production`, is published/in production but has **zero OAuth clients** and is not used by the current production version. Google blocked creating its Android client because the same package plus Play signing fingerprint is already registered in `fiscalmoneymanger`; this is the observed Console result for this app. Google's Android guidance confirms Android OAuth registration uses the signing certificate SHA-1, including the Play App Signing fingerprint. [Google Android client authentication](https://developers.google.com/android/guides/client-auth?hl=en)
+
+## Latest reviewer request (2026-11-12)
+
+Google replied to the verification submission with **action required**. This is not an approval. The requested remediation is:
+
+- Move the homepage and privacy policy from the shared `full-frills-landing.vercel.app` host to a verified domain owned by the developer. Update both URLs in the `fiscalmoneymanger` OAuth consent configuration and verify ownership in Search Console. The old URLs remain the Console values until those steps are completed.
+- Vercel now has `fullfrills.sahilsoni.in` assigned to the `full-frills-landing` project. Its DNS is hosted at GoDaddy; Vercel requires `A fullfrills.sahilsoni.in 76.76.21.21`. That record is not yet configured, so the custom host is not live. Search Console verification and OAuth URL updates are also incomplete.
+- Google Cloud Console currently redirects to mandatory MFA setup, and GoDaddy requires sign-in to edit DNS. These are user account gates. Do not claim domain verification or reply to Google as if the changes were complete until the domain resolves, ownership is verified, and Console URLs are updated.
+- Local source changes clarify Gmail data safeguards and retention/deletion in the public privacy policy and in-app notice, bump the in-app policy version to `2026-11-12`, and describe optional Gmail transaction capture on the homepage. The updated policy has not yet been deployed. It explicitly states that the native local database has no separate app-level encryption, that App Lock is an access gate rather than encryption, and that exported ZIP backups are unencrypted.
+- Google requires a **new comprehensive demo video**; the previously uploaded video `QvRD07j9xS0` is no longer sufficient. Show the actual Gmail feature, the OAuth consent flow with all requested scopes expanded and readable, and why the requested `gmail.readonly` scope is needed. Keep the scope in the video exactly aligned with the production app and Console configuration. The publishing status should remain In production.
+- Google requests active test credentials only if reviewers need credentials or a preconfigured environment to access the app. Full Frills Balance has no app-local account; Gmail requires the reviewer to grant Google access. Provide step-by-step navigation instructions and, if Google requires a ready mailbox, use only the dedicated synthetic test inbox. Never give reviewers access to an everyday mailbox.
+
+Once DNS is configured and the Console account can be accessed, deploy the landing changes, verify `sahilsoni.in` ownership in Search Console, update the homepage and privacy URLs, prepare the new video and review instructions, then resubmit and reply directly to Google's email. Do not change the production OAuth clients, switch projects, add billing, or mark any item complete until its corresponding step is actually finished.
 
 ## OAuth setup and safe project/client selection
 
