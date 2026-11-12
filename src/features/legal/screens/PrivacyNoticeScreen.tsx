@@ -142,6 +142,23 @@ export default function PrivacyNoticeScreen() {
           </Stack>
 
           <Stack space="md">
+            <AppText variant="subheading">{copy.googleDataSectionTitle}</AppText>
+            <AppCard variant="default" paddingSize="none">
+              <PrivacyRow
+                icon={Icon.ShieldCheck}
+                title={copy.googleProtectionTitle}
+                body={copy.googleProtectionBody}
+              />
+              <PrivacyRow
+                icon={Icon.Database}
+                title={copy.googleRetentionTitle}
+                body={copy.googleRetentionBody}
+                last
+              />
+            </AppCard>
+          </Stack>
+
+          <Stack space="md">
             <AppText variant="subheading">{copy.controlsSectionTitle}</AppText>
             <AppCard variant="outline" paddingSize="none">
               <PrivacyRow icon={Icon.Archive} title={copy.backupTitle} body={copy.backupBody} />

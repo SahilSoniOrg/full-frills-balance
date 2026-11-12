@@ -116,12 +116,12 @@ export const AppConfig = {
 
   // Public legal and support links
   links: {
-    privacyPolicyUrl: 'https://full-frills-landing.vercel.app/privacy.html',
+    privacyPolicyUrl: 'https://fullfrills.sahilsoni.in/privacy.html',
   },
 
   // Legal document versions used for local acknowledgement records
   legal: {
-    privacyPolicyVersion: '2026-11-09',
+    privacyPolicyVersion: '2026-11-12',
   },
 
   // Business Logic Constants
