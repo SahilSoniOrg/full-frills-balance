@@ -24,6 +24,19 @@ Google replied to the verification submission with **action required**. This is 
 
 Once DNS is configured and the Console account can be accessed, deploy the landing changes, verify `sahilsoni.in` ownership in Search Console, update the homepage and privacy URLs, prepare the new video and review instructions, then resubmit and reply directly to Google's email. Do not change the production OAuth clients, switch projects, add billing, or mark any item complete until its corresponding step is actually finished.
 
+### App navigation to give the reviewer
+
+The app has no local account or app password. Gmail access is granted through Google OAuth inside the app. Use these labels in the review instructions and demo:
+
+1. Open **Full Frills Balance** and go to **Settings → Transactions → Capture & review**.
+2. Under connected sources, tap **Gmail → Connect Gmail**. Sign in with the dedicated synthetic test inbox. On Google's consent screen, expand all services and keep the `gmail.readonly` permission readable in the recording.
+3. Return to **Capture & review**. Show that Gmail is connected and explain that the scope can access the mailbox while the app only checks new Inbox messages received after connection, on-device.
+4. Send a new, synthetic transaction notice to that test inbox after connecting. Open **Transaction inbox** from **Capture & review**, refresh, and show the message's parsed details.
+5. Review and import the transaction, then show its resulting journal entry. If demonstrating verified automatic capture, enable the app's separate capture controls deliberately and use a second synthetic message that satisfies the app's verification rules. Keep background checks optional; don't imply that they are required for a foreground review/import.
+6. The permission is read-only: show that the source email remains unchanged. The app does not need a Gmail write or delete permission.
+
+Keep the video to the synthetic test account, with no unrelated mail or account identifiers visible. The current device-control session is held by a different T3 session; the new recording remains outstanding until that session releases the emulator or an available device is opened.
+
 ## OAuth setup and safe project/client selection
 
 The requested scope is `https://www.googleapis.com/auth/gmail.readonly`. Google classifies it as a **restricted** Gmail scope. [Google Restricted Scopes](https://support.google.com/cloud/answer/13464325?hl=en)
