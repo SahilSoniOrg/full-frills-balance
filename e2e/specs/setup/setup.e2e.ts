@@ -1,4 +1,4 @@
-import { device } from 'detox';
+import { by, device, element, expect } from 'detox';
 import { setupOnboardingActions } from '../../actions/onboarding';
 import {
   launchFreshApp,
@@ -47,7 +47,7 @@ describe('Setup journeys', () => {
     await relaunchPreservingData();
     await setupOnboardingActions.waitForRestoreSummary();
     await setupOnboardingActions.continueRestoreSummary();
-    await setupOnboardingActions.finishSummary('E2E Restore User');
     await waitForDashboard();
+    await expect(element(by.label(/Open navigation drawer\. E2E Restore User\./))).toExist();
   });
 });

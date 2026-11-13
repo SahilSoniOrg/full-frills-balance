@@ -64,10 +64,6 @@ it('offers a uniquely implied FX rate and keeps imported account amounts during 
   await device.takeScreenshot('restore-same-currency-journal-flagged');
   await element(by.id('restore-journal-ignore-restore-invalid-same-currency-journal')).tap();
 
-  await waitFor(element(by.id('onboarding-summary-step')))
-    .toExist()
-    .withTimeout(60000);
-  await element(by.id('onboarding-finish-button')).tap();
   await waitFor(element(by.text('Restore changes applied')))
     .toExist()
     .withTimeout(60000);

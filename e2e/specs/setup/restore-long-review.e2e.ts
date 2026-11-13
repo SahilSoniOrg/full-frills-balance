@@ -54,11 +54,6 @@ it('preserves review scroll and keeps the restore action reachable for a long re
     }
   }
 
-  await waitFor(element(by.id('onboarding-summary-step')))
-    .toExist()
-    .withTimeout(60000);
-  await element(by.id('onboarding-finish-button')).tap();
-
   await waitFor(element(by.text('Restore changes applied')))
     .toExist()
     .withTimeout(60000);

@@ -285,10 +285,7 @@ describe('SetupCoordinator', () => {
       effects: { publishRestore, commitDevice: mockCommitDevice },
     });
 
-    await expect(coordinator.runPendingEffect()).resolves.toMatchObject({
-      kind: 'present',
-      sliceId: 'summary',
-    });
+    await expect(coordinator.runPendingEffect()).resolves.toEqual({ kind: 'finish' });
     expect(mockCommitDevice).toHaveBeenCalledWith(device);
     expect(coordinator.getDraft().acceptedSlices).toContain('device');
   });
