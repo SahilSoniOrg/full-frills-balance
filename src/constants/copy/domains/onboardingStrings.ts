@@ -13,7 +13,7 @@ export const ONBOARDING_STRINGS = {
   workspaceHint: 'A workplace keeps your accounts and money together. You can change it later.',
   continue: 'Continue',
   addLater: 'I’ll add this later',
-  stageSpace: 'Workplace',
+  stageCurrency: 'Currency',
   stageNow: 'Now',
   stageNext: 'Next',
   stageProtect: 'Protect',

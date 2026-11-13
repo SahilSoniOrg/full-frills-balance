@@ -12,7 +12,7 @@ export type OnboardingFlowEntry = {
  */
 export const ONBOARDING_FLOW: readonly OnboardingFlowEntry[] = [
   { step: 'welcome' },
-  { step: 'currency', progressName: copy.stageSpace },
+  { step: 'currency', progressName: copy.stageCurrency },
   { step: 'now', progressName: copy.stageNow },
   { step: 'next', progressName: copy.stageNext },
   { step: 'protect', progressName: copy.stageProtect },
