@@ -15,6 +15,40 @@ import { projectCashClarityDraft } from './projectCashClarityDraft';
 import { formatDraftAmount } from './spokenConfirm';
 
 type Identified = { readonly id: string };
+
+function amountWasEdited<T extends Identified>(
+  previous: readonly T[],
+  current: readonly T[],
+  amount: (item: T) => unknown,
+): boolean {
+  return current.some(item => {
+    const before = previous.find(candidate => candidate.id === item.id);
+    return before != null && amount(before) !== amount(item);
+  });
+}
+
+function hasAmountEdit(previous: CashClarityDraft, current: CashClarityDraft): boolean {
+  return (
+    amountWasEdited(previous.accounts, current.accounts, item => item.balance) ||
+    amountWasEdited(previous.accounts, current.accounts, item => item.cardPaymentAmount) ||
+    amountWasEdited(
+      previous.income.kind === 'recurring' ? previous.income.items : [],
+      current.income.kind === 'recurring' ? current.income.items : [],
+      item => item.amount,
+    ) ||
+    amountWasEdited(
+      previous.commitment.kind === 'payment' ? previous.commitment.items : [],
+      current.commitment.kind === 'payment' ? current.commitment.items : [],
+      item => item.amount,
+    ) ||
+    amountWasEdited(
+      previous.budget.kind === 'set' ? previous.budget.items : [],
+      current.budget.kind === 'set' ? current.budget.items : [],
+      item => item.amount,
+    )
+  );
+}
+
 type ListChangeLabels<T extends Identified> = {
   added: (item: T) => string;
   removed: (item: T) => string;
@@ -154,6 +188,10 @@ export function explainDraftTransition(
     currentSafeToSpend - previousSafeToSpend,
     CurrencyFormatter.getPrecisionFallback(current.currency),
   );
+  // Each keystroke is a draft mutation, so its delta is not the amount the user entered.
+  if (delta !== 0 && hasAmountEdit(previous, current)) {
+    return copy.changeSafeToSpendUpdated(reason);
+  }
   if (delta > 0) {
     return copy.changeSafeToSpendAdded(formatDraftAmount(delta, current.currency), reason);
   }

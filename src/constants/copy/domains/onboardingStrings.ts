@@ -160,4 +160,5 @@ export const ONBOARDING_STRINGS = {
   changeSafeToSpendHeld: (amount: string, reason: string) =>
     `${amount} held from Safe to Spend — ${reason}`,
   changeSafeToSpendUnchanged: (reason: string) => `Safe to Spend unchanged — ${reason}`,
+  changeSafeToSpendUpdated: (reason: string) => `Safe to Spend updated — ${reason}`,
 } as const;
