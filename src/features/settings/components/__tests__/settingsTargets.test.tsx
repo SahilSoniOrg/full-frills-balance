@@ -169,12 +169,15 @@ const screens: Record<string, () => ReactElement> = {
     <CaptureWorkspaceView
       onOpenSmsSettings={fn()}
       capture={emptyCaptureViewModel}
+      gmailSettingsEnabled
       hasAutomaticCaptureSource
       captureSourceLoading={false}
       gmailSection={
         <GmailCaptureSettingsSection
+          featureEnabled
           gmail={{
             connected: false,
+            featureEnabled: true,
             backgroundEnabled: false,
             automaticCaptureEnabled: false,
             syncState: 'idle',

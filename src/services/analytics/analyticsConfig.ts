@@ -6,7 +6,9 @@ import { preferences } from '@/src/services/preferences';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
+import * as Updates from 'expo-updates';
 import { Platform } from 'react-native';
+import { sanitizeGlobalAnalyticsProperties } from '@/src/utils/observabilityPrivacy';
 
 export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 export const BUILD_TYPE = readAppVariant();
@@ -67,4 +69,61 @@ export function getGlobalProperties(): AnalyticsProperties {
       $build_type: BUILD_TYPE || 'unknown',
     };
   }
+}
+
+/** Safe install and runtime context sent specifically with PostHog flag evaluations. */
+export function getFeatureFlagProperties(
+  distinctId: string,
+): Record<string, string | number | boolean> {
+  const globalProperties = sanitizeGlobalAnalyticsProperties(getGlobalProperties());
+  const propertyKeys = [
+    '$app_version',
+    '$app_build',
+    '$app_build_number',
+    '$os_name',
+    '$os_version',
+    '$is_tablet',
+    '$is_dev',
+    '$app_variant',
+    '$build_type',
+    '$db_schema_version',
+    'is_test_build',
+  ] as const;
+  const properties: Record<string, string | number | boolean> = {};
+  for (const key of propertyKeys) {
+    const value = globalProperties[key];
+    if (value !== undefined) properties[key] = value;
+  }
+
+  const nativePlatform = Platform.OS === 'ios' || Platform.OS === 'android';
+  const deviceTypes: Record<number, string> = {
+    [Device.DeviceType.UNKNOWN]: 'unknown',
+    [Device.DeviceType.PHONE]: 'phone',
+    [Device.DeviceType.TABLET]: 'tablet',
+    [Device.DeviceType.DESKTOP]: 'desktop',
+    [Device.DeviceType.TV]: 'tv',
+  };
+  const updateChannel = Updates.channel;
+  const identityKind = distinctId.match(/^(anon|dev|preview|e2e|sim)_/)?.[1];
+
+  properties.platform = Platform.OS;
+  properties.device_type = nativePlatform
+    ? (deviceTypes[Device.deviceType ?? Device.DeviceType.UNKNOWN] ?? 'unknown')
+    : Platform.OS === 'web'
+      ? 'web'
+      : 'unknown';
+  properties.$os_version = properties.$os_version || Device.osVersion || 'unknown';
+  properties.is_emulator = nativePlatform && Device.isDevice === false;
+  properties.install_kind = identityKind ?? 'unknown';
+  properties.update_channel =
+    typeof updateChannel === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(updateChannel)
+      ? updateChannel
+      : 'none';
+
+  const deviceModel = Device.modelName;
+  if (typeof deviceModel === 'string' && /^[A-Za-z0-9][A-Za-z0-9 ._()+/-]{0,79}$/.test(deviceModel))
+    properties.device_model = deviceModel;
+  else properties.device_model = 'unknown';
+
+  return properties;
 }

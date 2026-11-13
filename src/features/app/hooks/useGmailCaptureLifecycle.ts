@@ -5,22 +5,27 @@ import { cancelGmailSync, syncGmailForWorkplace } from '@/src/services/email/gma
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import { gmailBinding } from '@/src/services/email/gmailConnection';
-import { registerGmailBackgroundTask } from '@/src/services/email/gmailBackgroundTask';
+import {
+  registerGmailBackgroundTask,
+  unregisterGmailBackgroundTask,
+} from '@/src/services/email/gmailBackgroundTask';
+import { usePostHogFeatureFlag } from '@/src/hooks/usePostHogFeatureFlag';
+import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
 
 /** Check connected mail only while the current workplace is open and the app is unlocked. */
 export function useGmailCaptureLifecycle(): void {
   const { workplaceId, isSwitchingWorkplace } = useWorkplace();
   const { isAppCurrentlyLocked } = useAppLock();
   const { isAppReady, isDataHydrated } = useAppReady();
+  const gmailFeatureEnabled = usePostHogFeatureFlag(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings);
   useEffect(() => {
-    if (
-      Platform.OS === 'web' ||
-      isAppCurrentlyLocked ||
-      isSwitchingWorkplace ||
-      !isAppReady ||
-      !isDataHydrated
-    )
+    if (Platform.OS === 'web') return;
+    if (!gmailFeatureEnabled) {
+      cancelGmailSync(workplaceId);
+      void unregisterGmailBackgroundTask().catch(() => {});
       return;
+    }
+    if (isAppCurrentlyLocked || isSwitchingWorkplace || !isAppReady || !isDataHydrated) return;
     const controller = new AbortController();
     if (gmailBinding(workplaceId)?.backgroundEnabled) {
       void registerGmailBackgroundTask().catch(() => {});
@@ -42,5 +47,12 @@ export function useGmailCaptureLifecycle(): void {
       clearInterval(interval);
       subscription.remove();
     };
-  }, [workplaceId, isAppCurrentlyLocked, isSwitchingWorkplace, isAppReady, isDataHydrated]);
+  }, [
+    workplaceId,
+    isAppCurrentlyLocked,
+    isSwitchingWorkplace,
+    isAppReady,
+    isDataHydrated,
+    gmailFeatureEnabled,
+  ]);
 }

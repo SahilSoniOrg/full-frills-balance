@@ -11,6 +11,7 @@ import { registerGmailBackgroundTask } from '@/src/services/email/gmailBackgroun
 import { cancelGmailSync, syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { analytics } from '@/src/services/analytics';
+import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
 import { toast } from '@/src/utils/alerts';
 import type { WorkplaceId } from '@/src/types/ids';
 
@@ -28,14 +29,20 @@ export function useGmailCaptureActions({
   mutations,
   loading,
   connected,
+  featureEnabled,
 }: {
   mutations: MutationRunner;
   loading: boolean;
   connected: boolean;
+  featureEnabled: boolean;
 }) {
+  const featureEnabledNow = () =>
+    featureEnabled &&
+    analytics.isFeatureFlagEnabledFromLastFetch(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings);
+
   return {
     onToggleGmail: () => {
-      if (loading) return;
+      if (loading || (!connected && !featureEnabledNow())) return;
       mutations.confirmAndRun(
         {
           title: connected ? gmailCaptureStrings.disconnectTitle : gmailCaptureStrings.connectTitle,
@@ -53,7 +60,7 @@ export function useGmailCaptureActions({
             const result = await disconnectGmailForWorkplace(currentWorkplaceId);
             analytics.trackFeatureUsage('gmail', 'disconnect');
             if (result === 'failed') toast.warning(gmailCaptureStrings.disconnectRevocationFailed);
-          } else if (await connectGmailForWorkplace(currentWorkplaceId)) {
+          } else if (featureEnabledNow() && (await connectGmailForWorkplace(currentWorkplaceId))) {
             analytics.trackFeatureUsage('gmail', 'connect');
             void syncGmailForWorkplace(currentWorkplaceId).catch(() => {});
           }
@@ -62,7 +69,7 @@ export function useGmailCaptureActions({
       );
     },
     onReconnectGmail: () => {
-      if (loading) return;
+      if (loading || !featureEnabledNow()) return;
       void mutations.run(
         async currentWorkplaceId => {
           if (await connectGmailForWorkplace(currentWorkplaceId, true)) {
@@ -74,8 +81,9 @@ export function useGmailCaptureActions({
       );
     },
     onToggleGmailBackground: (enabled: boolean) => {
-      if (loading || !connected) return;
+      if (loading || !connected || (enabled && !featureEnabledNow())) return;
       const apply = async (currentWorkplaceId: WorkplaceId) => {
+        if (enabled && !featureEnabledNow()) return;
         if (enabled && !(await registerGmailBackgroundTask()))
           throw new Error(gmailCaptureStrings.backgroundUnavailable);
         await setGmailBackgroundEnabled(currentWorkplaceId, enabled);
@@ -104,8 +112,9 @@ export function useGmailCaptureActions({
       }
     },
     onToggleGmailAutomaticCapture: (enabled: boolean) => {
-      if (loading || !connected) return;
+      if (loading || !connected || (enabled && !featureEnabledNow())) return;
       const apply = async (currentWorkplaceId: WorkplaceId) => {
+        if (enabled && !featureEnabledNow()) return;
         if (!enabled) cancelGmailSync(currentWorkplaceId);
         await setGmailAutomaticCapture(currentWorkplaceId, enabled);
         analytics.trackFeatureUsage('gmail', 'toggle_automatic_capture', { enabled });

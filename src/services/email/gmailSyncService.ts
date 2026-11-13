@@ -14,11 +14,17 @@ import {
 } from './gmailApi';
 import { ingestGmailObservation } from './gmailIngestion';
 import { analytics } from '@/src/services/analytics';
+import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
 import { BehaviorSubject } from 'rxjs';
 import { logger } from '@/src/utils/logger';
 
 const active = new Map<WorkplaceId, { task: Promise<void>; controller: AbortController }>();
 const states = new Map<WorkplaceId, BehaviorSubject<'idle' | 'syncing' | 'ok' | 'error'>>();
+
+analytics.subscribeToFeatureFlags(() => {
+  if (analytics.isFeatureFlagEnabled(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings)) return;
+  for (const { controller } of active.values()) controller.abort();
+});
 
 /** Read the current state without creating a subscription during render. */
 export function getGmailSyncState(workplaceId: WorkplaceId) {
@@ -39,15 +45,22 @@ async function sync(
   signal?: AbortSignal,
   retry = true,
   shouldContinue?: () => boolean,
+  featureFlagDistinctId?: string,
 ): Promise<void> {
   const binding = gmailBinding(workplaceId);
-  if (!binding || signal?.aborted || shouldContinue?.() === false) return;
+  const canContinue = () =>
+    analytics.isFeatureFlagEnabledFromLastFetch(
+      POSTHOG_FEATURE_FLAGS.gmailCaptureSettings,
+      featureFlagDistinctId,
+    ) && shouldContinue?.() !== false;
+  if (!binding || signal?.aborted || !canContinue()) return;
   logger.debug('[Gmail] Sync started', {
     connectedAt: new Date(binding.connectedAt).toISOString(),
     hasHistoryCursor: !!binding.historyId,
     automaticCaptureEnabled: !!binding.automaticCaptureEnabledAt,
   });
   const credentials = await gmailAccessToken(shouldContinue ? binding.accountId : undefined);
+  if (signal?.aborted || !canContinue()) return;
   if (!credentials || credentials.accountId !== binding.accountId)
     throw new Error('Reconnect Gmail for this workplace.');
   const { accessToken } = credentials;
@@ -55,7 +68,7 @@ async function sync(
   let capturedCount = 0;
   const processIds = async (ids: readonly string[]) => {
     for (const id of ids) {
-      if (signal?.aborted || shouldContinue?.() === false) throw new Error('Gmail sync cancelled.');
+      if (signal?.aborted || !canContinue()) throw new Error('Gmail sync cancelled.');
       const sourceId = `gmail:${hashLegacySmsFingerprint(`${binding.accountId}:${id}`)}`;
       if (
         (await transactionInboxRepository.findEmailCopies(sourceId)).some(
@@ -85,7 +98,7 @@ async function sync(
             message,
             {
               signal,
-              shouldContinue,
+              shouldContinue: canContinue,
               accessToken,
               recipientEmail: credentials.email,
             },
@@ -127,7 +140,7 @@ async function sync(
   } catch (error) {
     if (error instanceof GmailApiError && error.status === 401 && retry && !signal?.aborted) {
       await invalidateGmailAccessToken(accessToken);
-      return sync(workplaceId, signal, false, shouldContinue);
+      return sync(workplaceId, signal, false, shouldContinue, featureFlagDistinctId);
     }
     if (!(error instanceof GmailApiError) || error.status !== 404) throw error;
     logger.debug('[Gmail] Scanning from connection cutoff', {
@@ -154,7 +167,7 @@ async function sync(
         !signal?.aborted
       ) {
         await invalidateGmailAccessToken(accessToken);
-        return sync(workplaceId, signal, false, shouldContinue);
+        return sync(workplaceId, signal, false, shouldContinue, featureFlagDistinctId);
       }
       throw recoveryError;
     }
@@ -164,13 +177,13 @@ async function sync(
       count: capturedCount,
       channel: 'email',
     });
-  if (!nextHistoryId || signal?.aborted || shouldContinue?.() === false) return;
+  if (!nextHistoryId || signal?.aborted || !canContinue()) return;
   if (deferHistoryAdvance) {
     logger.debug('[Gmail] History cursor deferred', { reason: 'retryable_message_unread' });
     return;
   }
   await runAccountingWriteSession(async () => {
-    if (!signal?.aborted && shouldContinue?.() !== false)
+    if (!signal?.aborted && canContinue())
       advanceGmailHistory(workplaceId, binding, nextHistoryId!);
   });
   logger.debug('[Gmail] Sync completed');
@@ -181,7 +194,17 @@ export function syncGmailForWorkplace(
   workplaceId: WorkplaceId,
   signal?: AbortSignal,
   shouldContinue?: () => boolean,
+  featureFlagDistinctId?: string,
 ): Promise<void> {
+  if (
+    !analytics.isFeatureFlagEnabledFromLastFetch(
+      POSTHOG_FEATURE_FLAGS.gmailCaptureSettings,
+      featureFlagDistinctId,
+    )
+  ) {
+    cancelGmailSync(workplaceId);
+    return Promise.resolve();
+  }
   const current = active.get(workplaceId);
   if (current) return current.task;
   const controller = new AbortController();
@@ -190,7 +213,7 @@ export function syncGmailForWorkplace(
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   else signal?.addEventListener('abort', abort, { once: true });
-  const task = sync(workplaceId, controller.signal, true, shouldContinue)
+  const task = sync(workplaceId, controller.signal, true, shouldContinue, featureFlagDistinctId)
     .then(
       () => {
         state.next(controller.signal.aborted ? 'idle' : 'ok');

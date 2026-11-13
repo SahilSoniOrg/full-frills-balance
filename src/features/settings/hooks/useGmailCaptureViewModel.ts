@@ -3,6 +3,8 @@ import { gmailBinding } from '@/src/services/email/gmailConnection';
 import { getGmailSyncState, gmailSyncState } from '@/src/services/email/gmailSyncService';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { useGmailCaptureActions } from '@/src/features/settings/hooks/useGmailCaptureActions';
+import { usePostHogFeatureFlag } from '@/src/hooks/usePostHogFeatureFlag';
+import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -12,6 +14,7 @@ type GmailSnapshot = { workplaceId: WorkplaceId; binding: GmailBinding };
 
 export function useGmailCaptureViewModel() {
   const { workplaceId } = useWorkplace();
+  const featureEnabled = usePostHogFeatureFlag(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings);
   const loadGeneration = useRef(0);
   const mutationEpoch = useRef(0);
   const [snapshot, setSnapshot] = useState<GmailSnapshot | null>(null);
@@ -59,9 +62,11 @@ export function useGmailCaptureViewModel() {
     mutations,
     loading: loading || !snapshot || snapshot.workplaceId !== workplaceId,
     connected: !!current,
+    featureEnabled,
   });
 
   return {
+    featureEnabled,
     connected: !!current,
     backgroundEnabled: current?.backgroundEnabled === true,
     automaticCaptureEnabled: !!current?.automaticCaptureEnabledAt,

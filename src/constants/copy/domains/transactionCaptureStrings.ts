@@ -166,8 +166,11 @@ export const transactionCaptureStrings = {
     'Enable automatic SMS import or Gmail capture under Message sources to use automatic capture for this workplace.',
   captureSourceRequired:
     'Connect Gmail and enable Gmail capture under Message sources to use automatic capture for this workplace.',
-  noAutomaticSourceEnabled:
-    'No message source is enabled for automatic capture. Enable a source above, or turn off this workplace setting.',
+  captureSourceRequiredAndroidWithoutGmail:
+    'Enable automatic SMS import under Message sources to use automatic capture for this workplace.',
+  captureSourceUnavailableWithoutGmail:
+    'Automatic capture has no available message source on this device.',
+  noAutomaticSourceEnabled: 'No message source is enabled for automatic capture.',
   retry: 'Try again',
   inboxChannelSpoken: 'Spoken',
   inboxChannelEmail: 'Email',

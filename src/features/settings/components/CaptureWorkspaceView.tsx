@@ -22,6 +22,7 @@ interface CaptureWorkspaceViewProps {
   onOpenSmsSettings: () => void;
   capture: TransactionCaptureViewModel;
   gmailSection: ReactNode;
+  gmailSettingsEnabled?: boolean;
   hasAutomaticCaptureSource: boolean;
   captureSourceLoading: boolean;
 }
@@ -30,6 +31,7 @@ export function CaptureWorkspaceView({
   onOpenSmsSettings,
   capture,
   gmailSection,
+  gmailSettingsEnabled = false,
   hasAutomaticCaptureSource,
   captureSourceLoading,
 }: CaptureWorkspaceViewProps) {
@@ -108,9 +110,13 @@ export function CaptureWorkspaceView({
           ) : (
             <AppCard variant="secondary" paddingSize="sm">
               <AppText variant="bodySmall" color="secondary">
-                {Platform.OS === 'android'
-                  ? strings.captureSourceRequiredAndroid
-                  : strings.captureSourceRequired}
+                {gmailSettingsEnabled
+                  ? Platform.OS === 'android'
+                    ? strings.captureSourceRequiredAndroid
+                    : strings.captureSourceRequired
+                  : Platform.OS === 'android'
+                    ? strings.captureSourceRequiredAndroidWithoutGmail
+                    : strings.captureSourceUnavailableWithoutGmail}
               </AppText>
             </AppCard>
           )}
@@ -202,7 +208,7 @@ function ConnectedSourcesSection({
   gmailSection: ReactNode;
 }) {
   const showSms = Platform.OS === 'android';
-  const showGmail = Platform.OS !== 'web';
+  const showGmail = Platform.OS !== 'web' && gmailSection !== null;
   if (!showSms && !showGmail) return null;
   return (
     <Stack space="sm">
@@ -238,6 +244,7 @@ function CaptureWorkspaceScreen() {
         onOpenSmsSettings={AppNavigation.toSmsSettings}
         capture={capture}
         gmailSection={null}
+        gmailSettingsEnabled={false}
         hasAutomaticCaptureSource={false}
         captureSourceLoading={false}
       />
@@ -252,16 +259,21 @@ function NativeCaptureWorkspaceView({ capture }: { capture: TransactionCaptureVi
   const gmail = useGmailCaptureViewModel();
   const hasAutomaticCaptureSource =
     (Platform.OS === 'android' && smsPrefs.isAutomaticSmsImportEnabled) ||
-    (gmail.connected && gmail.automaticCaptureEnabled);
+    (gmail.featureEnabled && gmail.connected && gmail.automaticCaptureEnabled);
 
   return (
     <CaptureWorkspaceView
       key={capture.workplaceId}
       onOpenSmsSettings={AppNavigation.toSmsSettings}
       capture={capture}
-      gmailSection={<GmailCaptureSettingsSection gmail={gmail} />}
+      gmailSection={
+        gmail.featureEnabled || gmail.connected ? (
+          <GmailCaptureSettingsSection gmail={gmail} featureEnabled={gmail.featureEnabled} />
+        ) : null
+      }
+      gmailSettingsEnabled={gmail.featureEnabled}
       hasAutomaticCaptureSource={hasAutomaticCaptureSource}
-      captureSourceLoading={!hasAutomaticCaptureSource && gmail.loading}
+      captureSourceLoading={gmail.featureEnabled && !hasAutomaticCaptureSource && gmail.loading}
     />
   );
 }

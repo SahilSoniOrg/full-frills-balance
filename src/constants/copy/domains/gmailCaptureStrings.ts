@@ -2,6 +2,8 @@ export const gmailCaptureStrings = {
   title: 'Gmail',
   connected: 'Connected. New Inbox mail is checked while open.',
   disconnected: 'Connect Gmail to find new transaction emails.',
+  featurePaused:
+    'Gmail is paused and will not check messages. Tap to disconnect or turn off the saved options below.',
   accountHelp: 'Recognize an account from Gmail',
   accountHelpDescription:
     'Open an account and add the complete sender address under Message recognition.',
@@ -13,11 +15,15 @@ export const gmailCaptureStrings = {
   backgroundAction: 'Enable background checks',
   backgroundSetting: 'Background Gmail checks',
   backgroundDescription: 'Runs when the device permits. Paused while app lock is enabled.',
+  backgroundPaused:
+    'Paused now. Turn this off to keep background checks off if Gmail becomes available again.',
   backgroundUnavailable:
     'Background checks are unavailable on this device. Gmail can still be checked while the app is open.',
   automaticSetting: 'Capture verified Gmail transactions',
   automaticDescription:
     'Requires automatic capture and a matching account pattern. Unverified emails stay in review.',
+  automaticPaused:
+    'Paused now. Turn this off to keep automatic capture off if Gmail becomes available again.',
   automaticTitle: 'Capture verified Gmail transactions?',
   automaticMessage:
     'For new matching bank emails, the app checks the sender’s signature and looks up its public key using Google Public DNS. The sender domain and key selector are sent to Google DNS; email content stays on this device. Supported verified transactions can create journals when automatic capture is enabled. Other emails need review.',

@@ -11,7 +11,9 @@ import {
 } from '@/src/utils/observabilityPrivacy';
 import * as Sentry from '@sentry/react-native';
 import PostHog from 'posthog-react-native';
+import { AppState } from 'react-native';
 import {
+  getFeatureFlagProperties,
   getGlobalProperties,
   navigationIntegration,
   RESOLVED_POSTHOG_API_KEY,
@@ -23,9 +25,56 @@ import {
   type AnalyticsProperties,
 } from './analyticsConfig';
 import { FeatureEventMap, KnownFeature } from './featureEventCatalog';
+import { storage } from '@/src/utils/storage';
+import { safeParseJSON } from '@/src/utils/serialization';
+
+const FEATURE_FLAG_CACHE_KEY = 'analytics.posthog.feature-flags';
+// Headless tasks use the persisted flag snapshot. Expire permission so an
+// inactive install cannot keep background Gmail access indefinitely.
+const FEATURE_FLAG_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+interface CachedFeatureFlags {
+  distinctId: string;
+  evaluatedAt: number;
+  values: Record<string, boolean | string>;
+}
+
+function featureFlagValues(value: unknown): Record<string, boolean | string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const flags: Record<string, boolean | string> = {};
+  for (const [key, flag] of Object.entries(value)) {
+    if (typeof flag === 'boolean' || typeof flag === 'string') flags[key] = flag;
+  }
+  return flags;
+}
+
+function readCachedFeatureFlags(): CachedFeatureFlags | null {
+  const raw = storage.getString(FEATURE_FLAG_CACHE_KEY);
+  const parsed = raw ? safeParseJSON<Record<string, unknown> | null>(raw, null) : null;
+  if (
+    !parsed ||
+    typeof parsed.distinctId !== 'string' ||
+    typeof parsed.evaluatedAt !== 'number' ||
+    !Number.isFinite(parsed.evaluatedAt)
+  )
+    return null;
+  return {
+    distinctId: parsed.distinctId,
+    evaluatedAt: parsed.evaluatedAt,
+    values: featureFlagValues(parsed.values),
+  };
+}
 
 export class AnalyticsService {
   private _posthog: PostHog | null = null;
+  private _posthogFeatureFlagUnsubscribe: (() => void) | null = null;
+  private featureFlagListeners = new Set<() => void>();
+  private identifiedDistinctId: string | null = null;
+  private featureFlagsReady = false;
+  private featureFlagRefreshPending = false;
+  private cachedFeatureFlags = readCachedFeatureFlags();
+  private featureFlagExpiryTimer: ReturnType<typeof setTimeout> | null = null;
+  private posthogAppStateSubscription: { remove: () => void } | null = null;
   private _initialized = false;
   private sessionStartTime = 0;
   private sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,10 +124,7 @@ export class AnalyticsService {
   delayedInitializePostHog() {
     if (this._posthog) return;
 
-    const isPosthogEnabled =
-      typeof RESOLVED_POSTHOG_API_KEY === 'string' &&
-      RESOLVED_POSTHOG_API_KEY.trim().length > 0 &&
-      AppConfig.features.enablePostHog;
+    const isPosthogEnabled = this.isPostHogConfigured();
 
     if (isPosthogEnabled) {
       try {
@@ -90,9 +136,20 @@ export class AnalyticsService {
           capturePushNotificationSubscriptions: false,
           capturePushNotificationOpened: false,
           enablePersistSessionIdAcrossRestart: true,
+          // The app identifies its stable anonymous device ID immediately after init.
+          // Avoid evaluating flags against PostHog's temporary SDK-generated ID first.
+          preloadFeatureFlags: false,
           customAppProperties: props =>
             sanitizeGlobalAnalyticsProperties({ ...props, ...getGlobalProperties() }),
           enableSessionReplay: false,
+        });
+
+        this._posthogFeatureFlagUnsubscribe?.();
+        this._posthogFeatureFlagUnsubscribe =
+          this._posthog.onFeatureFlags?.(flags => this.recordFeatureFlags(flags)) ?? null;
+        this.posthogAppStateSubscription?.remove();
+        this.posthogAppStateSubscription = AppState.addEventListener('change', state => {
+          if (state === 'active') this.refreshFeatureFlags();
         });
 
         // Sync user with Sentry once PostHog is ready
@@ -112,6 +169,14 @@ export class AnalyticsService {
     }
 
     this._initialized = true;
+  }
+
+  private isPostHogConfigured(): boolean {
+    return (
+      typeof RESOLVED_POSTHOG_API_KEY === 'string' &&
+      RESOLVED_POSTHOG_API_KEY.trim().length > 0 &&
+      AppConfig.features.enablePostHog
+    );
   }
 
   /**
@@ -176,6 +241,123 @@ export class AnalyticsService {
     }
   }
 
+  /** Read a cached PostHog flag without emitting a `$feature_flag_called` event. */
+  isFeatureFlagEnabled(key: string): boolean {
+    if (
+      !this.featureFlagsReady ||
+      this.featureFlagRefreshPending ||
+      !this.isPostHogConfigured() ||
+      !this.hasFreshFeatureFlagSnapshot(this.identifiedDistinctId)
+    )
+      return false;
+    try {
+      return this._posthog?.getFeatureFlag?.(key, { sendEvent: false }) === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Last PostHog evaluation, including the persisted snapshot used by headless tasks. */
+  isFeatureFlagEnabledFromLastFetch(key: string, expectedDistinctId?: string): boolean {
+    const distinctId = expectedDistinctId ?? this.identifiedDistinctId;
+    if (!this.isPostHogConfigured() || !distinctId || !this.hasFreshFeatureFlagSnapshot(distinctId))
+      return false;
+    if (this.featureFlagRefreshPending) return false;
+    if (!expectedDistinctId && !this.featureFlagsReady) return false;
+    if (this.featureFlagsReady) return this.isFeatureFlagEnabled(key);
+    if (this.cachedFeatureFlags?.distinctId !== expectedDistinctId) return false;
+    return this.cachedFeatureFlags?.values[key] === true;
+  }
+
+  private hasFreshFeatureFlagSnapshot(distinctId: string | null): boolean {
+    const snapshot = this.cachedFeatureFlags;
+    if (!snapshot || !distinctId || snapshot.distinctId !== distinctId) return false;
+    const age = Date.now() - snapshot.evaluatedAt;
+    return age >= 0 && age <= FEATURE_FLAG_CACHE_MAX_AGE_MS;
+  }
+
+  private invalidateCachedFeatureFlags(distinctId: string) {
+    if (this.featureFlagExpiryTimer) clearTimeout(this.featureFlagExpiryTimer);
+    this.featureFlagExpiryTimer = null;
+    this.cachedFeatureFlags = { distinctId, evaluatedAt: 0, values: {} };
+    try {
+      storage.set(FEATURE_FLAG_CACHE_KEY, JSON.stringify(this.cachedFeatureFlags));
+    } catch (error) {
+      logger.warn('[Analytics] Could not invalidate cached feature flags', { error });
+    }
+  }
+
+  private refreshFeatureFlags() {
+    if (!this._posthog || !this.identifiedDistinctId || !this.isPostHogConfigured()) return;
+    this.featureFlagRefreshPending = true;
+    this.featureFlagsReady = false;
+    this.invalidateCachedFeatureFlags(this.identifiedDistinctId);
+    this.notifyFeatureFlagListeners();
+    void this._posthog
+      .reloadFeatureFlagsAsync()
+      .then(flags => {
+        // onFeatureFlags normally stores this first; keep a fallback for SDK responses
+        // that resolve without notifying listeners.
+        if (this.featureFlagRefreshPending && flags) this.recordFeatureFlags(flags);
+      })
+      .catch(error => {
+        logger.warn('[Analytics] Could not refresh feature flags', { error });
+        // Keep the app fail-closed until a later successful refresh.
+      });
+  }
+
+  private scheduleFeatureFlagExpiry() {
+    if (this.featureFlagExpiryTimer) clearTimeout(this.featureFlagExpiryTimer);
+    const snapshot = this.cachedFeatureFlags;
+    if (!snapshot) {
+      this.featureFlagExpiryTimer = null;
+      return;
+    }
+    const remaining = snapshot.evaluatedAt + FEATURE_FLAG_CACHE_MAX_AGE_MS - Date.now();
+    if (remaining <= 0) {
+      this.featureFlagsReady = false;
+      this.featureFlagExpiryTimer = null;
+      this.notifyFeatureFlagListeners();
+      return;
+    }
+    this.featureFlagExpiryTimer = setTimeout(() => {
+      if (this.cachedFeatureFlags !== snapshot) return;
+      this.featureFlagsReady = false;
+      this.featureFlagExpiryTimer = null;
+      this.notifyFeatureFlagListeners();
+    }, remaining);
+  }
+
+  private recordFeatureFlags(flags: Record<string, boolean | string>) {
+    if (!this.identifiedDistinctId) return;
+    this.featureFlagsReady = true;
+    this.featureFlagRefreshPending = false;
+    this.cachedFeatureFlags = {
+      distinctId: this.identifiedDistinctId,
+      evaluatedAt: Date.now(),
+      values: featureFlagValues(flags),
+    };
+    try {
+      storage.set(FEATURE_FLAG_CACHE_KEY, JSON.stringify(this.cachedFeatureFlags));
+    } catch (error) {
+      logger.warn('[Analytics] Could not persist feature flag state', { error });
+    }
+    this.scheduleFeatureFlagExpiry();
+    this.notifyFeatureFlagListeners();
+  }
+
+  /** Subscribe to remote feature flag updates. Missing or unavailable flags stay off. */
+  subscribeToFeatureFlags(onChange: () => void): () => void {
+    this.featureFlagListeners.add(onChange);
+    return () => {
+      this.featureFlagListeners.delete(onChange);
+    };
+  }
+
+  private notifyFeatureFlagListeners() {
+    this.featureFlagListeners.forEach(listener => listener());
+  }
+
   /**
    * Identify the user/device with enhanced properties
    */
@@ -185,7 +367,19 @@ export class AnalyticsService {
     if (!this._posthog) return;
 
     try {
+      const existingDistinctId = this._posthog.getDistinctId();
+      if (this.identifiedDistinctId !== safeId) {
+        this.identifiedDistinctId = safeId;
+        this.featureFlagsReady = false;
+        this.featureFlagRefreshPending = true;
+        this.invalidateCachedFeatureFlags(safeId);
+        this.notifyFeatureFlagListeners();
+      }
+      this._posthog.setPersonPropertiesForFlags(getFeatureFlagProperties(safeId), false);
       this._posthog.identify(safeId);
+      // A same-ID identify does not reload flags in the SDK. The first launch's
+      // identify transition already triggers a request; later launches need this.
+      if (!existingDistinctId || existingDistinctId === safeId) this.refreshFeatureFlags();
       if (__DEV__) {
         logger.debug('[Analytics] Identified anonymous device');
       }

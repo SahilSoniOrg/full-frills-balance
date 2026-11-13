@@ -7,10 +7,12 @@ import { Platform } from 'react-native';
 
 export function GmailCaptureSettingsSection({
   gmail,
+  featureEnabled,
 }: {
   gmail: ReturnType<typeof useGmailCaptureViewModel>;
+  featureEnabled: boolean;
 }) {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web' || (!featureEnabled && !gmail.connected)) return null;
 
   return (
     <ListGroup variant="plain">
@@ -19,17 +21,19 @@ export function GmailCaptureSettingsSection({
         icon={Icon.Mail}
         title={strings.title}
         subtitle={
-          gmail.connected
-            ? gmail.syncState === 'error'
-              ? strings.syncError
-              : strings.connected
-            : strings.disconnected
+          !featureEnabled
+            ? strings.featurePaused
+            : gmail.connected
+              ? gmail.syncState === 'error'
+                ? strings.syncError
+                : strings.connected
+              : strings.disconnected
         }
         disabled={gmail.loading || gmail.busy}
         onPress={gmail.onToggleGmail}
         testID="transaction-capture-gmail"
       />
-      {gmail.connected && gmail.syncState === 'error' ? (
+      {featureEnabled && gmail.connected && gmail.syncState === 'error' ? (
         <AppButton variant="ghost" disabled={gmail.busy} onPress={gmail.onReconnectGmail}>
           {strings.reconnect}
         </AppButton>
@@ -39,8 +43,8 @@ export function GmailCaptureSettingsSection({
           focusId="transaction-capture-gmail-background"
           icon={Icon.History}
           title={strings.backgroundSetting}
-          subtitle={strings.backgroundDescription}
-          disabled={gmail.loading || gmail.busy}
+          subtitle={!featureEnabled ? strings.backgroundPaused : strings.backgroundDescription}
+          disabled={gmail.loading || gmail.busy || (!featureEnabled && !gmail.backgroundEnabled)}
           trailing={
             <ListRow.Toggle
               value={gmail.backgroundEnabled}
@@ -54,8 +58,10 @@ export function GmailCaptureSettingsSection({
           focusId="transaction-capture-gmail-auto"
           icon={Icon.Zap}
           title={strings.automaticSetting}
-          subtitle={strings.automaticDescription}
-          disabled={gmail.loading || gmail.busy}
+          subtitle={!featureEnabled ? strings.automaticPaused : strings.automaticDescription}
+          disabled={
+            gmail.loading || gmail.busy || (!featureEnabled && !gmail.automaticCaptureEnabled)
+          }
           trailing={
             <ListRow.Toggle
               value={gmail.automaticCaptureEnabled}
@@ -64,7 +70,7 @@ export function GmailCaptureSettingsSection({
           }
         />
       ) : null}
-      {gmail.connected ? (
+      {featureEnabled && gmail.connected ? (
         <ListRow
           focusId="transaction-capture-gmail-accounts"
           icon={Icon.Document}
