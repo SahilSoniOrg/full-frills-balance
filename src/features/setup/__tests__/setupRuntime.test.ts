@@ -9,6 +9,7 @@ import {
   createJourneyCoordinator,
   restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
+  shouldExitCompletedFirstRunRestore,
 } from '../setupRuntime';
 import type { RestoreSetupDraft } from '../setupTypes';
 
@@ -33,6 +34,15 @@ jest.mock('../SetupDraftStore', () => ({
 }));
 
 const operationId = asWorkplaceId('operation');
+
+describe('completed first-run restore', () => {
+  it('leaves the stale route only after registration and draft clearance', () => {
+    expect(shouldExitCompletedFirstRunRestore('first_run_restore', false, true)).toBe(true);
+    expect(shouldExitCompletedFirstRunRestore('first_run_restore', true, true)).toBe(false);
+    expect(shouldExitCompletedFirstRunRestore('first_run_restore', false, false)).toBe(false);
+    expect(shouldExitCompletedFirstRunRestore('picker_restore', false, true)).toBe(false);
+  });
+});
 
 function restoreDraft(handoff: boolean): RestoreSetupDraft {
   return {

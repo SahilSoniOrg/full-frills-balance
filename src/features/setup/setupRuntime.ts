@@ -31,6 +31,15 @@ export function resolveOptionalJourney(params: {
   return undefined;
 }
 
+/** A completed first-run restore can briefly remain on its old route. */
+export function shouldExitCompletedFirstRunRestore(
+  journey: string | undefined,
+  hasDraft: boolean,
+  deviceRegistered: boolean,
+): boolean {
+  return journey === 'first_run_restore' && !hasDraft && deviceRegistered;
+}
+
 /**
  * Create-workplace is optional, so books screens stay mounted behind it.
  * Restore has to stay optional too, or those screens render without a Workplace.

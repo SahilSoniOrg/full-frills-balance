@@ -39,6 +39,7 @@ import {
   resolveSetupJourney,
   restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
+  shouldExitCompletedFirstRunRestore,
 } from './setupRuntime';
 import {
   isRestoreJourneyId,
@@ -576,6 +577,13 @@ function SetupScreen() {
   const [candidateName, setCandidateName] = useState('');
   if (snapshot && !loadSetupDraft()) {
     return <UnreadableSetupDraft />;
+  }
+  // The completed draft can clear before navigation leaves this route. Do not
+  // start a second first-run restore while the launch gate opens the books.
+  if (
+    shouldExitCompletedFirstRunRestore(journey, !!snapshot, preferences.device.deviceRegistered)
+  ) {
+    return <Redirect href="/(tabs)" />;
   }
   const journeyId = resolveSetupJourney({ mode, journey }, journeyOverride);
   if (!journeyId) {
