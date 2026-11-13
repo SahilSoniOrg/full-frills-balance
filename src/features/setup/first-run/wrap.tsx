@@ -7,14 +7,14 @@ import { Inline, Stack } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
-import dayjs from 'dayjs';
 import { MotiView } from 'moti';
 import { type ReactNode, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { ConversationStep } from './conversationUi';
 import { ClarityChart } from './clarityChart';
-import { incomeItemName, paymentItemName, type CashClarityDraft } from './draft';
+import type { CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
+import { useClaritySceneViewModel } from './useClaritySceneViewModel';
 
 function ClarityResultPanel({ children }: { readonly children: ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -49,15 +49,16 @@ export function ClarityScene({
 }) {
   const { theme } = useTheme();
   const [explanationVisible, setExplanationVisible] = useState(false);
-  const income = draft.income.kind === 'recurring' ? draft.income.items : [];
-  const payments = draft.commitment.kind === 'payment' ? draft.commitment.items : [];
-  const budgets = draft.budget.kind === 'set' ? draft.budget.items : [];
-  const hasCash =
-    projection.liquidNow > 0 || draft.accounts.some(account => account.kind !== 'card');
-  const hasAnyInput = hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0;
-  const stsColor: ComponentVariant =
-    projection.safeToSpend > 0 ? 'primary' : projection.safeToSpend < 0 ? 'error' : 'secondary';
-  const todayBeats = projection.today.filter(beat => beat.key !== 'sts');
+  const { detailGroups, hasAnyInput, stsColor, todayBeats } = useClaritySceneViewModel(
+    draft,
+    projection,
+  );
+  const groupDots = {
+    cash: theme.asset,
+    income: theme.success,
+    payments: theme.error,
+    budgets: theme.warning,
+  };
 
   return (
     <ConversationStep
@@ -170,101 +171,33 @@ export function ClarityScene({
           />
           {hasAnyInput ? (
             <Stack gap="lg">
-              {hasCash ? (
+              {detailGroups.map(group => (
                 <ClarityGroup
-                  stage={copy.stageNow}
-                  tint="asset"
-                  dot={theme.asset}
-                  amount={projection.liquidNow}
+                  key={group.key}
+                  stage={group.stage}
+                  tint={group.tint}
+                  dot={groupDots[group.key]}
+                  amount={group.amount}
                   currency={currency}
+                  sign={group.sign}
                 >
-                  <ClarityLabelRow label={copy.cashYouHave} />
-                </ClarityGroup>
-              ) : null}
-              {income.length > 0 ? (
-                <ClarityGroup
-                  stage={copy.stageNext}
-                  tint="income"
-                  dot={theme.success}
-                  amount={income.reduce((sum, item) => sum + item.amount, 0)}
-                  currency={currency}
-                  sign="+"
-                >
-                  {income.map(item =>
-                    income.length > 1 ? (
-                      <ClarityFigure
-                        key={item.id}
-                        amount={item.amount}
-                        currency={currency}
-                        sign="+"
-                        tint="income"
-                        label={incomeItemName(item)}
-                        detail={dayjs(item.nextDate).format('D MMM')}
-                      />
+                  {group.rows.map(row =>
+                    row.kind === 'label' ? (
+                      <ClarityLabelRow key={row.id} label={row.label} detail={row.detail} />
                     ) : (
-                      <ClarityLabelRow
-                        key={item.id}
-                        label={incomeItemName(item)}
-                        detail={dayjs(item.nextDate).format('D MMM')}
+                      <ClarityFigure
+                        key={row.id}
+                        amount={row.amount}
+                        currency={currency}
+                        sign={row.sign}
+                        tint={group.tint}
+                        label={row.label}
+                        detail={row.detail}
                       />
                     ),
                   )}
                 </ClarityGroup>
-              ) : null}
-              {payments.length > 0 ? (
-                <ClarityGroup
-                  stage={copy.stageProtect}
-                  tint="expense"
-                  dot={theme.error}
-                  amount={payments.reduce((sum, item) => sum + item.amount, 0)}
-                  currency={currency}
-                  sign="-"
-                >
-                  {payments.map(item =>
-                    payments.length > 1 ? (
-                      <ClarityFigure
-                        key={item.id}
-                        amount={item.amount}
-                        currency={currency}
-                        sign="-"
-                        tint="expense"
-                        label={paymentItemName(item)}
-                        detail={dayjs(item.dueDate).format('D MMM')}
-                      />
-                    ) : (
-                      <ClarityLabelRow
-                        key={item.id}
-                        label={paymentItemName(item)}
-                        detail={dayjs(item.dueDate).format('D MMM')}
-                      />
-                    ),
-                  )}
-                </ClarityGroup>
-              ) : null}
-              {budgets.length > 0 ? (
-                <ClarityGroup
-                  stage={copy.stageReserve}
-                  tint="warning"
-                  dot={theme.warning}
-                  amount={projection.budgetReserveInWindow}
-                  currency={currency}
-                >
-                  {budgets.map(item =>
-                    budgets.length > 1 ? (
-                      <ClarityFigure
-                        key={item.id}
-                        amount={item.amount}
-                        currency={currency}
-                        tint="warning"
-                        label={item.name}
-                        detail={copy.monthly}
-                      />
-                    ) : (
-                      <ClarityLabelRow key={item.id} label={item.name} detail={copy.monthly} />
-                    ),
-                  )}
-                </ClarityGroup>
-              ) : null}
+              ))}
             </Stack>
           ) : null}
         </Stack>

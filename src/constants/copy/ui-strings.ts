@@ -999,11 +999,11 @@ export const UI_STRINGS = {
       eyebrow: 'A calmer way to track money',
       title: 'Know what you can actually spend.',
       subtitle:
-        'Your bank balance doesn’t know about next week’s bills. We do the quiet math so you always know what’s safe today.',
+        'Add your balances, expected income, upcoming bills, and monthly spending limits. We’ll show what you can use for everyday spending.',
       inputLabel: 'What should we call you?',
       inputPlaceholder: 'Your name or nickname',
       nameRequired: 'Add a name to start',
-      btnGetStarted: 'Get started',
+      btnGetStarted: 'Set up Safe to Spend',
       dividerOr: 'OR',
       restorePrompt: 'Already have your data?',
       btnRestore: 'Restore from backup',

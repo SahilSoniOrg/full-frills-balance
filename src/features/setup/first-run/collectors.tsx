@@ -2,6 +2,7 @@ import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboard
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { CollectStep } from './conversationUi';
+import type { CollectedItem } from './CollectedRow';
 import {
   ACCOUNT_KIND_META,
   cadenceFromIncome,
@@ -117,6 +118,74 @@ export function MoneyScene({
     { id: 'spendable', label: copy.savingsSpendable },
     { id: 'protected', label: copy.savingsProtected },
   ];
+  const collectedItems = accounts.map((account): CollectedItem => {
+    const common = {
+      id: account.id,
+      title: account.name,
+      amount: account.balance,
+      amountLabel: account.kind === 'card' ? copy.cardAmountLabel : copy.currentBalance,
+      icon: ACCOUNT_KIND_META[account.kind].icon,
+      onRename: (title: string) =>
+        onAccountsChange(renameNamed(accounts, account.id, title, item => accountLabel(item.kind))),
+      onAmountChange: (amount: number) =>
+        onAccountsChange(
+          accounts.map(item => (item.id === account.id ? { ...item, balance: amount } : item)),
+        ),
+      onRemove: () => onAccountsChange(accounts.filter(item => item.id !== account.id)),
+    };
+
+    if (account.kind === 'savings') {
+      return {
+        ...common,
+        kind: 'account',
+        detail: {
+          kind: 'savings',
+          options: savingsChoice,
+          selectedId:
+            account.spendable === true
+              ? 'spendable'
+              : account.spendable === false
+                ? 'protected'
+                : undefined,
+          onSelect: (choiceId: string) =>
+            onAccountsChange(
+              accounts.map(item =>
+                item.id === account.id ? { ...item, spendable: choiceId === 'spendable' } : item,
+              ),
+            ),
+        },
+      };
+    }
+
+    if (account.kind === 'card') {
+      return {
+        ...common,
+        kind: 'account',
+        detail: {
+          kind: 'card',
+          paymentPlan: {
+            amount: account.cardPaymentAmount ?? 0,
+            date: account.cardPaymentDate ?? nextDateOnDayOfMonth(1).startOf('day').valueOf(),
+            dateLabel: copy.dueShort,
+          },
+          onAmountChange: (amount: number) =>
+            onAccountsChange(
+              accounts.map(item =>
+                item.id === account.id ? { ...item, cardPaymentAmount: amount } : item,
+              ),
+            ),
+          onDateChange: (date: number) =>
+            onAccountsChange(
+              accounts.map(item =>
+                item.id === account.id ? { ...item, cardPaymentDate: date } : item,
+              ),
+            ),
+        },
+      };
+    }
+
+    return { ...common, kind: 'account', detail: { kind: 'plain' } };
+  });
 
   return (
     <CollectStep
@@ -155,62 +224,7 @@ export function MoneyScene({
         ]);
       }}
       currency={currency}
-      items={accounts.map(account => ({
-        id: account.id,
-        title: account.name,
-        amount: account.balance,
-        icon: ACCOUNT_KIND_META[account.kind].icon,
-        choice:
-          account.kind === 'savings'
-            ? {
-                options: savingsChoice,
-                selectedId:
-                  account.spendable === true
-                    ? 'spendable'
-                    : account.spendable === false
-                      ? 'protected'
-                      : undefined,
-              }
-            : undefined,
-        paymentPlan:
-          account.kind === 'card'
-            ? {
-                amount: account.cardPaymentAmount ?? 0,
-                date: account.cardPaymentDate ?? nextDateOnDayOfMonth(1).startOf('day').valueOf(),
-                dateLabel: copy.dueShort,
-              }
-            : undefined,
-      }))}
-      onRename={(id, title) =>
-        onAccountsChange(renameNamed(accounts, id, title, account => accountLabel(account.kind)))
-      }
-      onAmountChange={(id, amount) =>
-        onAccountsChange(
-          accounts.map(account => (account.id === id ? { ...account, balance: amount } : account)),
-        )
-      }
-      onChoiceChange={(id, choiceId) =>
-        onAccountsChange(
-          accounts.map(account =>
-            account.id === id ? { ...account, spendable: choiceId === 'spendable' } : account,
-          ),
-        )
-      }
-      onPaymentAmountChange={(id, amount) =>
-        onAccountsChange(
-          accounts.map(account =>
-            account.id === id ? { ...account, cardPaymentAmount: amount } : account,
-          ),
-        )
-      }
-      onPaymentDateChange={(id, date) =>
-        onAccountsChange(
-          accounts.map(account =>
-            account.id === id ? { ...account, cardPaymentDate: date } : account,
-          ),
-        )
-      }
-      onRemove={id => onAccountsChange(accounts.filter(account => account.id !== id))}
+      items={collectedItems}
     />
   );
 }
@@ -242,6 +256,7 @@ export function IncomeScene({
   return (
     <CollectStep
       title={copy.incomeSource}
+      continueLabel={copy.continueToPayments}
       continueDisabled={!amountsFilled(items)}
       onContinue={() => {
         if (items.length > 0 && !hasSpendable) {
@@ -281,10 +296,12 @@ export function IncomeScene({
         ]);
       }}
       currency={currency}
-      items={items.map(item => ({
+      items={items.map((item): CollectedItem => ({
+        kind: 'income',
         id: item.id,
         title: incomeItemName(item),
         amount: item.amount,
+        amountLabel: copy.incomeAmountLabel,
         icon: INCOME_ICONS[item.source],
         cadence: {
           intervals: INCOME_INTERVALS,
@@ -292,30 +309,32 @@ export function IncomeScene({
           date: item.nextDate,
           dateLabel: copy.nextShort,
         },
-      }))}
-      onRename={(id, title) => finish(renameNamed(items, id, title, incomeItemName))}
-      onAmountChange={(id, amount) =>
-        finish(items.map(item => (item.id === id ? { ...item, amount } : item)))
-      }
-      onIntervalChange={(id, interval) => {
-        const recurrence = incomeRecurrence(interval);
-        finish(
-          items.map(item =>
-            item.id === id
-              ? { ...item, interval: recurrence.interval, intervalN: recurrence.intervalN }
-              : item,
+        onRename: title => finish(renameNamed(items, item.id, title, incomeItemName)),
+        onAmountChange: amount =>
+          finish(items.map(current => (current.id === item.id ? { ...current, amount } : current))),
+        onIntervalChange: interval => {
+          const recurrence = incomeRecurrence(interval);
+          finish(
+            items.map(current =>
+              current.id === item.id
+                ? { ...current, interval: recurrence.interval, intervalN: recurrence.intervalN }
+                : current,
+            ),
+          );
+        },
+        onDateChange: date =>
+          finish(
+            items.map(current =>
+              current.id === item.id ? { ...current, nextDate: date } : current,
+            ),
           ),
-        );
-      }}
-      onDateChange={(id, date) =>
-        finish(items.map(item => (item.id === id ? { ...item, nextDate: date } : item)))
-      }
-      onRemove={id => {
-        const remaining = items.filter(item => item.id !== id);
-        onIncomeChange(
-          remaining.length > 0 ? { kind: 'recurring', items: remaining } : { kind: 'unset' },
-        );
-      }}
+        onRemove: () => {
+          const remaining = items.filter(current => current.id !== item.id);
+          onIncomeChange(
+            remaining.length > 0 ? { kind: 'recurring', items: remaining } : { kind: 'unset' },
+          );
+        },
+      }))}
     />
   );
 }
@@ -346,7 +365,7 @@ export function ProtectScene({
   return (
     <CollectStep
       title={copy.protectQuestion}
-      continueLabel={copy.continueToPayments}
+      continueLabel={copy.continueToBoundaries}
       continueDisabled={!amountsFilled(items)}
       onContinue={() => {
         if (items.length > 0 && !hasSpendable) {
@@ -384,29 +403,31 @@ export function ProtectScene({
         ]);
       }}
       currency={currency}
-      items={items.map(item => ({
+      items={items.map((item): CollectedItem => ({
+        kind: 'payment',
         id: item.id,
         title: paymentItemName(item),
         amount: item.amount,
+        amountLabel: copy.paymentAmountLabel,
         icon: PAYMENT_ICONS[item.type],
-        cadence: {
-          date: item.dueDate,
-          dateLabel: copy.dueShort,
+        date: item.dueDate,
+        dateLabel: copy.dueShort,
+        onRename: title => finish(renameNamed(items, item.id, title, paymentItemName)),
+        onAmountChange: amount =>
+          finish(items.map(current => (current.id === item.id ? { ...current, amount } : current))),
+        onDateChange: date =>
+          finish(
+            items.map(current =>
+              current.id === item.id ? { ...current, dueDate: date } : current,
+            ),
+          ),
+        onRemove: () => {
+          const remaining = items.filter(current => current.id !== item.id);
+          onCommitmentChange(
+            remaining.length > 0 ? { kind: 'payment', items: remaining } : { kind: 'unset' },
+          );
         },
       }))}
-      onRename={(id, title) => finish(renameNamed(items, id, title, paymentItemName))}
-      onAmountChange={(id, amount) =>
-        finish(items.map(item => (item.id === id ? { ...item, amount } : item)))
-      }
-      onDateChange={(id, date) =>
-        finish(items.map(item => (item.id === id ? { ...item, dueDate: date } : item)))
-      }
-      onRemove={id => {
-        const remaining = items.filter(item => item.id !== id);
-        onCommitmentChange(
-          remaining.length > 0 ? { kind: 'payment', items: remaining } : { kind: 'unset' },
-        );
-      }}
     />
   );
 }
@@ -438,7 +459,7 @@ export function ReserveScene({
     <CollectStep
       title={copy.reserveQuestion}
       subtitle={copy.reserveHint}
-      continueLabel={copy.continueToBoundaries}
+      continueLabel={copy.continueToClarity}
       continueDisabled={!amountsFilled(items)}
       onContinue={() => {
         if (items.length > 0 && !hasSpendable) {
@@ -474,24 +495,24 @@ export function ReserveScene({
         ]);
       }}
       currency={currency}
-      items={items.map(item => ({
+      items={items.map((item): CollectedItem => ({
+        kind: 'budget',
         id: item.id,
         title: item.name,
         amount: item.amount,
+        amountLabel: copy.reserveAmount,
         icon: BUDGET_ICONS[item.category ?? item.name],
+        onRename: title =>
+          finish(renameNamed(items, item.id, title, current => current.category ?? 'Food')),
+        onAmountChange: amount =>
+          finish(items.map(current => (current.id === item.id ? { ...current, amount } : current))),
+        onRemove: () => {
+          const remaining = items.filter(current => current.id !== item.id);
+          onBudgetChange(
+            remaining.length > 0 ? { kind: 'set', items: remaining } : { kind: 'unset' },
+          );
+        },
       }))}
-      onRename={(id, title) =>
-        finish(renameNamed(items, id, title, item => item.category ?? 'Food'))
-      }
-      onAmountChange={(id, amount) =>
-        finish(items.map(item => (item.id === id ? { ...item, amount } : item)))
-      }
-      onRemove={id => {
-        const remaining = items.filter(item => item.id !== id);
-        onBudgetChange(
-          remaining.length > 0 ? { kind: 'set', items: remaining } : { kind: 'unset' },
-        );
-      }}
     />
   );
 }

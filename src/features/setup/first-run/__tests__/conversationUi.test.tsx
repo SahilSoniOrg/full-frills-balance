@@ -162,16 +162,21 @@ describe('ConversationStep keyboard behavior', () => {
         currency="USD"
         items={[
           {
+            kind: 'account',
             id: 'card-1',
             title: 'Card',
             amount: 0,
-            paymentPlan: { amount: 0, date: 0, dateLabel: 'Due' },
+            detail: {
+              kind: 'card',
+              paymentPlan: { amount: 0, date: 0, dateLabel: 'Due' },
+              onAmountChange: jest.fn(),
+              onDateChange: jest.fn(),
+            },
+            onRename: jest.fn(),
+            onAmountChange: jest.fn(),
+            onRemove: jest.fn(),
           },
         ]}
-        onRename={jest.fn()}
-        onAmountChange={jest.fn()}
-        onRemove={jest.fn()}
-        onPaymentAmountChange={jest.fn()}
         onBack={jest.fn()}
         onContinue={jest.fn()}
       />,

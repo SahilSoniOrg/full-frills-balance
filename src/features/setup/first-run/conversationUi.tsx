@@ -1,28 +1,16 @@
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
-import {
-  AppButton,
-  AppCard,
-  AppIcon,
-  AppText,
-  FilterChipButton,
-  PressScaleTouchable,
-  SwipeToRemove,
-} from '@/src/components/core';
-import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
-import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
+import { AppButton, AppIcon, AppText, FilterChipButton } from '@/src/components/core';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
-import { Box, Inline, Stack, usePageKeyboard } from '@/src/design-system';
+import { Box, Stack, usePageKeyboard } from '@/src/design-system';
 import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import dayjs from 'dayjs';
 import { type ReactNode, useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
-import { parseAmount } from './draft';
+import { CollectedRow, type CollectedItem } from './CollectedRow';
 
 export interface ConversationOption {
   readonly id: string;
@@ -190,58 +178,12 @@ export function ChoiceChips({
   );
 }
 
-export type CadenceId = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
-
-type CollectedCadence = {
-  readonly intervals?: readonly { id: CadenceId; label: string }[];
-  readonly selectedInterval?: CadenceId;
-  readonly date: number;
-  readonly dateLabel: string;
-};
-
-type CollectedChoice = {
-  readonly options: readonly { id: string; label: string }[];
-  readonly selectedId?: string;
-};
-
-type CollectedPaymentPlan = {
-  readonly amount: number;
-  readonly date: number;
-  readonly dateLabel: string;
-};
-
-export type CollectedItem = {
-  readonly id: string;
-  readonly title: string;
-  readonly amount: number;
-  readonly icon?: IconName;
-  readonly cadence?: CollectedCadence;
-  readonly choice?: CollectedChoice;
-  readonly paymentPlan?: CollectedPaymentPlan;
-};
-
 export function CollectedList({
   items,
   currency,
-  onRename,
-  onAmountChange,
-  onRemove,
-  onIntervalChange,
-  onDateChange,
-  onChoiceChange,
-  onPaymentAmountChange,
-  onPaymentDateChange,
 }: {
   readonly items: readonly CollectedItem[];
   readonly currency: string;
-  readonly onRename: (id: string, title: string) => void;
-  readonly onAmountChange: (id: string, amount: number) => void;
-  readonly onRemove: (id: string) => void;
-  readonly onIntervalChange?: (id: string, interval: CadenceId) => void;
-  readonly onDateChange?: (id: string, date: number) => void;
-  readonly onChoiceChange?: (id: string, choiceId: string) => void;
-  readonly onPaymentAmountChange?: (id: string, amount: number) => void;
-  readonly onPaymentDateChange?: (id: string, date: number) => void;
 }) {
   const reduceMotion = useReducedMotion();
   if (items.length === 0) return null;
@@ -252,256 +194,13 @@ export function CollectedList({
     <Stack gap="sm">
       {items.map(item => (
         <Animated.View key={item.id} layout={rowLayout}>
-          <CollectedRow
-            item={item}
-            currency={currency}
-            onRename={onRename}
-            onAmountChange={onAmountChange}
-            onRemove={onRemove}
-            onIntervalChange={onIntervalChange}
-            onDateChange={onDateChange}
-            onChoiceChange={onChoiceChange}
-            onPaymentAmountChange={onPaymentAmountChange}
-            onPaymentDateChange={onPaymentDateChange}
-          />
+          <CollectedRow item={item} currency={currency} />
         </Animated.View>
       ))}
       <AppText variant="caption" color="secondary" style={styles.swipeHint}>
         {copy.swipeToRemove}
       </AppText>
     </Stack>
-  );
-}
-
-function CollectedRow({
-  item,
-  currency,
-  onRename,
-  onAmountChange,
-  onRemove,
-  onIntervalChange,
-  onDateChange,
-  onChoiceChange,
-  onPaymentAmountChange,
-  onPaymentDateChange,
-}: {
-  readonly item: CollectedItem;
-  readonly currency: string;
-  readonly onRename: (id: string, title: string) => void;
-  readonly onAmountChange: (id: string, amount: number) => void;
-  readonly onRemove: (id: string) => void;
-  readonly onIntervalChange?: (id: string, interval: CadenceId) => void;
-  readonly onDateChange?: (id: string, date: number) => void;
-  readonly onChoiceChange?: (id: string, choiceId: string) => void;
-  readonly onPaymentAmountChange?: (id: string, amount: number) => void;
-  readonly onPaymentDateChange?: (id: string, date: number) => void;
-}) {
-  const { theme, tokens, fonts } = useTheme();
-  const [name, setName] = useState(item.title);
-  const [amountText, setAmountText] = useState(item.amount === 0 ? '' : String(item.amount));
-  const [payText, setPayText] = useState(
-    item.paymentPlan && item.paymentPlan.amount > 0 ? String(item.paymentPlan.amount) : '',
-  );
-  const [editingName, setEditingName] = useState(false);
-  const [pickingDate, setPickingDate] = useState(false);
-  const [pickingPayDate, setPickingPayDate] = useState(false);
-  const [pickingInterval, setPickingInterval] = useState(false);
-  const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
-  const cadence = item.cadence;
-  const selectedIntervalLabel =
-    cadence?.intervals?.find(interval => interval.id === cadence.selectedInterval)?.label ??
-    copy.monthly;
-  const shownName = editingName ? name : item.title;
-
-  return (
-    <SwipeToRemove label={copy.removeItem} onRemove={() => onRemove(item.id)}>
-      <AppCard
-        variant="outline"
-        background="surface"
-        paddingSize="none"
-        accessibilityActions={[{ name: 'delete', label: copy.removeItem }]}
-        onAccessibilityAction={event => {
-          if (event.nativeEvent.actionName === 'delete') onRemove(item.id);
-        }}
-      >
-        <Box paddingHorizontal="xl" paddingVertical="sm">
-          <Stack gap="xs">
-            <Inline align="center" gap="sm">
-              {item.icon ? (
-                <AppIcon name={item.icon} size={Size.iconXs} color="textSecondary" />
-              ) : null}
-              <TextInput
-                value={shownName}
-                onChangeText={setName}
-                onFocus={() => {
-                  setName(item.title);
-                  setEditingName(true);
-                }}
-                onBlur={() => {
-                  setEditingName(false);
-                  onRename(item.id, name);
-                }}
-                accessibilityLabel={item.title}
-                testID={`onboarding-name-${item.id}`}
-                style={[
-                  styles.rowInput,
-                  styles.nameInput,
-                  { color: theme.text, fontFamily: fonts.regular },
-                ]}
-              />
-              <Box style={styles.amountHit}>
-                <Inline align="center" gap="xs">
-                  <AppText variant="body" color="secondary">
-                    {symbol}
-                  </AppText>
-                  <TextInput
-                    value={amountText}
-                    onChangeText={text => {
-                      setAmountText(text);
-                      onAmountChange(item.id, parseAmount(text) ?? 0);
-                    }}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={tokens.input.placeholder}
-                    accessibilityLabel={copy.currentBalance}
-                    testID={`onboarding-amount-${item.id}`}
-                    style={[
-                      styles.rowInput,
-                      styles.amountInput,
-                      {
-                        color: theme.text,
-                        fontFamily: (fonts.numeric ?? fonts).semibold,
-                        fontVariant: ['tabular-nums', 'lining-nums'],
-                      },
-                    ]}
-                  />
-                </Inline>
-              </Box>
-            </Inline>
-            {item.choice && onChoiceChange ? (
-              <Inline gap="sm" wrap>
-                {item.choice.options.map(option => (
-                  <FilterChipButton
-                    key={option.id}
-                    label={option.label}
-                    isActive={item.choice?.selectedId === option.id}
-                    onPress={() => onChoiceChange(item.id, option.id)}
-                  />
-                ))}
-              </Inline>
-            ) : null}
-            {item.paymentPlan && onPaymentAmountChange ? (
-              <Inline align="center" justify="space-between" gap="sm">
-                <Inline align="center" gap="xs">
-                  <AppText variant="caption" color="secondary">
-                    {copy.cardPay}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {symbol}
-                  </AppText>
-                  <TextInput
-                    value={payText}
-                    onChangeText={text => {
-                      setPayText(text);
-                      onPaymentAmountChange(item.id, parseAmount(text) ?? 0);
-                    }}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={tokens.input.placeholder}
-                    accessibilityLabel={copy.cardPaymentAmount}
-                    testID={`onboarding-card-pay-${item.id}`}
-                    style={[
-                      styles.rowInput,
-                      styles.amountInput,
-                      styles.payInput,
-                      {
-                        color: theme.text,
-                        fontFamily: (fonts.numeric ?? fonts).semibold,
-                        fontVariant: ['tabular-nums', 'lining-nums'],
-                      },
-                    ]}
-                  />
-                </Inline>
-                {onPaymentDateChange ? (
-                  <FilterChipButton
-                    icon={Icon.Calendar}
-                    label={`${item.paymentPlan.dateLabel} ${dayjs(item.paymentPlan.date).format('D MMM')}`}
-                    onPress={() => setPickingPayDate(true)}
-                  />
-                ) : null}
-              </Inline>
-            ) : null}
-            {cadence ? (
-              <Inline align="center" justify="space-between" gap="sm">
-                {cadence.intervals && onIntervalChange ? (
-                  <PressScaleTouchable
-                    haptic="selection"
-                    onPress={() => setPickingInterval(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${copy.salaryOften} ${selectedIntervalLabel}`}
-                    testID={`onboarding-interval-${item.id}`}
-                    style={styles.cadenceTrigger}
-                  >
-                    <Inline align="center" gap="xs">
-                      <AppText variant="caption" weight="medium">
-                        {selectedIntervalLabel}
-                      </AppText>
-                      <AppIcon name={Icon.ChevronDown} size={Size.iconXs} color="textSecondary" />
-                    </Inline>
-                  </PressScaleTouchable>
-                ) : (
-                  <Box />
-                )}
-                {onDateChange ? (
-                  <FilterChipButton
-                    icon={Icon.Calendar}
-                    label={`${cadence.dateLabel} ${dayjs(cadence.date).format('D MMM')}`}
-                    onPress={() => setPickingDate(true)}
-                  />
-                ) : null}
-              </Inline>
-            ) : null}
-          </Stack>
-        </Box>
-        {cadence?.intervals && onIntervalChange ? (
-          <SelectionPickerSheet
-            visible={pickingInterval}
-            title={copy.salaryOften}
-            options={cadence.intervals.map(interval => ({
-              id: interval.id,
-              label: interval.label,
-            }))}
-            selectedValue={cadence.selectedInterval ?? 'MONTHLY'}
-            onClose={() => setPickingInterval(false)}
-            onSelect={value => onIntervalChange(item.id, value)}
-          />
-        ) : null}
-        {cadence && onDateChange ? (
-          <DateTimePickerModal
-            visible={pickingDate}
-            date={dayjs(cadence.date).format('YYYY-MM-DD')}
-            time="09:00"
-            onClose={() => setPickingDate(false)}
-            onSelect={next => {
-              onDateChange(item.id, dayjs(next).startOf('day').valueOf());
-              setPickingDate(false);
-            }}
-          />
-        ) : null}
-        {item.paymentPlan && onPaymentDateChange ? (
-          <DateTimePickerModal
-            visible={pickingPayDate}
-            date={dayjs(item.paymentPlan.date).format('YYYY-MM-DD')}
-            time="09:00"
-            onClose={() => setPickingPayDate(false)}
-            onSelect={next => {
-              onPaymentDateChange(item.id, dayjs(next).startOf('day').valueOf());
-              setPickingPayDate(false);
-            }}
-          />
-        ) : null}
-      </AppCard>
-    </SwipeToRemove>
   );
 }
 
@@ -519,14 +218,6 @@ export function CollectStep({
   onAddChip,
   currency,
   items,
-  onRename,
-  onAmountChange,
-  onRemove,
-  onIntervalChange,
-  onDateChange,
-  onChoiceChange,
-  onPaymentAmountChange,
-  onPaymentDateChange,
 }: {
   readonly title: string;
   readonly subtitle?: string;
@@ -541,14 +232,6 @@ export function CollectStep({
   readonly onAddChip: (id: string) => void;
   readonly currency: string;
   readonly items: readonly CollectedItem[];
-  readonly onRename: (id: string, title: string) => void;
-  readonly onAmountChange: (id: string, amount: number) => void;
-  readonly onRemove: (id: string) => void;
-  readonly onIntervalChange?: (id: string, interval: CadenceId) => void;
-  readonly onDateChange?: (id: string, date: number) => void;
-  readonly onChoiceChange?: (id: string, choiceId: string) => void;
-  readonly onPaymentAmountChange?: (id: string, amount: number) => void;
-  readonly onPaymentDateChange?: (id: string, date: number) => void;
 }) {
   return (
     <ConversationStep
@@ -566,18 +249,7 @@ export function CollectStep({
           {chipLabel}
         </AppText>
         <ChoiceChips options={chips} onSelect={onAddChip} />
-        <CollectedList
-          items={items}
-          currency={currency}
-          onRename={onRename}
-          onAmountChange={onAmountChange}
-          onRemove={onRemove}
-          onIntervalChange={onIntervalChange}
-          onDateChange={onDateChange}
-          onChoiceChange={onChoiceChange}
-          onPaymentAmountChange={onPaymentAmountChange}
-          onPaymentDateChange={onPaymentDateChange}
-        />
+        <CollectedList items={items} currency={currency} />
       </Stack>
     </ConversationStep>
   );
@@ -617,42 +289,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  rowInput: {
-    minHeight: 28,
-    paddingVertical: 0,
-    fontSize: Typography.sizes.base,
-  },
-  nameInput: {
-    flex: 1,
-    minWidth: 0,
-  },
-  amountHit: {
-    minHeight: 28,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    flexShrink: 0,
-  },
-  amountInput: {
-    width: Size.fieldAmount,
-    minWidth: 48,
-    flexShrink: 0,
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    textAlign: 'right',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  payInput: {
-    width: Size.fieldNarrow,
-    fontSize: Typography.sizes.sm,
-    textAlign: 'left',
-  },
   swipeHint: {
     textAlign: 'center',
-  },
-  cadenceTrigger: {
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.sm,
   },
 });

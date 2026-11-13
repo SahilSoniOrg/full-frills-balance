@@ -12,12 +12,12 @@ export type OnboardingFlowEntry = {
  */
 export const ONBOARDING_FLOW: readonly OnboardingFlowEntry[] = [
   { step: 'welcome' },
-  { step: 'currency', progressName: copy.stageCurrency },
-  { step: 'now', progressName: copy.stageNow },
-  { step: 'next', progressName: copy.stageNext },
-  { step: 'protect', progressName: copy.stageProtect },
-  { step: 'reserve', progressName: copy.stageReserve },
-  { step: 'clarity', progressName: copy.stageClarity },
+  { step: 'currency', progressName: copy.progressCurrency },
+  { step: 'now', progressName: copy.progressAccounts },
+  { step: 'next', progressName: copy.progressIncome },
+  { step: 'protect', progressName: copy.progressPayments },
+  { step: 'reserve', progressName: copy.progressSpending },
+  { step: 'clarity', progressName: copy.progressResult },
 ];
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = ONBOARDING_FLOW.map(entry => entry.step);
