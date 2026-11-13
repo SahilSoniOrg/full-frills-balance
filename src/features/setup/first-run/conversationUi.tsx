@@ -438,7 +438,7 @@ function CollectedRow({
                     haptic="selection"
                     onPress={() => setPickingInterval(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={copy.salaryOften}
+                    accessibilityLabel={`${copy.salaryOften} ${selectedIntervalLabel}`}
                     testID={`onboarding-interval-${item.id}`}
                     style={styles.cadenceTrigger}
                   >
