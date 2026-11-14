@@ -25,7 +25,7 @@ describe('explainDraftTransition', () => {
     };
 
     expect(explainDraftTransition(previous, current, now)).toBe(
-      '$25 added to Safe to Spend — Bank balance set to $125',
+      'Safe to Spend updated — Bank balance set to $125',
     );
   });
 
@@ -120,10 +120,10 @@ describe('explainDraftTransition', () => {
 
   it('makes skipped optional sections truthful when they do not change the number', () => {
     expect(explainDraftTransition(base, { ...base, income: { kind: 'skipped' } }, now)).toBe(
-      'Safe to Spend unchanged — income skipped',
+      'Safe to Spend unchanged — No expected income included',
     );
     expect(explainDraftTransition(base, { ...base, commitment: { kind: 'skipped' } }, now)).toBe(
-      'Safe to Spend unchanged — planned payments skipped',
+      'Safe to Spend unchanged — No planned payments included',
     );
   });
 
