@@ -303,10 +303,12 @@ export function MoneyScene({
             : undefined,
           onPaymentAmountTextChange: (raw: string) =>
             amountEditor.write(cardPaymentInputKey(account.id), raw),
-          onAmountChange: (amount: number) =>
+          onAmountChange: (amount: number | undefined) =>
             onAccountsChange(
               accounts.map(item =>
-                item.id === account.id ? { ...item, cardPaymentAmount: amount } : item,
+                item.id === account.id
+                  ? { ...item, cardPaymentAmount: amount, cardPaymentDate: amount === undefined ? undefined : item.cardPaymentDate }
+                  : item,
               ),
             ),
           onDateChange: (date: number) =>

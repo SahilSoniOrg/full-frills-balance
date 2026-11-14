@@ -50,9 +50,8 @@ function deferred(
 }
 
 function rawText(input: CashClarityEditableInput, key: string, fallback: number): string {
-  return Object.prototype.hasOwnProperty.call(input.amountTextById, key)
-    ? input.amountTextById[key]
-    : displayAmount(fallback);
+  const value = input.amountTextById[key];
+  return typeof value === 'string' ? value : displayAmount(fallback);
 }
 
 /**

@@ -182,6 +182,7 @@ export function newDraftId(prefix: string): string {
   return `${prefix}-${generator()}`;
 }
 
+/** Legacy numeric-input helper. New editor code uses parseAmountInput with its locale and currency precision. */
 export function parseAmount(raw: string): number | undefined {
   const result = parseAmountInput(raw, 'en-US', 20);
   return result.status === 'valid' ? result.value : undefined;

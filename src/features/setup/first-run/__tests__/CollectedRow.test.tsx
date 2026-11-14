@@ -1,4 +1,4 @@
-import { render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import type { ComponentProps, ReactNode } from 'react';
 import { CollectedRow, type CollectedItem } from '../CollectedRow';
 
@@ -37,6 +37,34 @@ jest.mock('@/src/components/filters/SelectionPickerSheet', () => ({
 }));
 
 describe('CollectedRow field errors', () => {
+  it('shows explicit zero when raw account text is absent, including after a reset', () => {
+    const item: CollectedItem = {
+      kind: 'account', id: 'bank-zero', title: 'Bank', amount: 0,
+      amountLabel: 'Balance', detail: { kind: 'plain' },
+      onRename: jest.fn(), onAmountChange: jest.fn(), onRemove: jest.fn(),
+    };
+    const { rerender } = render(<CollectedRow item={{ ...item, amountText: '99' }} currency="USD" />);
+    rerender(<CollectedRow item={item} currency="USD" />);
+    expect(screen.getByTestId('onboarding-amount-bank-zero').props.value).toBe('0');
+  });
+
+  it('normalizes a blank or zero card payment to no plan', () => {
+    const onAmountChange = jest.fn();
+    const item: CollectedItem = {
+      kind: 'account', id: 'card-clear', title: 'Card', amount: 10, amountLabel: 'Owed',
+      detail: {
+        kind: 'card', paymentPlan: { amount: 10, date: Date.now(), dateLabel: 'Due' },
+        onAmountChange, onDateChange: jest.fn(),
+      },
+      onRename: jest.fn(), onAmountChange: jest.fn(), onRemove: jest.fn(),
+    };
+    render(<CollectedRow item={item} currency="USD" locale="en-US" />);
+    fireEvent.changeText(screen.getByTestId('onboarding-card-pay-card-clear'), '');
+    expect(onAmountChange).toHaveBeenLastCalledWith(undefined);
+    fireEvent.changeText(screen.getByTestId('onboarding-card-pay-card-clear'), '0');
+    expect(onAmountChange).toHaveBeenLastCalledWith(undefined);
+  });
+
   it('renders a stable account balance error beside its input', () => {
     const item: CollectedItem = {
       kind: 'account',

@@ -182,6 +182,7 @@ export const ONBOARDING_STRINGS = {
   savedCouldNotOpen: 'Saved, but could not open.',
   clarityUnknown: 'No estimate yet',
   estimateIncomplete: 'Based on the valid entries included so far.',
+  cardPaymentOptional: 'Leave blank or enter 0 for no planned payment.',
   clarityShortfall: 'Shortfall',
   clarityZero: 'Safe to spend is zero',
   editAction: 'Edit',

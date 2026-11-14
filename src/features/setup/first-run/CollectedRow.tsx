@@ -55,7 +55,7 @@ type AccountCollectedItem = CollectedItemBase & {
         readonly paymentAmountText?: string;
         readonly paymentAmountError?: string | null;
         readonly onPaymentAmountTextChange?: (raw: string) => void;
-        readonly onAmountChange: (amount: number) => void;
+        readonly onAmountChange: (amount: number | undefined) => void;
         readonly onDateChange: (date: number) => void;
       };
 };
@@ -97,13 +97,13 @@ export function CollectedRow({
   const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
   const [amountText, setAmountText] = useState(
-    item.amountText ?? (item.amount === 0 ? '' : String(item.amount)),
+    item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? String(item.amount) : ''),
   );
   const [editingName, setEditingName] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
   useEffect(() => {
-    if (item.amountText !== undefined) setAmountText(item.amountText);
-  }, [item.amountText]);
+    setAmountText(item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? String(item.amount) : ''));
+  }, [item.amountText, item.amount, item.kind]);
   useEffect(() => {
     if (!editingName) setName(item.title);
   }, [editingName, item.title]);
@@ -308,8 +308,8 @@ function CardPaymentDetails({
   );
   const [amountTouched, setAmountTouched] = useState(false);
   useEffect(() => {
-    if (detail.paymentAmountText !== undefined) setAmountText(detail.paymentAmountText);
-  }, [detail.paymentAmountText]);
+    setAmountText(detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? String(detail.paymentPlan.amount) : ''));
+  }, [detail.paymentAmountText, detail.paymentPlan.amount]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const parsedPayment = parseAmountInput(amountText, locale, currencyPrecision(currency));
   const paymentIssue =
@@ -337,9 +337,9 @@ function CardPaymentDetails({
               detail.onPaymentAmountTextChange?.(text);
               const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
               if (parsed.status === 'valid' && !amountIssueMessage(parsed, false, false)) {
-                detail.onAmountChange(parsed.value);
+                detail.onAmountChange(parsed.value > 0 ? parsed.value : undefined);
               } else if (parsed.status === 'empty') {
-                detail.onAmountChange(0);
+                detail.onAmountChange(undefined);
               }
             }}
             keyboardType="decimal-pad"
@@ -360,6 +360,7 @@ function CardPaymentDetails({
             ]}
           />
         </Inline>
+        <AppText variant="caption" color="secondary">{copy.cardPaymentOptional}</AppText>
         {paymentIssue ? (
           <AppText variant="caption" color="error">
             {paymentIssue}
