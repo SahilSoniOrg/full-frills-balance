@@ -181,6 +181,13 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectorPosition, setSelectorPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const surfaceRef = useRef<View>(null);
+  const selectorAnchorRef = useRef<View>(null);
   const activeIdRef = useRef(activeWorkplace.id);
   const drawerWidth = Math.min(width * 0.88, AppConfig.layout.popupModalMaxWidth);
   const selectorMaxHeight = Math.max(
@@ -231,6 +238,24 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     void workplace.setWorkplaceId(id);
   };
 
+  const toggleSelector = () => {
+    if (selectorOpen) {
+      setSelectorOpen(false);
+      return;
+    }
+
+    selectorAnchorRef.current?.measureInWindow((x, y, anchorWidth, anchorHeight) => {
+      surfaceRef.current?.measureInWindow((surfaceX, surfaceY) => {
+        setSelectorPosition({
+          top: y - surfaceY + anchorHeight + Spacing.sm,
+          left: x - surfaceX,
+          width: anchorWidth,
+        });
+        setSelectorOpen(true);
+      });
+    });
+  };
+
   const switchError = error ? (
     <AppText
       variant="caption"
@@ -243,6 +268,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
 
   const renderDrawerContent = () => (
     <View
+      ref={surfaceRef}
       testID="navigation-drawer-surface"
       style={styles.surface}
       accessibilityViewIsModal={drawerVisible}
@@ -327,148 +353,43 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
             >
               {copy.workplaceSection}
             </AppText>
-            <PressScaleTouchable
-              pressScale="subtle"
-              onPress={() => setSelectorOpen(open => !open)}
-              disabled={isSwitching}
-              accessibilityRole="button"
-              accessibilityLabel={copy.activeWorkplace(activeWorkplace.name)}
-              accessibilityHint={copy.chooseWorkplaceHint}
-              testID="navigation-drawer-workplace-trigger"
-              accessibilityState={{ expanded: selectorOpen, disabled: isSwitching }}
-              style={[
-                styles.workplaceButton,
-                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-              ]}
-            >
-              <View style={[styles.workplaceIcon, { backgroundColor: theme.primaryLight }]}>
-                <AppIcon
-                  name={activeWorkplace.icon ?? Icon.Briefcase}
-                  size={Size.iconSm}
-                  color={getReadableColor(theme.primary, theme.primaryLight, 3)}
-                />
-              </View>
-              <AppText
-                variant="body"
-                weight="semibold"
-                numberOfLines={2}
-                style={styles.workplaceName}
-              >
-                {activeWorkplace.name}
-              </AppText>
-              <AppIcon
-                name={selectorOpen ? Icon.ChevronUp : Icon.ChevronDown}
-                size={Size.sm}
-                color={theme.textSecondary}
-              />
-            </PressScaleTouchable>
-            {selectorOpen && (
-              <ScrollView
+            <View ref={selectorAnchorRef} collapsable={false}>
+              <PressScaleTouchable
+                pressScale="subtle"
+                onPress={toggleSelector}
+                disabled={isSwitching}
+                accessibilityRole="button"
+                accessibilityLabel={copy.activeWorkplace(activeWorkplace.name)}
+                accessibilityHint={copy.chooseWorkplaceHint}
+                testID="navigation-drawer-workplace-trigger"
+                accessibilityState={{ expanded: selectorOpen, disabled: isSwitching }}
                 style={[
-                  styles.selector,
-                  {
-                    backgroundColor: theme.surface,
-                    left: Spacing.lg - Spacing.sm,
-                    right: Spacing.lg - Spacing.sm,
-                    maxHeight: selectorMaxHeight,
-                  },
+                  styles.workplaceButton,
+                  { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
                 ]}
-                contentContainerStyle={{ paddingVertical: Spacing.sm }}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled
               >
-                {workplaces.length > 0 && (
-                  <View
-                    accessible
-                    accessibilityRole="radiogroup"
-                    accessibilityLabel={copy.workplacesGroup}
-                  >
-                    <ListGroup variant="plain" dividerInset="none">
-                      {workplaces.map(workplace => {
-                        const checked = workplace.id === activeWorkplace.id;
-                        return (
-                          <ListRow
-                            key={workplace.id}
-                            icon={workplace.icon ?? Icon.Briefcase}
-                            title={workplace.name}
-                            chevron={false}
-                            disabled={isSwitching}
-                            onPress={() => {
-                              if (checked) return;
-                              setSelectorOpen(false);
-                              onSwitchWorkplace(workplace.id);
-                            }}
-                            accessibilityRole="radio"
-                            accessibilityLabel={workplace.name}
-                            accessibilityHint={
-                              checked
-                                ? copy.currentWorkplaceHint
-                                : copy.switchToWorkplaceHint(workplace.name)
-                            }
-                            accessibilityState={{ checked, disabled: isSwitching }}
-                            trailing={
-                              checked ? (
-                                <AppIcon
-                                  name={Icon.Check}
-                                  size={Size.iconSm}
-                                  color={getReadableColor(theme.primary, theme.surface, 3)}
-                                />
-                              ) : undefined
-                            }
-                          />
-                        );
-                      })}
-                    </ListGroup>
-                  </View>
-                )}
-                {switchError}
-                <View
-                  style={[
-                    styles.selectorActions,
-                    workplaces.length > 1 && {
-                      borderTopWidth: StyleSheet.hairlineWidth,
-                      borderTopColor: theme.border,
-                      marginTop: Spacing.sm,
-                      paddingTop: Spacing.sm,
-                    },
-                  ]}
-                >
-                  <ListGroup variant="plain" dividerInset="none">
-                    <ListRow
-                      icon={Icon.Plus}
-                      title={settingsCopy.workplacePicker.create}
-                      subtitle={settingsCopy.workplacePicker.createSubtitle}
-                      chevron={false}
-                      disabled={isSwitching}
-                      onPress={() =>
-                        runNavigationAction(() =>
-                          AppNavigation.toAddWorkplace({
-                            context: 'existing_workplace_entry',
-                            origin,
-                          }),
-                        )
-                      }
-                      testID="navigation-drawer-create-workplace"
-                    />
-                    <ListRow
-                      icon={Icon.Save}
-                      title={settingsCopy.workplacePicker.import}
-                      subtitle={settingsCopy.workplacePicker.importSubtitle}
-                      chevron={false}
-                      disabled={isSwitching}
-                      onPress={() =>
-                        runNavigationAction(() => {
-                          router.push({
-                            pathname: '/onboarding',
-                            params: { journey: 'settings_restore' },
-                          });
-                        })
-                      }
-                    />
-                  </ListGroup>
+                <View style={[styles.workplaceIcon, { backgroundColor: theme.primaryLight }]}>
+                  <AppIcon
+                    name={activeWorkplace.icon ?? Icon.Briefcase}
+                    size={Size.iconSm}
+                    color={getReadableColor(theme.primary, theme.primaryLight, 3)}
+                  />
                 </View>
-              </ScrollView>
-            )}
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  numberOfLines={2}
+                  style={styles.workplaceName}
+                >
+                  {activeWorkplace.name}
+                </AppText>
+                <AppIcon
+                  name={selectorOpen ? Icon.ChevronUp : Icon.ChevronDown}
+                  size={Size.sm}
+                  color={theme.textSecondary}
+                />
+              </PressScaleTouchable>
+            </View>
             {!selectorOpen && switchError}
             {!selectorOpen ? (
               <ListGroup variant="plain" dividerInset="none">
@@ -535,6 +456,114 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
           </ListGroup>
         </View>
       </View>
+      {selectorOpen && selectorPosition ? (
+        <ScrollView
+          style={[
+            styles.selector,
+            {
+              backgroundColor: theme.surface,
+              left: selectorPosition.left,
+              top: selectorPosition.top,
+              width: selectorPosition.width,
+              maxHeight: selectorMaxHeight,
+            },
+          ]}
+          contentContainerStyle={{ paddingVertical: Spacing.sm }}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        >
+          {workplaces.length > 0 && (
+            <View
+              accessible
+              accessibilityRole="radiogroup"
+              accessibilityLabel={copy.workplacesGroup}
+            >
+              <ListGroup variant="plain" dividerInset="none">
+                {workplaces.map(workplace => {
+                  const checked = workplace.id === activeWorkplace.id;
+                  return (
+                    <ListRow
+                      key={workplace.id}
+                      icon={workplace.icon ?? Icon.Briefcase}
+                      title={workplace.name}
+                      chevron={false}
+                      disabled={isSwitching}
+                      onPress={() => {
+                        if (checked) return;
+                        setSelectorOpen(false);
+                        onSwitchWorkplace(workplace.id);
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityLabel={workplace.name}
+                      accessibilityHint={
+                        checked
+                          ? copy.currentWorkplaceHint
+                          : copy.switchToWorkplaceHint(workplace.name)
+                      }
+                      accessibilityState={{ checked, disabled: isSwitching }}
+                      trailing={
+                        checked ? (
+                          <AppIcon
+                            name={Icon.Check}
+                            size={Size.iconSm}
+                            color={getReadableColor(theme.primary, theme.surface, 3)}
+                          />
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </ListGroup>
+            </View>
+          )}
+          {switchError}
+          <View
+            style={[
+              styles.selectorActions,
+              workplaces.length > 1 && {
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: theme.border,
+                marginTop: Spacing.sm,
+                paddingTop: Spacing.sm,
+              },
+            ]}
+          >
+            <ListGroup variant="plain" dividerInset="none">
+              <ListRow
+                icon={Icon.Plus}
+                title={settingsCopy.workplacePicker.create}
+                subtitle={settingsCopy.workplacePicker.createSubtitle}
+                chevron={false}
+                disabled={isSwitching}
+                onPress={() =>
+                  runNavigationAction(() =>
+                    AppNavigation.toAddWorkplace({
+                      context: 'existing_workplace_entry',
+                      origin,
+                    }),
+                  )
+                }
+                testID="navigation-drawer-create-workplace"
+              />
+              <ListRow
+                icon={Icon.Save}
+                title={settingsCopy.workplacePicker.import}
+                subtitle={settingsCopy.workplacePicker.importSubtitle}
+                chevron={false}
+                disabled={isSwitching}
+                onPress={() =>
+                  runNavigationAction(() => {
+                    router.push({
+                      pathname: '/onboarding',
+                      params: { journey: 'settings_restore' },
+                    });
+                  })
+                }
+              />
+            </ListGroup>
+          </View>
+        </ScrollView>
+      ) : null}
     </View>
   );
 
@@ -641,9 +670,7 @@ const styles = StyleSheet.create({
   workplaceName: { flex: 1 },
   selector: {
     position: 'absolute',
-    top: '100%',
     flexGrow: 0,
-    marginTop: Spacing.sm,
     borderRadius: Shape.radius.lg,
     zIndex: 30,
     ...Shape.elevation.lg,
