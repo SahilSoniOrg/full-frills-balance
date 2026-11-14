@@ -1079,12 +1079,12 @@ export function OnboardingScreen() {
         id: collection,
         label:
           collection === 'accounts'
-            ? copy.moneyQuestion
+            ? copy.stageNow
             : collection === 'income'
-              ? copy.incomeSource
+              ? copy.expectedIncome
               : collection === 'commitment'
-                ? copy.protectQuestion
-                : copy.reserveQuestion,
+                ? copy.upcomingPayments
+                : copy.stageReserve,
         ...(detail ? { detail } : {}),
       };
     }),

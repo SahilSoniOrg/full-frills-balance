@@ -137,7 +137,7 @@ export function ClarityScene({
       footer={
         normalizedOmissions.length > 0 && !published ? (
           <AppText variant="caption" color="secondary">
-            {copy.willNotBeSaved}
+            {copy.deferredSectionsNotice(normalizedOmissions.map(item => item.label).join(', '))}
           </AppText>
         ) : null
       }
@@ -179,9 +179,6 @@ export function ClarityScene({
                   testID="onboarding-clarity-sts"
                 />
               ) : null}
-              <AppText variant="body" color="secondary" style={styles.proseCopy}>
-                {copy.clarityDefinition}
-              </AppText>
               {isIncompleteEstimate ? (
                 <AppText variant="caption" color="secondary">
                   {copy.estimateIncomplete}
@@ -211,63 +208,65 @@ export function ClarityScene({
           </Stack>
         ) : null}
 
-        {normalizedOmissions.length > 0 ? (
-          <Stack gap="sm" testID="onboarding-clarity-omissions">
-            <AppText variant="subheading">{copy.notIncludedYet}</AppText>
-            <AppText variant="caption" color="secondary">
-              {copy.willNotBeSaved}
-            </AppText>
-            {normalizedOmissions.map(omission => (
-              <AppText key={omission.id ?? omission.label} variant="caption" color="secondary">
-                {omission.detail ? `${omission.label} · ${omission.detail}` : omission.label}
-              </AppText>
-            ))}
-          </Stack>
-        ) : null}
-
         {editActions && editActions.length > 0 ? (
-          <Stack gap="sm" testID="onboarding-clarity-edit-actions">
-            {editActions.map(action => (
-              <AppButton
-                key={action.id ?? action.label}
-                variant="ghost"
-                size="md"
-                onPress={action.onPress}
-                disabled={finishing || published}
-                testID={`onboarding-edit-${action.id ?? action.label}`}
-              >
-                {action.label}
-              </AppButton>
-            ))}
+          <Stack gap="md" testID="onboarding-clarity-edit-actions">
+            <AppText variant="subheading">{copy.reviewSetup}</AppText>
+            {editActions.map(action => {
+              const groupKey =
+                action.id === 'accounts' ? 'cash' : action.id === 'budget' ? 'budgets' : action.id;
+              const group = detailGroups.find(item => item.key === groupKey);
+              const label =
+                action.id === 'accounts'
+                  ? copy.stageNow
+                  : action.id === 'income'
+                    ? copy.expectedIncome
+                    : action.id === 'payments'
+                      ? copy.upcomingPayments
+                      : copy.stageReserve;
+              return (
+                <Inline
+                  key={action.id ?? action.label}
+                  align="center"
+                  justify="space-between"
+                  gap="sm"
+                >
+                  <Stack flex={1} gap="xs">
+                    <AppText variant="body">{label}</AppText>
+                    {group ? (
+                      <MoneyText
+                        amount={group.amount}
+                        currencyCode={currency}
+                        formatStyle="compact"
+                        variant="body"
+                      />
+                    ) : (
+                      <AppText variant="caption" color="secondary">
+                        {copy.notIncludedYet}
+                      </AppText>
+                    )}
+                    {group && group.key !== 'cash'
+                      ? group.rows.map(row => (
+                          <AppText key={row.id} variant="caption" color="secondary">
+                            {row.detail ? `${row.label} · ${row.detail}` : row.label}
+                          </AppText>
+                        ))
+                      : null}
+                  </Stack>
+                  <AppButton
+                    variant="ghost"
+                    size="sm"
+                    style={{ minHeight: 44, minWidth: 44 }}
+                    onPress={action.onPress}
+                    disabled={finishing || published}
+                    accessibilityLabel={action.label}
+                    testID={`onboarding-edit-${action.id ?? action.label}`}
+                  >
+                    {copy.editSetupSection}
+                  </AppButton>
+                </Inline>
+              );
+            })}
           </Stack>
-        ) : null}
-
-        {estimateAvailable ? (
-          <Stack gap="sm">
-            <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
-            <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
-              <ClarityFormula projection={projection} currency={currency} />
-            </AppCard>
-          </Stack>
-        ) : null}
-
-        {estimateAvailable && todayBeats.length > 0 ? (
-          <ClarityBeatCard
-            testID="onboarding-clarity-now"
-            title={copy.stageNow}
-            beats={todayBeats}
-            currency={currency}
-            stsColor={stsColor}
-          />
-        ) : null}
-        {estimateAvailable && projection.ahead.length > 0 ? (
-          <ClarityBeatCard
-            testID="onboarding-clarity-next"
-            title={copy.stageNext}
-            beats={projection.ahead}
-            currency={currency}
-            stsColor={stsColor}
-          />
         ) : null}
 
         {!estimateAvailable ? (
@@ -289,6 +288,34 @@ export function ClarityScene({
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityFooter}
           </AppText>
+          {estimateAvailable ? (
+            <Stack gap="sm">
+              <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
+              <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
+                <ClarityFormula projection={projection} currency={currency} />
+              </AppCard>
+            </Stack>
+          ) : null}
+
+          {estimateAvailable && todayBeats.length > 0 ? (
+            <ClarityBeatCard
+              testID="onboarding-clarity-now"
+              title={copy.stageNow}
+              beats={todayBeats}
+              currency={currency}
+              stsColor={stsColor}
+            />
+          ) : null}
+          {estimateAvailable && projection.ahead.length > 0 ? (
+            <ClarityBeatCard
+              testID="onboarding-clarity-next"
+              title={copy.stageNext}
+              beats={projection.ahead}
+              currency={currency}
+              stsColor={stsColor}
+            />
+          ) : null}
+
           {estimateAvailable ? (
             <ClarityChart
               points={projection.chart}
