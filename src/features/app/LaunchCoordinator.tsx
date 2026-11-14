@@ -25,7 +25,6 @@ import {
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { preferences } from '@/src/services/preferences';
-import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { isRestoreJourneyId } from '@/src/features/setup/setupTypes';
 import { CreationLaunchProvider } from './CreationLaunchContext';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -319,7 +318,7 @@ export function LaunchCoordinatorProvider({
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
     if (!isRestoreJourneyId(resolution.journeyId)) return;
     if (loadSetupDraft()) return;
-    saveSetupDraft(createSetupDraft(resolution.journeyId as any, generator() as WorkplaceId));
+    saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
   }, [resolution]);
 
   return (

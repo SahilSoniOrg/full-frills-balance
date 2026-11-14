@@ -19,7 +19,6 @@ function keepImported<T>(initial: { value: T; source: string } | undefined, valu
 export function WorkplaceSetupSlice({
   initial,
   identityMode = 'editable',
-  books = 'starters',
   initialStep,
   resumeStep,
   isCompleting,
@@ -31,7 +30,6 @@ export function WorkplaceSetupSlice({
   readonly initial?: WorkplaceSetupOutput | WorkplaceSetupPrefill;
   /** The journey recipe decides whether identity is seeded or editable. */
   readonly identityMode?: 'automatic' | 'editable';
-  readonly books?: 'starters' | 'imported';
   readonly initialStep?: WorkplaceCheckpoint;
   /** Parent-owned checkpoint used to restore the local step after a remount. */
   readonly resumeStep?: WorkplaceCheckpoint;
@@ -44,7 +42,7 @@ export function WorkplaceSetupSlice({
   const [step, setStep] = useState<WorkplaceCheckpoint>(() =>
     resolveWorkplaceStartCheckpoint({
       identityMode,
-      books,
+      books: 'imported',
       initial,
       initialStep: initialStep ?? resumeStep,
     }),
@@ -67,7 +65,6 @@ export function WorkplaceSetupSlice({
   const derivedName = workplaceName || defaultWorkplaceName;
   const canGenerateName = !hasEditedWorkplaceName && !initial?.name?.value.trim();
   const inputName = hasEditedWorkplaceName ? workplaceName : derivedName;
-  const imported = true;
   const resolvedName = workplaceName.trim() || derivedName;
   const output: WorkplaceSetupOutput = {
     name: {
@@ -79,21 +76,9 @@ export function WorkplaceSetupSlice({
       source: initial?.icon ? keepImported(initial.icon, workplaceIcon) : 'defaulted',
     },
     baseCurrency: { value: currency, source: keepImported(initial?.baseCurrency, currency) },
-    selectedAccounts: imported
-      ? []
-      : [
-          ...starterAccountsFromDefaults(accounts),
-          ...customAccounts.filter(item => accounts.includes(item.name)),
-        ],
-    selectedCategories: imported
-      ? []
-      : [
-          ...starterCategoriesFromDefaults(categories),
-          ...customCategories.filter(item => categories.includes(item.name)),
-        ],
-    acceptedCheckpoints: imported
-      ? ['identity', 'currency']
-      : ['identity', 'currency', 'accounts', 'categories'],
+    selectedAccounts: [],
+    selectedCategories: [],
+    acceptedCheckpoints: ['identity', 'currency'],
   };
 
   return (
@@ -131,7 +116,7 @@ export function WorkplaceSetupSlice({
         <WorkplaceCurrencyStep
           selectedCurrency={currency}
           onSelectCurrency={setCurrency}
-          onContinue={() => (imported ? onContinue(output) : setStep('accounts'))}
+          onContinue={() => onContinue(output)}
           onBack={() =>
             identityMode === 'automatic' || initialStep === 'currency'
               ? onBack()
