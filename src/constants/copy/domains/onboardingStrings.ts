@@ -170,4 +170,12 @@ export const ONBOARDING_STRINGS = {
     `${amount} held from Safe to Spend — ${reason}`,
   changeSafeToSpendUnchanged: (reason: string) => `Safe to Spend unchanged — ${reason}`,
   changeSafeToSpendUpdated: (reason: string) => `Safe to Spend updated — ${reason}`,
+  notIncludedYet: 'Not included yet',
+  willNotBeSaved: 'These won’t be saved when setup finishes.',
+  retryOpen: 'Retry opening',
+  savedCouldNotOpen: 'Saved, but could not open.',
+  clarityUnknown: 'No estimate yet',
+  clarityShortfall: 'Shortfall',
+  clarityZero: 'Safe to spend is zero',
+  editAction: 'Edit',
 } as const;

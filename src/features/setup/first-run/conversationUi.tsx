@@ -30,6 +30,18 @@ export function ConversationStep({
   skipLabel,
   onSkip,
   onBack,
+  validation,
+  validationSlot,
+  footerValidation,
+  fieldValidation,
+  error,
+  errors,
+  errorMessage,
+  recovery,
+  recoveryActions,
+  recoverySlot,
+  footer,
+  footerSlot,
 }: {
   readonly title?: string;
   readonly subtitle?: string;
@@ -42,9 +54,35 @@ export function ConversationStep({
   readonly skipLabel?: string;
   readonly onSkip?: () => void;
   readonly onBack: () => void;
+  readonly validation?: ReactNode;
+  readonly validationSlot?: ReactNode;
+  readonly footerValidation?: ReactNode;
+  readonly fieldValidation?: ReactNode;
+  readonly error?: ReactNode;
+  readonly errors?: ReactNode;
+  readonly errorMessage?: ReactNode;
+  readonly recovery?: ReactNode;
+  readonly recoveryActions?: ReactNode;
+  readonly recoverySlot?: ReactNode;
+  readonly footer?: ReactNode;
+  readonly footerSlot?: ReactNode;
 }) {
   const [footerHeight, setFooterHeight] = useState(0);
   const { isKeyboardVisible } = usePageKeyboard();
+  const footerValidationNodes = [
+    validation,
+    validationSlot,
+    footerValidation,
+    fieldValidation,
+    error,
+    errors,
+    errorMessage,
+    recovery,
+    recoveryActions,
+    recoverySlot,
+    footer,
+    footerSlot,
+  ].filter(Boolean);
 
   return (
     <Box flex={1} minHeight={0}>
@@ -52,7 +90,7 @@ export function ConversationStep({
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: isKeyboardVisible ? Spacing.lg : footerHeight + Spacing.lg },
+          { paddingBottom: footerHeight + Spacing.lg },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -82,47 +120,48 @@ export function ConversationStep({
           </Stack>
         </OnboardingFadePanel>
       </KeyboardAwareScrollView>
-      {!isKeyboardVisible ? (
-        <Box
-          background="background"
-          borderTopWidth={1}
-          borderColor="border"
-          paddingTop="md"
-          onLayout={event => {
-            const height = event.nativeEvent.layout.height;
-            setFooterHeight(previousHeight =>
-              previousHeight === height ? previousHeight : height,
-            );
-          }}
-        >
-          <Stack space="xs">
-            {onSkip ? (
-              <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
-                {skipLabel ?? copy.addLater}
-              </AppButton>
-            ) : null}
-            {onPrimary ? (
-              <AppButton
-                variant="primary"
-                size="lg"
-                onPress={() => {
-                  Keyboard.dismiss();
-                  onPrimary();
-                }}
-                disabled={primaryDisabled || primaryLoading}
-                loading={primaryLoading}
-                testID={primaryTestID}
-                style={{ width: '100%' }}
-              >
-                {primaryLabel}
-              </AppButton>
-            ) : null}
-            <AppButton variant="ghost" size="md" onPress={onBack}>
-              {copy.back}
+      <Box
+        background="background"
+        borderTopWidth={1}
+        borderColor="border"
+        paddingTop="md"
+        onLayout={event => {
+          const height = event.nativeEvent.layout.height;
+          setFooterHeight(previousHeight =>
+            previousHeight === height ? previousHeight : height,
+          );
+        }}
+      >
+        <Stack space="xs">
+          {footerValidationNodes.length > 0 ? (
+            <Stack space="xs">{footerValidationNodes}</Stack>
+          ) : null}
+          {onSkip ? (
+            <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
+              {skipLabel ?? copy.addLater}
             </AppButton>
-          </Stack>
-        </Box>
-      ) : null}
+          ) : null}
+          {onPrimary ? (
+            <AppButton
+              variant="primary"
+              size="lg"
+              onPress={() => {
+                Keyboard.dismiss();
+                onPrimary();
+              }}
+              disabled={primaryDisabled || primaryLoading}
+              loading={primaryLoading}
+              testID={primaryTestID}
+              style={{ width: '100%' }}
+            >
+              {primaryLabel}
+            </AppButton>
+          ) : null}
+          <AppButton variant="ghost" size="md" onPress={onBack}>
+            {copy.back}
+          </AppButton>
+        </Stack>
+      </Box>
     </Box>
   );
 }
@@ -218,6 +257,18 @@ export function CollectStep({
   onAddChip,
   currency,
   items,
+  validation,
+  validationSlot,
+  footerValidation,
+  fieldValidation,
+  error,
+  errors,
+  errorMessage,
+  recovery,
+  recoveryActions,
+  recoverySlot,
+  footer,
+  footerSlot,
 }: {
   readonly title: string;
   readonly subtitle?: string;
@@ -232,6 +283,18 @@ export function CollectStep({
   readonly onAddChip: (id: string) => void;
   readonly currency: string;
   readonly items: readonly CollectedItem[];
+  readonly validation?: ReactNode;
+  readonly validationSlot?: ReactNode;
+  readonly footerValidation?: ReactNode;
+  readonly fieldValidation?: ReactNode;
+  readonly error?: ReactNode;
+  readonly errors?: ReactNode;
+  readonly errorMessage?: ReactNode;
+  readonly recovery?: ReactNode;
+  readonly recoveryActions?: ReactNode;
+  readonly recoverySlot?: ReactNode;
+  readonly footer?: ReactNode;
+  readonly footerSlot?: ReactNode;
 }) {
   return (
     <ConversationStep
@@ -243,6 +306,18 @@ export function CollectStep({
       skipLabel={skipLabel}
       onSkip={onSkip}
       onBack={onBack}
+      validation={validation}
+      validationSlot={validationSlot}
+      footerValidation={footerValidation}
+      fieldValidation={fieldValidation}
+      error={error}
+      errors={errors}
+      errorMessage={errorMessage}
+      recovery={recovery}
+      recoveryActions={recoveryActions}
+      recoverySlot={recoverySlot}
+      footer={footer}
+      footerSlot={footerSlot}
     >
       <Stack gap="md">
         <AppText variant="caption" color="secondary">

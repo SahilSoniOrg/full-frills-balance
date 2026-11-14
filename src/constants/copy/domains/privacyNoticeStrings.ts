@@ -2,6 +2,11 @@ export const PRIVACY_NOTICE_STRINGS = {
   title: 'Privacy & data',
   onboardingSummary: 'Before you begin, review how your data is handled.',
   onboardingAction: 'Review privacy policy',
+  onboardingSummaryBullets: [
+    'Your accounts, balances, and entries stay on this device unless you export or share a backup.',
+    'Exchange rates and limited analytics may use the network; analytics does not receive your financial details.',
+    'Optional capture and voice features use external services only when you enable them.',
+  ],
   acknowledgementPromptTitle: 'Before you continue',
   acknowledgementPromptBody:
     'Before you start, review the basics of how your information is handled.',

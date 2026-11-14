@@ -1,4 +1,4 @@
-import { AppCard, AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
+import { AppButton, AppCard, AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { ChromeMotion, Typography, Spacing } from '@/src/constants';
@@ -30,12 +30,36 @@ function ClarityResultPanel({ children }: { readonly children: ReactNode }) {
   );
 }
 
+export type ClarityOmission = {
+  readonly id?: string;
+  readonly label: string;
+  readonly detail?: string;
+};
+
+export type ClarityEditAction = {
+  readonly id?: string;
+  readonly label: string;
+  readonly onPress: () => void;
+};
+
 export function ClarityScene({
   currency,
   draft,
   projection,
   finishing,
   finishError,
+  openError,
+  openErrorMessage,
+  savedButNotOpened,
+  onRetryOpen,
+  retryOpenLabel,
+  omissions,
+  omitted,
+  deferred,
+  deferredOmissions,
+  editActions,
+  onEdit,
+  editTargets,
   onEnter,
   onBack,
 }: {
@@ -44,6 +68,20 @@ export function ClarityScene({
   readonly projection: CashClarityProjection;
   readonly finishing: boolean;
   readonly finishError?: string | null;
+  readonly openError?: string | null;
+  readonly openErrorMessage?: string | null;
+  readonly savedButNotOpened?: boolean;
+  readonly onRetryOpen?: () => void;
+  readonly retryOpenLabel?: string;
+  readonly omissions?:
+    | readonly (string | ClarityOmission)[]
+    | null;
+  readonly omitted?: readonly (string | ClarityOmission)[] | null;
+  readonly deferred?: readonly (string | ClarityOmission)[] | null;
+  readonly deferredOmissions?: readonly (string | ClarityOmission)[] | null;
+  readonly editActions?: readonly ClarityEditAction[] | null;
+  readonly onEdit?: (target: string) => void;
+  readonly editTargets?: readonly string[] | null;
   readonly onEnter: () => void;
   readonly onBack: () => void;
 }) {
@@ -53,6 +91,19 @@ export function ClarityScene({
     draft,
     projection,
   );
+  const resolvedOmissions = omissions ?? omitted ?? deferred ?? deferredOmissions ?? [];
+  const normalizedOmissions = resolvedOmissions.map((item, index) =>
+    typeof item === 'string' ? { id: `omission-${index}`, label: item } : item,
+  );
+  const resolvedOpenError = openError ?? openErrorMessage ?? null;
+  const resolvedEditActions = [
+    ...(editActions ?? []),
+    ...((editTargets ?? []).map((target, index) => ({
+      id: `edit-target-${index}`,
+      label: `Edit ${target}`,
+      onPress: () => onEdit?.(target),
+    })) as ClarityEditAction[]),
+  ];
   const groupDots = {
     cash: theme.asset,
     income: theme.success,
@@ -74,6 +125,21 @@ export function ClarityScene({
           <AppText variant="body" color="error" accessibilityRole="alert">
             {finishError}
           </AppText>
+        ) : null}
+        {resolvedOpenError || savedButNotOpened ? (
+          <AppText variant="body" color="error" accessibilityRole="alert">
+            {resolvedOpenError ?? copy.savedCouldNotOpen}
+          </AppText>
+        ) : null}
+        {onRetryOpen && (resolvedOpenError || savedButNotOpened) ? (
+          <AppButton
+            variant="secondary"
+            size="md"
+            onPress={onRetryOpen}
+            testID="onboarding-retry-open-button"
+          >
+            {retryOpenLabel ?? copy.retryOpen}
+          </AppButton>
         ) : null}
         <ClarityResultPanel>
           <AppCard
@@ -102,7 +168,7 @@ export function ClarityScene({
               <MoneyText
                 amount={projection.safeToSpend}
                 currencyCode={currency}
-                formatStyle="compact"
+                formatStyle="sts"
                 variant="hero"
                 color={stsColor}
                 fit={{
@@ -118,6 +184,34 @@ export function ClarityScene({
             </Stack>
           </AppCard>
         </ClarityResultPanel>
+
+        {normalizedOmissions.length > 0 ? (
+          <Stack gap="sm" testID="onboarding-clarity-omissions">
+            <AppText variant="subheading">{copy.notIncludedYet}</AppText>
+            <AppText variant="caption" color="secondary">{copy.willNotBeSaved}</AppText>
+            {normalizedOmissions.map(omission => (
+              <AppText key={omission.id ?? omission.label} variant="caption" color="secondary">
+                {omission.detail ? `${omission.label} · ${omission.detail}` : omission.label}
+              </AppText>
+            ))}
+          </Stack>
+        ) : null}
+
+        {resolvedEditActions.length > 0 ? (
+          <Stack gap="sm" testID="onboarding-clarity-edit-actions">
+            {resolvedEditActions.map(action => (
+              <AppButton
+                key={action.id ?? action.label}
+                variant="ghost"
+                size="md"
+                onPress={action.onPress}
+                testID={`onboarding-edit-${action.id ?? action.label}`}
+              >
+                {action.label}
+              </AppButton>
+            ))}
+          </Stack>
+        ) : null}
 
         <Stack gap="sm">
           <AppText variant="subheading">{copy.clarityExplainAction}</AppText>

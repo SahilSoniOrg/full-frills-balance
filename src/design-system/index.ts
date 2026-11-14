@@ -4,6 +4,7 @@ export * from './Inline';
 export * from './Keyboard';
 export * from './Page';
 export * from './Separator';
+export * from './SetupProgressBar';
 export * from './Skeleton';
 export * from './Stack';
 export * from './utils';

@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, ChromeMotion, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Box, Inline, Page, Stack, usePageKeyboard } from '@/src/design-system';
+import { Box, Inline, Page, SetupProgressBar, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { MotiView } from 'moti';
 import type { ReactNode } from 'react';
@@ -26,9 +26,6 @@ export function OnboardingChrome({
   readonly testID: string;
   readonly children: ReactNode;
 }) {
-  const reduceMotion = useReducedMotion();
-  const progressRatio = stage ? stage.current / stage.total : 0;
-
   return (
     <Page testID={testID} edges={['top', 'bottom']} keyboardAvoiding>
       <Box flex={1} minHeight={0}>
@@ -41,30 +38,13 @@ export function OnboardingChrome({
             minHeight={0}
           >
             {stage ? (
-              <Box paddingTop="lg" paddingBottom="sm" accessibilityLabel={stage.label}>
-                <Inline align="center" justify="space-between" marginBottom="sm">
-                  <AppText variant="body" color="secondary" weight="medium">
-                    {stage.label}
-                  </AppText>
-                </Inline>
-                <Box height={Spacing.xs} borderRadius="full" background="border" overflow="hidden">
-                  {reduceMotion ? (
-                    <Box
-                      height="100%"
-                      width={`${progressRatio * 100}%`}
-                      borderRadius="full"
-                      background="primary"
-                    />
-                  ) : (
-                    <MotiView
-                      animate={{ width: `${progressRatio * 100}%` }}
-                      transition={ChromeMotion.panel}
-                      style={{ height: '100%', borderRadius: 999, overflow: 'hidden' }}
-                    >
-                      <Box height="100%" width="100%" borderRadius="full" background="primary" />
-                    </MotiView>
-                  )}
-                </Box>
+              <Box paddingTop="lg" paddingBottom="sm">
+                <SetupProgressBar
+                  label={stage.label}
+                  current={stage.current}
+                  total={stage.total}
+                  accessibilityLabel={stage.label}
+                />
               </Box>
             ) : null}
             {header ? <Box flexShrink={0}>{header}</Box> : null}
@@ -96,13 +76,25 @@ export function SafeToSpendHeader({
   amount,
   currency,
   change,
+  changeReason,
+  reason,
+  spokenEcho,
+  echo,
+  spoken,
 }: {
   readonly amount: number;
   readonly currency: string;
-  readonly change: string | null;
+  readonly change?: string | null;
+  readonly changeReason?: string | null;
+  readonly reason?: string | null;
+  readonly spokenEcho?: string | null;
+  readonly echo?: string | null;
+  readonly spoken?: string | null;
 }) {
   const { isKeyboardVisible: compact } = usePageKeyboard();
   const reduceMotion = useReducedMotion();
+  const resolvedChangeReason = changeReason ?? reason ?? change ?? null;
+  const resolvedSpokenEcho = spokenEcho ?? echo ?? spoken ?? null;
 
   const amountText = (variant: 'subheading' | 'hero') => (
     <MoneyText
@@ -144,7 +136,19 @@ export function SafeToSpendHeader({
           )}
         </Stack>
       )}
-      {change ? (
+      {resolvedSpokenEcho ? (
+        <Box paddingBottom="xs">
+          <AppText
+            variant="caption"
+            color="secondary"
+            numberOfLines={2}
+            testID="onboarding-sts-echo"
+          >
+            {resolvedSpokenEcho}
+          </AppText>
+        </Box>
+      ) : null}
+      {resolvedChangeReason ? (
         <Box paddingBottom="sm">
           <AppText
             variant="caption"
@@ -152,7 +156,7 @@ export function SafeToSpendHeader({
             numberOfLines={2}
             testID="onboarding-sts-change"
           >
-            {change}
+            {resolvedChangeReason}
           </AppText>
         </Box>
       ) : null}
