@@ -22,7 +22,9 @@ function restorePreviews(draft: RestoreSetupDraft): readonly RestorePreview[] {
     name:
       index === 0
         ? workplace.name.value
-        : (source.facts.workplace.name ?? `Workplace ${index + 1}`),
+        : (draft.restore.handoffs?.[index]?.publishedWorkplaceName ??
+          source.facts.workplace.name ??
+          `Workplace ${index + 1}`),
     currency:
       index === 0
         ? workplace.baseCurrency.value

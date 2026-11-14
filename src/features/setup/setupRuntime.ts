@@ -13,11 +13,7 @@ import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardRestorePublication, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
-import {
-  restoreSources,
-  type RestoreJourneyId,
-  type RestoreSetupDraft,
-} from './setupTypes';
+import { restoreSources, type RestoreJourneyId, type RestoreSetupDraft } from './setupTypes';
 
 type RestoreSetupOutcome =
   | {
@@ -109,9 +105,10 @@ export function createJourneyCoordinator(journeyId: RestoreJourneyId): SetupCoor
                     }
                   : undefined;
             if (!corrections) throw new Error('Bulk restore workplace metadata is incomplete');
+            const publishedName = await uniqueRestoreWorkplaceName(corrections.name, operationId);
             const handoff = await publishRestore(prepared, {
               operationId,
-              corrections,
+              corrections: { ...corrections, name: publishedName },
               onProgress,
             });
             if (index > 0 && !(await workplaceService.getWorkplace(operationId))) {
@@ -136,6 +133,32 @@ export function createJourneyCoordinator(journeyId: RestoreJourneyId): SetupCoor
     },
     finish: finishJourney,
   });
+}
+
+async function uniqueRestoreWorkplaceName(
+  requestedName: string,
+  operationId: WorkplaceId,
+): Promise<string> {
+  const name = requestedName.trim();
+  const existing = await workplaceService.getAllWorkplaces();
+  // Reuse the committed name if publication already happened before an interrupted retry.
+  const alreadyPublished = existing.find(workplace => workplace.id === operationId);
+  if (alreadyPublished) return alreadyPublished.name;
+
+  const existingNames = new Set(
+    existing
+      .filter(workplace => workplace.id !== operationId)
+      .map(workplace => workplace.name.trim().toLowerCase()),
+  );
+  if (!existingNames.has(name.toLowerCase())) return name;
+
+  let suffix = 2;
+  let candidate = `${name} (${suffix})`;
+  while (existingNames.has(candidate.toLowerCase())) {
+    suffix += 1;
+    candidate = `${name} (${suffix})`;
+  }
+  return candidate;
 }
 
 function createSeededDraft(journeyId: RestoreJourneyId): RestoreSetupDraft {
@@ -184,8 +207,7 @@ export function applySetupOutcome(
       origin: '/onboarding?journey=empty_device_restore',
       navigation: 'replace',
     });
-  }
-  else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
+  } else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
   else AppNavigation.returnToSettings();
 }
 

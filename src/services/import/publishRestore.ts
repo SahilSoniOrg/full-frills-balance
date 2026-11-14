@@ -254,6 +254,7 @@ export async function publishRestore(
   return {
     operationId,
     workplaceId: operationId,
+    publishedWorkplaceName: published.name,
     fingerprint: prepared.fingerprint,
     stats: { ...prepared.stats, workplaceId: operationId },
     facts: prepared.facts,

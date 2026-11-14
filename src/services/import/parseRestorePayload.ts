@@ -169,6 +169,9 @@ export function parseRestoreHandoff(
     return undefined;
   }
   if (value.operationId !== operationId || !nonEmptyString(value.fingerprint)) return undefined;
+  if (value.publishedWorkplaceName !== undefined && !nonEmptyString(value.publishedWorkplaceName)) {
+    return undefined;
+  }
   const facts = parseRestoreFacts(value.facts);
   const stats = parseRestoreStats(value.stats);
   if (
@@ -182,6 +185,9 @@ export function parseRestoreHandoff(
   return {
     operationId: asWorkplaceId(value.operationId),
     workplaceId: asWorkplaceId(value.workplaceId),
+    ...(value.publishedWorkplaceName === undefined
+      ? {}
+      : { publishedWorkplaceName: value.publishedWorkplaceName }),
     fingerprint: value.fingerprint,
     facts,
     stats,

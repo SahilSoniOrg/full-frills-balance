@@ -60,6 +60,8 @@ export interface PublishRestoreOptions {
 export interface RestoreHandoff {
   readonly operationId: WorkplaceId;
   readonly workplaceId: WorkplaceId;
+  /** Effective local name after conflict-safe restore publication. */
+  readonly publishedWorkplaceName?: string;
   readonly fingerprint: string;
   readonly stats: ImportStats;
   readonly facts: RestoreFacts;

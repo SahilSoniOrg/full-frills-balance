@@ -24,11 +24,7 @@ import { asWorkplaceId } from '@/src/types/ids';
 type SliceAcceptance = SetupSliceAcceptance;
 type RestoreProgress = (message: string, progress?: number) => void;
 
-const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
-  'workplace',
-  'restore_summary',
-  'device',
-];
+const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = ['workplace', 'restore_summary', 'device'];
 
 type RestoreSetupOutcome =
   | {
@@ -186,7 +182,8 @@ function commitDevice(
 export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupCoordinator {
   const recipe = options.recipe ?? getSetupRecipe(options.journeyId);
   const store = options.draftStore ?? setupDraftStore;
-  let draft: RestoreSetupDraft = options.draft ?? createSetupDraft(options.journeyId, options.operationId);
+  let draft: RestoreSetupDraft =
+    options.draft ?? createSetupDraft(options.journeyId, options.operationId);
 
   const persist = (next: RestoreSetupDraft): void => {
     store.save(next);
@@ -283,8 +280,23 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
       throw new Error('Restore publication effect is not configured');
     }
     const handoffs = await options.effects.publishRestore(draft, onProgress);
+    const publishedName = handoffs[0]?.publishedWorkplaceName;
+    const workplace =
+      draft.workplace && publishedName
+        ? {
+            ...draft.workplace,
+            name: {
+              value: publishedName,
+              source:
+                publishedName === draft.workplace.name.value
+                  ? draft.workplace.name.source
+                  : ('defaulted' as const),
+            },
+          }
+        : draft.workplace;
     persist({
       ...draft,
+      ...(workplace ? { workplace } : {}),
       restore: {
         ...draft.restore,
         handoffs,
