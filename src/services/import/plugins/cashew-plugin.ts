@@ -13,9 +13,9 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { files } from '@/src/utils/files';
-import { countAccountsVsCategories } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
+import { files } from '@/src/services/files/files';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
+import { logger } from '@/src/services/observability/logger';
 import * as SQLite from 'expo-sqlite';
 
 const CASHEW_DB_NAME = 'cashew_import.sqlite';

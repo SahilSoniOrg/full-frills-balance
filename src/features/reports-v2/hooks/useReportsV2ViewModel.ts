@@ -23,7 +23,7 @@ import {
   rangeEndingOnLatestActivity,
   shouldShiftInitialReportRange,
 } from '@/src/services/reports/initialReportRange';
-import { confirm, toast } from '@/src/utils/alerts';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 
 const EMPTY_ACCOUNT_IDS: readonly string[] = [];
 const FILTER_SETTLE_DELAY_MS = 220;

@@ -6,9 +6,9 @@ import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountSavePayload } from '@/src/features/accounts/services/accountFormService';
 import { Icon } from '@/src/types/domainIcons';
-import { confirm, showErrorAlert } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
-import { AllTheProviders } from '@/src/utils/test-utils';
+import { confirm, showErrorAlert } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { AllTheProviders } from '@/src/testing/render';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { createDefaultAccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
 
@@ -70,13 +70,13 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
   useOptionalWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: jest.fn(() => mockQueueLeave()),
     toAccounts: jest.fn(() => mockQueueLeave()),
   },
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   showErrorAlert: jest.fn(),
   toast: { success: jest.fn() },

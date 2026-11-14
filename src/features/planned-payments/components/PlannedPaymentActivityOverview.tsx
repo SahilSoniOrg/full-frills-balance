@@ -13,7 +13,7 @@ import type {
 } from '@/src/services/planned-payment/plannedPaymentDetailService';
 import type { JournalId } from '@/src/types/ids';
 import dayjs from 'dayjs';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { PlannedPaymentHistoryCard } from './PlannedPaymentHistoryCard';
 import {
   getPlannedPaymentHistoryPresentation,

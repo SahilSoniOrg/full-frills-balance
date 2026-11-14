@@ -13,7 +13,7 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { Q, Model } from '@nozbe/watermelondb';
 
 const WORKPLACE_ONE = 'wp-rebuild-isolation-1' as WorkplaceId;

@@ -1,5 +1,5 @@
 import { AccountType } from '@/src/types/enums';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,

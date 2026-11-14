@@ -14,7 +14,7 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { Icon, isValidIconName, parseIconName, type IconName } from '@/src/types/domainIcons';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
 import {
   CANONICAL_IMPORT_VERSION_V1,
   CanonicalAccount,

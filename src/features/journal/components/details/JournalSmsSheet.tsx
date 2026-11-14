@@ -13,9 +13,9 @@ import {
 } from '@/src/services/journal/smsHighlightRanges';
 import type { SmsJournalInfoDisplay } from '@/src/services/journal/journalDetailsHelpers';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useTheme } from '@/src/hooks/use-theme';
-import { blendColors } from '@/src/utils/color-math';
+import { blendColors } from '@/src/design-system/colorMath';
 
 const colors = {
   amount: 'expense',

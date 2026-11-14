@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import { StyleSheet, View } from 'react-native';
 
 type MetricBreakdownRowProps = {

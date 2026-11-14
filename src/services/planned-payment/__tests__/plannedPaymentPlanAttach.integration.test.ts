@@ -25,7 +25,7 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import { asPlannedPaymentId, type AccountId, type WorkplaceId } from '@/src/types/ids';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-plan-attach' as WorkplaceId;
@@ -179,7 +179,7 @@ describe('planned payment plan attach', () => {
     expect(capture.description).toBe('Rent');
 
     const meta = await metadataFor(capture.id);
-    const parsed = safeParseJSON<Record<string, unknown>>(meta.metadataJson, {});
+    const parsed = parseJSONRecord(meta.metadataJson);
     expect(parsed[MetadataKeys.ORIGINAL_PLANNED_DATE]).toBe(occurrenceDay);
     const captureMeta = readCaptureMetadata(meta.metadataJson);
     expect(captureMeta).toMatchObject({
@@ -306,10 +306,7 @@ describe('planned payment plan attach', () => {
       allocations: [{ accountId: uncategorizedId, origin: 'uncategorized' }],
       sources: [{ sourceId: 'sms-1' }],
     });
-    const parsed = safeParseJSON<Record<string, unknown>>(
-      (await metadataFor(capture.id)).metadataJson,
-      {},
-    );
+    const parsed = parseJSONRecord((await metadataFor(capture.id)).metadataJson);
     expect(parsed[MetadataKeys.ORIGINAL_PLANNED_DATE]).toBeUndefined();
   });
 });

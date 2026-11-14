@@ -1,7 +1,7 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
 import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
-import { smsContentDigest } from '@/src/utils/smsDeliveryIdentity';
+import { smsContentDigest } from '@/src/domain/transaction-intelligence/smsDeliveryIdentity';
 import { generator } from '@/src/data/database/idGenerator';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
@@ -9,8 +9,8 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
-import { safeParseJSON } from '@/src/utils/serialization';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { parseJSONRecord } from '@/src/utils/serialization';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { AppConfig } from '@/src/constants';
 import {
   buildReferenceDuplicateMatch,
@@ -18,9 +18,9 @@ import {
   scoreFuzzyDuplicateMatch,
   type DuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { resolveProcessingStatus } from './smsFingerprint';
-import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { sanitizeSmsMetadataJson } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
 import { SmsAnalysisResult, SmsContentReservation, SmsFuzzyReservation } from './types';
 import { decideSms, type SmsDecision } from './smsDecision';
 import type { CaptureContext } from '@/src/services/transaction-intelligence/captureContext';
@@ -37,11 +37,11 @@ export function prepareUpsertInboxRecord(
 ): TransactionInboxRecordWriteData {
   const now = Date.now();
   const existingMetadata = existingRecord?.metadataJson
-    ? safeParseJSON<Record<string, unknown>>(existingRecord.metadataJson, {})
+    ? parseJSONRecord(existingRecord.metadataJson)
     : {};
   const cleanedMetadata = sanitizeSmsMetadataJson(JSON.stringify(existingMetadata), true);
   const metadataJson = JSON.stringify({
-    ...(cleanedMetadata ? safeParseJSON<Record<string, unknown>>(cleanedMetadata, {}) : {}),
+    ...(cleanedMetadata ? parseJSONRecord(cleanedMetadata) : {}),
     ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
   });
   // Scan-dismissed messages never gain raw text; a record the
@@ -212,10 +212,7 @@ export async function processScanBatchItem(params: {
   }
 
   const statusAtDecision = finalStatus;
-  const previousMetadata = safeParseJSON<Record<string, unknown>>(
-    latestRecord?.metadataJson ?? '{}',
-    {},
-  );
+  const previousMetadata = parseJSONRecord(latestRecord?.metadataJson ?? '{}');
   const alreadyHeldForReview =
     previousMetadata.captureAutoPostBlocked === true ||
     typeof previousMetadata.captureReviewReason === 'string';
@@ -295,7 +292,7 @@ export async function processScanBatchItem(params: {
   // Sticky block only for explicit review holds. Manual/catch scans with auto-post off
   // return kind:'review' without a reason and must not poison later arrival auto-post.
   if (remainsInReview && decision.kind === 'review' && decision.reason) {
-    const metadata = safeParseJSON<Record<string, unknown>>(inboxRecord.metadataJson ?? '{}', {});
+    const metadata = parseJSONRecord(inboxRecord.metadataJson ?? '{}');
     inboxRecord.metadataJson = JSON.stringify({
       ...metadata,
       captureAutoPostBlocked: true,

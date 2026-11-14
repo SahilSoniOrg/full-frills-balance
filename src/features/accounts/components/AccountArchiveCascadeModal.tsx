@@ -9,7 +9,7 @@ import {
   ArchiveCascadeNode,
   buildArchiveCascadeNodes,
   defaultCascadeSelection,
-} from '@/src/utils/accountArchive';
+} from '@/src/domain/accounts/accountArchive';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 

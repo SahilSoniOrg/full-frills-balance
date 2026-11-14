@@ -9,7 +9,7 @@ import { smsService } from '@/src/services/sms-service';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { InboxParseStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 
 interface EditReparseSmsModalProps {
   visible: boolean;

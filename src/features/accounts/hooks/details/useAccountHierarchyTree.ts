@@ -2,11 +2,14 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { isUndeletedAccount, type AccountTreeSnapshot } from '@/src/services/accounts/accountTree';
-import { isAccountArchived } from '@/src/utils/accountArchive';
-import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { AppNavigation } from '@/src/utils/navigation';
+import { isUndeletedAccount, type AccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
+import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
+import {
+  getAccountAccentColor,
+  resolveAccountAccentColor,
+} from '@/src/design-system/accountPresentation';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useMemo, useState } from 'react';
 import type { AncestorAccountViewModel, SubAccountViewModel } from './types';
 

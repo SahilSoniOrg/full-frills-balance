@@ -1,8 +1,8 @@
 import { RestartOptions } from '@/src/contexts/app-shell/AppRestartProvider';
 import { AppConfig } from '@/src/constants';
 import { analytics } from '@/src/services/analytics';
-import { alert, confirm, toast } from '@/src/utils/alerts';
-import { logger } from '@/src/utils/logger';
+import { alert, confirm, toast } from '@/src/services/feedback/alerts';
+import { logger } from '@/src/services/observability/logger';
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 

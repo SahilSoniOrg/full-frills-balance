@@ -15,7 +15,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import type { JournalId } from '@/src/types/ids';
 import type { JournalListItem } from '@/src/types/ui';
-import { getNow } from '@/src/utils/dateUtils';
+import { getNow } from '@/src/utils/dateFormatting';
 import { useMemo } from 'react';
 
 export interface InsightDetailsViewModel {

@@ -5,7 +5,7 @@ import { PREFERENCES_KEY, USER_PREFERENCES_KEY } from '../types';
 
 const mockMemory = new Map<string, string>();
 
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     set: jest.fn((key: string, value: string) => mockMemory.set(key, value)),
     getString: jest.fn((key: string) => mockMemory.get(key)),

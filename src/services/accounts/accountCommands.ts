@@ -22,8 +22,8 @@ import {
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
-import { isValidHexColor } from '@/src/utils/accountCategory';
-import { roundToPrecision } from '@/src/utils/money';
+import { isValidHexColor } from '@/src/design-system/colorMath';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 /** Caller-owned fields for creating an account (form / onboarding data only). */
 export interface CreateAccountCommandInput {

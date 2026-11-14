@@ -1,0 +1,175 @@
+import { AppConfig } from '@/src/constants';
+
+import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
+
+import dayjs from 'dayjs';
+
+import calendar from 'dayjs/plugin/calendar';
+
+import * as Localization from 'expo-localization';
+
+dayjs.extend(calendar);
+
+const DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
+const MAX_DATE_FORMATTERS = 32;
+
+function formatLocalizedDate(
+  date: Date,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  if (Number.isNaN(date.getTime())) return 'Invalid Date';
+  // Recreate the default-zone formatter when the device timezone changes.
+  const timeZone = Localization.getCalendars()[0]?.timeZone;
+  const key = JSON.stringify([locale, timeZone, options]);
+  let formatter = DATE_FORMATTERS.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    if (DATE_FORMATTERS.size >= MAX_DATE_FORMATTERS) {
+      const oldest = DATE_FORMATTERS.keys().next().value;
+      if (oldest !== undefined) DATE_FORMATTERS.delete(oldest);
+    }
+    DATE_FORMATTERS.set(key, formatter);
+  }
+  return formatter.format(date);
+}
+
+export const CLOCK_DAYJS_FORMAT: Record<ResolvedHourCycle, string> = {
+  '12-hour': 'h:mm A',
+  '24-hour': 'HH:mm',
+};
+
+export function formatClockTime(value: dayjs.ConfigType, cycle: ResolvedHourCycle): string {
+  return dayjs(value).format(CLOCK_DAYJS_FORMAT[cycle]);
+}
+
+export function formatDateKeepingPattern(
+  value: dayjs.ConfigType,
+  datePattern: string,
+  cycle: ResolvedHourCycle,
+  separator = ', ',
+): string {
+  const d = dayjs(value);
+  return `${d.format(datePattern)}${separator}${d.format(CLOCK_DAYJS_FORMAT[cycle])}`;
+}
+
+export function localeClockOptions(cycle: ResolvedHourCycle): Intl.DateTimeFormatOptions {
+  return {
+    hour: cycle === '12-hour' ? 'numeric' : '2-digit',
+    minute: '2-digit',
+    hour12: cycle === '12-hour',
+  };
+}
+
+export function calendarClockTemplates(cycle: ResolvedHourCycle): {
+  sameDay: string;
+  nextDay: string;
+  nextWeek: string;
+  lastDay: string;
+  lastWeek: string;
+  sameElse: string;
+} {
+  const clock = CLOCK_DAYJS_FORMAT[cycle];
+  return {
+    sameDay: `[Today at] ${clock}`,
+    nextDay: `[Tomorrow at] ${clock}`,
+    nextWeek: `dddd [at] ${clock}`,
+    lastDay: `[Yesterday at] ${clock}`,
+    lastWeek: `[Last] dddd [at] ${clock}`,
+    sameElse: `MMM D, YYYY [at] ${clock}`,
+  };
+}
+
+/**
+ * Formats a timestamp as a localized date string
+ * @param timestamp Unix timestamp in milliseconds
+ * @param options Optional formatting options
+ * @returns Formatted date string
+ */
+export const formatDate = (
+  value: number | Date,
+  options: { locale?: string } & (
+    | { includeTime?: false; hourCycle?: ResolvedHourCycle }
+    | { includeTime: boolean; hourCycle: ResolvedHourCycle }
+  ) = {},
+): string => {
+  const { locale = 'en-US' } = options;
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  const date = new Date(timestamp);
+
+  if (options.includeTime) {
+    const hourCycle = options.hourCycle;
+    return formatLocalizedDate(date, locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      ...localeClockOptions(hourCycle),
+    });
+  }
+
+  return formatLocalizedDate(date, locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Formats a timestamp as a short date string (MM/DD/YYYY)
+ * @param timestamp Unix timestamp in milliseconds
+ * @returns Short date string
+ */
+export const formatShortDate = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  const date = new Date(timestamp);
+  return formatLocalizedDate(date, 'en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+/** Named clock so render paths pass react-hooks/purity (Date.now is banned there). */
+export const getNow = () => Date.now();
+
+/** Named clock so render paths pass react-hooks/purity (performance.now is banned there). */
+export const getPerfNow = () => performance.now();
+
+/**
+ * Formats a timestamp for the day separator in lists (e.g. "Monday, Feb 23, 2026")
+ */
+export const formatDaySeparator = (
+  timestamp: number,
+  locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale,
+): string => {
+  const date = new Date(timestamp);
+  return formatLocalizedDate(date, locale, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Formats a timestamp as a relative date for reconciliation (e.g., "Today at 1:48 AM")
+ */
+export const formatRelativeReconciledDate = (
+  value: number | Date,
+  hourCycle: ResolvedHourCycle,
+): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  return dayjs(timestamp).calendar(null, calendarClockTemplates(hourCycle));
+};
+
+/**
+ * Formats a timestamp as just time for reconciliation (e.g., "1:48 AM" or "13:48")
+ */
+export const formatReconciledTime = (
+  value: number | Date,
+  hourCycle: ResolvedHourCycle,
+): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  return formatClockTime(timestamp, hourCycle);
+};

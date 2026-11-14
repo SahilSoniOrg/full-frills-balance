@@ -5,7 +5,7 @@ import * as Application from 'expo-application';
 import { ensureAnonymizedId } from '@/src/services/analytics/anonymizedIdentity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { preferences } from '@/src/services/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useEffect, useRef } from 'react';
@@ -25,7 +25,7 @@ import { runAppBootstrapSideEffects } from '../bootstrap';
 import { checkJournalBalancesOnStartup } from '../journalBalanceStartupCheck';
 import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 
 /**

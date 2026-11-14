@@ -6,7 +6,7 @@ import {
   SMS_IMPORT_PRIVACY_LEGACY_FINGERPRINT,
   smsImportPrivacyBatch,
 } from '@/src/testing/smsImportPrivacyFixture';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WORKPLACE = 'wp-import-inbox-privacy' as never;

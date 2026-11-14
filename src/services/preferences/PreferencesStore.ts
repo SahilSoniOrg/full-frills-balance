@@ -1,10 +1,10 @@
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { ShareFormat } from '@/src/types/sharing';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { isHourCyclePreference } from '@/src/utils/hourCycle';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { splitPreferenceBags } from './splitPreferenceBags';
 import {
   DEFAULT_UI_PREFERENCES,

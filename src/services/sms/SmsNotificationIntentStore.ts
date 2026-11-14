@@ -1,9 +1,9 @@
+import { parseJSONRecord } from '@/src/utils/serialization';
 import type { NotificationResponse } from 'expo-notifications';
 import { SMS_REVIEW_NOTIFICATION_TYPE } from '@/src/services/notification/NotificationService';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import type { WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { storage } from '@/src/data/storage/storage';
 
 const PENDING_KEY = 'sms_pending_notification_intent';
 const HANDLED_KEY = 'sms_handled_notification_response';
@@ -15,10 +15,30 @@ export interface PendingSmsNotificationIntent {
   grouped: boolean;
 }
 
+function readPendingIntent(json: string | undefined): PendingSmsNotificationIntent | null {
+  const value = parseJSONRecord(json);
+  if (
+    typeof value.responseId !== 'string' ||
+    !value.responseId ||
+    typeof value.receivedAt !== 'number' ||
+    !Number.isFinite(value.receivedAt) ||
+    typeof value.grouped !== 'boolean'
+  )
+    return null;
+  return {
+    responseId: value.responseId,
+    receivedAt: value.receivedAt,
+    grouped: value.grouped,
+    inboxRecordId: typeof value.inboxRecordId === 'string' ? value.inboxRecordId : undefined,
+    workplaceId: typeof value.workplaceId === 'string' ? value.workplaceId : undefined,
+  };
+}
+
 /** Captures taps before launch gates mount. Contains only opaque local identities. */
 export class SmsNotificationIntentStore {
-  private pending: PendingSmsNotificationIntent | null =
-    safeParseJSON<PendingSmsNotificationIntent | null>(storage.getString(PENDING_KEY), null);
+  private pending: PendingSmsNotificationIntent | null = readPendingIntent(
+    storage.getString(PENDING_KEY),
+  );
   private listeners = new Set<() => void>();
   getSnapshot = () => this.pending;
   subscribe = (listener: () => void) => {

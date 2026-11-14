@@ -6,7 +6,7 @@ import { analytics } from '@/src/services/analytics';
  * This is a small typed façade over the existing analytics service. It does not
  * introduce a generic analytics framework: each event has its own function and
  * fixed property set, and every value is validated by
- * `src/utils/observabilityPrivacy.ts` before delivery.
+ * `src/services/observability/privacy.ts` before delivery.
  *
  * Parent emission rules (callers must follow these to keep metrics honest):
  * - `onboarding_flow_started` is emitted once per flow instance, on first mount
@@ -45,13 +45,7 @@ export type OnboardingContext =
   | 'existing_workplace_entry';
 
 export type OnboardingStepId =
-  | 'welcome'
-  | 'currency'
-  | 'accounts'
-  | 'income'
-  | 'payments'
-  | 'monthly_limits'
-  | 'result';
+  'welcome' | 'currency' | 'accounts' | 'income' | 'payments' | 'monthly_limits' | 'result';
 
 export type OnboardingCompletionAction = 'continue' | 'complete';
 export type OnboardingDeferralAction = 'defer' | 'skip';
@@ -96,9 +90,7 @@ function flowProps(input: OnboardingFlowAnalytics): Record<string, string | bool
   };
 }
 
-export function trackOnboardingFlowStarted(
-  input: OnboardingFlowAnalytics,
-): boolean {
+export function trackOnboardingFlowStarted(input: OnboardingFlowAnalytics): boolean {
   return analytics.track('onboarding_flow_started', flowProps(input));
 }
 

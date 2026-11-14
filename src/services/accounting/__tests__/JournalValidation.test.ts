@@ -1,6 +1,6 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-import { checkJournal, effect } from '@/src/utils/accounting/BalanceEffects';
+import { checkJournal, effect } from '@/src/domain/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 
 describe('JournalValidation', () => {

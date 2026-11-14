@@ -1,6 +1,7 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { database } from '@/src/data/database/Database';
 import Currency from '@/src/data/models/Currency';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+
 import { Q } from '@nozbe/watermelondb';
 
 interface CurrencyInput {
@@ -26,7 +27,7 @@ export class CurrencyRepository {
     const currency = await this.findByCode(code);
     if (currency) return currency.precision;
 
-    return CurrencyFormatter.getPrecisionFallback(code);
+    return getCurrencyPrecision(code);
   }
 
   async findAllIncludingDeleted(): Promise<Currency[]> {

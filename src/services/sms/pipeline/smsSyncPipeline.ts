@@ -24,7 +24,7 @@ import {
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import {
   computeSmsFingerprint,
   isStoredRedelivery,
@@ -43,7 +43,7 @@ import {
 } from '@/src/services/planned-payment/evidenceDrivenObservationSettlement';
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { projectRecognition } from './smsDecision';
 
 export interface SmsScanOptions {
@@ -317,8 +317,8 @@ export class SmsSyncPipeline {
                 });
                 const roles = resolveAccountFlowRoles(recognition);
                 const alreadyHeldForReview =
-                  safeParseJSON<Record<string, unknown>>(latestRecord?.metadataJson ?? '{}', {})
-                    ?.captureAutoPostBlocked === true;
+                  parseJSONRecord(latestRecord?.metadataJson ?? '{}')?.captureAutoPostBlocked ===
+                  true;
                 evidenceSettlement = await applyEvidenceDrivenObservationSettlement({
                   session,
                   workplaceId,
@@ -413,10 +413,7 @@ export class SmsSyncPipeline {
               item.inboxRecord.processingStatus !== InboxProcessingStatus.DISMISSED
             ) {
               item.inboxRecord.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
-              const metadata = safeParseJSON<Record<string, unknown>>(
-                item.inboxRecord.metadataJson ?? '{}',
-                {},
-              );
+              const metadata = parseJSONRecord(item.inboxRecord.metadataJson ?? '{}');
               item.inboxRecord.metadataJson = JSON.stringify({
                 ...metadata,
                 captureAutoPostBlocked: true,
@@ -428,10 +425,7 @@ export class SmsSyncPipeline {
               !item.inboxRecord.linkedJournalId &&
               item.inboxRecord.processingStatus === InboxProcessingStatus.PENDING
             ) {
-              const metadata = safeParseJSON<Record<string, unknown>>(
-                item.inboxRecord.metadataJson ?? '{}',
-                {},
-              );
+              const metadata = parseJSONRecord(item.inboxRecord.metadataJson ?? '{}');
               item.inboxRecord.metadataJson = JSON.stringify({
                 ...metadata,
                 captureAutoPostBlocked: true,

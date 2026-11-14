@@ -9,8 +9,8 @@ import {
   type ShareOutcome,
   type ShareScope,
 } from '@/src/types/sharing';
-import { toast } from '@/src/utils/alerts';
-import { logger } from '@/src/utils/logger';
+import { toast } from '@/src/services/feedback/alerts';
+import { logger } from '@/src/services/observability/logger';
 
 /** Multi-workplace / device shares are allowed to outlive a screen remount (see SharingRuntime). */
 function survivesOwnerUnmount(scope: ShareScope | undefined): boolean {

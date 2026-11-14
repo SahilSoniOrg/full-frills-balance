@@ -1,5 +1,5 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { AccountSection } from '@/src/utils/accountCategory';
+import type { AccountSection } from '@/src/design-system/accountPresentation';
 
 export type AccountPickerSections = AccountSection[];
 

@@ -33,11 +33,11 @@ import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums'
 import { TransactionChannel } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { Collection, Model } from '@nozbe/watermelondb';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import {
   sanitizeSmsAuditChanges,
   hashSmsMetadataFingerprints,
-} from '@/src/utils/smsPrivateMetadata';
+} from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
 
 type ImportPersistenceRaw = Record<string, unknown> & {
   id?: string;

@@ -14,8 +14,8 @@ import { withPrivacyScope, useEffectivePrivacyMode } from '@/src/contexts/Privac
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { Icon } from '@/src/types/domainIcons';
-import { AppNavigation } from '@/src/utils/navigation';
-import { formatDate } from '@/src/utils/dateUtils';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { Fragment, useState } from 'react';
 

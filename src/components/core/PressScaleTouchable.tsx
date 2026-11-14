@@ -1,6 +1,6 @@
 import { Opacity, Scale } from '@/src/constants/design-tokens';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { triggerPressHaptic, type PressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic, type PressHaptic } from '@/src/design-system/haptics';
 import { MotiView } from 'moti';
 import { useState, type ReactNode } from 'react';
 import {

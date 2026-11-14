@@ -40,7 +40,7 @@ import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useA
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountManagementAction } from '@/src/features/accounts/helpers/accountManagementActions';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Keyboard } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';

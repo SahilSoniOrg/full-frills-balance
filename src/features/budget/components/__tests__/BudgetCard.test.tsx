@@ -1,4 +1,4 @@
-import { render, fireEvent, cleanup } from '@/src/utils/test-utils';
+import { render, fireEvent, cleanup } from '@/src/testing/render';
 import { BudgetCard } from '../BudgetCard';
 import { BudgetListSummary } from '../BudgetListSummary';
 import { summarizeBudgetList } from '../../helpers/budgetListPresentation';
@@ -8,9 +8,11 @@ import { AppConfig } from '@/src/constants';
 import { asBudgetId, asAccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import type { BudgetItem } from '../../types';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
-jest.mock('@/src/utils/incompleteFxDetails', () => ({ showIncompleteFxDetails: jest.fn() }));
+jest.mock('@/src/services/currency/incompleteFxDetails', () => ({
+  showIncompleteFxDetails: jest.fn(),
+}));
 jest.mock('@shopify/flash-list', () => {
   const { FlatList } = jest.requireActual<typeof import('react-native')>('react-native');
   return { FlashList: FlatList };

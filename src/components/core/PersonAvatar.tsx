@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core/AppText';
 import { useTheme } from '@/src/hooks/use-theme';
-import { personInitials } from '@/src/utils/personName';
+import { personInitials } from '@/src/components/core/personName';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /** Shared diameter for header trigger + drawer profile. */

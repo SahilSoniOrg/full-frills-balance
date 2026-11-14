@@ -1,4 +1,4 @@
-import { render, fireEvent, act } from '@/src/utils/test-utils';
+import { render, fireEvent, act } from '@/src/testing/render';
 import { AppConfig } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
 import { buildJournalEntries, plannedMove } from '../../../journalDetailsPresentation';
@@ -20,7 +20,7 @@ import { AccountType, AuditAction, JournalDisplayType } from '@/src/types/enums'
 import { asBudgetId } from '@/src/types/ids';
 import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
 import { revertEntry } from '@/src/services/audit-service';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { Icon } from '@/src/types/domainIcons';
 
@@ -36,8 +36,8 @@ jest.mock('@/src/components/overlays/ModalSurface', () => {
 });
 
 jest.mock('@/src/services/audit-service', () => ({ revertEntry: jest.fn() }));
-jest.mock('@/src/utils/alerts', () => ({
-  ...jest.requireActual('@/src/utils/alerts'),
+jest.mock('@/src/services/feedback/alerts', () => ({
+  ...jest.requireActual('@/src/services/feedback/alerts'),
   toast: { success: jest.fn(), error: jest.fn() },
 }));
 

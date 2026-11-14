@@ -1,7 +1,7 @@
 import { AppText, ListGroup, ListRow } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
-import { formatRecurrence } from '@/src/utils/recurrenceLabels';
+import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 
 interface Props {
   budget: PlainBudget;

@@ -1,7 +1,7 @@
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalEntryLine } from '@/src/types/domainJournal';
-import { logger } from '@/src/utils/logger';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { logger } from '@/src/services/observability/logger';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import type { LineRateFetchState } from './workplaceRowFx';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 

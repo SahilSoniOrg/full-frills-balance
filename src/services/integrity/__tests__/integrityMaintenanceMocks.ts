@@ -2,7 +2,7 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { preferences } from '@/src/services/preferences';
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 
 jest.mock('@/src/data/repositories/DatabaseRepository', () => ({
   databaseRepository: {
@@ -27,14 +27,14 @@ jest.mock('@/src/services/widgets/WidgetProjectionService', () => ({
     clearWorkplace: jest.fn().mockResolvedValue(undefined),
   },
 }));
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: {
     clearSnapshots: jest.fn(() => true),
     clearSnapshotsForWorkplace: jest.fn(() => true),
     resumeSnapshotsForWorkplace: jest.fn(),
   },
 }));
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: { clearAll: jest.fn(), remove: jest.fn() },
 }));
 jest.mock('@/src/services/audit-identity', () => ({ clearLocalAuditActorId: jest.fn() }));

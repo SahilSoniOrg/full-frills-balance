@@ -7,8 +7,8 @@ import { AccountId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants/app-config';
 
 import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
-import { toAccountType } from '@/src/utils/accountCategory';
-import { roundToPrecision } from '@/src/utils/money';
+import { toAccountType } from '@/src/domain/accounts/accountClassification';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 export interface IncomeVsExpenseSummary {
   income: number;

@@ -9,7 +9,7 @@ import {
   SETTINGS_HUB_SECTIONS,
   type SettingsActions,
 } from '@/src/features/settings/components/settingsSections';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo, useRef, useState } from 'react';
 
 export function SettingsView({ actions }: { actions: SettingsActions }) {

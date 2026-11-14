@@ -11,7 +11,7 @@ import {
 } from '@/src/features/journal/components/JournalListModals';
 import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 

@@ -11,7 +11,7 @@ import {
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { JournalStatus } from '@/src/types/enums';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 /**
  * Set an account's balance by posting the required two-leg journal. The account,

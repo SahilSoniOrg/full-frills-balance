@@ -1,6 +1,6 @@
 import { generator } from '@/src/data/database/idGenerator';
-import { storage } from '@/src/utils/storage';
-import { logger } from '@/src/utils/logger';
+import { storage } from '@/src/data/storage/storage';
+import { logger } from '@/src/services/observability/logger';
 
 const LOCAL_AUDIT_ACTOR_ID_KEY = 'full_frills_balance_audit_actor_id_v1';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

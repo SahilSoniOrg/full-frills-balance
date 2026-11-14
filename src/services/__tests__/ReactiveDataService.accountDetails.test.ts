@@ -10,7 +10,7 @@ import {
   type AggregatedAccountBalances,
 } from '@/src/services/reactive/reactiveAggregatedBalances';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 
 jest.mock('@/src/services/balance/balanceReadService', () => ({
   balanceReadService: { getAccountBalances: jest.fn() },

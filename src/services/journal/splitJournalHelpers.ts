@@ -1,15 +1,16 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+
 import {
   formatRoundedAmount,
   fromMinorUnits,
   minorUnitFactor,
   roundToPrecision,
   toMinorUnits,
-} from '@/src/utils/money';
+} from '@/src/domain/money/money';
 
 const SPLIT_AMOUNT_PRECISION = 2;
 
@@ -51,7 +52,7 @@ function distributeUnitsEvenly(totalUnits: number, count: number): number[] {
 }
 
 export function getSplitCurrencyPrecision(currency: string | undefined, fallback = 2): number {
-  return currency ? CurrencyFormatter.getPrecisionFallback(currency) : fallback;
+  return currency ? getCurrencyPrecision(currency) : fallback;
 }
 
 function getBasePrecision(currencyContext: SplitCurrencyContext): number {

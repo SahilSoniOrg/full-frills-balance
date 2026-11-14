@@ -13,7 +13,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import { appUpdateService } from '@/src/services/update/appUpdateService';
 import { exportUpdateBackup } from '@/src/services/export';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { AppState, StyleSheet } from 'react-native';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';

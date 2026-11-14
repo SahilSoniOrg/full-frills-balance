@@ -1,11 +1,14 @@
+import { roundToPrecision } from '@/src/domain/money/moneyRounding';
+import { balanceSign } from '@/src/domain/accounting/BalanceEffects';
+import { toAccountType } from '@/src/domain/accounts/accountClassification';
+import { TransactionType } from '@/src/types/enums';
 import { FactStreamsInput, NumberLookup, PlanningFact, PlanningPeriod } from './planningContracts';
 
 export const DEFAULT_PRECISION = 2;
 
 export function roundAmount(value: number, precision: number = DEFAULT_PRECISION): number {
   if (!Number.isFinite(value)) return 0;
-  const factor = 10 ** precision;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  return roundToPrecision(value, precision);
 }
 
 export function upper(value: string | undefined): string {
@@ -38,13 +41,14 @@ export function signedDelta(fact: PlanningFact): number {
   if (Number.isFinite(fact.signedBalanceDelta)) return fact.signedBalanceDelta as number;
 
   const amount = Number.isFinite(fact.amount) ? fact.amount : 0;
-  const debit = upper(fact.transactionType) === 'DEBIT';
-  const type = upper(fact.accountType);
-  if (type === 'ASSET' || type === 'EXPENSE') return debit ? amount : -amount;
-  if (type === 'LIABILITY' || type === 'EQUITY' || type === 'INCOME') {
-    return debit ? -amount : amount;
-  }
-  return 0;
+  const type = toAccountType(fact.accountType);
+  const transactionType = upper(fact.transactionType);
+  if (
+    !type ||
+    (transactionType !== TransactionType.DEBIT && transactionType !== TransactionType.CREDIT)
+  )
+    return 0;
+  return amount * balanceSign(type, transactionType);
 }
 
 export function inPeriod(fact: PlanningFact, period: PlanningPeriod): boolean {
@@ -92,11 +96,6 @@ export function periodDayTimestamps(period: PlanningPeriod): number[] {
   const days: number[] = [];
   for (let current = start; current <= end; current += 86_400_000) days.push(current);
   return days;
-}
-
-export function percentage(value: number, divisor: number, precision: number): number | null {
-  if (divisor === 0) return null;
-  return roundAmount((value / divisor) * 100, precision);
 }
 
 export function periodProgress(period: PlanningPeriod, precision: number): number | null {

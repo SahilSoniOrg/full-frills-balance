@@ -1,7 +1,7 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
+import { ensureFontSetLoaded } from '@/src/services/fonts/loadFontSet';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useFonts } from '../useFonts';
 
@@ -11,7 +11,7 @@ jest.mock('@/src/contexts/app-shell/appReady', () => ({
 jest.mock('@/src/hooks/useThemePrefs', () => ({
   useThemePrefs: jest.fn(),
 }));
-jest.mock('@/src/utils/loadFontSet', () => ({
+jest.mock('@/src/services/fonts/loadFontSet', () => ({
   ensureFontSetLoaded: jest.fn(),
 }));
 

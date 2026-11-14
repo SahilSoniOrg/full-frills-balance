@@ -1,4 +1,4 @@
-import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
+import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
 
 export type JournalFxRateSource = 'identity' | 'imported' | 'missing' | 'invalid';
 

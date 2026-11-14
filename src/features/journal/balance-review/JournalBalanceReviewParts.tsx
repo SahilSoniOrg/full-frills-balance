@@ -3,10 +3,10 @@ import { Box, Stack } from '@/src/design-system';
 import {
   evaluateJournalBalance,
   getValuationIssues,
-  normalizeCurrencyCode as normalize,
   type JournalBalanceEvaluation,
   type UniqueJournalFxRateProposal,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { normalizeCurrencyCode as normalize } from '@/src/domain/money/currencyPrecision';
 import type {
   JournalBalanceLineEdit,
   JournalBalanceReviewLine,
@@ -14,8 +14,8 @@ import type {
 import { resolveJournalFxRate } from '@/src/domain/accounting/journalFx';
 import { JournalFxRateEditor } from '@/src/features/journal/entry/components/JournalFxRateEditor';
 import type { TransactionType } from '@/src/types/enums';
-import { formatDate } from '@/src/utils/dateUtils';
-import { formatRoundedAmount, fromMinorUnits } from '@/src/utils/money';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { formatRoundedAmount, fromMinorUnits } from '@/src/domain/money/money';
 import { useMemo, useState } from 'react';
 
 type BalanceRateSource =

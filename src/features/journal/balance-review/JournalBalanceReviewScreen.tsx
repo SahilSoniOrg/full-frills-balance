@@ -7,7 +7,7 @@ import { Spacing } from '@/src/constants/design-tokens';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Stack } from '@/src/design-system';
 import type { JournalId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import {

@@ -8,9 +8,9 @@ import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/desig
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon } from '@/src/types/domainIcons';
-import { withOpacity } from '@/src/utils/color-math';
-import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
-import { hasNegativeAmountSign } from '@/src/utils/amountInput';
+import { withOpacity } from '@/src/design-system/colorMath';
+import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/domain/money/money';
+import { hasNegativeAmountSign } from '@/src/domain/money/amountInput';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,

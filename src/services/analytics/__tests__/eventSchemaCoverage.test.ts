@@ -3,7 +3,7 @@ import { join, relative } from 'path';
 import {
   isAnalyticsEventDeclared,
   sanitizeAnalyticsProperties,
-} from '@/src/utils/observabilityPrivacy';
+} from '@/src/services/observability/privacy';
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {

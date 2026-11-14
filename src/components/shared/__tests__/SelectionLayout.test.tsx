@@ -10,7 +10,7 @@ import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journal
 import { Icon } from '@/src/types/domainIcons';
 import { Row } from '@/src/design-system';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 
 jest.mock('@/src/components/overlays/ModalSurface', () => ({
   ModalSurface: ({ children, visible }: { children: ReactNode; visible: boolean }) =>

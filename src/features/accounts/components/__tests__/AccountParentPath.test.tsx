@@ -1,6 +1,6 @@
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { asAccountId } from '@/src/types/ids';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 const ancestor = (id: string, name: string, isArchived = false) => ({
   id: asAccountId(id),

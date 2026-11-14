@@ -9,12 +9,12 @@ import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImp
 import { backfillHistoricalExchangeRates } from '@/src/services/import/historicalExchangeRateBackfill';
 import { forceRunCheck } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
 import { preferences } from '@/src/services/preferences';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { restorePublicationClaims } from './restorePublicationClaims';
 import { toJournalStatus } from '@/src/data/repositories/importValueParsers';
 import { JournalStatus } from '@/src/types/enums';

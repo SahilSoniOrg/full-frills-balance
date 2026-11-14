@@ -1,5 +1,5 @@
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { incomeItemName, paymentItemName, type CashClarityDraft } from './draft';

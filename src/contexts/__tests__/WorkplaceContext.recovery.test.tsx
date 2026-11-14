@@ -4,7 +4,7 @@ import { render } from '@testing-library/react-native';
 import { WorkplaceContext, WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { preferences } from '@/src/services/preferences';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { WorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/services/preferences', () => ({
@@ -26,7 +26,7 @@ jest.mock('@/src/services/analytics', () => ({
 
 jest.mock('@/src/hooks/useWorkplaceSnapshot');
 
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: {
     deferCustomSnapshot: jest.fn(),
     getCustomSnapshot: jest.fn(),

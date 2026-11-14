@@ -1,4 +1,4 @@
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { useCallback } from 'react';
 
 export interface UndoableActionOptions<TResult = unknown> {

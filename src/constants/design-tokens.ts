@@ -102,7 +102,7 @@
  */
 
 import { Platform } from 'react-native';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 // === SPACING SCALE ===
 // Based on 4px grid system for consistency

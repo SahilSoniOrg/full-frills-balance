@@ -5,10 +5,10 @@ import { act, fireEvent, render, renderHook } from '@testing-library/react-nativ
 import { useToastListener } from '@/src/hooks/useToastListener';
 import { AppConfig } from '@/src/constants/app-config';
 import type { WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import type { AppUpdateSnapshot } from '@/src/services/update/appUpdateService';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { UpdateGate } from '../UpdateGate';
 
 let mockSnapshot: AppUpdateSnapshot;
@@ -40,11 +40,11 @@ jest.mock('@/src/services/update/updateInsightService', () => ({
     return service;
   })(),
 }));
-jest.mock('@/src/utils/alerts', () => ({
-  ...jest.requireActual('@/src/utils/alerts'),
+jest.mock('@/src/services/feedback/alerts', () => ({
+  ...jest.requireActual('@/src/services/feedback/alerts'),
   toast: { info: jest.fn(), error: jest.fn() },
 }));
-jest.mock('@/src/utils/storage', () => {
+jest.mock('@/src/data/storage/storage', () => {
   const values = new Map<string, string>();
   return {
     storage: {
@@ -123,7 +123,7 @@ describe('UpdateGate presentation', () => {
   });
 
   it('leaves the update in Hub after its untouched toast expires', () => {
-    const { toast: realToast } = jest.requireActual('@/src/utils/alerts');
+    const { toast: realToast } = jest.requireActual('@/src/services/feedback/alerts');
     jest.mocked(toast.info).mockImplementationOnce(realToast.info);
     const workplaceId = 'workplace-1' as WorkplaceId;
     const { result } = renderHook(() => ({

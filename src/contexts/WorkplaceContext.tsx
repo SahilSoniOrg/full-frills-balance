@@ -1,6 +1,6 @@
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { WorkplaceId } from '@/src/types/ids';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 

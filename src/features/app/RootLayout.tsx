@@ -19,7 +19,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import * as Sentry from '@sentry/react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider, useNavigationContainerRef } from 'expo-router';
@@ -50,7 +50,7 @@ import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance
 import { useGmailCaptureLifecycle } from './hooks/useGmailCaptureLifecycle';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { useWidgetLaunchTracking } from './hooks/useWidgetLaunchTracking';
 import { useWidgetSync } from './hooks/useWidgetSync';

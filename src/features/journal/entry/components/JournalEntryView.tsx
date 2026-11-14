@@ -20,7 +20,7 @@ import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchMo
 import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/SimpleModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';

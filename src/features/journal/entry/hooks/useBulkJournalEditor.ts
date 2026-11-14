@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { generator as generateId } from '@/src/data/database/idGenerator';
@@ -19,11 +20,11 @@ import {
   journalService,
   type PlannedJournalMode,
 } from '@/src/services/journal/journalDomainService';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { sanitizeAmount } from '@/src/utils/validation';
-import { logger } from '@/src/utils/logger';
+
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
+import { logger } from '@/src/services/observability/logger';
 import { analytics } from '@/src/services/analytics';
-import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
+import { triggerSaveOutcomeHaptic } from '@/src/design-system/haptics';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import {
@@ -99,7 +100,7 @@ function resolveBulkRowFxPair(
     fetchedRates: row.fxRates ?? IDLE_RATES,
     override: row.fxOverride,
     sourceAmount: sanitizeAmount(row.amount) || 0,
-    destPrecision: CurrencyFormatter.getPrecisionFallback(destCurrency),
+    destPrecision: getCurrencyPrecision(destCurrency),
   });
 }
 

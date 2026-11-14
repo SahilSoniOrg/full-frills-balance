@@ -3,7 +3,7 @@ import {
   PlannedPaymentMonthSummary,
 } from '@/src/features/planned-payments/components/PlannedPaymentMonthSummary';
 import { buildPlannedPaymentListPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
-import { render } from '@/src/utils/test-utils';
+import { render } from '@/src/testing/render';
 import { StyleSheet, View } from 'react-native';
 
 function makeListData() {

@@ -1,7 +1,7 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
-import { getReadableColor } from '@/src/utils/color-math';
+import { getReadableColor } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { View } from 'react-native';

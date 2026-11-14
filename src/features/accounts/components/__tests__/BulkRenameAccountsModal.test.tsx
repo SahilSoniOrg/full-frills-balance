@@ -3,7 +3,7 @@ import { BulkRenameAccountsModal } from '../BulkRenameAccountsModal';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { act, fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/testing/render';
 
 const mockAccounts: AccountCardViewModel[] = [
   {

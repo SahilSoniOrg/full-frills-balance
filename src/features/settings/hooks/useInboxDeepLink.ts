@@ -4,7 +4,7 @@ import { smsService } from '@/src/services/sms-service';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { TransactionInboxItem } from '@/src/types/domainJournal';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 

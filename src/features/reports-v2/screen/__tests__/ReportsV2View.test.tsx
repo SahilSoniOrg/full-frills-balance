@@ -2,8 +2,8 @@ import { RefreshControl } from 'react-native';
 import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Icon } from '@/src/types/domainIcons';
-import { act, fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
-import { confirm, toast } from '@/src/utils/alerts';
+import { act, fireEvent, render, screen, waitFor } from '@/src/testing/render';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import type { MissingRateFetchResult } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
@@ -26,7 +26,7 @@ jest.mock('@/src/components/account-selection', () => ({
 }));
 jest.mock('@/src/components/filters/DateRangePicker', () => ({ DateRangePicker: () => null }));
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: {
     show: jest.fn((options: Parameters<typeof confirm.show>[0]) => options.onConfirm()),
   },

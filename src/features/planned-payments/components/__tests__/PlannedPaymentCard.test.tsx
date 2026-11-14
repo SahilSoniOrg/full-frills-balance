@@ -4,7 +4,7 @@ import { preferences } from '@/src/services/preferences';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
-import { fireEvent, render, within } from '@/src/utils/test-utils';
+import { fireEvent, render, within } from '@/src/testing/render';
 import { StyleSheet, View } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';

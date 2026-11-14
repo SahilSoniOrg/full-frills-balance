@@ -9,15 +9,15 @@ import {
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
-import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
-import { logger } from '@/src/utils/logger';
-import { amountsAreEqual } from '@/src/utils/money';
+import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
+import { logger } from '@/src/services/observability/logger';
+import { amountsAreEqual } from '@/src/domain/money/money';
 import { Model } from '@nozbe/watermelondb';
 import type Transaction from '@/src/data/models/Transaction';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 const REBUILD_LOCK_PREFIX = 'rebuild_lock_';

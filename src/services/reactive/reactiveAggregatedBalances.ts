@@ -23,11 +23,11 @@ import {
 } from '@/src/services/wealth-service';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { convertAmount } from '@/src/services/currencyConversion';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { startTrace } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/services/observability/TraceService';
 import { combineLatest, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
 
 export interface AggregatedAccountBalances {

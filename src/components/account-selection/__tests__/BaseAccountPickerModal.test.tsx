@@ -1,5 +1,5 @@
 import { BaseAccountPickerModal } from '../BaseAccountPickerModal';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import React from 'react';
 import { Text } from 'react-native';
 

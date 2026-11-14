@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import type { TabType } from '@/src/types/domainJournal';
 import { TransactionTypeSegmentedControl } from '../components/TransactionTypeSegmentedControl';
 

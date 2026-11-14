@@ -14,14 +14,14 @@ import { calculateReportSummary } from '@/src/services/reports/reportSummary';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import {
   DateRange,
-  formatDate,
   getEndOfDay,
   getStartOfDay,
   PeriodFilter,
-} from '@/src/utils/dateUtils';
+} from '@/src/domain/calendar/dateRanges';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { Theme } from '@/src/constants/design-tokens';
 import { useCallback, useMemo, useState } from 'react';
 import {

@@ -3,7 +3,7 @@ import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { seedAccountListMetricsWorkplaceIsolation } from '@/src/testing/rawQueryWorkplaceIsolationHarness';
 import { lastRawSqlCall, expectRawSqlPlaceholderArity } from '@/src/testing/rawSqlTestHelpers';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 
 const WORKPLACE_ONE = 'wp-account-list-metrics-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-account-list-metrics-2' as WorkplaceId;

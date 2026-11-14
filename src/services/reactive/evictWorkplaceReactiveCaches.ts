@@ -1,6 +1,6 @@
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 /**
  * Disposes shared Rx pipelines owned by the departing workplace so a switch

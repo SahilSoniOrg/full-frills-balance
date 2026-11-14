@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { ConfirmDialog } from './ConfirmDialog';
 
 jest.mock('@/src/components/overlays/ModalSurface', () => ({

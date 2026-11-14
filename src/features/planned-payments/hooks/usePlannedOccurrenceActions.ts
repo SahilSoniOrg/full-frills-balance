@@ -5,8 +5,8 @@ import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/ids';
-import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { inferSimpleJournalTypeFromAccounts } from '@/src/services/planned-payment/inferSimpleJournalTypeFromAccounts';
 import { useCallback } from 'react';
 

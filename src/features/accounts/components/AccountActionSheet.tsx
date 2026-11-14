@@ -9,7 +9,7 @@ import {
 } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 
 export interface AccountActionSheetProps {

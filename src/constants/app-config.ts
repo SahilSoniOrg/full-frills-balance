@@ -1,3 +1,8 @@
+import {
+  DEFAULT_CURRENCY_CODE,
+  DEFAULT_CURRENCY_PRECISION,
+} from '@/src/domain/money/currencyPrecision';
+import { SMS_REDELIVERY_WINDOW_MS } from '@/src/domain/transaction-intelligence/smsDeliveryIdentity';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { UI_STRINGS } from './copy/ui-strings';
 
@@ -10,7 +15,7 @@ const analyticsEnabled = !isDevelopmentBuild || enableAnalyticsInDev;
 
 export const AppConfig = {
   // Default currency for new accounts
-  defaultCurrency: 'USD' as const,
+  defaultCurrency: DEFAULT_CURRENCY_CODE,
 
   // Default locale for formatting
   defaultLocale: 'en-IN',
@@ -53,7 +58,7 @@ export const AppConfig = {
         weightMerchant: 0.15,
         referenceMatchScore: 1,
         fingerprintDayBucketMs: 24 * 60 * 60 * 1000,
-        redeliveryWindowMs: 10 * 1000,
+        redeliveryWindowMs: SMS_REDELIVERY_WINDOW_MS,
         fuzzyWindowMs: 4 * 60 * 60 * 1000,
       },
       batchOpChunkSize: 200,
@@ -126,7 +131,7 @@ export const AppConfig = {
 
   // Business Logic Constants
   constants: {
-    precision: 2,
+    precision: DEFAULT_CURRENCY_PRECISION,
     validation: {
       maxAccountNameLength: 100,
       minDayOfMonth: 1,

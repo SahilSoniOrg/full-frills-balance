@@ -3,7 +3,7 @@ import { AppCard, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import { type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
 import { MetricBreakdownRow } from './MetricBreakdownRow';

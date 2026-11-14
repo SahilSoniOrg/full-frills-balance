@@ -1,4 +1,4 @@
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
 import { generator } from '@/src/data/database/idGenerator';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';

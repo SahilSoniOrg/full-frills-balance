@@ -1,5 +1,5 @@
 import { asAccountId } from '@/src/types/ids';
-import { createAccountTreeSnapshot } from '../accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import {
   createAccountTreeDraft,
   discardAccountTreeDraft,

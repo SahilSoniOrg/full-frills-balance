@@ -7,8 +7,8 @@ import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeTo
 import { SafeToSpendExplanationModal } from '../SafeToSpendExplanationModal';
 import { AppConfig } from '@/src/constants';
 import { ONBOARDING_STRINGS } from '@/src/constants/copy/domains/onboardingStrings';
-import { formatDate } from '@/src/utils/dateUtils';
-import { render, screen } from '@/src/utils/test-utils';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { render, screen } from '@/src/testing/render';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/components/overlays/ModalSurface', () => {

@@ -1,10 +1,11 @@
+import { preferences } from '@/src/services/preferences';
 import { JournalDisplayType } from '../../types/enums';
 import { ShareFormat } from '../../types/sharing';
 import type { Shareable, SharePreparationContext } from '../../types/sharing';
 import type { WorkplaceId } from '../../types/ids';
 import { throwIfShareAborted } from './sharingCancellation';
 import { CurrencyFormatter } from '../../utils/currencyFormatter';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 
 export interface ShareableJournalEntry {
   id: string;
@@ -95,7 +96,9 @@ export class JournalShareProvider {
     const lines: string[] = [];
     // Tier 3: Consistent header formatting
     lines.push(`💰 ${this.title.toUpperCase()}`);
-    lines.push(`🕒 Generated: ${formatDate(generatedAt, { includeTime: true })}`);
+    lines.push(
+      `🕒 Generated: ${formatDate(generatedAt, { includeTime: true, hourCycle: preferences.hourCycle.resolved })}`,
+    );
 
     // Tier 3: Dataset warning
     if (entries.length > 500) {
@@ -108,7 +111,10 @@ export class JournalShareProvider {
     const currencies = new Set<string>();
 
     entries.forEach(t => {
-      const dateStr = formatDate(t.date, { includeTime: options.includeTime ?? false });
+      const dateStr = formatDate(t.date, {
+        includeTime: options.includeTime ?? false,
+        hourCycle: preferences.hourCycle.resolved,
+      });
       const amountStr = CurrencyFormatter.format(t.amount, t.currencyCode);
 
       const typeMeta = options.typeMetaOverride ?? DEFAULT_TYPE_META;
@@ -168,7 +174,7 @@ export class JournalShareProvider {
     };
 
     const rows = entries.map(t => [
-      formatDate(t.date, { includeTime: true }),
+      formatDate(t.date, { includeTime: true, hourCycle: preferences.hourCycle.resolved }),
       `"${makeSafe(t.description).replace(/"/g, '""')}"`,
       t.displayType,
       t.amount.toString(),
@@ -181,7 +187,9 @@ export class JournalShareProvider {
   private formatAsMarkdown(entries: ShareableJournalEntry[], generatedAt: number): string {
     const lines: string[] = [];
     lines.push(`# ${this.title}`);
-    lines.push(`**Generated:** ${formatDate(generatedAt, { includeTime: true })}`);
+    lines.push(
+      `**Generated:** ${formatDate(generatedAt, { includeTime: true, hourCycle: preferences.hourCycle.resolved })}`,
+    );
 
     if (this.entries.length > 500) {
       lines.push('');
@@ -209,7 +217,10 @@ export class JournalShareProvider {
     };
 
     entries.forEach(t => {
-      const dateStr = formatDate(t.date, { includeTime: this.options.includeTime ?? false });
+      const dateStr = formatDate(t.date, {
+        includeTime: this.options.includeTime ?? false,
+        hourCycle: preferences.hourCycle.resolved,
+      });
       const amountStr = CurrencyFormatter.format(t.amount, t.currencyCode);
       const description = escapeMarkdown(makeSafe(t.description));
       lines.push(`| ${dateStr} | ${description} | ${t.displayType} | ${amountStr} |`);

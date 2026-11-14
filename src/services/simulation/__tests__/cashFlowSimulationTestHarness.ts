@@ -58,7 +58,7 @@ jest.mock('@/src/services/currencyConversion', () => ({
     rate: fromCurrency === 'EUR' ? 2 : 1,
   })),
 }));
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),

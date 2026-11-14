@@ -2,7 +2,7 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 
-import { Money } from '@/src/utils/money';
+import { Money } from '@/src/domain/money/money';
 
 export interface PlannedPaymentJournalLine {
   accountId: AccountId;

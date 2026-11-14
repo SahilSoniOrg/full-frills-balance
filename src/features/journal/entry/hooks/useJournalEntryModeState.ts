@@ -8,7 +8,7 @@ import {
   isSplitModeDisabledByLines,
 } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { useCallback, useState } from 'react';
 
 type JournalEditorModeState = Pick<

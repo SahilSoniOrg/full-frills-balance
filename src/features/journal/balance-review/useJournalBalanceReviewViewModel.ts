@@ -8,9 +8,9 @@ import {
   type SavedJournalBalanceReviewEntry,
 } from '@/src/services/integrity';
 import type { JournalId } from '@/src/types/ids';
-import { toast } from '@/src/utils/alerts';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { toast } from '@/src/services/feedback/alerts';
+import { logger } from '@/src/services/observability/logger';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 

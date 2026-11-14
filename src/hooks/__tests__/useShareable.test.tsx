@@ -12,8 +12,8 @@ jest.mock('@/src/services/SharingService', () => ({
 jest.mock('@/src/hooks/useSharePrefs', () => ({
   useSharePrefs: () => ({ defaultShareFormat: 'TEXT' }),
 }));
-jest.mock('@/src/utils/alerts', () => ({ toast: {} }));
-jest.mock('@/src/utils/logger', () => ({ logger: { error: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ toast: {} }));
+jest.mock('@/src/services/observability/logger', () => ({ logger: { error: jest.fn() } }));
 
 it('keeps ownership while hiding preparation UI during confirmation and ignores unrelated progress', async () => {
   let finishPreparation!: () => void;

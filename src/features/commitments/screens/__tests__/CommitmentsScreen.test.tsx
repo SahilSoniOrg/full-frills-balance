@@ -1,4 +1,4 @@
-import { render } from '@/src/utils/test-utils';
+import { render } from '@/src/testing/render';
 import { useBudgetListViewModel } from '@/src/features/budget';
 import { usePlannedPayments } from '@/src/features/planned-payments';
 import { CommitmentsPage } from '../CommitmentsScreen';
@@ -31,7 +31,7 @@ jest.mock('@/src/features/planned-payments', () => ({
 jest.mock('@/src/components/layout', () => ({
   ScreenWithChrome: jest.requireActual('@/src/testing/mockTabScreenChrome').MockTabScreenWithChrome,
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toBudgetForm: jest.fn(),
     toPlannedPaymentForm: jest.fn(),

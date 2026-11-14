@@ -1,7 +1,7 @@
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import { schema } from '@/src/data/database/schema';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { snakeToCamel } from '@/src/utils/serialization';
 import { DATE_COLUMN_NAMES, EXPORT_OMIT_SOFT_DELETED_TABLES, toIsoDate } from './exportSchemaUtils';
 

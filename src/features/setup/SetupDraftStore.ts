@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/types/enums';
 import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
 import {
   claimedRestoreFingerprint,
@@ -293,7 +293,9 @@ function parseBase(value: RecordValue): SetupDraftBase | undefined {
   };
 }
 
-function acceptedOutputIsPresent(draft: RestoreSetupDraft | LegacyWorkplaceCreationSetupDraft): boolean {
+function acceptedOutputIsPresent(
+  draft: RestoreSetupDraft | LegacyWorkplaceCreationSetupDraft,
+): boolean {
   const accepted = new Set(draft.acceptedSlices);
   if (draft.kind === 'restore' && accepted.has('device') && !draft.device) return false;
   if (accepted.has('workplace') && !draft.workplace) return false;
@@ -468,9 +470,10 @@ function migrateLegacyWorkplaceCreation(
   legacy: LegacyWorkplaceCreationSetupDraft,
 ): CashClaritySetupDraft {
   const intent = 'add_workplace' as const;
-  const context = legacy.journeyId === 'empty_device_workplace'
-    ? 'registered_empty_device' as const
-    : 'workplace_picker' as const;
+  const context =
+    legacy.journeyId === 'empty_device_workplace'
+      ? ('registered_empty_device' as const)
+      : ('workplace_picker' as const);
   const session = createCreationSession({
     intent,
     context,
@@ -480,37 +483,44 @@ function migrateLegacyWorkplaceCreation(
     operationId: legacy.operationId,
   });
   const workplace = legacy.workplace;
-  const step = legacy.summary || legacy.acceptedSlices.includes('summary')
-    ? 'clarity'
-    : workplace?.acceptedCheckpoints.includes('categories')
+  const step =
+    legacy.summary || legacy.acceptedSlices.includes('summary')
       ? 'clarity'
-      : workplace?.acceptedCheckpoints.includes('accounts')
-        ? 'next'
-        : workplace?.acceptedCheckpoints.includes('currency')
-          ? 'now'
-          : 'currency';
+      : workplace?.acceptedCheckpoints.includes('categories')
+        ? 'clarity'
+        : workplace?.acceptedCheckpoints.includes('accounts')
+          ? 'next'
+          : workplace?.acceptedCheckpoints.includes('currency')
+            ? 'now'
+            : 'currency';
   return {
     ...session,
     draft: {
       ...session.draft,
-      ...(workplace ? {
-        workplaceName: workplace.name.value,
-        workplaceIcon: workplace.icon.value,
-        currency: workplace.baseCurrency.value,
-        preservedStarterAccounts: workplace.selectedAccounts.map((item, index) => ({
-          ...item, id: item.id ?? asAccountId(`${legacy.operationId}:legacy-account:${index}`),
-        })),
-        preservedStarterCategories: workplace.selectedCategories.map((item, index) => ({
-          ...item, id: item.id ?? asAccountId(`${legacy.operationId}:legacy-category:${index}`),
-        })),
-      } : {}),
+      ...(workplace
+        ? {
+            workplaceName: workplace.name.value,
+            workplaceIcon: workplace.icon.value,
+            currency: workplace.baseCurrency.value,
+            preservedStarterAccounts: workplace.selectedAccounts.map((item, index) => ({
+              ...item,
+              id: item.id ?? asAccountId(`${legacy.operationId}:legacy-account:${index}`),
+            })),
+            preservedStarterCategories: workplace.selectedCategories.map((item, index) => ({
+              ...item,
+              id: item.id ?? asAccountId(`${legacy.operationId}:legacy-category:${index}`),
+            })),
+          }
+        : {}),
     },
     step,
-    legacyProvenance: workplace ? {
-      name: workplace.name.source,
-      icon: workplace.icon.source,
-      currency: workplace.baseCurrency.source,
-    } : undefined,
+    legacyProvenance: workplace
+      ? {
+          name: workplace.name.source,
+          icon: workplace.icon.source,
+          currency: workplace.baseCurrency.source,
+        }
+      : undefined,
   };
 }
 
@@ -572,7 +582,10 @@ export class SetupDraftStore {
       if (!raw) return undefined;
       const payload: unknown = JSON.parse(raw);
       const parsed = parseSetupDraft(payload);
-      if (parsed?.kind === 'cash_clarity' && (!isRecord(payload) || payload.kind !== 'cash_clarity' || payload.schemaVersion !== 2)) {
+      if (
+        parsed?.kind === 'cash_clarity' &&
+        (!isRecord(payload) || payload.kind !== 'cash_clarity' || payload.schemaVersion !== 2)
+      ) {
         // Replace a legacy creation only after the full old payload converted successfully.
         this.write(parsed);
       }
@@ -585,15 +598,25 @@ export class SetupDraftStore {
   save(draft: SetupDraft): void {
     if (!isValidSetupDraft(draft)) throw new Error('Cannot persist an invalid Setup draft');
     const existing = this.load();
-    const sameSession = existing && existing.kind === draft.kind && existing.operationId === draft.operationId &&
+    const sameSession =
+      existing &&
+      existing.kind === draft.kind &&
+      existing.operationId === draft.operationId &&
       (existing.kind === 'restore'
-        ? draft.kind === 'restore' && existing.journeyId === draft.journeyId && existing.entryPolicy === draft.entryPolicy
-        : draft.kind === 'cash_clarity' && existing.intent === draft.intent && existing.context === draft.context && existing.entryPolicy === draft.entryPolicy);
+        ? draft.kind === 'restore' &&
+          existing.journeyId === draft.journeyId &&
+          existing.entryPolicy === draft.entryPolicy
+        : draft.kind === 'cash_clarity' &&
+          existing.intent === draft.intent &&
+          existing.context === draft.context &&
+          existing.entryPolicy === draft.entryPolicy);
     if (existing && !sameSession) {
       throw new Error('Resolve the active Setup draft before switching journeys');
     }
     if (!existing && hasUnreadableSetupDraft()) {
-      throw new Error('Preserve or explicitly discard the unreadable Setup payload before continuing');
+      throw new Error(
+        'Preserve or explicitly discard the unreadable Setup payload before continuing',
+      );
     }
     this.write(draft);
   }

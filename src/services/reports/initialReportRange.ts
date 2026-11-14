@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import type { DateRange } from '@/src/utils/dateUtils';
+import type { DateRange } from '@/src/domain/calendar/dateRanges';
 
 /** True when the latest activity falls outside the initially opened report window. */
 export function shouldShiftInitialReportRange(

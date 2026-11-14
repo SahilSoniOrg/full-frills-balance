@@ -1,5 +1,5 @@
-import { AppNavigation } from '@/src/utils/navigation';
-import { confirm, toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';

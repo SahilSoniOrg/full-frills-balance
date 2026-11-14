@@ -1,11 +1,14 @@
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { WelcomeScene } from '../welcome';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 
 jest.mock('@/src/components/core', () => {
-  const { Text: NativeText, TextInput: NativeTextInput, TouchableOpacity, View } = jest.requireActual(
-    'react-native',
-  ) as typeof import('react-native');
+  const {
+    Text: NativeText,
+    TextInput: NativeTextInput,
+    TouchableOpacity,
+    View,
+  } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     AppButton: ({ children, ...props }: { children?: React.ReactNode }) => (
       <TouchableOpacity {...props}>{children}</TouchableOpacity>

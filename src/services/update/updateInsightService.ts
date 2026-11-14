@@ -1,7 +1,7 @@
 import { preferences } from '@/src/services/preferences';
 import type { Insight } from '@/src/services/insight/insightTypes';
 import type { WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import type { VersionPolicy } from './types';
 import { getCurrentBuild } from './versionPolicyService';
 

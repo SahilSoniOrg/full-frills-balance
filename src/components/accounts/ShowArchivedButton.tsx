@@ -1,7 +1,7 @@
 import { Icon, IconButton } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { useArchiveVisibility } from '@/src/contexts/ArchiveVisibilityScope';
-import { hasArchivedAccountsInList } from '@/src/utils/accountArchive';
+import { hasArchivedAccountsInList } from '@/src/domain/accounts/accountArchive';
 
 type ArchiveAccountRef = { archivedAt?: Date | number | null };
 

@@ -6,7 +6,7 @@ import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger/bu
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType } from '@/src/types/enums';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 function warnIfMissingFxRate(
   amount: number,

@@ -29,8 +29,8 @@ import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';

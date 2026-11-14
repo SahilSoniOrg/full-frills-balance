@@ -7,7 +7,7 @@ import {
   observeWorkplaceJournalMeta,
   observeWorkplaceActiveTransactionCount,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
@@ -17,10 +17,10 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { AccountBalance, EnrichedJournal } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { firstValueFrom, combineLatest, Observable, switchMap, map, tap } from 'rxjs';
-import { snapshotService } from '@/src/utils/SnapshotService';
-import { startTrace } from '@/src/utils/TraceService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
+import { startTrace } from '@/src/services/observability/TraceService';
 import {
   reactiveCacheCoordinator,
   REACTIVE_CACHE_NAMESPACES,

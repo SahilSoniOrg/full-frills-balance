@@ -30,7 +30,7 @@ jest.mock('@/src/services/import/restorePublicationClaims', () => ({
 jest.mock('@/src/services/ReactiveDataService', () => ({
   reactiveDataService: { clearCache: jest.fn() },
 }));
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: {
     clearSnapshotsForWorkplace: jest.fn(),
     resumeSnapshotsForWorkplace: jest.fn(),

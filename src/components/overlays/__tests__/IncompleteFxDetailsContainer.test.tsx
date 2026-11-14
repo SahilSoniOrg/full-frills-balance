@@ -1,15 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
-import { act, fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
+import { act, fireEvent, render, screen, waitFor } from '@/src/testing/render';
 import { IncompleteFxDetailsContainer } from '../IncompleteFxDetailsContainer';
 
 jest.mock('react-native/src/private/animated/NativeAnimatedHelper');
 jest.mock('@/src/services/reports-v2/missingExchangeRateFetch', () => ({
   fetchMissingHistoricalRates: jest.fn(async () => ({ attempted: 1, fetched: 1, failed: 0 })),
 }));
-jest.mock('@/src/utils/alerts', () => ({
-  ...jest.requireActual('@/src/utils/alerts'),
+jest.mock('@/src/services/feedback/alerts', () => ({
+  ...jest.requireActual('@/src/services/feedback/alerts'),
   toast: { success: jest.fn(), warning: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 

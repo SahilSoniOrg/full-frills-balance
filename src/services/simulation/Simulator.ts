@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { logger } from '@/src/utils/logger';
-import { Trace, startTrace } from '@/src/utils/TraceService';
+import { logger } from '@/src/services/observability/logger';
+import { Trace, startTrace } from '@/src/services/observability/TraceService';
 import type { Flow, SimulationEngineResult } from './types';
 import { runBalanceSimulation } from './balanceSimulation';
 

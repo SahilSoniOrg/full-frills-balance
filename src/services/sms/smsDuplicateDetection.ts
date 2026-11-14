@@ -4,7 +4,7 @@ import Journal from '@/src/data/models/Journal';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 const DUPLICATE_CONFIG = AppConfig.input.sms.duplicateDetection;

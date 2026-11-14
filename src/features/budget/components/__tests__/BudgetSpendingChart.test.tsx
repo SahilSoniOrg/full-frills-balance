@@ -1,6 +1,6 @@
 import { BudgetSpendingChart } from '../BudgetSpendingChart';
 import { presentBudgetPeriod } from '../../helpers/budgetDetailPresentation';
-import { act, cleanup, fireEvent, render as renderWithProviders } from '@/src/utils/test-utils';
+import { act, cleanup, fireEvent, render as renderWithProviders } from '@/src/testing/render';
 import type { ReactElement } from 'react';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
@@ -8,7 +8,7 @@ import { panGestures, tapGestures } from '@/src/testing/gestureMock';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 
-jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
+jest.mock('@/src/design-system/haptics', () => ({ triggerHaptic: jest.fn() }));
 
 function render(ui: ReactElement) {
   return renderWithProviders(<ChartInteractionProvider>{ui}</ChartInteractionProvider>);

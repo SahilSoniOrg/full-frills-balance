@@ -1,12 +1,12 @@
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
-import { AppNavigation } from '@/src/utils/navigation';
-import { act, AllTheProviders, renderHook } from '@/src/utils/test-utils';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { act, AllTheProviders, renderHook } from '@/src/testing/render';
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toAccountDetails: jest.fn() },
 }));
 

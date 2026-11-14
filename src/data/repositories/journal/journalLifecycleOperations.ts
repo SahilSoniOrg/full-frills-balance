@@ -31,7 +31,7 @@ import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 export interface BulkDeleteResult extends JournalRebuildImpact {
@@ -330,9 +330,7 @@ export async function stageRevertToPlanned(
     .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
     .fetch();
   const storedDate = metadata?.metadataJson
-    ? safeParseJSON<Record<string, unknown>>(metadata.metadataJson, {})[
-        MetadataKeys.ORIGINAL_PLANNED_DATE
-      ]
+    ? parseJSONRecord(metadata.metadataJson)[MetadataKeys.ORIGINAL_PLANNED_DATE]
     : undefined;
   const revertTime =
     typeof storedDate === 'number' && Number.isFinite(storedDate)

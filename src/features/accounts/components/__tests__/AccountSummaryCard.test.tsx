@@ -1,6 +1,6 @@
 import { AccountSummaryCard } from '@/src/features/accounts/components/AccountSummaryCard';
 import { AccountType } from '@/src/types/enums';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import type { ComponentProps } from 'react';
 
 type Props = ComponentProps<typeof AccountSummaryCard>;

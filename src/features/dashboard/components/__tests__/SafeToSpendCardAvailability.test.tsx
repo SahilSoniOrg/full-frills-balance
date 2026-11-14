@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { SafeToSpendCard } from '@/src/features/dashboard/components/SafeToSpendCard';
 import type { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({

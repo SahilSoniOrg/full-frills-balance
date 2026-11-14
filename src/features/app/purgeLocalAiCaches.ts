@@ -1,5 +1,6 @@
-import { files } from '@/src/utils/files';
-import { logger } from '@/src/utils/logger';
+import { Platform } from 'react-native';
+import { files } from '@/src/services/files/files';
+import { logger } from '@/src/services/observability/logger';
 
 /** iOS `HybridModelStore`: `Library/Caches/litert_models`. */
 const IOS_LITERT_MODELS_DIR = 'litert_models';
@@ -8,8 +9,8 @@ const ANDROID_LITERT_MODELS_DIR = 'models';
 
 export type LocalAiCacheFileOps = Pick<
   typeof files,
-  'cache' | 'document' | 'directoryExists' | 'listDirectory' | 'deleteFile' | 'deleteDirectory'
->;
+  'cache' | 'document' | 'directoryExists' | 'deleteFile' | 'deleteDirectory'
+> & { listDirectory(uri: string): Promise<DirEntry[]> };
 
 type DirEntry = { uri?: string; name?: string };
 
@@ -63,6 +64,7 @@ async function deleteMatchingArtifacts(
  * Idempotent: missing directories and already-deleted files are ignored.
  */
 export async function purgeLocalAiCaches(ops: LocalAiCacheFileOps = files): Promise<void> {
+  if (ops === files && Platform.OS === 'web') return;
   try {
     const cacheRoot = ops.cache;
     const documentRoot = ops.document;

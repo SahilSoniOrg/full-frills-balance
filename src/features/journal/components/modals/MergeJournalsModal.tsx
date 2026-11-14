@@ -6,7 +6,7 @@ import { useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analyzeJournalsForMerge, MergeJournalsAnalysis } from '@/src/services/journal/bulk';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 

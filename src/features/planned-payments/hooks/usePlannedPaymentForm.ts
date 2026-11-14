@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { useAccounts } from '@/src/components/account-selection';
 import type { ScheduleValue } from '@/src/components/forms';
 import { formatRequirementHint } from '@/src/components/forms/requirementHint';
@@ -19,13 +20,13 @@ import {
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import type { PlannedPaymentFxMode, PlainAccount } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { toast } from '@/src/utils/alerts';
-import { logger } from '@/src/utils/logger';
+
+import { toast } from '@/src/services/feedback/alerts';
+import { logger } from '@/src/services/observability/logger';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
-import { AppNavigation } from '@/src/utils/navigation';
-import { formatRoundedAmount } from '@/src/utils/money';
-import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { formatRoundedAmount } from '@/src/domain/money/money';
+import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -79,7 +80,7 @@ export function usePlannedPaymentForm(id?: string) {
   const destinationAccount = accounts.find(account => account.id === form.toAccountId);
   const destinationPrecision =
     currencies.find(currency => currency.code === destinationAccount?.currencyCode)?.precision ??
-    CurrencyFormatter.getPrecisionFallback(destinationAccount?.currencyCode ?? '');
+    getCurrencyPrecision(destinationAccount?.currencyCode ?? '');
   const fx = usePlannedPaymentFx(form, sourceAccount, destinationAccount, destinationPrecision);
   const [expansionPosition, setExpansionPosition] = useState<'left' | 'right' | null>(null);
   const { fxMode, destinationAmount } = form;

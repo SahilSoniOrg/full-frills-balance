@@ -4,8 +4,8 @@ import { SafeToSpendCard } from '@/src/features/dashboard/components/SafeToSpend
 import { SafeToSpendExplanationModal } from '@/src/features/dashboard/components/SafeToSpendExplanationModal';
 import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { AppConfig } from '@/src/constants';
-import { formatDate } from '@/src/utils/dateUtils';
-import { render, screen } from '@/src/utils/test-utils';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { render, screen } from '@/src/testing/render';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 
 let mockWorkplace = { workplaceId: 'wp-a', defaultCurrencyCode: 'USD' };
@@ -74,10 +74,10 @@ jest.mock('@/src/hooks/useObservable', () => ({
 jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
   safeToSpendReadModel: { forWorkplace: jest.fn(() => ({ watch: jest.fn(() => ({})) })) },
 }));
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: { getCustomSnapshotWithMetadata: () => mockCached },
 }));
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
 jest.mock('@/src/navigation/primaryPageNavigation', () => ({

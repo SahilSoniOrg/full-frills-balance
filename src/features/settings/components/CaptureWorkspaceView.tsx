@@ -3,7 +3,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { FocusTarget } from '@/src/components/shared/FocusTarget';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import {
   useTransactionCaptureViewModel,
@@ -12,7 +12,7 @@ import {
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
 import { Platform } from 'react-native';

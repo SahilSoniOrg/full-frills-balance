@@ -5,9 +5,9 @@ import {
   runArchiveIntentWithConfirmation,
   showArchiveIntentConfirmation,
 } from '@/src/features/accounts/helpers/accountArchiveConfirm';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
 }));
 

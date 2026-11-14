@@ -1,7 +1,7 @@
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
 import dayjs from 'dayjs';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 import {
   isSpendableAccount,
   type CashClarityDraft,
@@ -19,12 +19,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assertFiniteMoney(value: unknown, label: string, allowZero: boolean): asserts value is number {
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    (allowZero ? false : value <= 0)
-  ) {
+function assertFiniteMoney(
+  value: unknown,
+  label: string,
+  allowZero: boolean,
+): asserts value is number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || (allowZero ? false : value <= 0)) {
     invalid(`${label} must be a finite ${allowZero ? 'amount' : 'positive amount'}.`);
   }
 }
@@ -106,7 +106,8 @@ function validateIncome(draft: CashClarityDraft): void {
   assertUniqueIds(income.items, 'Income');
   const sources = new Set(['salary', 'family', 'retirement', 'freelance', 'other']);
   for (const item of income.items) {
-    if (!isRecord(item) || !sources.has(String(item.source))) invalid('An income source is invalid.');
+    if (!isRecord(item) || !sources.has(String(item.source)))
+      invalid('An income source is invalid.');
     assertName(item.name, 'Income name', true);
     assertFiniteMoney(item.amount, 'Income amount', false);
     assertTimestamp(item.nextDate, 'Income date');
@@ -124,10 +125,7 @@ function validateIncome(draft: CashClarityDraft): void {
 
 function validateCommitments(draft: CashClarityDraft): void {
   const commitment = draft.commitment as CommitmentDraft;
-  if (
-    !isRecord(commitment) ||
-    !['unset', 'skipped', 'payment'].includes(String(commitment.kind))
-  ) {
+  if (!isRecord(commitment) || !['unset', 'skipped', 'payment'].includes(String(commitment.kind))) {
     invalid('Payment setup is malformed.');
   }
   if (commitment.kind !== 'payment') return;
@@ -135,7 +133,8 @@ function validateCommitments(draft: CashClarityDraft): void {
   assertUniqueIds(commitment.items, 'Payment');
   const types = new Set<CommitmentKind>(['rent', 'subscription', 'loan', 'utilities']);
   for (const item of commitment.items) {
-    if (!isRecord(item) || !types.has(item.type as CommitmentKind)) invalid('A payment type is invalid.');
+    if (!isRecord(item) || !types.has(item.type as CommitmentKind))
+      invalid('A payment type is invalid.');
     assertName(item.name, 'Payment name', true);
     assertFiniteMoney(item.amount, 'Payment amount', false);
     assertTimestamp(item.dueDate, 'Payment due date');
@@ -173,15 +172,12 @@ export function validateCashClarityDraft(draft: CashClarityDraft): void {
   assertUniqueIds(draft.accounts, 'Account');
   const kinds = new Set(['bank', 'cash', 'savings', 'card']);
   for (const account of draft.accounts) {
-    if (!isRecord(account) || !kinds.has(String(account.kind))) invalid('An account type is invalid.');
+    if (!isRecord(account) || !kinds.has(String(account.kind)))
+      invalid('An account type is invalid.');
     assertName(account.name, 'Account name', true);
     assertFiniteMoney(account.balance, 'Account balance', true);
     if (account.kind === 'card' && account.balance < 0) invalid('Card debt cannot be negative.');
-    if (
-      account.kind === 'savings' &&
-      account.spendable !== true &&
-      account.spendable !== false
-    ) {
+    if (account.kind === 'savings' && account.spendable !== true && account.spendable !== false) {
       invalid('Choose whether the savings account is available to spend.');
     }
     if (account.kind !== 'savings' && account.spendable !== undefined) {
@@ -210,7 +206,9 @@ export function validateCashClarityDraft(draft: CashClarityDraft): void {
     (draft.income.kind === 'recurring' && draft.income.items.length > 0) ||
     (draft.commitment.kind === 'payment' && draft.commitment.items.length > 0) ||
     (draft.budget.kind === 'set' && draft.budget.items.length > 0) ||
-    draft.accounts.some(account => account.kind === 'card' && account.cardPaymentAmount !== undefined);
+    draft.accounts.some(
+      account => account.kind === 'card' && account.cardPaymentAmount !== undefined,
+    );
   if (needsSpendableAccount && !draft.accounts.some(isSpendableAccount)) {
     throw new CashClarityPublicationError(
       'missing_spendable_account',

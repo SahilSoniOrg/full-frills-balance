@@ -10,7 +10,7 @@ import {
   getAccountTreeSiblingListKey,
   planFromSiblingLists,
   validateAccountTreeStructure,
-} from '@/src/services/accounts/accountTree';
+} from '@/src/domain/accounts/accountTree';
 import { AuditAction } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 

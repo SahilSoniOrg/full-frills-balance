@@ -1,6 +1,7 @@
+import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { TransactionType } from '@/src/types/enums';
-import { fromMinorUnits } from '@/src/utils/money';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { fromMinorUnits } from '@/src/domain/money/money';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { convertJournalCurrencyAmount, resolveJournalFxRate } from './journalFx';
 
 export interface JournalBalanceLineInput {
@@ -66,10 +67,6 @@ export class JournalBalanceError extends Error {
     super(message);
     this.name = 'JournalBalanceError';
   }
-}
-
-export function normalizeCurrencyCode(code: string | undefined): string {
-  return code?.trim().toUpperCase() ?? '';
 }
 
 function formatMinorUnits(minorUnits: number, precision: number): number {

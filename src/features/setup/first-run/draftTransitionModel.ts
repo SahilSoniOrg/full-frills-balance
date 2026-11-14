@@ -1,6 +1,7 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { roundToPrecision } from '@/src/utils/money';
+
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   incomeItemName,
@@ -76,7 +77,11 @@ function firstListChange<T extends Identified>(
   return null;
 }
 
-function accountUpdate(previous: DraftAccount, current: DraftAccount, currency: string): string | null {
+function accountUpdate(
+  previous: DraftAccount,
+  current: DraftAccount,
+  currency: string,
+): string | null {
   if (previous.balance !== current.balance) {
     return copy.transitionBalanceSet(current.name, formatDraftAmount(current.balance, currency));
   }
@@ -86,7 +91,8 @@ function accountUpdate(previous: DraftAccount, current: DraftAccount, currency: 
   ) {
     return copy.transitionCardPaymentUpdated(current.name);
   }
-  if (previous.spendable !== current.spendable) return copy.transitionAvailabilityUpdated(current.name);
+  if (previous.spendable !== current.spendable)
+    return copy.transitionAvailabilityUpdated(current.name);
   if (previous.name !== current.name || previous.kind !== current.kind) {
     return copy.transitionAccountUpdated(current.name);
   }
@@ -186,7 +192,7 @@ export function explainDraftTransition(
   const currentSafeToSpend = projectCashClarityDraft(current, now).safeToSpend;
   const delta = roundToPrecision(
     currentSafeToSpend - previousSafeToSpend,
-    CurrencyFormatter.getPrecisionFallback(current.currency),
+    getCurrencyPrecision(current.currency),
   );
   // Each keystroke is a draft mutation, so its delta is not the amount the user entered.
   if (delta !== 0 && hasAmountEdit(previous, current)) {

@@ -12,7 +12,7 @@ import {
   isBalanceChangedBeyondEpsilon,
   needsBalanceChangeClassification,
 } from '@/src/services/accounts/balanceChangeClassification';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ValidationError } from '@/src/utils/errors';
 import { useCallback, useMemo } from 'react';

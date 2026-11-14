@@ -9,7 +9,7 @@ import type { AccountPersistenceInput } from '@/src/data/repositories/account/ty
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
+import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { AccountAuditState } from '@/src/types/audit';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';

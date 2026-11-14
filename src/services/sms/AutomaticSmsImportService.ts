@@ -1,9 +1,9 @@
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { preferences } from '@/src/services/preferences';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { AppConfig } from '@/src/constants';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 

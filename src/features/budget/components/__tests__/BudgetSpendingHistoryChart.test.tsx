@@ -1,5 +1,5 @@
 import { BudgetSpendingHistoryChart } from '../BudgetSpendingHistoryChart';
-import { cleanup, render } from '@/src/utils/test-utils';
+import { cleanup, render } from '@/src/testing/render';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import type { BudgetSpendingPeriod } from '../../hooks/budgetEditDraft';

@@ -3,7 +3,7 @@ import { AppSegmentedControl, Icon, type SegmentedOption } from '@/src/component
 import { Opacity, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { TabType } from '@/src/types/domainJournal';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { resolveSimpleTypeAccentColor } from '../journalEntryPresentation';
 import { StyleSheet, View } from 'react-native';
 

@@ -13,7 +13,7 @@ import { auditRepository, type AuditEntry } from '@/src/data/repositories/AuditR
 import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType, AuditAction } from '@/src/types/enums';
-import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
+import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { ValidationError } from '@/src/utils/errors';
 import { Model, Q } from '@nozbe/watermelondb';
 import { accountQueryRepository } from './AccountQueryRepository';

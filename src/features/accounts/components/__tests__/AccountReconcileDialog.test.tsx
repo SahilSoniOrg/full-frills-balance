@@ -2,7 +2,7 @@ import { AccountReconcileDialog } from '@/src/features/accounts/components/Accou
 import { AppButton } from '@/src/components/core';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { preferences } from '@/src/services/preferences';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import type { ComponentProps } from 'react';
 
 // Keep disabled-button behavior without requiring native opacity animations.

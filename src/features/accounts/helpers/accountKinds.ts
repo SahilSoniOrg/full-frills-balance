@@ -8,7 +8,7 @@ import {
   isAccountSubtype,
   isSubtypeAllowedForType,
 } from '@/src/types/accountSubtype';
-import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { isLoanSubtype } from '@/src/domain/accounts/accountSubtypes';
 
 export interface SuggestedAccountKind {
   type: AccountType;

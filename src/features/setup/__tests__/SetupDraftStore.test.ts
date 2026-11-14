@@ -1,11 +1,16 @@
 import { Icon } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
-import { discardUnreadableSetupDraft, parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
-import { storage } from '@/src/utils/storage';
+import {
+  discardUnreadableSetupDraft,
+  parseSetupDraft,
+  SETUP_DRAFT_KEY,
+  SetupDraftStore,
+} from '../SetupDraftStore';
+import { storage } from '@/src/data/storage/storage';
 import type { RestoreSetupDraft } from '../setupTypes';
 import { AccountType } from '@/src/types/enums';
 
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: { getString: jest.fn(), set: jest.fn(), remove: jest.fn() },
 }));
 
@@ -99,8 +104,22 @@ describe('SetupDraftStore', () => {
         name: { value: 'Family Books', source: 'imported' },
         icon: { value: Icon.Briefcase, source: 'imported' },
         baseCurrency: { value: 'CAD', source: 'existing' },
-        selectedAccounts: [{ id: asAccountId('legacy-brokerage'), name: 'Brokerage', type: AccountType.ASSET, icon: Icon.Briefcase }],
-        selectedCategories: [{ id: asAccountId('legacy-custom'), name: 'Custom income', type: AccountType.INCOME, icon: Icon.TrendingUp }],
+        selectedAccounts: [
+          {
+            id: asAccountId('legacy-brokerage'),
+            name: 'Brokerage',
+            type: AccountType.ASSET,
+            icon: Icon.Briefcase,
+          },
+        ],
+        selectedCategories: [
+          {
+            id: asAccountId('legacy-custom'),
+            name: 'Custom income',
+            type: AccountType.INCOME,
+            icon: Icon.TrendingUp,
+          },
+        ],
         acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
       },
       summary: { confirmed: true },
@@ -129,8 +148,13 @@ describe('SetupDraftStore', () => {
 
   it('assigns repeatable IDs only to legacy definitions that lack an ID', () => {
     const legacy = {
-      schemaVersion: 1, kind: 'workplace_creation', journeyId: 'create_workplace',
-      entryPolicy: 'optional', operationId, presentedHistory: ['workplace'], acceptedSlices: ['workplace'],
+      schemaVersion: 1,
+      kind: 'workplace_creation',
+      journeyId: 'create_workplace',
+      entryPolicy: 'optional',
+      operationId,
+      presentedHistory: ['workplace'],
+      acceptedSlices: ['workplace'],
       workplace: {
         name: { value: 'Personal', source: 'defaulted' },
         icon: { value: Icon.Home, source: 'defaulted' },
@@ -142,9 +166,12 @@ describe('SetupDraftStore', () => {
     };
     const migrated = parseSetupDraft(legacy);
     const retried = parseSetupDraft(legacy);
-    if (migrated?.kind !== 'cash_clarity' || retried?.kind !== 'cash_clarity') throw new Error('Expected migrated sessions');
+    if (migrated?.kind !== 'cash_clarity' || retried?.kind !== 'cash_clarity')
+      throw new Error('Expected migrated sessions');
     expect(migrated.draft.preservedStarterAccounts?.[0].id).toBe(`${operationId}:legacy-account:0`);
-    expect(migrated.draft.preservedStarterCategories?.[0].id).toBe(`${operationId}:legacy-category:0`);
+    expect(migrated.draft.preservedStarterCategories?.[0].id).toBe(
+      `${operationId}:legacy-category:0`,
+    );
     expect(retried.draft).toEqual(migrated.draft);
   });
 

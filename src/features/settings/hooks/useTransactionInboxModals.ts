@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { showDetachFromJournalConfirm } from '@/src/utils/showDetachFromJournalConfirm';
+import { showDetachFromJournalConfirm } from '@/src/components/transaction-capture/showDetachFromJournalConfirm';
 import { resolveSelectedItemById } from '@/src/features/settings/utils/resolveInboxModalItem';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -10,8 +10,8 @@ import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import { TransactionInboxImportOptions } from '@/src/services/sms/transactionInboxImport';
 import { smsService } from '@/src/services/sms-service';
 import { analytics } from '@/src/services/analytics';
-import { AppNavigation } from '@/src/utils/navigation';
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 
 interface UseTransactionInboxModalsProps {
   workplaceId: WorkplaceId;

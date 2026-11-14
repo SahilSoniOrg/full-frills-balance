@@ -11,11 +11,11 @@ import {
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useEffect, useRef, useState } from 'react';
 import { Opacity, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import { inboxProcessingStatusLabel } from './inboxProcessingStatusLabel';
 import { Platform, StyleSheet, View } from 'react-native';
 import { EmailPreviewModal } from './EmailPreviewModal';

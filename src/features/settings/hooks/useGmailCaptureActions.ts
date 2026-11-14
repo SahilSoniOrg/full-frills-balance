@@ -12,7 +12,7 @@ import { cancelGmailSync, syncGmailForWorkplace } from '@/src/services/email/gma
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import { analytics } from '@/src/services/analytics';
 import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import type { WorkplaceId } from '@/src/types/ids';
 
 type MutationRunner = ReturnType<typeof useCaptureMutationRunner>;

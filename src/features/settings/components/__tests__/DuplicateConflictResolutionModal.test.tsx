@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { DuplicateConflictResolutionModal } from '../DuplicateConflictResolutionModal';
 import { JournalId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';

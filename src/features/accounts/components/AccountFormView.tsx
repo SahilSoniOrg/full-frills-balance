@@ -25,14 +25,14 @@ import { resolveCurrencySymbol } from '@/src/features/accounts/helpers/currencyP
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getReadableColor, withOpacity } from '@/src/utils/color-math';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { StyleSheet, View } from 'react-native';
 import { AccountFormOverlays } from './AccountFormOverlays';
 import { CurrencySideControl } from './CurrencySideControl';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 import { accountMatcherStrings as matcherCopy } from '@/src/constants/copy/domains/accountMatcherStrings';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { shouldShowAccountMatchersSection } from '../helpers/accountMatcherSectionPolicy';
 
 export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {

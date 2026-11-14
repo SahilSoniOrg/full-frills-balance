@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { Keyboard, TextInput, View } from 'react-native';
 import { Spacing } from '@/src/constants/design-tokens';
 import { AppConfig } from '@/src/constants';

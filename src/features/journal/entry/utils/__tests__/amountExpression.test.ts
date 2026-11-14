@@ -2,7 +2,7 @@ import {
   evaluateCalculatorExpression,
   formatRationalForDetails,
   formatRationalToCurrency,
-} from '@/src/utils/amountExpression';
+} from '@/src/components/overlays/amountExpression';
 
 describe('exact calculator evaluator', () => {
   it('preserves intermediate precision and applies currency rounding only at display time', () => {

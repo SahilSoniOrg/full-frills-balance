@@ -1,5 +1,5 @@
 import { AccountId } from '@/src/types/ids';
-import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
+import { filterAccountsForDisplay } from '@/src/domain/accounts/accountArchive';
 import React, { createContext, useContext, useMemo, useState, type ComponentType } from 'react';
 
 export type ArchiveVisibilityValue = {

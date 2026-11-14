@@ -6,7 +6,7 @@ import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import type { InsightDetailsViewModel } from '@/src/features/hub/hooks/useInsightDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';

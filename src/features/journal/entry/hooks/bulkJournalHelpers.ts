@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { TransactionType, AccountType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
@@ -5,10 +6,10 @@ import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { formatRoundedAmount } from '@/src/utils/money';
+
+import { formatRoundedAmount } from '@/src/domain/money/money';
 import type { BulkJournalRow } from '../types/bulkJournal';
 
 export const DUPLICATE_ACCOUNT_ERROR = 'Source and destination accounts must be distinct';
@@ -68,10 +69,7 @@ export function buildBulkJournalEntries(
         accountName: destAccount?.name || '',
         accountType: destAccount?.accountType || AccountType.ASSET,
         amount: isCross
-          ? formatRoundedAmount(
-              row.convertedAmount,
-              CurrencyFormatter.getPrecisionFallback(destCurrency),
-            )
+          ? formatRoundedAmount(row.convertedAmount, getCurrencyPrecision(destCurrency))
           : row.amount,
         transactionType: TransactionType.DEBIT,
         notes: '',

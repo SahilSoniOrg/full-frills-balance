@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AppInputField } from '@/src/components/core/AppInputField';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { ScheduleSheet } from '../schedule/ScheduleSheet';
 import type { ScheduleValue } from '../schedule/types';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';

@@ -3,7 +3,7 @@ import type {
   MatcherOutcome,
   SmsAccountRecognition,
 } from '@/src/types/accountMatcher';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 
 interface EmailRecognitionEvidence {

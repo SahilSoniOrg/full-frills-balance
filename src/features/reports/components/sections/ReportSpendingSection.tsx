@@ -7,7 +7,7 @@ import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownD
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
 import { ReportSpendingTabVm } from '@/src/features/reports/hooks/reportTabTypes';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 
 interface ReportSpendingSectionProps {

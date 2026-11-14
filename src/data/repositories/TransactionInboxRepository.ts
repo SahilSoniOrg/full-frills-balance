@@ -25,7 +25,7 @@ import type DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
 import { runAccountingWriteSession } from './AccountingWriteSession';
 import { generator } from '@/src/data/database/idGenerator';
-import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { sanitizeSmsMetadataJson } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
 import {
   applyInboxWriteData,
   inboxSnapshotFromRecord,

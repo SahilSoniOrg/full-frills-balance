@@ -1,7 +1,7 @@
 import { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 export type ConversionMode = 'historical' | 'spot';
 

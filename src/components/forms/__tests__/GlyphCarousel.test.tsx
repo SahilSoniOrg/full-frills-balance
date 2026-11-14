@@ -1,5 +1,5 @@
 import { FlatList } from 'react-native';
-import { act, fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/testing/render';
 import { GlyphCarousel } from '../GlyphCarousel';
 import type { GlyphCarouselItem } from '../GlyphCarousel';
 import { Icon } from '@/src/components/core';

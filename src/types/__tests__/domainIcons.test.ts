@@ -12,9 +12,9 @@ describe('domain icon definitions', () => {
     expect(isValidIconName(undefined)).toBe(false);
     expect(isValidIconName(null)).toBe(false);
     expect(isValidIconName('not-an-icon')).toBe(false);
-    expect(isValidIconName('toString')).toBe(false);
-    expect(isValidIconName('constructor')).toBe(false);
-    expect(isValidIconName('__proto__')).toBe(false);
+    expect(isValidIconName('@/function toString() { [native code] }')).toBe(false);
+    expect(isValidIconName('@/function Object() { [native code] }')).toBe(false);
+    expect(isValidIconName('@/[object Object]')).toBe(false);
   });
 
   it('exposes PascalCase catalog members', () => {

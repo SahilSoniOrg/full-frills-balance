@@ -6,12 +6,12 @@ import {
 import {
   evaluateJournalBalance,
   resolveCurrencyPrecisions,
-  normalizeCurrencyCode,
   type JournalBalanceEvaluation,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 const AUDIT_PAGE_SIZE = 100;
 

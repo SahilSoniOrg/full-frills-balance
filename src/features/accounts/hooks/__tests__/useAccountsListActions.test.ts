@@ -5,9 +5,9 @@ import { useAccountsListActions } from '../useAccountsListActions';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toAccountDetails: jest.fn(),
     toAccountCreation: jest.fn(),

@@ -9,10 +9,10 @@ import {
   hasAcknowledgedCurrentPrivacyPolicy,
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { analytics } from '@/src/services/analytics';
-import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
-import { logger } from '@/src/utils/logger';
+import { triggerSaveOutcomeHaptic } from '@/src/design-system/haptics';
+import { logger } from '@/src/services/observability/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { getLocales } from 'expo-localization';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';

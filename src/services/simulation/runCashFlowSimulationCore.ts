@@ -1,7 +1,7 @@
 import Journal from '@/src/data/models/Journal';
 import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
 import { AccountId } from '@/src/types/ids';
-import { Trace } from '@/src/utils/TraceService';
+import { Trace } from '@/src/services/observability/TraceService';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { composeSpending, sortTimeline } from './ProjectionComposer';

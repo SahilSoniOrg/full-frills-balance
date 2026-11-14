@@ -28,7 +28,7 @@ jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
 jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/observability/logger');
 jest.mock('@/src/services/preferences', () => ({
   preferences: {
     insights: {

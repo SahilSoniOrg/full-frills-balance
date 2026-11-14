@@ -7,7 +7,7 @@ import {
   usePrimaryNavigation,
 } from '@/src/navigation/primaryNavigation';
 import { Icon } from '@/src/types/domainIcons';
-import { getReadableColor } from '@/src/utils/color-math';
+import { getReadableColor } from '@/src/design-system/colorMath';
 import { StyleSheet, View } from 'react-native';
 
 export function PrimaryNavigationHeader() {

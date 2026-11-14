@@ -1,5 +1,5 @@
 import { computeFitFontSize, FitText } from '@/src/components/shared/FitText';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { StyleSheet, Text } from 'react-native';
 
 const layout = (width: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width, height: 80 } } });

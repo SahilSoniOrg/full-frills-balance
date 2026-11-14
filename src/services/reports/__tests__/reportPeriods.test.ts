@@ -1,5 +1,5 @@
 import { getPreviousEquivalentReportRange } from '@/src/services/reports/reportPeriods';
-import { DateRange } from '@/src/utils/dateUtils';
+import { DateRange } from '@/src/domain/calendar/dateRanges';
 
 describe('getPreviousEquivalentReportRange', () => {
   const currentRange: DateRange = {

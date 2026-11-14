@@ -3,7 +3,7 @@ import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
-import { generateWorkplaceName } from '@/src/utils/workplaceName';
+import { generateWorkplaceName } from '@/src/services/setup/workplaceName';
 import { claimedRestoreFingerprint, isRestoreOwnershipTuple } from '@/src/services/import/restore';
 import type {
   DeviceSetupOutput,

@@ -3,7 +3,7 @@ import { AppText, ColoredDot, PressScaleTouchable } from '@/src/components/core'
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

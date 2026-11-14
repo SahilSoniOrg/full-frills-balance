@@ -5,7 +5,7 @@ import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { reportsV2Engine } from '@/src/services/reports-v2/reportQueryEngine';
 import { observeReportInputChanges } from '@/src/services/reports-v2/reportInputChanges';
 import { ReportsV2View } from './screen/ReportsV2View';

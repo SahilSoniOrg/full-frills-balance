@@ -1,8 +1,8 @@
 import { useUndoableAction } from '@/src/hooks/useUndoableAction';
-import { toast, showErrorAlert } from '@/src/utils/alerts';
+import { toast, showErrorAlert } from '@/src/services/feedback/alerts';
 import { act, renderHook } from '@testing-library/react-native';
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   toast: {
     success: jest.fn(),
   },

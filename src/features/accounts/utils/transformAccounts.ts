@@ -1,3 +1,4 @@
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import type { IconName } from '@/src/types/domainIcons';
 import { Theme } from '@/src/constants/design-tokens';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -8,11 +9,11 @@ import {
   getAccountSections,
   getSectionColor,
   resolveAccountAppearance,
-} from '@/src/utils/accountCategory';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
+} from '@/src/design-system/accountPresentation';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { isAccountArchived, getVisibleRoots } from '@/src/domain/accounts/accountArchive';
 import { Opacity } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 export interface AccountCardViewModel {
   id: AccountId;
@@ -77,20 +78,6 @@ interface TransformOptions {
   onContrast: (color: string) => string;
 }
 
-const STATIC_META_CACHE = new Map<
-  string,
-  {
-    categoryColor: string;
-    categoryIconBg: string;
-    accountColor: string;
-    textColor: string;
-  }
->();
-
-let currentBucket = new Map<string, AccountCardViewModel>();
-let oldBucket = new Map<string, AccountCardViewModel>();
-const BUCKET_LIMIT = 1000;
-
 export function transformAccountsToSections(
   accounts: PlainAccount[],
   options: TransformOptions,
@@ -125,16 +112,8 @@ export function transformAccountsToSections(
     else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
 
     const typeAccounts = section.data;
-    const accountsById = new Map(typeAccounts.map(account => [account.id, account]));
-    const accountsByParent = new Map<string, AccountFields[]>();
-    typeAccounts.forEach(a => {
-      if (a.parentAccountId) {
-        const children = accountsByParent.get(a.parentAccountId) || [];
-        children.push(a);
-        accountsByParent.set(a.parentAccountId, children);
-      }
-    });
-
+    const tree = createAccountTreeSnapshot(typeAccounts);
+    const accountsById = tree.accountsById;
     const rootAccounts = getVisibleRoots(typeAccounts);
     const flattenedData: AccountCardViewModel[] = [];
 
@@ -145,78 +124,23 @@ export function transformAccountsToSections(
       const monthlyIncome = balanceData?.monthlyIncome || 0;
       const monthlyExpenses = balanceData?.monthlyExpenses || 0;
       const isExpanded = expandedAccountIds.has(account.id);
-      const children = accountsByParent.get(account.id) || [];
+      const children = tree.getChildren(account.id);
 
-      const updatedAtTs =
-        account.updatedAt instanceof Date
-          ? account.updatedAt.getTime()
-          : account.updatedAt
-            ? new Date(account.updatedAt).getTime()
-            : 0;
-      const roundedBalance = Math.round(balance * 100) / 100;
-      const roundedWorkplaceBalance =
-        workplaceBalance === undefined ? '' : Math.round(workplaceBalance * 100) / 100;
-      const roundedIncome = Math.round(monthlyIncome * 100) / 100;
-      const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
-      const archivedAtTs =
-        account.archivedAt instanceof Date
-          ? account.archivedAt.getTime()
-          : account.archivedAt
-            ? new Date(account.archivedAt).getTime()
-            : 0;
-      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${account.color ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${defaultCurrency}:${roundedBalance}:${roundedWorkplaceBalance}:${roundedIncome}:${roundedExpenses}`;
-
-      let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
-
-      if (viewModel) {
-        if (!currentBucket.has(stateKey)) {
-          if (currentBucket.size >= BUCKET_LIMIT) {
-            oldBucket = currentBucket;
-            currentBucket = new Map();
-          }
-          currentBucket.set(stateKey, viewModel);
-        }
-
-        flattenedData.push(viewModel);
-        if (isExpanded) {
-          children.forEach(child => flatten(child, depth + 1));
-        }
-        return;
-      }
-
-      const themeKey = (theme as unknown as { mode?: string }).mode ?? theme.background;
-      const metaKey = `${account.id}:${account.accountType}:${account.color ?? ''}:${themeKey}`;
-      let meta = STATIC_META_CACHE.get(metaKey);
-
-      if (!meta) {
-        const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(
-          account,
-          theme,
-        );
-        // AccountFields cards use accountColor as their solid surface, so derive
-        // readable foreground text from that surface.
-        const textColor = onContrast(accountColor);
-        const categoryIconBg = withOpacity(categoryColor, Opacity.soft);
-        meta = {
-          categoryColor,
-          categoryIconBg,
-          accountColor,
-          textColor,
-        };
-        STATIC_META_CACHE.set(metaKey, meta);
-      }
+      const { categoryColor, accentColor: accountColor } = resolveAccountAppearance(account, theme);
+      const textColor = onContrast(accountColor);
+      const categoryIconBg = withOpacity(categoryColor, Opacity.soft);
 
       const currencyCode = balanceData?.currencyCode || account.currencyCode;
 
-      const createdViewModel: AccountCardViewModel = {
+      const viewModel: AccountCardViewModel = {
         id: account.id,
         name: account.name,
         icon: getAccountIcon(account),
         accountType: account.accountType,
-        categoryColor: meta.categoryColor,
-        categoryIconBg: meta.categoryIconBg,
-        accountColor: meta.accountColor,
-        textColor: meta.textColor,
+        categoryColor,
+        categoryIconBg,
+        accountColor,
+        textColor,
         balance,
         workplaceBalance,
         workplaceCurrencyCode: defaultCurrency,
@@ -238,15 +162,7 @@ export function transformAccountsToSections(
           : undefined,
       };
 
-      viewModel = createdViewModel;
-
-      if (currentBucket.size >= BUCKET_LIMIT) {
-        oldBucket = currentBucket;
-        currentBucket = new Map();
-      }
-      currentBucket.set(stateKey, createdViewModel);
-
-      flattenedData.push(createdViewModel);
+      flattenedData.push(viewModel);
 
       if (isExpanded) {
         children.forEach(child => flatten(child, depth + 1));

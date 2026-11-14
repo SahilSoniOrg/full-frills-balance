@@ -4,7 +4,7 @@ import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 export type PlannedOccurrenceJournals =
@@ -117,11 +117,7 @@ export class JournalPlannedQueries {
       .fetch();
     const auto = new Set(
       metadata
-        .filter(
-          row =>
-            safeParseJSON<Record<string, unknown>>(row.metadataJson, {})[MetadataKeys.AUTO_POST] ===
-            true,
-        )
+        .filter(row => parseJSONRecord(row.metadataJson)[MetadataKeys.AUTO_POST] === true)
         .map(row => row.journalId),
     );
     return due.filter(journal => auto.has(journal.id));
@@ -146,7 +142,7 @@ export class JournalPlannedQueries {
     const originalDateByJournalId = new Map<JournalId, number>();
     const metadata = await this.findMetadataByJournalIds(workplaceId, journalIds);
     for (const row of metadata) {
-      const metadataJson = safeParseJSON<Record<string, unknown>>(row.metadataJson, {});
+      const metadataJson = parseJSONRecord(row.metadataJson);
       const rawOriginalDate = metadataJson[MetadataKeys.ORIGINAL_PLANNED_DATE];
       const originalDate =
         typeof rawOriginalDate === 'number' || typeof rawOriginalDate === 'string'

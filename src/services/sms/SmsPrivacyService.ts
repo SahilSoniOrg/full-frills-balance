@@ -1,6 +1,6 @@
 import { smsPrivacyRepository } from '@/src/data/repositories/SmsPrivacyRepository';
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+import { storage } from '@/src/data/storage/storage';
 
 const PRIVACY_MIGRATION_KEY = 'sms_privacy_cleanup_v4_complete';
 

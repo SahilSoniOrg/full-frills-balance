@@ -4,7 +4,7 @@ import {
   getAccountTreeDraftPlacementChanges,
   stageAccountTreeDraftDrop,
 } from '../accountTreeDraft';
-import { createAccountTreeSnapshot } from '../accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { resolveAccountTreeDropTarget, type AccountTreeDropKind } from '../accountTreeTargets';
 
 const id = (value: string) => value as never;

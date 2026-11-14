@@ -1,5 +1,5 @@
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import { alert, confirm } from '@/src/utils/alerts';
+import { alert, confirm } from '@/src/services/feedback/alerts';
 import type { MutableRefObject } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import type { WorkplaceId } from '@/src/types/ids';

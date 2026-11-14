@@ -8,7 +8,7 @@ import '@/src/features/app/preventSplashAutoHide';
 
 import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
-import { logger } from './src/utils/logger';
+import { logger } from './src/services/observability/logger';
 
 if (process.env.EXPO_OS !== 'web') {
   AppRegistry.registerHeadlessTask('AutomaticSmsImport', () => async data => {

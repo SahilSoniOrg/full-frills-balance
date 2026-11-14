@@ -1,7 +1,7 @@
 import { WidgetProjectionService } from '../WidgetProjectionService';
 import { loadNativeWidgetAdapter } from '../nativeWidgetAdapter';
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+import { storage } from '@/src/data/storage/storage';
 import { createNativeWidgetsStub } from '@/src/testing/mockNativeWidgets';
 
 async function flushUntilStarted(started: () => boolean): Promise<void> {
@@ -14,10 +14,10 @@ const nativeWidgets = createNativeWidgetsStub();
 jest.mock('../nativeWidgetAdapter', () =>
   jest.requireActual('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
 );
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { warn: jest.fn() },
 }));
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     set: jest.fn(),
     remove: jest.fn(),

@@ -1,5 +1,5 @@
 import { ScrollView } from 'react-native';
-import { act, fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/testing/render';
 import { ClockWheel } from './ClockWheel';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));

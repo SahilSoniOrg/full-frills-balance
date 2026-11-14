@@ -1,6 +1,6 @@
 import { Parser } from 'htmlparser2';
 import type { WorkplaceId } from '@/src/types/ids';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import { gmailBinding } from './gmailConnection';
 import { gmailAccessToken } from './gmailAuthorization';
 import { readGmailPreview } from './gmailApi';

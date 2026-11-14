@@ -1,6 +1,6 @@
 import { IconName } from '@/src/types/domainIcons';
 import { AccountId } from '@/src/types/ids';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 

@@ -4,7 +4,7 @@ import type { RowFx } from '@/src/features/journal/entry/hooks/workplaceRowFx';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import React from 'react';
 import { SplitAllocationRow } from '../components/SplitAllocationRow';
 

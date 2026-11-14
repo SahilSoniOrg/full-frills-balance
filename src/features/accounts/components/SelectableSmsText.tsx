@@ -10,7 +10,7 @@ import {
   tokenizeSmsWords,
 } from '@/src/services/journal/smsTextSpans';
 import { useTheme } from '@/src/hooks/use-theme';
-import { blendColors, getReadableColor } from '@/src/utils/color-math';
+import { blendColors, getReadableColor } from '@/src/design-system/colorMath';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

@@ -1,5 +1,5 @@
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { executeE2eBootstrap } from '../e2eSeed';
 import { assertE2eHarnessEnabled } from '../e2eRuntimeGate';
 

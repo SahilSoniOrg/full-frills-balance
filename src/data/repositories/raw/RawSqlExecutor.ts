@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { getRawAdapter, rowsFromQueryRaw, type RawSqlArg } from '../../database/DatabaseUtils';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 /** Narrow adapter seam for raw reads. SQL and row types remain with feature queries. */
 export class RawSqlExecutor {

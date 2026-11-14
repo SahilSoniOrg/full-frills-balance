@@ -1,7 +1,7 @@
 import { JournalSearchView } from '../JournalSearchView';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import type { ScreenNavChrome } from '@/src/components/layout';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/features/journal/components/JournalListView', () => ({
   JournalListView: ({ list }: { list: { listHeader?: React.ReactNode } }) =>

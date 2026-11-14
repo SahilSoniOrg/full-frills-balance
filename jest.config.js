@@ -26,7 +26,7 @@ module.exports = {
   },
   setupFiles: ['<rootDir>/jest.platform-mock.js'],
   coverageThreshold: {
-    './src/utils/accounting/BalanceEffects.ts': {
+    './src/domain/accounting/BalanceEffects.ts': {
       branches: 80,
       statements: 90,
     },
@@ -46,7 +46,7 @@ module.exports = {
       branches: 38,
       statements: 45,
     },
-    './src/utils/money.ts': {
+    './src/domain/money/money.ts': {
       branches: 27,
       statements: 79,
     },

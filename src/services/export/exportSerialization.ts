@@ -1,6 +1,6 @@
 import type { UIPreferences } from '@/src/services/preferences/types';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
-import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
+import { hashSmsMetadataFingerprints } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
 
 export type ExportWorkplaceMetadata = {
   id: string;

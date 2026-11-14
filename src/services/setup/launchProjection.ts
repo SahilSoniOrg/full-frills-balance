@@ -1,4 +1,4 @@
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { SETUP_DRAFT_KEY } from './setupDraftIdentity';
 
 export { SETUP_DRAFT_KEY, SETUP_JOURNEY_IDS, isSetupJourneyId } from './setupDraftIdentity';

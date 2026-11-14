@@ -1,5 +1,5 @@
 import { InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 
 export interface SmsJournalInfoDisplay {
   sender?: string;
@@ -14,14 +14,6 @@ export interface SmsJournalInfoDisplay {
   autoPosted?: boolean;
   receivedAt?: number;
   amountColor?: 'income' | 'expense';
-}
-
-interface SmsMetadataFields {
-  parsedAmount?: number;
-  parsedCurrencyCode?: string;
-  referenceNumber?: string;
-  accountSource?: string;
-  parsedMerchant?: string;
 }
 
 export function mapSmsJournalMetadataDisplay(input: {
@@ -44,10 +36,7 @@ export function mapSmsJournalMetadataDisplay(input: {
     channel?: 'sms' | 'voice' | 'email';
   } | null;
 }): SmsJournalInfoDisplay {
-  const parsedMetadata = safeParseJSON<SmsMetadataFields>(
-    input.inboxRecord?.metadataJson || input.metadataJson,
-    {},
-  );
+  const parsedMetadata = parseJSONRecord(input.inboxRecord?.metadataJson || input.metadataJson);
   return {
     sender: input.inboxRecord?.senderAddress || input.originalSmsSender || undefined,
     rawBody: input.inboxRecord?.rawBody || input.originalSmsBody || undefined,
@@ -57,12 +46,26 @@ export function mapSmsJournalMetadataDisplay(input: {
         : typeof parsedMetadata.parsedAmount === 'number'
           ? parsedMetadata.parsedAmount
           : undefined,
-    currencyCode: input.inboxRecord?.parsedCurrencyCode || parsedMetadata.parsedCurrencyCode,
-    referenceNumber: input.inboxRecord?.referenceNumber || parsedMetadata.referenceNumber,
-    accountSource: input.inboxRecord?.parsedAccountSource || parsedMetadata.accountSource,
+    currencyCode:
+      input.inboxRecord?.parsedCurrencyCode ||
+      (typeof parsedMetadata.parsedCurrencyCode === 'string'
+        ? parsedMetadata.parsedCurrencyCode
+        : undefined),
+    referenceNumber:
+      input.inboxRecord?.referenceNumber ||
+      (typeof parsedMetadata.referenceNumber === 'string'
+        ? parsedMetadata.referenceNumber
+        : undefined),
+    accountSource:
+      input.inboxRecord?.parsedAccountSource ||
+      (typeof parsedMetadata.accountSource === 'string' ? parsedMetadata.accountSource : undefined),
     inboxRecordId: input.inboxRecord?.id,
     channel: input.inboxRecord?.channel,
-    merchant: input.inboxRecord?.parsedMerchant || parsedMetadata.parsedMerchant,
+    merchant:
+      input.inboxRecord?.parsedMerchant ||
+      (typeof parsedMetadata.parsedMerchant === 'string'
+        ? parsedMetadata.parsedMerchant
+        : undefined),
     autoPosted: input.inboxRecord?.processingStatus === InboxProcessingStatus.AUTO_POSTED,
     receivedAt: input.inboxRecord?.inputDate,
     amountColor:

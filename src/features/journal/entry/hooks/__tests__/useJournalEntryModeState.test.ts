@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import { useJournalEntryModeState } from '../useJournalEntryModeState';
 
-jest.mock('@/src/utils/alerts', () => ({ showErrorAlert: jest.fn() }));
+jest.mock('@/src/services/feedback/alerts', () => ({ showErrorAlert: jest.fn() }));
 
 describe('useJournalEntryModeState', () => {
   it('does not rewrite the transaction type when visiting Split', () => {

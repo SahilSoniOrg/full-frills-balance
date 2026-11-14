@@ -1,7 +1,11 @@
 import { AppConfig, type ColorKey } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
-import { describePeriodRange, type DateRange, type PeriodRangeFacts } from '@/src/utils/dateUtils';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import {
+  describePeriodRange,
+  type DateRange,
+  type PeriodRangeFacts,
+} from '@/src/domain/calendar/dateRanges';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import dayjs from 'dayjs';
 
 type Sign = '+' | '−';

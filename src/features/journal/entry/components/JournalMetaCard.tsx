@@ -19,8 +19,8 @@ import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
-import { withOpacity } from '@/src/utils/color-math';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { withOpacity } from '@/src/design-system/colorMath';
+import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import React, {
   useCallback,
   useEffect,

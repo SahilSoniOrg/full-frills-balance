@@ -2,7 +2,7 @@ import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
+import { isBalanceSheetAccount } from '@/src/domain/accounts/accountClassification';
 import { useMemo } from 'react';
 
 export interface UseAccountSelectionOptions {

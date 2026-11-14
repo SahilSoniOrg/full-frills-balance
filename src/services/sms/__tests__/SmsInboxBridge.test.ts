@@ -1,8 +1,8 @@
 import { SmsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { PermissionsAndroid, Platform } from 'react-native';
 
-jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ confirm: { show: jest.fn() } }));
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,

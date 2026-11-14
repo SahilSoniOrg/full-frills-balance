@@ -4,7 +4,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';
-import { fromMinorUnits, safeAdd } from '@/src/utils/money';
+import { fromMinorUnits, safeAdd } from '@/src/domain/money/money';
 import { evaluateJournalLines } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { currencyReadService } from '@/src/services/currency-read-service';

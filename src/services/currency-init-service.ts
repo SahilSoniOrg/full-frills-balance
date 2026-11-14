@@ -7,7 +7,7 @@
 
 import Currency from '@/src/data/models/Currency';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 import { COMMON_CURRENCIES } from '@/src/constants/currency-definitions';
 

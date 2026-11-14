@@ -22,8 +22,8 @@ import {
 } from '@/src/services/accounts/accountTreeTargets';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
-import { isAccountArchived } from '@/src/utils/accountArchive';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
+import { triggerHaptic } from '@/src/design-system/haptics';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import {
   ACCOUNT_TREE_ROW_MIN_HEIGHT,

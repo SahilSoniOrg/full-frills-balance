@@ -1,11 +1,11 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
 import {
   ACTIVE_JOURNAL_STATUSES,
   activeJournalStatusSqlPlaceholders,
-} from '@/src/utils/journalStatus';
+} from '@/src/domain/journal/journalStatus';
 import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';

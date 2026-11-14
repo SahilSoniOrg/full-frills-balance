@@ -1,6 +1,6 @@
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { logger } from '@/src/utils/logger';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { logger } from '@/src/services/observability/logger';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 import { analytics } from '@/src/services/analytics';

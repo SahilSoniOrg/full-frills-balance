@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useConfirmUnsavedChanges } from '../useConfirmUnsavedChanges';
 import { isUpdateRestartBlocked } from '@/src/services/update/updateRestartGuard';
 
@@ -13,8 +13,8 @@ jest.mock('expo-router', () => ({
     mockPreventRemove = enabled;
   },
 }));
-jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { back: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ confirm: { show: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: { back: jest.fn() } }));
 
 describe('useConfirmUnsavedChanges', () => {
   beforeEach(() => {

@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import type { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { asAccountId } from '@/src/types/ids';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import {
   annotateSubAccountTree,
   SubAccountListModal,

@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 
 import { WorkplaceId } from '@/src/types/ids';
 import { createDisposableReplay } from '@/src/services/reactive/disposableReplay';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 export const REACTIVE_CACHE_NAMESPACES = {
   dashboard: 'reactive-data/dashboard',

@@ -1,4 +1,4 @@
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { PrivacyAcknowledgementSheet } from '../PrivacyAcknowledgementSheet';
 
 jest.mock('@/src/components/overlays/InfoSheet', () => {

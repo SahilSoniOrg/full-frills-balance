@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
@@ -10,8 +11,8 @@ import { Spacing } from '@/src/constants';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { formatDate } from '@/src/utils/dateUtils';
+
+import { formatDate } from '@/src/utils/dateFormatting';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -82,7 +83,7 @@ export function PlannedPaymentFormView({
               autoFocus={autoFocusAmount}
               precision={
                 currencies.find(currency => currency.code === form.currencyCode)?.precision ??
-                CurrencyFormatter.getPrecisionFallback(form.currencyCode)
+                getCurrencyPrecision(form.currencyCode)
               }
             />
           </View>

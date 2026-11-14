@@ -6,7 +6,7 @@ import type { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { InboxParseStatus, TransactionDirection } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { BehaviorSubject } from 'rxjs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 

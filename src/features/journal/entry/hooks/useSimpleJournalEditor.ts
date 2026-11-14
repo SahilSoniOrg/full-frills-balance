@@ -21,8 +21,8 @@ import {
   parseSimpleAmountInput,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
-import { getInferredAccountType } from '@/src/utils/accountCategory';
-import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { getInferredAccountType } from '@/src/domain/journal/journalAccountTypes';
+import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';

@@ -8,9 +8,9 @@ import {
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useThemeOverride } from '@/src/contexts/UIContext';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
-import { isFontSetLoaded } from '@/src/utils/loadFontSet';
-import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
+import { blendColors, getWCAGContrastColor } from '@/src/design-system/colorMath';
+import { isFontSetLoaded } from '@/src/services/fonts/loadFontSet';
+import { ComponentVariant, getVariantColors } from '@/src/design-system/variants';
 import { useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 

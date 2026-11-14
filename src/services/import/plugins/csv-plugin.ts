@@ -7,8 +7,8 @@ import {
 } from '@/src/services/import/plugins/csv/csvParser';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import { AccountType } from '@/src/types/enums';
-import { countAccountsVsCategories } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
+import { logger } from '@/src/services/observability/logger';
 
 export const csvPlugin: ImportPlugin = {
   id: 'csv',

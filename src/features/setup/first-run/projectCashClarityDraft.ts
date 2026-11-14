@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { simulateDraftScenario } from '@/src/services/simulation/draftSimulationService';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
 import type {
   SimulationBudget,

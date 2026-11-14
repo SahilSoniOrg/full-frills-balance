@@ -11,13 +11,13 @@ import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/Acc
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
-import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
+import { isLoanSubtype } from '@/src/domain/accounts/accountSubtypes';
 import { toLiabilityMetadata } from './liabilityMetadata';
 import dayjs from 'dayjs';
 import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { LiabilityMetadata } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 

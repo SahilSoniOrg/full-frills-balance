@@ -6,7 +6,7 @@ import { toPlainBudgetScope } from '@/src/data/models/BudgetScope';
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { map, shareReplay, switchMap } from 'rxjs/operators';
@@ -22,7 +22,7 @@ import {
 import { BudgetUsage } from './types';
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import type { DateRange, RecurrenceRule } from '@/src/services/forward-finance/recurrence/types';
-import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 
 export type BudgetSpendingHistoryEntry = {
   label: string;

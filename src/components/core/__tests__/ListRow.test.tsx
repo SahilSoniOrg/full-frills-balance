@@ -1,5 +1,5 @@
 import { ListRow, LIST_ROW_LEVEL_INDENT } from '@/src/components/core/ListRow';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { Icon } from '@/src/types/domainIcons';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Spacing } from '@/src/constants/design-tokens';

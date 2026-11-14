@@ -13,7 +13,7 @@ jest.mock('@/src/hooks/useExchangeRate', () => ({
   }),
 }));
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   showErrorAlert: jest.fn(),
 }));
 

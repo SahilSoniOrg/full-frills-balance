@@ -27,8 +27,8 @@ import type {
 } from '@/src/domain/accounting/PostedJournalImportError';
 import type { JournalBalanceEvaluation } from '@/src/domain/accounting/journalBalanceEvaluator';
 import type { JournalBalanceLineEdit } from '@/src/domain/accounting/journalBalanceReview';
-import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
-import { formatDate } from '@/src/utils/dateUtils';
+import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
+import { formatDate } from '@/src/utils/dateFormatting';
 
 const preparedByFingerprint = new Map<string, PreparedRestore>();
 const preparedByOperationId = new Map<string, PreparedRestore>();

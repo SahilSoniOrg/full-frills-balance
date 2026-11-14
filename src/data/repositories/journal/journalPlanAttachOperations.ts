@@ -36,8 +36,8 @@ import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types
 import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata, AuditJsonObject } from '@/src/types/auditEvents';
 import { REVERT_CONFLICT_MESSAGE } from '@/src/domain/audit/revertErrors';
-import { safeParseJSON } from '@/src/utils/serialization';
-import { stableAuditJson } from '@/src/utils/stableAuditJson';
+import { parseJSONRecord } from '@/src/utils/serialization';
+import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 import { Q } from '@nozbe/watermelondb';
 
 export const PLAN_ATTACH_AUDIT_EVENT = 'journal.planned_payment_attached' as const;
@@ -64,7 +64,7 @@ export interface PlanAttachResult extends JournalPersistenceResult {
 }
 
 function readMetadataObject(json: string | undefined): Record<string, unknown> {
-  return safeParseJSON<Record<string, unknown>>(json, {}) ?? {};
+  return parseJSONRecord(json) ?? {};
 }
 
 function auditTransactions(transactions: readonly Transaction[]) {

@@ -1,7 +1,7 @@
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 import { Icon } from '@/src/types/domainIcons';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { Text } from 'react-native';
 import { Screen } from '@/src/components/layout/Screen';
 import { SafeAreaFrame } from '@/src/design-system/SafeArea';

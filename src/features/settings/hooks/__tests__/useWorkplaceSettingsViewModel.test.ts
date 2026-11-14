@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useWorkplaceSettingsViewModel } from '../useWorkplaceSettingsViewModel';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { Icon } from '@/src/types/domainIcons';
 
 const mockWorkplace = { id: 'home', name: 'Home', icon: 'briefcase', defaultCurrencyCode: 'USD' };
@@ -22,7 +22,7 @@ jest.mock('@/src/services/analytics', () => ({ analytics: { trackFeatureUsage: j
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: { getAllWorkplaces: jest.fn(), updateWorkplace: jest.fn() },
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   toast: { error: jest.fn(), success: jest.fn(), warning: jest.fn() },
 }));

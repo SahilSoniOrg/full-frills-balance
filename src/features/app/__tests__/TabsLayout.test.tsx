@@ -3,9 +3,9 @@ import { TabsLayout } from '@/src/features/app/TabsLayout';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, type ViewProps } from 'react-native';
 import type { PrimaryNavigationContextValue } from '@/src/navigation/primaryNavigation';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 
-jest.mock('@/src/utils/alerts', () => ({ toast: { info: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ toast: { info: jest.fn() } }));
 
 let mockBottomInset = 24;
 let mockKeyboardVisible = false;
@@ -79,7 +79,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 jest.mock('@/src/hooks/useObservable', () => ({ useObservable: () => ({ data: [] }) }));
 jest.mock('@/src/hooks/useProfilePrefs', () => ({ useProfilePrefs: () => ({ userName: 'Test' }) }));
 jest.mock('@/src/services/WorkplaceService', () => ({ workplaceService: {} }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: {} }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: {} }));
 // Deep jest.mock paths are required so PrimaryTabBar’s relative ContextualAddMenu
 // import is stubbed; avoid `import('…/deep')` type refs — those fail the boundary check.
 jest.mock('@/src/features/navigation/ContextualAddMenu', () => {

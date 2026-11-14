@@ -8,9 +8,9 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
-import { PeriodFilter } from '@/src/utils/dateUtils';
+import { PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import dayjs, { Dayjs } from 'dayjs';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 

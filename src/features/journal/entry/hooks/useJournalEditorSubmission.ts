@@ -1,9 +1,9 @@
 import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import type { JournalId } from '@/src/types/ids';
-import { showErrorAlert } from '@/src/utils/alerts';
-import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
-import { logger } from '@/src/utils/logger';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
+import { triggerSaveOutcomeHaptic } from '@/src/design-system/haptics';
+import { logger } from '@/src/services/observability/logger';
 import { useCallback, useRef, useState } from 'react';
 import type { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 

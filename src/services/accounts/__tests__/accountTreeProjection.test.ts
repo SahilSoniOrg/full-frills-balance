@@ -1,5 +1,5 @@
 import { flattenAccountTree } from '../accountTreeProjection';
-import { createAccountTreeSnapshot } from '../accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 
 const id = (value: string) => value as never;
 

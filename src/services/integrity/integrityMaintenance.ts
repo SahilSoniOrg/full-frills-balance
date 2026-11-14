@@ -6,17 +6,17 @@
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { preferences } from '@/src/services/preferences';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { claimedRestoreFingerprint } from '@/src/services/import/restoreOwnership';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
 import { clearLocalAuditActorId } from '@/src/services/audit-identity';
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { notifySetupDraftChanged } from '@/src/services/setup/launchProjection';
 
 function runPostResetCleanup(

@@ -2,7 +2,7 @@ import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity } from '@/src/constants';
 import type { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Box } from '@/src/design-system';
 

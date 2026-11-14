@@ -7,9 +7,12 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { hasArchivedAccountsInList, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { withOpacity } from '@/src/utils/color-math';
+import {
+  hasArchivedAccountsInList,
+  pinnedArchivedAccountIds,
+} from '@/src/domain/accounts/accountArchive';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { MotiView } from 'moti';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {

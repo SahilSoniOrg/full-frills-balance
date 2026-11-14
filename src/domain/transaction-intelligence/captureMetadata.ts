@@ -1,7 +1,7 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, type AccountId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 
 export interface CaptureSourceObservation {
   channel: 'sms' | 'voice' | 'email';
@@ -45,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readObject(json: string | undefined): Record<string, unknown> {
-  const parsed = json ? safeParseJSON<unknown>(json, null) : null;
+  const parsed = json ? safeParseJSON(json, null) : null;
   return isRecord(parsed) ? parsed : {};
 }
 

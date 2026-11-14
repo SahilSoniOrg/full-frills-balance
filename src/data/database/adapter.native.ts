@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { migrations } from '@/src/data/database/migrations';
 import { schema } from '@/src/data/database/schema';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 /**
  * JSI is enabled unconditionally on native.

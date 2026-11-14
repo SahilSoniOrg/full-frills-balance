@@ -6,8 +6,8 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { analytics } from '@/src/services/analytics';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
-import { amountsAreEqual } from '@/src/utils/money';
+import { logger } from '@/src/services/observability/logger';
+import { amountsAreEqual } from '@/src/domain/money/money';
 import { BalanceVerificationResult } from './types';
 
 /**

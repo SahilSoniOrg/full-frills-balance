@@ -3,15 +3,15 @@ import { AccountCard } from '../AccountCard';
 import { AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
-import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
+import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';
 import type { ComponentProps } from 'react';
 import { StyleSheet } from 'react-native';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
 import { ThemeOverride } from '@/src/contexts/UIContext';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 import { getLayoutPath as layoutPath } from '@/src/testing/layoutAssertions';
 
@@ -64,7 +64,9 @@ describe('AccountCard', () => {
     const reconciledAt = new Date(2026, 8, 30, 13, 48);
     const screen = renderCard({ account: { ...mockAccount, reconciledAt } });
     expect(screen.getByTestId('account-card-reconciled-badge')).toBeTruthy();
-    const date = screen.getByText(formatRelativeReconciledDate(reconciledAt));
+    const date = screen.getByText(
+      formatRelativeReconciledDate(reconciledAt, preferences.hourCycle.resolved),
+    );
     expect(date).toHaveStyle({
       opacity: Opacity.heavy,
       color: mockAccount.textColor,
@@ -100,7 +102,11 @@ describe('AccountCard', () => {
         isSelected,
       });
       expect(screen.getByTestId('account-card-reconciled-badge')).toBeTruthy();
-      expect(screen.getByText(formatRelativeReconciledDate(reconciledAt))).toBeTruthy();
+      expect(
+        screen.getByText(
+          formatRelativeReconciledDate(reconciledAt, preferences.hourCycle.resolved),
+        ),
+      ).toBeTruthy();
     },
   );
 
@@ -226,7 +232,7 @@ describe('AccountCard', () => {
     expect(card.props.accessibilityLabel).toContain('level 3');
     expect(card.props.accessibilityLabel).toContain('balance $1,500.00');
     expect(card.props.accessibilityLabel).toContain(
-      `Reconciled ${formatRelativeReconciledDate(reconciledAt)}`,
+      `Reconciled ${formatRelativeReconciledDate(reconciledAt, preferences.hourCycle.resolved)}`,
     );
   });
 

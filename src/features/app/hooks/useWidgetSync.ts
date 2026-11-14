@@ -13,9 +13,9 @@ import {
 } from '@/src/services/simulation/SafeToSpendReadModel';
 import type { SafeToSpendPaintSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import React from 'react';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 

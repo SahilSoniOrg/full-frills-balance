@@ -20,7 +20,7 @@ jest.mock('@/src/hooks/useAccounts', () => ({
     error: null,
   }),
 }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { back: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: { back: jest.fn() } }));
 jest.mock('@/src/components/core/AppText', () => {
   const ReactModule = jest.requireActual<typeof import('react')>('react');
   const { Text } = jest.requireActual<typeof import('react-native')>('react-native');

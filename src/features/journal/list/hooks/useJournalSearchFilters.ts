@@ -1,7 +1,7 @@
 import { analytics } from '@/src/services/analytics';
-import { readJournalSearchScope } from '@/src/utils/journalSearchScope';
+import { readJournalSearchScope } from '@/src/navigation/journalSearchScope';
 import { AccountId, JournalId } from '@/src/types/ids';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface JournalSearchFilterParams {

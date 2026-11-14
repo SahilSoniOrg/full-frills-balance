@@ -1,6 +1,6 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import type { CreateAccountIntent } from './AccountPickerList';
-import { getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
@@ -9,8 +9,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { withOpacity } from '@/src/utils/color-math';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { MotiView } from 'moti';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Platform, type LayoutChangeEvent, View } from 'react-native';

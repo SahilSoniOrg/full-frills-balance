@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@/src/utils/test-utils';
+import { act, renderHook, waitFor } from '@/src/testing/render';
 import { BehaviorSubject, defer, of, Subject } from 'rxjs';
 import dayjs from 'dayjs';
 import { AppState } from 'react-native';
@@ -17,9 +17,11 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toSimpleJournalEntry: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({
+  AppNavigation: { toSimpleJournalEntry: jest.fn() },
+}));
 
 jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn() }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({

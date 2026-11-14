@@ -17,14 +17,14 @@ import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { JournalListModals } from '@/src/features/journal';
 import { Column, Row, Separator } from '@/src/design-system';
 import { PlannedPaymentStatus } from '@/src/types/enums';
-import { getNow } from '@/src/utils/dateUtils';
+import { getNow } from '@/src/utils/dateFormatting';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
 import {

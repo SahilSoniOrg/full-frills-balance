@@ -6,8 +6,8 @@ import type {
   SimulationPlannedPayment,
 } from './types';
 import type { AccountId } from '@/src/types/ids';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
 

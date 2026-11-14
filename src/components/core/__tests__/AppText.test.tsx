@@ -2,9 +2,9 @@ import { AppInputField } from '@/src/components/core/AppInputField';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { FontIds, FontSchemes } from '@/src/constants/design-tokens';
 import { ThemeOverride } from '@/src/contexts/UIContext';
-import { ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';
+import { ensureAllFontSetsLoaded } from '@/src/services/fonts/loadFontSet';
 import { AppText } from '@/src/components/core/AppText';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 describe('AppText', () => {
   it('renders correctly', () => {

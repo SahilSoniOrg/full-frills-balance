@@ -13,7 +13,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
+import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';

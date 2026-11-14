@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 import type { JournalId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';

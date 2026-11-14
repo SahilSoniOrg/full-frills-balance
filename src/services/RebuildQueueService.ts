@@ -1,3 +1,4 @@
+import { safeParseJSON } from '@/src/utils/serialization';
 /**
  * Rebuild Queue Service
  *
@@ -8,9 +9,23 @@
 import { AppConfig } from '@/src/constants';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
-import { safeParseJSON } from '@/src/utils/serialization';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+
+import { storage } from '@/src/data/storage/storage';
+
+function readQueueEntries(json: string): [string, number][] {
+  const value = safeParseJSON(json);
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is [string, number] =>
+      Array.isArray(entry) &&
+      entry.length === 2 &&
+      typeof entry[0] === 'string' &&
+      entry[0].includes('__') &&
+      typeof entry[1] === 'number' &&
+      Number.isFinite(entry[1]),
+  );
+}
 
 interface RebuildQueueConfig {
   debounceMs: number;
@@ -68,7 +83,7 @@ class RebuildQueueService {
     try {
       const stored = storage.getString(RebuildQueueService.STORAGE_KEY);
       if (stored) {
-        const entries = safeParseJSON<[string, number][]>(stored, []);
+        const entries = readQueueEntries(stored);
         if (Array.isArray(entries)) {
           this.queue = new Map(entries);
           logger.info(`[RebuildQueue] Loaded ${this.queue.size} items from disk`);
@@ -86,7 +101,7 @@ class RebuildQueueService {
     try {
       const processing = storage.getString(RebuildQueueService.PROCESSING_KEY);
       if (processing) {
-        const entries = safeParseJSON<[string, number][]>(processing, []);
+        const entries = readQueueEntries(processing);
         if (Array.isArray(entries) && entries.length > 0) {
           logger.warn(`[RebuildQueue] Recovering ${entries.length} items from interrupted batch`);
           for (const [id, date] of entries) {

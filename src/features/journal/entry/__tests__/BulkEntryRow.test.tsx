@@ -1,4 +1,4 @@
-import { render } from '@/src/utils/test-utils';
+import { render } from '@/src/testing/render';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { NO_FX_OVERRIDE } from '@/src/domain/accounting/fxPair';

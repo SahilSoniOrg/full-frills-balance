@@ -1,6 +1,6 @@
 import { LineChartGrid, type LineChartGridProps } from '../LineChartGrid';
 import { AppConfig } from '@/src/constants/app-config';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { Text as SvgText } from 'react-native-svg';
 
 const props: LineChartGridProps = {

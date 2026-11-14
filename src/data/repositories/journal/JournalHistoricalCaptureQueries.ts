@@ -19,7 +19,7 @@ import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '@/src/data/repositories/fetchSequentiallyInChunks';
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
 
 export interface HistoricalCategoryPattern {
@@ -64,7 +64,7 @@ function sourceEvidenceFromMetadata(
   occurredAt: number,
 ): HistoricalSmsSourceEvidence | null {
   if (!row.originalSmsId) return null;
-  const parsed = safeParseJSON<Record<string, unknown>>(row.metadataJson, {});
+  const parsed = parseJSONRecord(row.metadataJson);
   const merchant = typeof parsed.parsedMerchant === 'string' ? parsed.parsedMerchant : undefined;
   const amount =
     typeof parsed.parsedAmount === 'number' && Number.isFinite(parsed.parsedAmount)

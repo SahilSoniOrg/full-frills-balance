@@ -1,3 +1,4 @@
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import {
   AppButton,
   AppIcon,
@@ -13,7 +14,7 @@ import type { ScreenNavChrome } from '@/src/components/layout';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { AppConfig } from '@/src/constants/app-config';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
@@ -47,6 +48,7 @@ export function AccountMatcherEditorView({
   onForget: () => void;
 }) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const messagePager = useShowMorePager(vm.messages.length, { initial: 20, step: 20 });
@@ -225,7 +227,10 @@ export function AccountMatcherEditorView({
                 )}
               </AppText>
               <AppText variant="caption" color="secondary">
-                {formatDate(vm.selectedExample.inputDate, { includeTime: true })}
+                {formatDate(vm.selectedExample.inputDate, {
+                  includeTime: true,
+                  hourCycle: resolvedHourCycle,
+                })}
               </AppText>
               <View style={styles.selectedBody}>
                 {vm.regexMode ? (

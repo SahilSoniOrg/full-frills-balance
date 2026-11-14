@@ -18,7 +18,7 @@ import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecor
 import type { AccountMatcherFlow } from '@/src/types/accountMatcher';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   fetchInboxByDeviceId,
@@ -33,7 +33,7 @@ import {
   SMS_TEST_WORKPLACE_B,
 } from '@/src/testing/smsTestHarness';
 
-jest.mock('@/src/utils/storage', () =>
+jest.mock('@/src/data/storage/storage', () =>
   jest.requireActual('@/src/testing/smsIntegrationMocks').createSmsIntegrationStorageMock(),
 );
 

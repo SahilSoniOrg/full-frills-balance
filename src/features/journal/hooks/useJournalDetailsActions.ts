@@ -5,9 +5,9 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
-import { logger } from '@/src/utils/logger';
+import { showConfirmationAlert, showErrorAlert, toast } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { logger } from '@/src/services/observability/logger';
 import { useCallback, useRef, useState } from 'react';
 import { resolveRevertPlannedActionLabels } from '@/src/services/journal/journalDetailsHelpers';
 

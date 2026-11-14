@@ -1,4 +1,5 @@
-import { sanitizeAmount, sanitizeInput } from '@/src/utils/validation';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
+import { sanitizeInput } from '@/src/utils/validation';
 
 describe('validation', () => {
   describe('sanitizeInput', () => {

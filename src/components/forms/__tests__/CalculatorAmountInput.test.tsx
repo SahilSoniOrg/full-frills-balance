@@ -1,6 +1,6 @@
 import { CalculatorAmountInput } from '../CalculatorAmountInput';
 import { Size, Typography } from '@/src/constants';
-import { fireEvent, render, screen, act } from '@/src/utils/test-utils';
+import { fireEvent, render, screen, act } from '@/src/testing/render';
 import { useState } from 'react';
 import { Keyboard, Pressable as MockPressable, StyleSheet } from 'react-native';
 

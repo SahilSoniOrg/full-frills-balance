@@ -11,7 +11,7 @@
 import { Palette, Shape, Spacing, Typography } from '@/src/constants';
 import { analytics } from '@/src/services/analytics';
 import { BugReportService } from '@/src/services/BugReportService';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import React, { Component, ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 

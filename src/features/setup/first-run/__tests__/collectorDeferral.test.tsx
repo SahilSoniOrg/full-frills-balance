@@ -1,5 +1,5 @@
 import { PlannedPaymentInterval } from '@/src/types/enums';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { IncomeScene } from '../collectors';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 

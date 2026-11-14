@@ -7,7 +7,7 @@ import type {
   ImportPlugin,
   ParsedImportResult,
 } from '@/src/services/import/types';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import type { PreparedRestore, PrepareRestoreOptions, RestoreFacts } from './restoreTypes';
 
 /**

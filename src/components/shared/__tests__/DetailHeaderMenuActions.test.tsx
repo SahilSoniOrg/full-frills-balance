@@ -1,4 +1,4 @@
-import { render, fireEvent, act } from '@/src/utils/test-utils';
+import { render, fireEvent, act } from '@/src/testing/render';
 import { DetailHeaderMenuActions } from '../DetailHeaderMenuActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Icon, IconButton } from '@/src/components/core';

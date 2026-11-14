@@ -22,7 +22,7 @@ import {
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { generator } from '@/src/data/database/idGenerator';
 import { preferences } from '@/src/services/preferences';
 import { remapCategoryDefaultsForAccountMerge } from '@/src/domain/transaction-intelligence/categoryDefaults';

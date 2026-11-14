@@ -1,6 +1,6 @@
 import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { headlineCurrency, safeAdd, safeSubtract } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { headlineCurrency, safeAdd, safeSubtract } from '@/src/domain/money/money';
 import { BudgetItem } from '../types';
 import { presentBudgetPeriod } from './budgetDetailPresentation';
 import { resolveBudgetStatus, type BudgetStatus } from './budgetCardPresentation';

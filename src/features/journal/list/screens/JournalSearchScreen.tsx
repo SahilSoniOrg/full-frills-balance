@@ -6,7 +6,7 @@ import { transactionCaptureStrings as captureCopy } from '@/src/constants/copy/d
 import { JournalSearchView } from '@/src/features/journal/list/components/JournalSearchView';
 import { useJournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo } from 'react';
 
 function JournalSearchScreen() {

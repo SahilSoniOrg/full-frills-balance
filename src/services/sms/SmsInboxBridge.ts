@@ -2,7 +2,7 @@ import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { getE2eSmsInboxMessages } from '@/src/testing/e2eSmsInject';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { PermissionError } from '@/src/utils/errors';
 import { PermissionsAndroid, Platform } from 'react-native';
 

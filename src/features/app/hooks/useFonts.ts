@@ -1,9 +1,9 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { useEffect } from 'react';
-import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
+import { ensureFontSetLoaded } from '@/src/services/fonts/loadFontSet';
 
 /** Resolve the persisted scheme before the splash leaves; failed loads use a real fallback. */
 export function useFonts() {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { ClarityScene } from '../wrap';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { AccountType } from '@/src/types/enums';

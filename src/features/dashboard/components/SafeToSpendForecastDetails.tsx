@@ -1,7 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import type { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 type ForecastDetails = Pick<

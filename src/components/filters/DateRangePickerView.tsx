@@ -1,8 +1,8 @@
 import { Icon, AppButton, AppText, IconButton } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
-import { PeriodFilter } from '@/src/utils/dateUtils';
+import { PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import type { Dayjs } from 'dayjs';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';

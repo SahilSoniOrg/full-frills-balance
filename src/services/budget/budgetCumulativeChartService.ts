@@ -10,8 +10,8 @@ import type {
   BudgetCumulativeTx,
 } from '@/src/services/projections/buildBudgetCumulativeSeries';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { safeAdd, safeSubtract } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { safeAdd, safeSubtract } from '@/src/domain/money/money';
 
 export interface BudgetCategorySpending {
   accountId: AccountId;

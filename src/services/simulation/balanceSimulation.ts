@@ -2,7 +2,7 @@ import type { Flow, SafeToSpendExplanationFlow, SimulationEngineResult } from '.
 import { findFirstMajorInflowDay, getLiquidImpact } from './utils/FlowPolicy';
 import { assertValidFlow } from './utils/FlowInvariants';
 import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
-import { roundToPrecision } from '@/src/utils/moneyRounding';
+import { roundToPrecision } from '@/src/domain/money/moneyRounding';
 
 /** Only plain values and collections cross the runtime boundary. */
 export interface BalanceSimulationInput {

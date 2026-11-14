@@ -1,6 +1,6 @@
 import { DetailDisclosure } from '../DetailDisclosure';
 import { AppButton, AppText, Icon } from '@/src/components/core';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 
 describe('detail disclosures', () => {
   it('keeps deeper content hidden until expanded and reports its state to accessibility', () => {

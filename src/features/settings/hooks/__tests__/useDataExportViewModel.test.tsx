@@ -6,7 +6,7 @@ import { SharingProvider } from '@/src/contexts/SharingContext';
 import { SharingRuntime } from '@/src/services/sharing/SharingRuntime';
 import { PlatformShareTransport } from '@/src/services/sharing/ShareTransport';
 import { ShareFormat } from '@/src/types/sharing';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { useDataExportViewModel } from '../useDataExportViewModel';
 
 jest.mock('@/src/services/SharingService', () => ({
@@ -29,11 +29,11 @@ jest.mock('@/src/services/analytics', () => ({
 jest.mock('@/src/services/export/nativeBackupExporter', () => ({
   exportWorkplacesToJSON: jest.fn(async () => 'backup-bytes'),
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   toast: { success: jest.fn(), warning: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
-jest.mock('@/src/utils/files', () => ({
+jest.mock('@/src/services/files/files', () => ({
   files: {
     document: 'file:///documents/',
     writeContent: jest.fn(async (uri: string) => uri),

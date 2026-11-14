@@ -1,13 +1,13 @@
 import type { NotificationResponse } from 'expo-notifications';
 import { SmsNotificationIntentStore } from '../SmsNotificationIntentStore';
 import { WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
 }));
 
-jest.mock('@/src/utils/storage', () => {
+jest.mock('@/src/data/storage/storage', () => {
   const memory = new Map<string, string>();
   return {
     storage: {

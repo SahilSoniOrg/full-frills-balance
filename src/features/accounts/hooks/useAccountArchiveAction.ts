@@ -11,8 +11,8 @@ import {
   buildArchiveCascadeNodes,
   isAccountArchived,
   type AccountArchiveChanges,
-} from '@/src/utils/accountArchive';
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+} from '@/src/domain/accounts/accountArchive';
+import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 

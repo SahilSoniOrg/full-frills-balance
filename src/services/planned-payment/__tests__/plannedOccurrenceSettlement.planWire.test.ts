@@ -19,7 +19,7 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import { asPlannedPaymentId, type AccountId, type WorkplaceId } from '@/src/types/ids';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
 const WP = 'wp-plan-wire' as WorkplaceId;
@@ -156,7 +156,7 @@ describe('planned occurrence settlement plan wire', () => {
         .query(Q.where('journal_id', capture.id), Q.where('workplace_id', WP))
         .fetch()
     )[0];
-    const parsed = safeParseJSON<Record<string, unknown>>(meta.metadataJson, {});
+    const parsed = parseJSONRecord(meta.metadataJson);
     expect(parsed[MetadataKeys.ORIGINAL_PLANNED_DATE]).toBe(occurrenceDay);
 
     const retired = await database.collections.get<Journal>('journals').find(planned.id);

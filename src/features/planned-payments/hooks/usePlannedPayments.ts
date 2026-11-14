@@ -7,7 +7,7 @@ import {
   type PlannedPaymentListData,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useMemo } from 'react';
 import { EMPTY } from 'rxjs';
 import {

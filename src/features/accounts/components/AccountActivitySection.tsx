@@ -20,8 +20,9 @@ import type { AccountActivitySectionModel } from '@/src/features/accounts/hooks/
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
-import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getReadableColor } from '@/src/utils/color-math';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getReadableColor } from '@/src/design-system/colorMath';
 import { AccountType } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';

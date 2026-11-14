@@ -5,7 +5,7 @@ import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
-import { getInferredAccountType } from '@/src/utils/accountCategory';
+import { getInferredAccountType } from '@/src/domain/journal/journalAccountTypes';
 import { preferences } from '@/src/services/preferences';
 import { useEffect, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';

@@ -6,8 +6,8 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { Icon } from '@/src/types/domainIcons';
-import { AppNavigation } from '@/src/utils/navigation';
-import { formatDate } from '@/src/utils/dateUtils';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { Fragment, useState } from 'react';
 
 const REVIEW_PAGE_SIZE = 20;

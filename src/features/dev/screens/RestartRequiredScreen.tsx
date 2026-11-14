@@ -2,7 +2,7 @@ import { Icon, AppButton, AppCard, AppText, IconTile } from '@/src/components/co
 import { AppConfig, Spacing } from '@/src/constants';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { Page } from '@/src/design-system';
-import { reloadApp } from '@/src/utils/reloadApp';
+import { reloadApp } from '@/src/services/launch/reloadApp';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 

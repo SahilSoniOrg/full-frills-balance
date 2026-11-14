@@ -4,7 +4,7 @@ import { AppText } from '@/src/components/core/AppText';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { resolveStyleColors, resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { ComponentVariant } from '@/src/utils/style-helpers';
+import { ComponentVariant } from '@/src/design-system/variants';
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 

@@ -3,16 +3,16 @@ import {
   useAccountDeleteMergeActions,
   type UseAccountDeleteMergeActionsOptions,
 } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { type AccountFields } from '@/src/types/plainDtos';
-import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { Icon } from '@/src/types/domainIcons';
-import { AllTheProviders } from '@/src/utils/test-utils';
+import { AllTheProviders } from '@/src/testing/render';
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   showErrorAlert: jest.fn(),
   toast: {
@@ -21,13 +21,13 @@ jest.mock('@/src/utils/alerts', () => ({
   },
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     afterAccountRemoval: jest.fn(),
   },
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { error: jest.fn() },
 }));
 

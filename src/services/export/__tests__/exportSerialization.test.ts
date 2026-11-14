@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { serializeMultiWorkplaceExport } from '@/src/services/export/exportSerialization';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 
 describe('export serialization', () => {
   it('preserves retained SMS sources without exporting plain-text deduplication identities', () => {

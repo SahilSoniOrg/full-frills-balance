@@ -5,7 +5,7 @@ import type {
   JournalBalanceLineEdit,
   JournalBalanceReviewEntry,
 } from '@/src/domain/accounting/journalBalanceReview';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {

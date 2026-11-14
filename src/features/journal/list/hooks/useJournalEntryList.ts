@@ -21,8 +21,8 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListItem } from '@/src/types/ui';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { logger } from '@/src/services/observability/logger';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 export type JournalEntryListPaginationPolicy = 'default' | 'always';

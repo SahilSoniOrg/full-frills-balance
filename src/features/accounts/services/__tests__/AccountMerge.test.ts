@@ -12,7 +12,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { assertNoLiveAccountReferences } from '@/src/services/accounts/accountReferenceGraph';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/services/analytics');

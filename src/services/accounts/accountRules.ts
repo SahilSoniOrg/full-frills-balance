@@ -2,8 +2,8 @@ import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { TransactionType, AccountSubtype, AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
-import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
-import { getEpsilon } from '@/src/utils/money';
+import { isDebitNormalAccountType } from '@/src/domain/accounts/accountClassification';
+import { getEpsilon } from '@/src/domain/money/money';
 
 export type AccountHierarchyShape = {
   accountType: AccountType;

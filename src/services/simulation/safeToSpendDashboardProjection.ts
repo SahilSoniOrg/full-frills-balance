@@ -11,18 +11,18 @@ import {
   UnvaluedStartingBalance,
   SafeToSpendExplanation,
 } from '@/src/services/simulation/types';
-import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
+import { LIQUID_ASSET_SUBTYPES } from '@/src/domain/accounts/accountSubtypes';
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { logger } from '@/src/utils/logger';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { Money, roundToPrecision } from '@/src/utils/money';
+import { logger } from '@/src/services/observability/logger';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { Money, roundToPrecision } from '@/src/domain/money/money';
 import dayjs, { Dayjs } from 'dayjs';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import type { SafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
 import { throwIfSimulationAborted } from './simulationCancellation';
-import { startTrace } from '@/src/utils/TraceService';
+import { startTrace } from '@/src/services/observability/TraceService';
 
 export interface SafeToSpendDataPoint {
   timestamp: number;

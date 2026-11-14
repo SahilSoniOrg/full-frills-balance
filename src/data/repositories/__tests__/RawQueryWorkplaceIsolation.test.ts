@@ -8,7 +8,7 @@ import {
   setupTwoWorkplaceLedgerFixture,
   TWO_WORKPLACE_LEDGER_ONE,
 } from '@/src/testing/twoWorkplaceLedgerFixture';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { AccountId, TransactionId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { firstValueFrom, of, take } from 'rxjs';

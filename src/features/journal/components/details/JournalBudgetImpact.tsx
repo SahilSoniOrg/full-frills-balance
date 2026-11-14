@@ -6,7 +6,7 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { AppConfig, JOURNAL_DETAILS_LIMITS, Spacing } from '@/src/constants';
 import { Inline, Stack } from '@/src/design-system';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { JournalBudgetModel } from '../../journalDetailsPresentation';
 
 export function JournalBudgetImpact({

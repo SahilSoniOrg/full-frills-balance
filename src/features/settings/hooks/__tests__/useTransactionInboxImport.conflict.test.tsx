@@ -2,8 +2,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useTransactionInboxImport } from '../useTransactionInboxImport';
 import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatcherContext';
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
-import { alert } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { alert } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 
 jest.mock('@/src/services/accounts/accountMatcherContext', () => ({
@@ -13,8 +13,10 @@ jest.mock('@/src/services/sms/recognition/accountMatcherEvaluator', () => ({
   recognizeSmsAccounts: jest.fn(),
 }));
 jest.mock('@/src/contexts/PrivacyScope', () => ({ useEffectivePrivacyMode: () => false }));
-jest.mock('@/src/utils/alerts', () => ({ alert: { show: jest.fn() } }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toJournalEntry: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ alert: { show: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({
+  AppNavigation: { toJournalEntry: jest.fn() },
+}));
 
 it('warns when recognition is incomplete and opens an unfilled entry', async () => {
   const card = asAccountId('card');

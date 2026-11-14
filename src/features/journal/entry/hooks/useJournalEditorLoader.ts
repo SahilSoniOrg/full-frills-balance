@@ -2,7 +2,7 @@ import type { JournalStatus } from '@/src/types/enums';
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { showErrorAlert } from '@/src/utils/alerts';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 

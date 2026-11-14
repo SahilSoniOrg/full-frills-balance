@@ -1,8 +1,9 @@
+import { toByteArray } from 'base64-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
-import { confirm } from '@/src/utils/alerts';
-import { files } from '@/src/utils/files';
+import { confirm } from '@/src/services/feedback/alerts';
+import { files } from '@/src/services/files/files';
 import { analytics } from '@/src/services/analytics';
 import {
   ShareFormat,
@@ -136,9 +137,7 @@ export class PlatformShareTransport implements ShareTransport {
         blob = artifact.content;
       } else {
         const content =
-          artifact.kind === 'base64'
-            ? Uint8Array.from(atob(artifact.content), char => char.charCodeAt(0))
-            : artifact.content;
+          artifact.kind === 'base64' ? toByteArray(artifact.content) : artifact.content;
         blob = new Blob([typeof content === 'string' ? content : new Uint8Array(content)], {
           type: meta.mimeType,
         });

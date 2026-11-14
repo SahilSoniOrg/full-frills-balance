@@ -1,8 +1,9 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { getJournalLineBaseAmount } from '@/src/services/accounting/JournalCalculator';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { sanitizeAmount } from '@/src/utils/validation';
+
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { TransactionType } from '@/src/types/enums';
 import {
   PostingPlan,
@@ -297,7 +298,7 @@ function withPrecisionFallbacks(
   for (const code of [plan.currencyCode, ...plan.lines.map(line => line.accountCurrency)]) {
     const normalizedCode = code?.trim().toUpperCase();
     if (normalizedCode && !precisions.has(normalizedCode)) {
-      precisions.set(normalizedCode, CurrencyFormatter.getPrecisionFallback(normalizedCode));
+      precisions.set(normalizedCode, getCurrencyPrecision(normalizedCode));
     }
   }
   return precisions;

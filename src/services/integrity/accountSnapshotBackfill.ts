@@ -3,7 +3,7 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceId } from '@/src/types/ids';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 
 const ACCOUNT_SNAPSHOT_BACKFILL_KEY = '@integrity_account_snapshot_backfill_version';
 const ACCOUNT_SNAPSHOT_BACKFILL_VERSION = '2';

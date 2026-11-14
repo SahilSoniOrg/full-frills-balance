@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@/src/utils/test-utils';
+import { act, renderHook, waitFor } from '@/src/testing/render';
 import { usePlannedPaymentDetailsViewModel } from '../usePlannedPaymentDetailsViewModel';
 import { usePlannedPaymentRecord } from '../usePlannedPaymentRecord';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
@@ -6,8 +6,8 @@ import { plannedPaymentDetailService } from '@/src/services/planned-payment/plan
 import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
-import { confirm, toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 
 jest.mock('@/src/hooks/useShareable', () => ({
   useShareable: () => ({
@@ -82,10 +82,10 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
   deletePlannedPayment: jest.fn(),
 }));
 jest.mock('@/src/services/analytics', () => ({ analytics: { trackFeatureUsage: jest.fn() } }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { back: jest.fn(), toPlannedPaymentForm: jest.fn() },
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   toast: { success: jest.fn() },
   confirm: { show: jest.fn() },
 }));

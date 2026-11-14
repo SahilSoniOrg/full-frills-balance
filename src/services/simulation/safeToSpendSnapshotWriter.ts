@@ -1,7 +1,7 @@
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { logger } from '@/src/services/observability/logger';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 
 const STS_SNAPSHOT_KEY = 'safe_to_spend';
 

@@ -3,13 +3,13 @@ import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig, Spacing } from '@/src/constants';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import {
   clearIncompleteFxDetailsListener,
   setIncompleteFxDetailsListener,
   type IncompleteFxContext,
   type IncompleteFxDetailsRequest,
-} from '@/src/utils/incompleteFxDetails';
+} from '@/src/services/currency/incompleteFxDetails';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 

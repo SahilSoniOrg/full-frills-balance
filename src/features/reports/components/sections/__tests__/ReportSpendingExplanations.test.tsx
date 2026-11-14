@@ -3,7 +3,7 @@ import type {
   ReportBreakdownViewState,
   ReportSpendingTabVm,
 } from '@/src/features/reports/hooks/reportTabTypes';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import type { ReactNode } from 'react';
 
 jest.mock('@/src/components/charts/HeatmapChart', () => ({ HeatmapChart: () => null }));

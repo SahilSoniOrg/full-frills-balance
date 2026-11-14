@@ -2,7 +2,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountSections } from '@/src/utils/accountCategory';
+import { getAccountSections } from '@/src/design-system/accountPresentation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const EMPTY_ACCOUNTS: (AccountFields | PlainAccount)[] = [];

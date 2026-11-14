@@ -26,8 +26,8 @@ import {
   type WorkplaceId,
 } from '@/src/types/ids';
 import dayjs from 'dayjs';
-import { generateWorkplaceName } from '@/src/utils/workplaceName';
-import { logger } from '@/src/utils/logger';
+import { generateWorkplaceName } from '@/src/services/setup/workplaceName';
+import { logger } from '@/src/services/observability/logger';
 import type { CashClarityDraft } from './draft';
 import {
   invalid,

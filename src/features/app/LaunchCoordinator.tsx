@@ -36,8 +36,12 @@ import {
 } from '@/src/contexts/CreationLaunchContext';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation, firstRunCreationHref, workplaceCreationHref } from '@/src/utils/navigation';
+import { logger } from '@/src/services/observability/logger';
+import {
+  AppNavigation,
+  firstRunCreationHref,
+  workplaceCreationHref,
+} from '@/src/navigation/AppNavigation';
 import { Redirect, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, {
   createContext,

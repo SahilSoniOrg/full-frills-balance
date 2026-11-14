@@ -1,5 +1,5 @@
 import { analytics } from '@/src/services/analytics';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import * as Linking from 'expo-linking';
 import { useEffect } from 'react';
 

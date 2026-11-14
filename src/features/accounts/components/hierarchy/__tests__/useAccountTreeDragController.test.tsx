@@ -2,12 +2,12 @@ import { act, renderHook } from '@testing-library/react-native';
 import { cancelAnimation, withSpring, withTiming } from 'react-native-reanimated';
 import { asAccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { flattenAccountTree } from '@/src/services/accounts/accountTreeProjection';
 import { useAccountTreeDragController } from '../useAccountTreeDragController';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
-jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
+jest.mock('@/src/design-system/haptics', () => ({ triggerHaptic: jest.fn() }));
 
 const first = asAccountId('first');
 const second = asAccountId('second');

@@ -16,8 +16,8 @@ import {
 import { recognizeEmailAccounts } from './emailAccountRecognition';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import { findManyDuplicateCandidates } from '@/src/services/sms/smsDuplicateDetection';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
@@ -26,7 +26,7 @@ import { ensureGmailMessageAuthenticated, gmailAutomaticCaptureCutoff } from './
 import { gmailBinding } from './gmailConnection';
 import { parseGmailTransaction } from './parseGmailTransaction';
 import { buildEmailRecognitionEvidence } from './emailRecognitionEvidence';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 export interface IngestGmailObservationOptions {
   signal?: AbortSignal;

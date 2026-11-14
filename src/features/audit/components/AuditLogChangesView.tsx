@@ -20,7 +20,7 @@ import { isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

@@ -5,7 +5,7 @@
  * feature barrel, which also exports account screens and creates cycles.
  */
 export { useAccounts } from '@/src/hooks/useAccounts';
-export { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
+export { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
 export { AccountPickerPill } from './AccountPickerList';
 export type { AccountPickerPillProps, CreateAccountIntent } from './AccountPickerList';
 export { AccountPickerModal, MultiAccountPickerModal } from './AccountPickerModal';

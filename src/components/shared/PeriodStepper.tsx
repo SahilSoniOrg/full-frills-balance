@@ -1,7 +1,7 @@
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { PeriodRangeFacts } from '@/src/utils/dateUtils';
+import type { PeriodRangeFacts } from '@/src/domain/calendar/dateRanges';
 import { Keyboard, StyleSheet, View } from 'react-native';
 
 interface PeriodStepperProps {

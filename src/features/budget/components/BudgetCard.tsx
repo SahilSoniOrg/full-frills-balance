@@ -19,8 +19,8 @@ import { BudgetItem } from '../types';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { View } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
-import { formatRecurrence } from '@/src/utils/recurrenceLabels';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
+import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 import type { BudgetStatus } from '../helpers/budgetCardPresentation';
 
 function statusIcon(status: BudgetStatus) {

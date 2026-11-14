@@ -1,8 +1,8 @@
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { RebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+import { storage } from '@/src/data/storage/storage';
 
 jest.mock('@/src/services/AccountingRebuildService', () => ({
   accountingRebuildService: {
@@ -10,7 +10,7 @@ jest.mock('@/src/services/AccountingRebuildService', () => ({
   },
 }));
 
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     getString: jest.fn(),
     set: jest.fn(),
@@ -18,7 +18,7 @@ jest.mock('@/src/utils/storage', () => ({
   },
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: {
     debug: jest.fn(),
     info: jest.fn(),

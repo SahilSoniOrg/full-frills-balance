@@ -2,7 +2,7 @@ import { AppIcon } from '@/src/components/core/AppIcon';
 import { BorderWidth, Opacity, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon } from '@/src/types/domainIcons';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { StyleSheet, View } from 'react-native';
 
 /** Decorative only: the containing row owns its selection state and touch target. */

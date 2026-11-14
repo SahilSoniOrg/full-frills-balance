@@ -6,7 +6,7 @@ import {
 } from '@/src/services/export/exportSerialization';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/ids';
-import { compression } from '@/src/utils/compression';
+import { compression } from '@/src/services/files/compression';
 import { preferences } from '@/src/services/preferences';
 import { fetchAndTransformTable } from './exportTableTransformer';
 
@@ -92,6 +92,6 @@ export async function exportWorkplacesToJSON(
   try {
     return archive.base64;
   } finally {
-    archive.cleanup();
+    await archive.cleanup();
   }
 }

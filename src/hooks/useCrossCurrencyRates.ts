@@ -9,7 +9,7 @@ import {
   type FxFetchedRates,
 } from '@/src/domain/accounting/fxPair';
 import { getHistoricalFxTimestamp } from '@/src/domain/accounting/journalFx';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface RateFetchers {

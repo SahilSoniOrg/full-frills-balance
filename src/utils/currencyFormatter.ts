@@ -1,10 +1,7 @@
+import { getCurrencyPrecision, normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { AppConfig } from '@/src/constants';
 import { getLocales } from 'expo-localization';
-import {
-  CURRENCY_LOCALES,
-  CURRENCY_PRECISIONS,
-  CURRENCY_SYMBOLS,
-} from '@/src/constants/currency-definitions';
+import { CURRENCY_LOCALES, CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 
 /**
  * Formatting options for CurrencyFormatter
@@ -44,10 +41,6 @@ function getNumberFormatter(
 /** Formatting locale configured on the currency definition (e.g. INR -> 'en-IN'), if any. */
 export function getCurrencyLocale(currencyCode: string | undefined): string | undefined {
   return CURRENCY_LOCALES[normalizeCurrencyCode(currencyCode)];
-}
-
-export function normalizeCurrencyCode(currencyCode: string | undefined): string {
-  return currencyCode?.trim().toUpperCase() ?? '';
 }
 
 /** Locale for short style when the currency has none; keeps K/M/B/T independent of device locale. */
@@ -116,7 +109,7 @@ export const CurrencyFormatter = {
     const cacheKey = `${amount}:${currencyCode}:${localeKey}:${JSON.stringify(options)}`;
     if (FORMAT_CACHE.has(cacheKey)) return FORMAT_CACHE.get(cacheKey)!;
 
-    const defaultPrecision = this.getPrecisionFallback(currencyCode);
+    const defaultPrecision = getCurrencyPrecision(currencyCode);
     const {
       includeSymbol = true,
       minimumFractionDigits = defaultPrecision,
@@ -210,16 +203,6 @@ export const CurrencyFormatter = {
     }
     return formatCompactFallback(amount, locale);
   },
-
-  /**
-   * Gets the fallback precision (decimal places) for a currency code.
-   * Uses CURRENCY_PRECISIONS mapping and falls back to 2.
-   */
-  getPrecisionFallback(currencyCode: string | undefined): number {
-    const normalizedCode = normalizeCurrencyCode(currencyCode);
-    if (!normalizedCode) return 2;
-    return CURRENCY_PRECISIONS[normalizedCode] ?? 2;
-  },
 };
 
 export const FORMAT_AMOUNT_LOADING = '---';
@@ -283,7 +266,7 @@ export function formatMoneyAmount(
       formatted = formatStsAmount(amount, currencyCode);
       break;
     case 'trimmed': {
-      const factor = 10 ** CurrencyFormatter.getPrecisionFallback(currencyCode);
+      const factor = 10 ** getCurrencyPrecision(currencyCode);
       formatted =
         Math.round(amount * factor) % factor === 0
           ? CurrencyFormatter.format(amount, currencyCode, {

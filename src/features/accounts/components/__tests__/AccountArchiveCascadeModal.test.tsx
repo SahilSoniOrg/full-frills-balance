@@ -2,8 +2,11 @@ import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/A
 import { AppConfig } from '@/src/constants';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { defaultCascadeSelection, buildArchiveCascadeNodes } from '@/src/utils/accountArchive';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import {
+  defaultCascadeSelection,
+  buildArchiveCascadeNodes,
+} from '@/src/domain/accounts/accountArchive';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/components/overlays/InfoSheet', () => {
   const React = jest.requireActual('react');

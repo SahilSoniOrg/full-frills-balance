@@ -1,5 +1,5 @@
 import { AccountType } from '@/src/types/enums';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
 
 /** Account details copy: categories accumulate spending or earnings rather than holding a balance. */
 export function accountDetailsCopy(accountType: AccountType) {

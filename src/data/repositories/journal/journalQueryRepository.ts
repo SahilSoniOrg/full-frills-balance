@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';
 

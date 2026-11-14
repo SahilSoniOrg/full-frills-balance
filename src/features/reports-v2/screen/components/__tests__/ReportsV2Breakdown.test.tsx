@@ -1,6 +1,6 @@
 import { asAccountId } from '@/src/types/ids';
 import { ReportsV2Breakdown } from '../ReportsV2Breakdown';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 const EXCHANGE_RATE_MESSAGE =
   'Some cross-currency activity was omitted because no historical rate was available.';

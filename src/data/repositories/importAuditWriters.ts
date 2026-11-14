@@ -13,7 +13,7 @@ import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
 import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
-import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
+import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { mapTransactionToAudit } from '@/src/types/audit';
 
 interface ImportedAuditContext {

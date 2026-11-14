@@ -7,7 +7,7 @@ import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { BudgetUsage } from '@/src/services/budget/types';
 import type { PlainBudget } from '@/src/types/plainDtos';

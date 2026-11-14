@@ -10,7 +10,7 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { AppConfig, BorderWidth, JOURNAL_DETAILS_LIMITS, Size, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import type { JournalHistoryModel } from '../../journalDetailsPresentation';
 import type { JournalHistoryDetail, JournalHistoryEvent } from '../../journalHistoryPresentation';
 

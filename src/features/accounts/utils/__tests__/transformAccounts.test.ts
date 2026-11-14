@@ -24,6 +24,44 @@ describe('transformAccountsToSections', () => {
     onContrast: () => '#000000',
   };
 
+  it('keeps three-decimal balance updates when account metadata is unchanged', () => {
+    const account: PlainAccount = {
+      id: 'kwd-cache' as AccountId,
+      name: 'Dinar account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'KWD',
+    };
+    const present = (balance: number) =>
+      transformAccountsToSections([account], {
+        ...defaultOptions,
+        balancesByAccountId: new Map([
+          [account.id, { balance, monthlyIncome: 0, monthlyExpenses: 0 }],
+        ]),
+      })[0].data[0];
+
+    expect(present(1.001).balance).toBe(1.001);
+    expect(present(1.002).balance).toBe(1.002);
+  });
+
+  it('refreshes colors when theme tokens change without changing the background', () => {
+    const account: PlainAccount = {
+      id: 'theme-cache' as AccountId,
+      name: 'Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    };
+    const first = transformAccountsToSections([account], defaultOptions)[0].data[0];
+    const next = transformAccountsToSections([account], {
+      ...defaultOptions,
+      theme: { ...defaultOptions.theme, asset: '#112233' },
+      onContrast: () => '#ffffff',
+    })[0].data[0];
+
+    expect(next.categoryColor).toBe('#112233');
+    expect(next.categoryColor).not.toBe(first.categoryColor);
+    expect(next.textColor).toBe('#ffffff');
+  });
+
   it('keeps a searched parent expandable and shows its full subtree on expansion', () => {
     const parent: PlainAccount = {
       id: 'search-parent' as AccountId,

@@ -14,7 +14,7 @@ import {
   REACTIVE_CACHE_NAMESPACES,
 } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
 import * as forecastDateBasis from '@/src/services/simulation/forecastDateBasis';
 import {
@@ -65,7 +65,7 @@ jest.mock('@/src/services/balance/balanceReadService', () => ({
   },
 }));
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: {
     saveCustomSnapshot: jest.fn(),
   },

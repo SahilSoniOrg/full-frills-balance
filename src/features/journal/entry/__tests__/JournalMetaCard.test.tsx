@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { createRef, useRef, useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { State } from 'react-native-gesture-handler';

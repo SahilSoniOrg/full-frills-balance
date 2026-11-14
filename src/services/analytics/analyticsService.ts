@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import {
   safeDiagnosticError,
   safeAnalyticsIdentity,
@@ -8,7 +8,7 @@ import {
   sanitizeSentryBreadcrumb,
   sanitizeSentryErrorEvent,
   sanitizeSentryTransactionEvent,
-} from '@/src/utils/observabilityPrivacy';
+} from '@/src/services/observability/privacy';
 import * as Sentry from '@sentry/react-native';
 import PostHog from 'posthog-react-native';
 import { AppState } from 'react-native';
@@ -25,8 +25,8 @@ import {
   type AnalyticsProperties,
 } from './analyticsConfig';
 import { FeatureEventMap, KnownFeature } from './featureEventCatalog';
-import { storage } from '@/src/utils/storage';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { storage } from '@/src/data/storage/storage';
+import { parseJSONRecord } from '@/src/utils/serialization';
 
 const FEATURE_FLAG_CACHE_KEY = 'analytics.posthog.feature-flags';
 // Headless tasks use the persisted flag snapshot. Expire permission so an
@@ -50,7 +50,7 @@ function featureFlagValues(value: unknown): Record<string, boolean | string> {
 
 function readCachedFeatureFlags(): CachedFeatureFlags | null {
   const raw = storage.getString(FEATURE_FLAG_CACHE_KEY);
-  const parsed = raw ? safeParseJSON<Record<string, unknown> | null>(raw, null) : null;
+  const parsed = raw ? parseJSONRecord(raw) : null;
   if (
     !parsed ||
     typeof parsed.distinctId !== 'string' ||

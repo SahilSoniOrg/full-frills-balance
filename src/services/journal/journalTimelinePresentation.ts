@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { AppConfig } from '@/src/constants';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
@@ -7,9 +8,9 @@ import {
   convertJournalCurrencyAmount,
   resolveJournalFxRate,
 } from '@/src/domain/accounting/journalFx';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
-import { getAccountTypeVariant } from '@/src/utils/accountCategory';
+
+import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountTypeVariant } from '@/src/design-system/accountPresentation';
 import {
   JournalEntryAccountFlow,
   JournalEntryCardProps,
@@ -106,7 +107,7 @@ function buildAccountFlow(
   journal: EnrichedJournal,
   viewerAccount?: EnrichedJournal['accounts'][number],
 ): JournalEntryAccountFlow {
-  const journalPrecision = CurrencyFormatter.getPrecisionFallback(journal.currencyCode);
+  const journalPrecision = getCurrencyPrecision(journal.currencyCode);
   const legs = journal.accounts.map((account, index) => {
     const currencyCode = account.currencyCode?.trim().toUpperCase();
     const amount =
@@ -124,7 +125,7 @@ function buildAccountFlow(
       amount != null && rate != null && currencyCode
         ? convertJournalCurrencyAmount({
             nativeAmount: amount,
-            nativePrecision: CurrencyFormatter.getPrecisionFallback(currencyCode),
+            nativePrecision: getCurrencyPrecision(currencyCode),
             exchangeRate: rate,
             journalPrecision,
           }).journalAmount

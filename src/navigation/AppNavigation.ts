@@ -1,0 +1,718 @@
+import { Href, router } from 'expo-router';
+import { CommonActions, type NavigationAction } from 'expo-router/react-navigation';
+import type { CreationLaunchEntryContext } from '@/src/contexts/CreationLaunchContext';
+import { preferences } from '@/src/services/preferences';
+import type { TransactionIntentSeed } from '@/src/types/journalEntryRoute';
+import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
+import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
+import { AccountType } from '@/src/types/enums';
+import { AccountId, BudgetId, PlannedPaymentId } from '@/src/types/ids';
+import { primaryPageFromRouteName } from '@/src/navigation/primaryPages';
+import { saveJournalSearchScope } from '@/src/navigation/journalSearchScope';
+import {
+  type AccountCreationReturnTarget,
+  encodeAccountCreationReturnTarget,
+} from '@/src/navigation/accountCreationReturn';
+
+/** Stamp creation routes with the active workplace when the caller omits one. */
+function launchWorkplaceId(explicit?: string): string | undefined {
+  return explicit || preferences.device.activeWorkplaceId || undefined;
+}
+
+const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
+const MAX_INLINE_JOURNAL_IDS = 100;
+let lastJournalEntryNavigation: { href: string; timestamp: number } | null = null;
+
+export type AccountRemovalNavigation = {
+  getState: () =>
+    | {
+        key: string;
+        index: number;
+        routes: readonly { key?: string; name: string; params?: object }[];
+      }
+    | undefined;
+  dispatch: (action: NavigationAction) => void;
+};
+
+export type WorkplaceCreationEntryContext = CreationLaunchEntryContext;
+
+export interface WorkplaceCreationEntry {
+  readonly context: WorkplaceCreationEntryContext;
+  /** Existing route name/path retained for draft resume and cancel fallback. */
+  readonly origin: string;
+  /** Only empty-device restore discard replaces; normal optional entry pushes. */
+  readonly navigation?: 'push' | 'replace';
+}
+
+export function workplaceCreationHref({ context, origin }: WorkplaceCreationEntry): Href {
+  return {
+    pathname: '/onboarding',
+    params: { journey: 'add_workplace', context, origin },
+  };
+}
+
+export function firstRunCreationHref(origin: string, name?: string): Href {
+  return {
+    pathname: '/onboarding',
+    params: {
+      journey: 'first_run',
+      context: 'unregistered_device',
+      origin,
+      ...(name ? { name } : {}),
+    },
+  };
+}
+
+function isRemovedAccountRoute(
+  route: { name: string; params?: object },
+  accountId: AccountId,
+): boolean {
+  if (
+    ![
+      'account-details',
+      'account-creation',
+      'category-creation',
+      'account-matchers',
+      'account-matcher-editor',
+    ].includes(route.name)
+  )
+    return false;
+  const id = route.params && 'accountId' in route.params ? route.params.accountId : undefined;
+  return id === accountId || (Array.isArray(id) && id.includes(accountId));
+}
+
+/**
+ * Builds a route with query parameters, filtering out null, undefined, and empty string values.
+ */
+export function buildRoute(
+  pathname: string,
+  params?: Record<string, string | number | boolean | null | undefined>,
+): Href {
+  if (!params) return pathname as Href;
+  const queryParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value));
+    }
+  }
+  const query = queryParams.toString();
+  return (query ? `${pathname}?${query}` : pathname) as Href;
+}
+
+/**
+ * Centralized navigation utility to handle routing across the application.
+ * Addresses FINDING-004 by removing ad-hoc router.push calls from ViewModels.
+ */
+export const AppNavigation = {
+  /**
+   * Navigate back to the previous screen.
+   */
+  back: () => {
+    lastJournalEntryNavigation = null;
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  },
+
+  /**
+   * Navigate to the Dashboard (Home tab).
+   */
+  toDashboard: () => {
+    router.replace('/(tabs)');
+  },
+
+  /** Select a canonical primary page without adding an outer Stack destination. */
+  toPrimaryPage: (routeName: string) => {
+    if (!primaryPageFromRouteName(routeName)) return;
+    router.replace(`/(tabs)/${routeName}` as Href);
+  },
+
+  toWorkplaceCreation: (entry: WorkplaceCreationEntry) => {
+    AppNavigation.toAddWorkplace(entry);
+  },
+
+  toAddWorkplace: ({ context, origin, navigation = 'push' }: WorkplaceCreationEntry) => {
+    const navigate = navigation === 'replace' ? router.replace : router.push;
+    navigate(workplaceCreationHref({ context, origin }));
+  },
+
+  toAccountMatchers: (accountId: AccountId, workplaceId?: string) => {
+    router.push(
+      buildRoute('/account-matchers', {
+        accountId,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  toAccountMatcherEditor: (accountId: AccountId, matcherId?: string, proposalKey?: string) => {
+    router.push(
+      buildRoute('/account-matcher-editor', {
+        accountId,
+        matcherId,
+        proposalKey,
+        workplaceId: launchWorkplaceId(),
+      }),
+    );
+  },
+
+  toSetupJourney: (journey: SetupJourneyId) => {
+    router.replace({ pathname: '/onboarding', params: { journey } });
+  },
+
+  toFirstRun: (name?: string) => {
+    router.replace(firstRunCreationHref('/onboarding?journey=first_run_restore', name));
+  },
+
+  /**
+   * Navigate to the Accounts List tab.
+   */
+  toAccounts: () => {
+    AppNavigation.toPrimaryPage('accounts');
+  },
+
+  /** Return after removal, preserving valid history and discarding pages for the removed account. */
+  afterAccountRemoval: (accountId: AccountId, navigation: AccountRemovalNavigation): void => {
+    lastJournalEntryNavigation = null;
+    const state = navigation.getState();
+    const current = state?.routes[state.index];
+    // A pending command may finish after the user has already left this account.
+    if (current && !isRemovedAccountRoute(current, accountId)) return;
+    const history =
+      state?.routes
+        .slice(0, state.index)
+        .filter(route => !isRemovedAccountRoute(route, accountId)) ?? [];
+    if (state && history.length > 0 && router.canGoBack()) {
+      if (history.length === state.index) {
+        router.back();
+      } else {
+        navigation.dispatch({
+          ...CommonActions.reset({ ...state, routes: history, index: history.length - 1 }),
+          target: state.key,
+        });
+      }
+      return;
+    }
+    // Reset instead of replacing the form: replacement would leave removed detail pages underneath.
+    navigation.dispatch({
+      ...CommonActions.reset({
+        index: 0,
+        routes: [{ name: '(tabs)', state: { index: 0, routes: [{ name: 'accounts' }] } }],
+      }),
+      ...(state ? { target: state.key } : {}),
+    });
+  },
+
+  /** Push the returnable Settings destination above the originating tab. */
+  toSettings: () => {
+    router.push('/settings');
+  },
+
+  /** Leave a restore flow without keeping it underneath Settings. */
+  returnToSettings: () => {
+    router.dismissTo('/settings');
+  },
+
+  /**
+   * Navigate to the Journal Entry screen (Create or Edit).
+   */
+  toJournalEntry: (options?: {
+    /** New typed launch contract. Legacy fields below remain supported. */
+    seed?: TransactionIntentSeed;
+    journalId?: string;
+    smsId?: string;
+    smsRecordId?: string;
+    initialDate?: string;
+    sourceAccountId?: string;
+    destinationAccountId?: string;
+    amount?: string;
+    description?: string;
+    notes?: string;
+    workplaceId?: string;
+    params?: Record<string, string>;
+  }) => {
+    const { seed, params, workplaceId: explicitWorkplaceId, ...direct } = options ?? {};
+    const { workplaceId: paramWorkplaceId, ...routeParams } = params ?? {};
+    const href = buildRoute('/journal-entry', {
+      ...(seed ? toLegacyJournalEntryQueryParams(seed) : {}),
+      ...direct,
+      ...routeParams,
+      workplaceId: launchWorkplaceId(
+        typeof paramWorkplaceId === 'string' ? paramWorkplaceId : explicitWorkplaceId,
+      ),
+    });
+    const now = Date.now();
+    if (
+      lastJournalEntryNavigation &&
+      lastJournalEntryNavigation.href === href &&
+      now - lastJournalEntryNavigation.timestamp < JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS
+    ) {
+      return;
+    }
+
+    lastJournalEntryNavigation = { href: String(href), timestamp: now };
+    router.push(href);
+  },
+
+  /**
+   * Navigate to the journal editor in simple mode with a preselected type.
+   */
+  toSimpleJournalEntry: (
+    type: 'expense' | 'income' | 'transfer',
+    options?: {
+      sourceAccountId?: string;
+      destinationAccountId?: string;
+      amount?: string;
+      journalId?: string;
+      guidedAutopilot?: boolean;
+      workplaceId?: string;
+    },
+  ) => {
+    AppNavigation.toJournalEntry({
+      journalId: options?.journalId,
+      sourceAccountId: options?.sourceAccountId,
+      workplaceId: options?.workplaceId,
+      params: {
+        mode: 'simple',
+        type,
+        ...(options?.guidedAutopilot ? { guidedAutopilot: 'true' } : {}),
+        ...(options?.destinationAccountId
+          ? { destinationAccountId: options.destinationAccountId }
+          : {}),
+        ...(options?.amount ? { amount: options.amount } : {}),
+      },
+    });
+  },
+
+  /**
+   * Navigate to the Journal Details screen.
+   */
+  toJournalDetails: (journalId: string) => {
+    router.push(buildRoute('/journal-details', { journalId }));
+  },
+
+  /**
+   * Navigate to the Account Details screen.
+   */
+  toAccountDetails: (
+    accountId: AccountId,
+    options?: {
+      startDate?: number;
+      endDate?: number;
+      preview?: {
+        name?: string;
+        balance?: number;
+        currency?: string;
+        icon?: string;
+        type?: string;
+        colorKey?: string;
+      };
+    },
+  ) => {
+    router.push(
+      buildRoute('/account-details', {
+        accountId,
+        startDate: options?.startDate,
+        endDate: options?.endDate,
+        pName: options?.preview?.name,
+        pBalance: options?.preview?.balance,
+        pCurrency: options?.preview?.currency,
+        pIcon: options?.preview?.icon,
+        pType: options?.preview?.type,
+        pColor: options?.preview?.colorKey,
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the Account Details screen, replacing the current route.
+   */
+  replaceToAccountDetails: (accountId: AccountId) => {
+    router.replace(buildRoute('/account-details', { accountId }));
+  },
+
+  /**
+   * Navigate to the Account Form screen (Create or Edit).
+   */
+  toAccountForm: (
+    accountId?: string,
+    preview?: {
+      name?: string;
+      type?: string;
+      currency?: string;
+      icon?: string;
+      returnTarget?: AccountCreationReturnTarget;
+      workplaceId?: string;
+    },
+  ) => {
+    router.push(
+      buildRoute('/account-creation', {
+        accountId,
+        pName: preview?.name,
+        pType: preview?.type,
+        pCurrency: preview?.currency,
+        pIcon: preview?.icon,
+        returnTarget: preview?.returnTarget
+          ? encodeAccountCreationReturnTarget(preview.returnTarget)
+          : undefined,
+        workplaceId: launchWorkplaceId(preview?.workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to account creation route with optional preselected type.
+   */
+  toAccountCreation: (type?: AccountType | string, workplaceId?: string) => {
+    router.push(
+      buildRoute('/account-creation', {
+        type,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the Category Form screen (Create or Edit).
+   */
+  toCategoryForm: (
+    accountId?: string,
+    preview?: {
+      name?: string;
+      type?: string;
+      currency?: string;
+      icon?: string;
+      workplaceId?: string;
+    },
+  ) => {
+    router.push(
+      buildRoute('/category-creation', {
+        accountId,
+        pName: preview?.name,
+        pType: preview?.type,
+        pCurrency: preview?.currency,
+        pIcon: preview?.icon,
+        workplaceId: launchWorkplaceId(preview?.workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to category creation route with optional preselected type.
+   */
+  toCategoryCreation: (type?: AccountType | string, workplaceId?: string) => {
+    router.push(
+      buildRoute('/category-creation', {
+        type,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the Budget Detail screen.
+   */
+  toBudgetDetail: (budgetId: BudgetId) => {
+    router.push(buildRoute('/budget-details', { id: budgetId }));
+  },
+
+  /**
+   * Navigate to the Budget Form screen (Create or Edit).
+   */
+  toBudgetForm: (
+    budgetId?: BudgetId,
+    preview?: {
+      name?: string;
+      amount?: number;
+      currency?: string;
+    },
+    workplaceId?: string,
+  ) => {
+    router.push(
+      buildRoute('/budget-edit', {
+        id: budgetId,
+        pName: preview?.name,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to appearance settings.
+   */
+  toAppearanceSettings: (focus?: string) => {
+    router.push(buildRoute('/appearance-settings', { focus }));
+  },
+
+  /**
+   * Navigate to personalization settings.
+   */
+  toPersonalizationSettings: (focus?: string) => {
+    router.push(buildRoute('/personalization-settings', { focus }));
+  },
+
+  /**
+   * Navigate to data management settings.
+   */
+  toDataManagementSettings: (focus?: string) => {
+    router.push(buildRoute('/data-management-settings', { focus }));
+  },
+
+  /**
+   * Navigate to privacy and security settings.
+   */
+  toPrivacySecuritySettings: (focus?: string) => {
+    router.push(buildRoute('/privacy-security-settings', { focus }));
+  },
+
+  /**
+   * Open the plain-language privacy and data notice.
+   */
+  toPrivacyNotice: () => {
+    router.push('/privacy-notice');
+  },
+
+  /** Navigate to the transaction capture and review workspace. */
+  toCaptureWorkspace: (focus?: string) => {
+    router.push(buildRoute('/transaction-capture', { focus }));
+  },
+
+  /** Navigate to device-wide spending reminder preferences. */
+  toSpendingReminderSettings: (focus?: string) => {
+    router.push(buildRoute('/notification-settings', { focus }));
+  },
+
+  /** Navigate to the captured transactions that still need a category. */
+  toCategorizationReview: () => {
+    router.push('/categorization-review');
+  },
+
+  /** Open the queue of transaction category and naming suggestions. */
+  toCaptureSuggestions: () => {
+    router.push('/capture-suggestions');
+  },
+
+  /** Open repeated category patterns inferred from SMS-linked transactions. */
+  toCaptureHistorySuggestions: () => {
+    router.push('/capture-history-suggestions');
+  },
+
+  /** Open merchants whose historical transactions use multiple categories. */
+  toCaptureMixedSuggestions: () => {
+    router.push('/capture-mixed-suggestions');
+  },
+
+  /** Navigate to SMS source access, listening, and notification settings. */
+  toSmsSettings: (focus?: string) => {
+    router.push(buildRoute('/sms-settings', { focus }));
+  },
+
+  /**
+   * Navigate to maintenance and reset settings.
+   */
+  toMaintenanceSettings: (focus?: string) => {
+    router.push(buildRoute('/maintenance-settings', { focus }));
+  },
+
+  /**
+   * Navigate to about and support settings.
+   */
+  toAboutSupportSettings: (focus?: string) => {
+    router.push(buildRoute('/about-support-settings', { focus }));
+  },
+
+  /** Navigate to workplace management. */
+  toWorkplaceManagement: (focus?: string) => {
+    router.push(buildRoute('/workplace-management', { focus }));
+  },
+
+  toDeviceSettings: (focus?: string) => {
+    router.push(buildRoute('/device-settings', { focus }));
+  },
+
+  /**
+   * Navigate to the Audit Log screen.
+   */
+  toAuditLog: (options?: { entityType?: string; entityId?: string }) => {
+    router.push(
+      buildRoute('/audit-log', {
+        entityType: options?.entityType,
+        entityId: options?.entityId,
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the merged account management screen.
+   */
+  toAccountManagement: (options?: {
+    accountId?: string;
+    filterMode?: 'accounts' | 'categories';
+  }) => {
+    router.push(
+      buildRoute('/account-management', {
+        accountId: options?.accountId,
+        filterMode: options?.filterMode,
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the Planned Payment Details screen.
+   */
+  toPlannedPaymentDetails: (
+    id: PlannedPaymentId,
+    preview?: {
+      description?: string;
+      amount?: number;
+      currency?: string;
+      nextDate?: number;
+    },
+  ) => {
+    router.push(
+      buildRoute('/planned-payment-details', {
+        id,
+        pDesc: preview?.description,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+        pDate: preview?.nextDate,
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the Planned Payment Form screen.
+   */
+  toPlannedPaymentForm: (
+    id?: string,
+    preview?: {
+      description?: string;
+      amount?: number;
+      currency?: string;
+    },
+    workplaceId?: string,
+  ) => {
+    router.push(
+      buildRoute('/planned-payment-form', {
+        id,
+        pDesc: preview?.description,
+        pAmount: preview?.amount,
+        pCurrency: preview?.currency,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
+  },
+
+  /**
+   * Navigate to the unified Transaction Inbox.
+   */
+  toTransactionInbox: () => {
+    router.push('/sms-inbox' as Href);
+  },
+
+  /** Navigate to the Review hub. */
+  toHub: () => {
+    router.push('/hub' as Href);
+  },
+
+  /**
+   * Navigate to insight details with route params.
+   */
+  toInsightDetails: (params: {
+    id: string;
+    message: string;
+    description: string;
+    suggestion: string;
+    journalIds: string[];
+    severity: string;
+    amount?: number;
+    currencyCode?: string;
+  }) => {
+    router.push(
+      buildRoute('/insight-details', {
+        id: params.id,
+        message: params.message,
+        description: params.description,
+        suggestion: params.suggestion,
+        journalIds: params.journalIds.join(','),
+        severity: params.severity,
+        amount: params.amount,
+        currencyCode: params.currencyCode,
+      }),
+    );
+  },
+
+  /** Review and fix posted journals whose debits and credits don't match. */
+  toJournalBalanceReview: () => {
+    router.push('/journal-balance-review' as Href);
+  },
+
+  /**
+   * Navigate to the Reports screen.
+   */
+  toReports: () => {
+    router.push('/reports' as Href);
+  },
+
+  /**
+   * Navigate to the Reports V2 screen.
+   */
+  toReportsV2: () => {
+    router.push('/reports-v2' as Href);
+  },
+
+  /**
+   * Navigate to the Journal Search/Filter screen.
+   */
+  toJournalSearch: (params?: {
+    searchQuery?: string;
+    startDate?: number;
+    endDate?: number;
+    accountIds?: string[];
+    journalIds?: string[];
+    minAmount?: number;
+    maxAmount?: number;
+    displayType?: string;
+    /** Inbox record to link when the user picks a journal from search. */
+    attachInboxId?: string;
+    attachInboxChannel?: 'sms' | 'email' | 'voice';
+    reportScope?: {
+      label: string;
+      baseStartDate: number;
+      baseEndDate: number;
+      baseAccountIds: string[];
+    };
+  }) => {
+    const journalScope =
+      params?.journalIds && params.journalIds.length > MAX_INLINE_JOURNAL_IDS
+        ? saveJournalSearchScope(params.journalIds)
+        : undefined;
+    router.push(
+      buildRoute('/journal-search', {
+        q: params?.searchQuery,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+        accountIds: params?.accountIds?.length ? params.accountIds.join(',') : undefined,
+        journalIds: journalScope
+          ? undefined
+          : params?.journalIds?.length
+            ? params.journalIds.join(',')
+            : undefined,
+        journalScope,
+        minAmount: params?.minAmount,
+        maxAmount: params?.maxAmount,
+        displayType: params?.displayType,
+        attachInboxId: params?.attachInboxId,
+        attachInboxChannel: params?.attachInboxChannel,
+        reportScopeLabel: params?.reportScope?.label,
+        reportScopeStartDate: params?.reportScope?.baseStartDate,
+        reportScopeEndDate: params?.reportScope?.baseEndDate,
+        reportScopeAccountIds: params?.reportScope?.baseAccountIds.join(','),
+      }),
+    );
+  },
+};

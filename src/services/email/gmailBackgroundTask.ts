@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { preferences } from '@/src/services/preferences';
 import { gmailBinding } from './gmailConnection';
 import { cancelGmailSync, syncGmailForWorkplace } from './gmailSyncService';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { DEVICE_PREFERENCES_KEY } from '@/src/services/preferences/deviceTypes';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { analytics } from '@/src/services/analytics';
@@ -42,7 +42,7 @@ if (Platform.OS !== 'web' && !TaskManager.isTaskDefined(GMAIL_BACKGROUND_TASK)) 
     const controller = new AbortController();
     const shouldContinue = () => {
       const raw = storage.getString(DEVICE_PREFERENCES_KEY);
-      const current = raw ? safeParseJSON<unknown>(raw, null) : null;
+      const current = raw ? safeParseJSON(raw, null) : null;
       if (!current || typeof current !== 'object' || Array.isArray(current)) return false;
       const value = current as Record<string, unknown>;
       return (

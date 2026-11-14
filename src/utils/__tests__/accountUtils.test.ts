@@ -1,6 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 
-import { getAccountSections, groupAccountsByType } from '@/src/utils/accountCategory';
+import { getAccountSections, groupAccountsByType } from '@/src/design-system/accountPresentation';
 
 describe('accountUtils', () => {
   const mockAccounts: any[] = [

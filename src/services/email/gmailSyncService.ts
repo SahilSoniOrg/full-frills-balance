@@ -1,7 +1,7 @@
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { WorkplaceId } from '@/src/types/ids';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import { gmailAccessToken, invalidateGmailAccessToken } from './gmailAuthorization';
 import { gmailBinding, advanceGmailHistory } from './gmailConnection';
 import {
@@ -16,7 +16,7 @@ import { ingestGmailObservation } from './gmailIngestion';
 import { analytics } from '@/src/services/analytics';
 import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
 import { BehaviorSubject } from 'rxjs';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 const active = new Map<WorkplaceId, { task: Promise<void>; controller: AbortController }>();
 const states = new Map<WorkplaceId, BehaviorSubject<'idle' | 'syncing' | 'ok' | 'error'>>();

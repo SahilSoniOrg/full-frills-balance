@@ -3,7 +3,7 @@ import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { TransactionInboxItem } from '@/src/types/domainJournal';
-import { alert, showErrorAlert } from '@/src/utils/alerts';
+import { alert, showErrorAlert } from '@/src/services/feedback/alerts';
 
 export type InboxItemActionHandlers = {
   handleDismiss: (item: TransactionInboxItem) => Promise<void>;

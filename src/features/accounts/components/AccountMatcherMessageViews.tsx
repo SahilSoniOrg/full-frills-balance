@@ -1,9 +1,10 @@
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { AppIcon, AppText, Icon, ListRow, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { displayPrivate } from '../helpers/displayPrivate';
@@ -21,8 +22,9 @@ export function MatcherMessageChoice({
   testID: string;
 }) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const sender = displayPrivate(privateMode, message.senderAddress, copy.unknownSender);
-  const date = formatDate(message.inputDate, { includeTime: true });
+  const date = formatDate(message.inputDate, { includeTime: true, hourCycle: resolvedHourCycle });
   return (
     <ListRow
       onPress={onPress}
@@ -61,7 +63,11 @@ export function MatcherPreviewMessage({
   sourceLabel?: string;
 }) {
   const { theme } = useTheme();
-  const metadata = [formatDate(message.inputDate, { includeTime: true }), sourceLabel]
+  const { resolvedHourCycle } = useHourCyclePrefs();
+  const metadata = [
+    formatDate(message.inputDate, { includeTime: true, hourCycle: resolvedHourCycle }),
+    sourceLabel,
+  ]
     .filter(Boolean)
     .join(' · ');
   return (

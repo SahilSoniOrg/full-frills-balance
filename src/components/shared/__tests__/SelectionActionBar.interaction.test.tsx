@@ -1,7 +1,7 @@
 import { SelectionActionBar } from '../SelectionActionBar';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 import { Icon } from '@/src/types/domainIcons';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { View } from 'react-native';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));

@@ -6,8 +6,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { withOpacity } from '@/src/utils/color-math';
-import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { withOpacity } from '@/src/design-system/colorMath';
+import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import React, { useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {

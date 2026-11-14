@@ -1,5 +1,5 @@
 import type { AccountId } from '@/src/types/ids';
-import { type AccountTreeSnapshot, type OrderedAccount } from './accountTree';
+import { type AccountTreeSnapshot, type OrderedAccount } from '@/src/domain/accounts/accountTree';
 
 export interface FlattenedAccountTreeRow {
   accountId: AccountId;

@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core/AppText';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import { ComponentVariant } from '@/src/utils/style-helpers';
+import { ComponentVariant } from '@/src/design-system/variants';
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,

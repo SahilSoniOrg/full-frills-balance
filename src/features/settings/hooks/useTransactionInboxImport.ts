@@ -6,13 +6,13 @@ import {
 } from '@/src/services/sms/transactionInboxImport';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { SmsAccountRecognition } from '@/src/types/accountMatcher';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { logger } from '@/src/services/observability/logger';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback } from 'react';
 import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatcherContext';
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
-import { alert } from '@/src/utils/alerts';
+import { alert } from '@/src/services/feedback/alerts';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { readEmailRecognitionEvidence } from '@/src/services/email/emailRecognitionEvidence';
 

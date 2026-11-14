@@ -4,8 +4,8 @@ import { AppConfig, FontId, FontIds, FontSchemes } from '@/src/constants';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { logger } from '@/src/utils/logger';
-import { ensureAllFontSetsLoaded, isFontSetLoaded } from '@/src/utils/loadFontSet';
+import { logger } from '@/src/services/observability/logger';
+import { ensureAllFontSetsLoaded, isFontSetLoaded } from '@/src/services/fonts/loadFontSet';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

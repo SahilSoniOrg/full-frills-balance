@@ -40,7 +40,7 @@ jest.mock('@/src/services/preferences', () => ({
   preferencesMigration: { legacyCurrencyCode: undefined, clearLegacyCurrencyCode: jest.fn() },
 }));
 
-jest.mock('@/src/utils/SnapshotService', () => ({
+jest.mock('@/src/data/cache/SnapshotService', () => ({
   snapshotService: {
     clearSnapshotsForWorkplace: jest.fn(() => true),
     resumeSnapshotsForWorkplace: jest.fn(),
@@ -58,7 +58,7 @@ jest.mock('@/src/services/widgets/WidgetProjectionService', () => ({
 
 const mockWorkplaces = workplaceRepository as jest.Mocked<typeof workplaceRepository>;
 const mockDatabaseRepository = databaseRepository as jest.Mocked<typeof databaseRepository>;
-const { snapshotService } = jest.requireMock('@/src/utils/SnapshotService') as {
+const { snapshotService } = jest.requireMock('@/src/data/cache/SnapshotService') as {
   snapshotService: { clearSnapshotsForWorkplace: jest.Mock };
 };
 const { preferencesMigration } = jest.requireMock('@/src/services/preferences') as {

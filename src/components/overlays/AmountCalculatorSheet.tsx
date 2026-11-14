@@ -6,8 +6,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import {
   evaluateCalculatorExpression,
   formatRationalToCurrency,
-} from '@/src/utils/amountExpression';
-import { triggerHaptic } from '@/src/utils/haptics';
+} from '@/src/components/overlays/amountExpression';
+import { triggerHaptic } from '@/src/design-system/haptics';
 import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 

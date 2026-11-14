@@ -15,12 +15,13 @@ import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/cons
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getReadableColor, withOpacity } from '@/src/utils/color-math';
+import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 
 // Old minimumFontScale was 0.6; same floor, now honoured on web too.

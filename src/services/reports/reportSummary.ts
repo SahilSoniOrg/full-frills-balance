@@ -1,5 +1,5 @@
 import type { CategoryBreakdown } from '@/src/services/reports/reportSnapshot';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 export interface ReportSummaryComparison {
   incomeChange: number;

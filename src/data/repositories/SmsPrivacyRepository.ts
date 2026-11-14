@@ -3,11 +3,11 @@ import AuditLog from '@/src/data/models/AuditLog';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 import {
   sanitizeSmsAuditChanges,
   hashSmsMetadataFingerprints,
-} from '@/src/utils/smsPrivateMetadata';
+} from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
 

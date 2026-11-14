@@ -7,7 +7,7 @@ import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions
 import { Icon } from '@/src/types/domainIcons';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMemo, useEffect } from 'react';
 import {

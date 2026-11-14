@@ -13,7 +13,7 @@ import { NotificationCadence } from '@/src/services/notification/NotificationSer
 import dayjs from 'dayjs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatClockTime } from '@/src/utils/dateUtils';
+import { formatClockTime } from '@/src/utils/dateFormatting';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 

@@ -6,7 +6,7 @@ import * as privacy from '@/src/contexts/PrivacyScope';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AccountType } from '@/src/types/enums';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/components/charts/LineChart', () => ({ LineChart: jest.fn(() => null) }));
 

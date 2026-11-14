@@ -1,6 +1,6 @@
 import { ListGroup } from '@/src/components/core/ListGroup';
 import { ListRow, listRowTextInset } from '@/src/components/core/ListRow';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { StyleSheet, View } from 'react-native';
 
 const separators = () =>

@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { getStringSimilarity } from '@/src/utils/stringDistance';
+import { getStringSimilarity } from '@/src/services/ledger/resolution/stringDistance';
 
 export interface FuzzyMatchResult {
   account: Account;

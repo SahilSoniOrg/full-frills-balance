@@ -28,7 +28,7 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
   updatePlannedPayment: jest.fn(),
   createPlannedPayment: jest.fn(),
 }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { back: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: { back: jest.fn() } }));
 
 const payment: PlannedPaymentObligation = {
   id: asPlannedPaymentId('rent'),

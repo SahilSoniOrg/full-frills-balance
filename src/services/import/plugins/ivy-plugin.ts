@@ -1,15 +1,15 @@
+import { getOccurrenceOnOrAfter } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { CanonicalImportBuilder } from '@/src/services/import/canonicalImportBuilder';
 import {
-  advanceOccurrence,
   mapToNearestAccountColor,
   normalizeIvyColor,
   parseSerializedIds,
   parseTimestampMs,
 } from '@/src/services/import/plugins/importPluginHelpers';
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
-import { countAccountsVsCategories } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
+import { logger } from '@/src/services/observability/logger';
 
 // Ivy Wallet Interfaces
 interface IvyAccount {
@@ -224,17 +224,16 @@ export const ivyPlugin: ImportPlugin = {
         if (rule.oneTime) {
           if (finalNextOcc < today) return;
         } else if (finalNextOcc < today) {
-          let safetyCap = 0;
-          while (finalNextOcc < today && safetyCap < 1000) {
-            finalNextOcc = advanceOccurrence(
-              finalNextOcc,
-              rule.intervalN || 1,
+          finalNextOcc = getOccurrenceOnOrAfter(
+            startDate,
+            {
               intervalType,
+              intervalN: rule.intervalN || 1,
               recurrenceDay,
               recurrenceMonth,
-            );
-            safetyCap++;
-          }
+            },
+            today,
+          );
         }
 
         const currencyCode =

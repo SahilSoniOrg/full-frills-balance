@@ -5,7 +5,7 @@ import {
   CHART_SCRUB_HOLD_MS,
   CHART_TAP_MAX_DISTANCE,
 } from '@/src/constants/gesture-constants';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerHaptic } from '@/src/design-system/haptics';
 import { usePrimaryPageSwipeReservation } from '@/src/navigation/primaryPageNavigation';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';

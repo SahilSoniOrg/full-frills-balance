@@ -1,14 +1,14 @@
 import { decodeContent, extractIfZip } from '../orchestrator';
-import { compression } from '@/src/utils/compression';
-import { logger } from '@/src/utils/logger';
+import { compression } from '@/src/services/files/compression';
+import { logger } from '@/src/services/observability/logger';
 
-jest.mock('@/src/utils/compression', () => ({
+jest.mock('@/src/services/files/compression', () => ({
   compression: {
     extractFirstFile: jest.fn(),
   },
 }));
 
-jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/observability/logger');
 
 describe('ImportOrchestrator - extractIfZip', () => {
   const zipMagic = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);

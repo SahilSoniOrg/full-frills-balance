@@ -1,10 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/domain/accounting/BalanceEffects';
 import {
   ACTIVE_JOURNAL_STATUSES,
   activeJournalStatusSqlPlaceholders,
-} from '@/src/utils/journalStatus';
+} from '@/src/domain/journal/journalStatus';
 import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';

@@ -4,7 +4,7 @@ import { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 import { Icon, AppButton } from '@/src/components/core';
 import { useLayoutEffect, useState } from 'react';
 import type { IconName } from '@/src/types/domainIcons';
-import { generateWorkplaceName } from '@/src/utils/workplaceName';
+import { generateWorkplaceName } from '@/src/services/setup/workplaceName';
 import type {
   WorkplaceCheckpoint,
   WorkplaceSetupOutput,
@@ -124,7 +124,6 @@ export function WorkplaceSetupSlice({
           isCompleting={isCompleting}
         />
       )}
-
     </>
   );
 }

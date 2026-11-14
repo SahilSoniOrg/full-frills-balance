@@ -1,3 +1,5 @@
+import { balanceSign } from '@/src/domain/accounting/BalanceEffects';
+import { isReportLiquidAssetSubtype } from '@/src/domain/accounts/accountSubtypes';
 import {
   AccountSubtype,
   AccountType,
@@ -5,7 +7,7 @@ import {
   SemanticType,
   TransactionType,
 } from '@/src/types/enums';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 import type {
   CalculatorQuery,
@@ -26,14 +28,6 @@ export const INTERNAL_TRANSFER_SEMANTICS = new Set<string>([
   SemanticType.SAVINGS_ALLOCATION,
   SemanticType.EXPENSE_RECLASSIFICATION,
   SemanticType.INCOME_RECLASSIFICATION,
-]);
-
-export const LIQUID_ASSET_SUBTYPES = new Set<string>([
-  AccountSubtype.CASH,
-  AccountSubtype.WALLET,
-  AccountSubtype.BANK_CHECKING,
-  AccountSubtype.BANK_SAVINGS,
-  AccountSubtype.MONEY_MARKET,
 ]);
 
 export const CREDIT_CARD_SUBTYPE = AccountSubtype.CREDIT_CARD;
@@ -71,14 +65,7 @@ export function signedDelta(fact: ReportingFact): number {
   if (!accountType || !transactionType) return 0;
 
   const amount = amountInReportCurrency(fact);
-  const positive =
-    ((accountType === AccountType.ASSET || accountType === AccountType.EXPENSE) &&
-      transactionType === TransactionType.DEBIT) ||
-    ((accountType === AccountType.LIABILITY ||
-      accountType === AccountType.EQUITY ||
-      accountType === AccountType.INCOME) &&
-      transactionType === TransactionType.CREDIT);
-  return round(positive ? amount : -amount);
+  return round(amount * balanceSign(accountType, transactionType));
 }
 
 export function semantic(fact: ReportingFact): string | undefined {
@@ -94,9 +81,7 @@ export function isExpenseFact(fact: ReportingFact): boolean {
 }
 
 export function isLiquidAssetFact(fact: ReportingFact): boolean {
-  return (
-    fact.accountType === AccountType.ASSET && LIQUID_ASSET_SUBTYPES.has(String(fact.accountSubtype))
-  );
+  return fact.accountType === AccountType.ASSET && isReportLiquidAssetSubtype(fact.accountSubtype);
 }
 
 export function isCreditCardFact(fact: ReportingFact): boolean {

@@ -4,9 +4,9 @@ import AuditLog from '@/src/data/models/AuditLog';
 import { AuditAction, AuditEntityType } from '@/src/types/enums';
 import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import type { AuditActor, AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
-import { resolveAuditActor } from '@/src/utils/resolveAuditActor';
+import { resolveAuditActor } from '@/src/services/audit/resolveAuditActor';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Q } from '@nozbe/watermelondb';
 
 export interface AuditEntry<T = unknown> {

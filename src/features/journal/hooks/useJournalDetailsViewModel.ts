@@ -17,8 +17,8 @@ import { ORPHANED_PLANNED_JOURNAL_NOTICE } from '@/src/services/planned-payment/
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
 import type { JournalId } from '@/src/types/ids';
-import { formatDate } from '@/src/utils/dateUtils';
-import { AppNavigation } from '@/src/utils/navigation';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';

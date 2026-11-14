@@ -4,7 +4,7 @@ import {
   WORKPLACE_MISMATCH_MESSAGE,
   useWorkplaceLaunchBinding,
 } from '@/src/navigation/boundWorkplace';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 

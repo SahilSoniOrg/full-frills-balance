@@ -3,7 +3,7 @@ import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRep
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
 import { BudgetId, AccountId, WorkplaceId } from '@/src/types/ids';
-import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 
 /**
  * Creates a new budget with the specified scope accounts.

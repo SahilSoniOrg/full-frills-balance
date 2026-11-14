@@ -1,6 +1,6 @@
 import { analytics } from '@/src/services/analytics';
 import { AccountId, PlannedPaymentId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback } from 'react';
 
 type SafeToSpendFeatureAction =

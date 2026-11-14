@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { TransactionType } from '@/src/types/enums';
 
-import { checkJournal, JournalLineForCheck } from '@/src/utils/accounting/BalanceEffects';
-import { roundToPrecision } from '@/src/utils/money';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { checkJournal, JournalLineForCheck } from '@/src/domain/accounting/BalanceEffects';
+import { roundToPrecision } from '@/src/domain/money/money';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 
 interface JournalLineInput {
   amount: number | string;

@@ -1,4 +1,4 @@
-import { ToastPayload, clearToastListener, setToastListener } from '@/src/utils/alerts';
+import { ToastPayload, clearToastListener, setToastListener } from '@/src/services/feedback/alerts';
 import { useEffect, useRef, useState } from 'react';
 
 export interface ToastItem extends ToastPayload {

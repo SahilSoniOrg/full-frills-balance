@@ -2,8 +2,8 @@ import { FontId, ThemeId, ThemeMode } from '@/src/constants/design-tokens';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences';
 import type { ThemeAppearance } from '@/src/services/preferences';
 import { usePreference } from '@/src/hooks/usePreference';
-import { commitFontIdAfterLoad } from '@/src/utils/loadFontSet';
-import { logger } from '@/src/utils/logger';
+import { commitFontIdAfterLoad } from '@/src/services/fonts/loadFontSet';
+import { logger } from '@/src/services/observability/logger';
 import { useCallback, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 

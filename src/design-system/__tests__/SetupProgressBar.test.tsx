@@ -1,4 +1,4 @@
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { SetupProgressBar } from '@/src/design-system/SetupProgressBar';
 
 describe('SetupProgressBar', () => {

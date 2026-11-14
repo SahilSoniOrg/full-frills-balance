@@ -10,7 +10,7 @@ import { PrivacySecuritySettingsView } from '@/src/features/settings/components/
 import { SettingsView } from '@/src/features/settings/components/SettingsView';
 import { SmsSettingsView } from '@/src/features/settings/components/SmsSettingsView';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
-import { render } from '@/src/utils/test-utils';
+import { render } from '@/src/testing/render';
 import { asWorkplaceId } from '@/src/types/ids';
 import type { ReactElement } from 'react';
 import { Platform } from 'react-native';

@@ -5,7 +5,7 @@ import { Box, Inline, Stack } from '@/src/design-system';
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { IconName } from '@/src/types/domainIcons';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useCallback, useMemo, type ReactNode } from 'react';
 import {
   FlatList,

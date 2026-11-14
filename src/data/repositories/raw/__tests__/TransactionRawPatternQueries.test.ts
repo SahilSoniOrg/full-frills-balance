@@ -10,7 +10,7 @@ import {
 import { expectRawSqlPlaceholderArity, lastRawSqlCall } from '@/src/testing/rawSqlTestHelpers';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 
 describe('TransactionRawPatternQueries workplace isolation', () => {
   const workplaceOne = 'wp-pattern-one' as WorkplaceId;

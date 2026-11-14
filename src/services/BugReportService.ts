@@ -1,5 +1,5 @@
 import { ShareFormat, type ShareOutcome } from '@/src/types/sharing';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { sharingService } from './SharingService';
 import { createDiagnosticShareable } from './sharing/diagnosticShareable';
 

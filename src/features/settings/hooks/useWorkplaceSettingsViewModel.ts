@@ -6,7 +6,7 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AppConfig } from '@/src/constants/app-config';
 import type { IconName } from '@/src/types/domainIcons';
 import type { PlainCurrency, PlainWorkplace } from '@/src/types/plainDtos';
-import { confirm, toast } from '@/src/utils/alerts';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import { useCallback, useState } from 'react';
 
 export interface WorkplaceSettingsViewModel {

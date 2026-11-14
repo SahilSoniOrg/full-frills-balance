@@ -25,7 +25,7 @@ import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@
 import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { getAuditEventFieldDeltas, isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import type { AuditJsonObject } from '@/src/types/auditEvents';
-import { stableAuditJson } from '@/src/utils/stableAuditJson';
+import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 
 type AuditChanges = Record<string, unknown> & {
   before?: Record<string, unknown>;

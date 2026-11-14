@@ -1,7 +1,7 @@
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { REVERT_CONFLICT_MESSAGE } from '@/src/domain/audit/revertErrors';
-import { stableAuditJson } from '@/src/utils/stableAuditJson';
+import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 
 /**
  * Rejects an undo if any event field no longer matches, using rows loaded from

@@ -9,9 +9,9 @@ import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/Scop
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, type TransactionType } from '@/src/types/enums';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { logger } from '@/src/utils/logger';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { logger } from '@/src/services/observability/logger';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
 import { BudgetUsage } from './types';
 

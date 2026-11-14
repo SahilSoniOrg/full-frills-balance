@@ -3,7 +3,7 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
 import { importRegistry } from '@/src/services/import';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {

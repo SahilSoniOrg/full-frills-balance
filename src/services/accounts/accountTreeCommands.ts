@@ -19,7 +19,7 @@ import {
   type AccountTreeSiblingListState,
   type AccountTreeRowState,
   type AccountTreeMoveReceipt,
-} from '@/src/services/accounts/accountTree';
+} from '@/src/domain/accounts/accountTree';
 
 const STALE_TREE_ERROR = 'Account tree changed; staged changes are no longer current';
 

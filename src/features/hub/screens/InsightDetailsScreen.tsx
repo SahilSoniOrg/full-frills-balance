@@ -5,7 +5,7 @@ import { InsightDetailsView } from '@/src/features/hub/components/InsightDetails
 import { useInsightDetailsViewModel } from '@/src/features/hub/hooks/useInsightDetailsViewModel';
 import type { InsightDetailsRouteParams } from '@/src/features/hub/helpers/insightDetailsPresentation';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 

@@ -5,9 +5,9 @@ import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountBalance } from '@/src/types/domainReadModels';
-import { logger } from '@/src/utils/logger';
-import { Money } from '@/src/utils/money';
-import { Trace, startTrace } from '@/src/utils/TraceService';
+import { logger } from '@/src/services/observability/logger';
+import { Money } from '@/src/domain/money/money';
+import { Trace, startTrace } from '@/src/services/observability/TraceService';
 import { CachedHierarchy } from './types';
 
 export class BalanceHierarchyAggregator {

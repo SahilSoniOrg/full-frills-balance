@@ -5,7 +5,7 @@ import { preferences } from '@/src/services/preferences';
 import { syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
 import type { SmsInboxCursor } from '@/src/types/smsInbox';
 import type { WorkplaceId } from '@/src/types/ids';
-import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
+import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { Platform } from 'react-native';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 

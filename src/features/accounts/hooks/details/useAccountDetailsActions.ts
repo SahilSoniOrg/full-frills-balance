@@ -2,12 +2,12 @@ import { AppConfig } from '@/src/constants';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
-import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
-import { DateRange } from '@/src/utils/dateUtils';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
+import { showConfirmationAlert, showErrorAlert, toast } from '@/src/services/feedback/alerts';
+import { DateRange } from '@/src/domain/calendar/dateRanges';
+import { logger } from '@/src/services/observability/logger';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useState } from 'react';
 
 export interface UseAccountDetailsActionsOptions {

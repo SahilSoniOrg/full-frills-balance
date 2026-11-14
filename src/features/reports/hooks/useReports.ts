@@ -19,8 +19,8 @@ import {
   rangeEndingOnLatestActivity,
   shouldShiftInitialReportRange,
 } from '@/src/services/reports/initialReportRange';
-import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
-import { logger } from '@/src/utils/logger';
+import { DateRange, PeriodFilter, getLastNRange } from '@/src/domain/calendar/dateRanges';
+import { logger } from '@/src/services/observability/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, map } from 'rxjs';

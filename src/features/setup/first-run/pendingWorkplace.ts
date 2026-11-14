@@ -1,6 +1,6 @@
 import { generator } from '@/src/data/database/idGenerator';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 
 const PENDING_WORKPLACE_KEY = 'cash_clarity_pending_workplace_id';
 

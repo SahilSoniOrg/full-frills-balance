@@ -1,5 +1,5 @@
 import { Inline, Stack } from '@/src/design-system';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 describe('Stack', () => {
   it('supports column and row directions through the shared implementation', () => {

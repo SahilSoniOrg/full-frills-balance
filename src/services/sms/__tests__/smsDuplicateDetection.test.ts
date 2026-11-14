@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import type Journal from '@/src/data/models/Journal';

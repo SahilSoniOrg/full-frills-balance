@@ -12,7 +12,7 @@ import {
 } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { seedBasicAssetExpenseAccounts } from '@/src/testing/accountTestFixtures';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';

@@ -76,7 +76,7 @@ jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
     forWorkplace: jest.fn(() => ({ preWarm: jest.fn().mockResolvedValue(undefined) })),
   },
 }));
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
 }));
 jest.mock('@/src/services/preferences', () => ({

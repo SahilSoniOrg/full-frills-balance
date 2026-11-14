@@ -21,8 +21,8 @@ import {
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
-import { getReadableColor } from '@/src/utils/color-math';
-import { AppNavigation } from '@/src/utils/navigation';
+import { getReadableColor } from '@/src/design-system/colorMath';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Drawer } from 'react-native-drawer-layout';

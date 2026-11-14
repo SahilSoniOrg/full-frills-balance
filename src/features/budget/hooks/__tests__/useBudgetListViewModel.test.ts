@@ -32,7 +32,9 @@ const mockRateUpdates = new (jest.requireActual<typeof import('rxjs')>('rxjs').S
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: { observeSpotRateUpdates: () => mockRateUpdates },
 }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toBudgetDetail: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({
+  AppNavigation: { toBudgetDetail: jest.fn() },
+}));
 
 const workplaceId = asWorkplaceId('workplace');
 const categoryId = asAccountId('category');

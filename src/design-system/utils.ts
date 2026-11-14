@@ -7,7 +7,7 @@ import {
   SpacingKey,
   Theme,
 } from '@/src/constants/design-tokens';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 

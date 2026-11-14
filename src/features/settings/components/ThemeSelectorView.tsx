@@ -5,7 +5,7 @@ import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 type ThemeSelectorViewProps = {
   themeId: ThemeId;

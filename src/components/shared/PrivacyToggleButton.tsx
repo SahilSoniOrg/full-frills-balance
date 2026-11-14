@@ -3,8 +3,8 @@ import type { IconButtonVariant } from '@/src/components/core/IconButton';
 import { AppConfig, Size } from '@/src/constants';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
-import { toast } from '@/src/utils/alerts';
-import { getReadableColor } from '@/src/utils/color-math';
+import { toast } from '@/src/services/feedback/alerts';
+import { getReadableColor } from '@/src/design-system/colorMath';
 
 type PrivacyToggleButtonProps = {
   variant?: IconButtonVariant;

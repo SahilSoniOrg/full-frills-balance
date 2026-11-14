@@ -1,6 +1,6 @@
 import { Icon } from '@/src/types/domainIcons';
 import { AppInput } from '@/src/components/core/AppInput';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { StyleSheet } from 'react-native';
 
 jest.mock('@/src/components/core/AppIcon', () => ({

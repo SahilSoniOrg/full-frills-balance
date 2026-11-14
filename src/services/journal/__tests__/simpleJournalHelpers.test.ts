@@ -4,7 +4,7 @@ import {
   parseSimpleAmountInput,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
-import { hasNegativeAmountSign } from '@/src/utils/amountInput';
+import { hasNegativeAmountSign } from '@/src/domain/money/amountInput';
 import { AccountType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 

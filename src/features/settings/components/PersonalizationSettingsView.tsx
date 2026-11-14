@@ -7,7 +7,7 @@ import {
   type PersonalizationViewModel,
 } from '@/src/features/settings/hooks/usePersonalizationViewModel';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { View } from 'react-native';
 
 interface PersonalizationSettingsViewProps {

@@ -4,7 +4,7 @@ import { AccountMatcherEditorView } from '@/src/features/accounts/components/Acc
 import { useAccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/useAccountMatcherEditorViewModel';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { asAccountId, EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { Icon } from '@/src/types/domainIcons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';

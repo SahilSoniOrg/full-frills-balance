@@ -9,7 +9,7 @@ import {
 } from '@/src/features/accounts/helpers/accountKinds';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountType } from '@/src/types/enums';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useMemo } from 'react';
 
 const ACCOUNT_TYPES = [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY] as const;

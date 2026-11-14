@@ -7,10 +7,10 @@ jest.mock('@/src/data/repositories/transaction');
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   showErrorAlert: jest.fn(),
 }));
-jest.mock('@/src/utils/haptics', () => ({
+jest.mock('@/src/design-system/haptics', () => ({
   triggerSaveOutcomeHaptic: jest.fn(),
 }));
 jest.mock('@/src/hooks/useExchangeRate', () => ({

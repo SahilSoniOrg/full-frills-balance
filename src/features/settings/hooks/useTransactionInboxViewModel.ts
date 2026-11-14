@@ -12,7 +12,7 @@ import { smsService, type SmsInboxFilterStatus } from '@/src/services/sms-servic
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback } from 'react';
 
 export type { SmsInboxFilterStatus };

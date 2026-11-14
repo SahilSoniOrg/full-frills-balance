@@ -8,7 +8,7 @@ import {
   getEntityDisplayName,
   parseAuditChanges,
 } from '@/src/services/audit/auditLogTypes';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useMemo } from 'react';
 const AUDIT_ID_PREVIEW_LEN = 12;

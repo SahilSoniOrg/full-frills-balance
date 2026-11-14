@@ -5,7 +5,7 @@ import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Keyboard, SectionList, StyleSheet, View } from 'react-native';
 

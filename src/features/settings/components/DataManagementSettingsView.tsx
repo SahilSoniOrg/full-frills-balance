@@ -6,7 +6,7 @@ import { DataExportSection } from '@/src/features/settings/components/DataExport
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { ShareFormat } from '@/src/types/sharing';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
 const SHARE_FORMAT_OPTIONS = [
   { id: ShareFormat.TEXT, label: AppConfig.strings.settings.data.shareFormats.TEXT },

@@ -20,7 +20,7 @@ jest.mock('@/src/services/sms/SmsPrivacyService', () => ({
   smsPrivacyService: { cleanupLegacyContent: jest.fn().mockResolvedValue(undefined) },
 }));
 
-jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/observability/logger');
 
 describe('smsService.parseTransactionMessage', () => {
   it('parses INR debit messages with merchant and account source', async () => {

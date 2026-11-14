@@ -5,7 +5,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatClockTime, formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { formatClockTime, formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';

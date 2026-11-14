@@ -1,5 +1,5 @@
 import { AppConfig, Spacing } from '@/src/constants';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { StyleSheet, Text } from 'react-native';
 import {
   ExchangeRateCard,

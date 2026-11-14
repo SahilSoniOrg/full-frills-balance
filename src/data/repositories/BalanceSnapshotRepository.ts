@@ -5,7 +5,7 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Q } from '@nozbe/watermelondb';
 import { filter, map, type Observable } from 'rxjs';
 import Transaction from '@/src/data/models/Transaction';

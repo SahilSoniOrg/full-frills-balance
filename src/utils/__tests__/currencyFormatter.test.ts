@@ -1,3 +1,4 @@
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import {
   CurrencyFormatter,
   formatMoneyAmount,
@@ -158,23 +159,23 @@ describe('CurrencyFormatter', () => {
 
   describe('getPrecisionFallback', () => {
     it('should return 2 for undefined or unknown code', () => {
-      expect(CurrencyFormatter.getPrecisionFallback(undefined)).toBe(2);
-      expect(CurrencyFormatter.getPrecisionFallback('UNKNOWN')).toBe(2);
+      expect(getCurrencyPrecision(undefined)).toBe(2);
+      expect(getCurrencyPrecision('UNKNOWN')).toBe(2);
     });
 
     it('should return 0 for JPY and KRW', () => {
-      expect(CurrencyFormatter.getPrecisionFallback('JPY')).toBe(0);
-      expect(CurrencyFormatter.getPrecisionFallback('KRW')).toBe(0);
-      expect(CurrencyFormatter.getPrecisionFallback('jpy')).toBe(0);
+      expect(getCurrencyPrecision('JPY')).toBe(0);
+      expect(getCurrencyPrecision('KRW')).toBe(0);
+      expect(getCurrencyPrecision('jpy')).toBe(0);
     });
 
     it('should return 3 for KWD, BHD, OMR, JOD, TND', () => {
-      expect(CurrencyFormatter.getPrecisionFallback('KWD')).toBe(3);
-      expect(CurrencyFormatter.getPrecisionFallback(' KWD ')).toBe(3);
-      expect(CurrencyFormatter.getPrecisionFallback('BHD')).toBe(3);
-      expect(CurrencyFormatter.getPrecisionFallback('OMR')).toBe(3);
-      expect(CurrencyFormatter.getPrecisionFallback('JOD')).toBe(3);
-      expect(CurrencyFormatter.getPrecisionFallback('TND')).toBe(3);
+      expect(getCurrencyPrecision('KWD')).toBe(3);
+      expect(getCurrencyPrecision(' KWD ')).toBe(3);
+      expect(getCurrencyPrecision('BHD')).toBe(3);
+      expect(getCurrencyPrecision('OMR')).toBe(3);
+      expect(getCurrencyPrecision('JOD')).toBe(3);
+      expect(getCurrencyPrecision('TND')).toBe(3);
     });
   });
 

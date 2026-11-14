@@ -9,7 +9,7 @@ import { useAccounts } from '@/src/hooks/useAccounts';
 import { WorkplaceBoundScreen } from '@/src/navigation/WorkplaceBoundScreen';
 import { getEligibleMatcherAccountIds } from '@/src/services/accounts/accountMatcherEligibility';
 import { asAccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AccountMatchersSection } from '../components/AccountMatchersSection';

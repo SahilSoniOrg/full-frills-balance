@@ -8,7 +8,7 @@ import {
   type AllocationStatusTone,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { IconName } from '@/src/types/domainIcons';
 import type { AccountId } from '@/src/types/ids';

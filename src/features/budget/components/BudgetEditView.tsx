@@ -26,9 +26,9 @@ import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFo
 import { FadeIn, Stack } from '@/src/design-system';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { getReadableColor } from '@/src/utils/color-math';
-import { toast } from '@/src/utils/alerts';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { getReadableColor } from '@/src/design-system/colorMath';
+import { toast } from '@/src/services/feedback/alerts';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BudgetSpendingHistoryChart } from './BudgetSpendingHistoryChart';

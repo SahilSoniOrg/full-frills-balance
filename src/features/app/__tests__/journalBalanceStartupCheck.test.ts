@@ -1,8 +1,8 @@
 import { analytics } from '@/src/services/analytics';
 import { journalBalanceInsightService } from '@/src/services/integrity';
 import type { WorkplaceId } from '@/src/types/ids';
-import { confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { checkJournalBalancesOnStartup } from '../journalBalanceStartupCheck';
 
 jest.mock('@/src/services/integrity', () => ({
@@ -11,8 +11,8 @@ jest.mock('@/src/services/integrity', () => ({
 jest.mock('@/src/services/analytics', () => ({
   analytics: { track: jest.fn() },
 }));
-jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({ confirm: { show: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toJournalBalanceReview: jest.fn() },
 }));
 

@@ -1,6 +1,6 @@
 import { SafeToSpendHeader } from '@/src/features/dashboard/components/SafeToSpendHeader';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: jest.fn(() => false),

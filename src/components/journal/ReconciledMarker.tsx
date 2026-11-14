@@ -3,7 +3,7 @@ import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
+import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 
 export interface ReconciledMarkerProps {

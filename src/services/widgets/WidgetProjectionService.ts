@@ -1,8 +1,8 @@
 import type { WidgetDataSnapshot } from '@/modules/expo-widgets/src/ExpoWidgets.types';
 import type { WorkplaceId } from '@/src/types/ids';
 import { loadNativeWidgetAdapter } from './nativeWidgetAdapter';
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+import { storage } from '@/src/data/storage/storage';
 
 const WIDGET_CLEANUP_PENDING_ALL_KEY = 'widget_cleanup_all_pending_v1';
 const WIDGET_CLEANUP_PENDING_OWNER_PREFIX = 'widget_cleanup_owner_pending_v1_';

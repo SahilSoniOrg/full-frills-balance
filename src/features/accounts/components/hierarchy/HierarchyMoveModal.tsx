@@ -6,7 +6,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
 import { StyleSheet } from 'react-native';
 
 interface HierarchyMoveModalProps {

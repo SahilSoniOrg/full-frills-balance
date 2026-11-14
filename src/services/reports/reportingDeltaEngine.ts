@@ -8,9 +8,9 @@ import {
   ReportingDeltaInput,
 } from '@/src/services/reports/reportTypes';
 import { WorkplaceId } from '@/src/types/ids';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import dayjs from 'dayjs';
 
 /**

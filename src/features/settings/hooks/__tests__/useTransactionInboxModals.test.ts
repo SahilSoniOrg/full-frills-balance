@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useTransactionInboxModals } from '../useTransactionInboxModals';
-import { showDetachFromJournalConfirm } from '@/src/utils/showDetachFromJournalConfirm';
+import { showDetachFromJournalConfirm } from '@/src/components/transaction-capture/showDetachFromJournalConfirm';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
 jest.mock('@/src/services/sms-service', () => ({
   smsService: {
@@ -20,14 +20,14 @@ jest.mock('@/src/services/analytics', () => ({
   },
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toJournalDetails: jest.fn(),
     toJournalSearch: jest.fn(),
   },
 }));
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   showErrorAlert: jest.fn(),
   toast: {
@@ -43,7 +43,7 @@ jest.mock('@/src/hooks/useHourCyclePrefs', () => ({
   useHourCyclePrefs: () => ({ resolvedHourCycle: '12-hour' }),
 }));
 
-jest.mock('@/src/utils/showDetachFromJournalConfirm', () => ({
+jest.mock('@/src/components/transaction-capture/showDetachFromJournalConfirm', () => ({
   showDetachFromJournalConfirm: jest.fn(),
 }));
 

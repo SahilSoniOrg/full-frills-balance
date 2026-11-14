@@ -1,6 +1,6 @@
 import { Text, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type EdgeInsets } from 'react-native-safe-area-context';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
 import { AppCard } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';

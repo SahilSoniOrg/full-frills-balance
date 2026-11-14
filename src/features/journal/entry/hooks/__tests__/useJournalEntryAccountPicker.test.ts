@@ -4,14 +4,14 @@ import {
   type JournalAccountCreateTarget,
 } from '../useJournalEntryAccountPicker';
 import { AccountType } from '@/src/types/enums';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import {
   encodeAccountCreationReturnTarget,
   type AccountCreationReturnTarget,
-} from '@/src/utils/accountCreationReturn';
+} from '@/src/navigation/accountCreationReturn';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toAccountForm: jest.fn() },
 }));
 

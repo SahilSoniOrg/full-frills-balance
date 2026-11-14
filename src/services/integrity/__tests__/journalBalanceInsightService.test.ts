@@ -12,7 +12,7 @@ jest.mock('../journalBalanceAudit', () => ({
   findUnbalancedJournals: (...args: unknown[]) => mockFind(...args),
   findUnbalancedJournalsByIds: (...args: unknown[]) => mockFindByIds(...args),
 }));
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     getString: (key: string) => mockStorage.get(key),
     set: (key: string, value: string) => mockStorage.set(key, value),

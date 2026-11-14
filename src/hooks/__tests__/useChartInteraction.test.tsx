@@ -6,7 +6,7 @@ import {
 import { panGestures, tapGestures } from '@/src/testing/gestureMock';
 import { useChartInteraction } from '../useChartInteraction';
 
-jest.mock('@/src/utils/haptics', () => ({ triggerHaptic: jest.fn() }));
+jest.mock('@/src/design-system/haptics', () => ({ triggerHaptic: jest.fn() }));
 
 beforeEach(() => {
   panGestures.length = 0;

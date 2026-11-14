@@ -4,7 +4,7 @@ import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { combineLatest, of, type Observable } from 'rxjs';
 import {
   auditTime,

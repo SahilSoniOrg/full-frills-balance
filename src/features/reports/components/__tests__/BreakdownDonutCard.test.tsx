@@ -1,6 +1,6 @@
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
 import { AccountId } from '@/src/types/ids';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/components/charts/DonutChart', () => ({
   DonutChart: () => null,

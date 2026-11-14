@@ -1,11 +1,11 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { IconButton } from '@/src/components/core';
 import { PrivacyToggleButton } from '../PrivacyToggleButton';
 import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 import { preferences } from '@/src/services/preferences';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 
-jest.mock('@/src/utils/alerts', () => ({ toast: { info: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ toast: { info: jest.fn() } }));
 
 beforeEach(() => {
   preferences.privacy.setIsPrivacyMode(false);

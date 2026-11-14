@@ -9,7 +9,7 @@ import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
 import { Icon } from '@/src/types/domainIcons';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useRef } from 'react';
 import type { ScrollViewProps } from 'react-native';

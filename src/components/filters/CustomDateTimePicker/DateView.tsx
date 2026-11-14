@@ -1,6 +1,6 @@
 import { Icon, AppText, IconButton, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Shape, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';

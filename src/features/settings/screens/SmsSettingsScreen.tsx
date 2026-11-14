@@ -5,8 +5,8 @@ import { analytics } from '@/src/services/analytics';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
-import { alert, confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { alert, confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking } from 'react-native';
 

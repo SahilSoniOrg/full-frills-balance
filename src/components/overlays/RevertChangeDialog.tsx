@@ -3,7 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { analytics } from '@/src/services/analytics';
 import { revertEntry } from '@/src/services/audit-service';
 import type { WorkplaceId } from '@/src/types/ids';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { ConfirmDialog } from './ConfirmDialog';
 
 export interface RevertChangeRequest {

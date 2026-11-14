@@ -1,5 +1,5 @@
 import { WorkplaceBoundScreen } from '@/src/navigation/WorkplaceBoundScreen';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { Text } from 'react-native';
 import { asWorkplaceId } from '@/src/types/ids';
 
@@ -17,7 +17,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ workplaceId: mockRouteWorkplaceId }),
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { back: jest.fn() },
 }));
 

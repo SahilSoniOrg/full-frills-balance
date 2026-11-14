@@ -26,7 +26,7 @@ import { AuditAction, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
+import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
 import { Model, Q } from '@nozbe/watermelondb';
 
 export const journalTables = {

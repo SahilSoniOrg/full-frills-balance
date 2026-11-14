@@ -21,8 +21,8 @@ import {
   type SafeToSpendPaintSnapshot,
 } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import type { DashboardData } from '@/src/services/ReactiveDataService';
-import { logger as appLogger } from '@/src/utils/logger';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { logger as appLogger } from '@/src/services/observability/logger';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePrimaryPageActive } from '@/src/navigation/primaryPageNavigation';
 import { EMPTY } from 'rxjs';

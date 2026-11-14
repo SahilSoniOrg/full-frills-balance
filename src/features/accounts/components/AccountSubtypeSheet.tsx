@@ -9,7 +9,7 @@ import {
 } from '@/src/features/accounts/helpers/accountKinds';
 import { ACCOUNT_SUBTYPES_BY_TYPE } from '@/src/types/accountSubtype';
 import type { AccountSubtype, AccountType } from '@/src/types/enums';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useMemo } from 'react';
 
 export function AccountSubtypeSheet({

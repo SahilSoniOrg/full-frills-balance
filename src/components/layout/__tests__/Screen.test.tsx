@@ -1,5 +1,5 @@
 import { Screen } from '@/src/components/layout/Screen';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import React from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaFrame } from '@/src/design-system/SafeArea';

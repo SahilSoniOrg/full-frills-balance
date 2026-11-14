@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { analytics } from '@/src/services/analytics';
-import { AccountArchiveChanges } from '@/src/utils/accountArchive';
+import { AccountArchiveChanges } from '@/src/domain/accounts/accountArchive';
 
 export type ArchiveAuditEntry = {
   entityId: string;

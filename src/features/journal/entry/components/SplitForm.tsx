@@ -17,7 +17,7 @@ import {
 } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
-import { formatRoundedAmount } from '@/src/utils/money';
+import { formatRoundedAmount } from '@/src/domain/money/money';
 import { AccountPickerField } from '@/src/features/journal/entry/components/AccountPickerField';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { Icon } from '@/src/types/domainIcons';

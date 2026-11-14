@@ -19,10 +19,13 @@ import {
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { isAccountArchived, type AccountArchiveChanges } from '@/src/utils/accountArchive';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { showErrorAlert } from '@/src/utils/alerts';
+import {
+  isAccountArchived,
+  type AccountArchiveChanges,
+} from '@/src/domain/accounts/accountArchive';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { useCallback, useMemo } from 'react';
 
 interface UseAccountsBulkOperationsInput {

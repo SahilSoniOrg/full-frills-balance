@@ -4,7 +4,7 @@ import { AppConfig, Spacing } from '@/src/constants';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 
 interface ReportSummaryCardProps {

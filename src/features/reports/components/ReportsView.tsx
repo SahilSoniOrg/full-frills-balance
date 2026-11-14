@@ -16,7 +16,7 @@ import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useCallback, useState } from 'react';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
 const REPORT_TABS: readonly TabOption<ReportTab>[] = [
   { id: 'OVERVIEW', label: AppConfig.strings.reports.tabs.overview },

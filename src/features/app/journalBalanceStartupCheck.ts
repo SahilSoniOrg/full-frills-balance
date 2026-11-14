@@ -1,8 +1,8 @@
 import { analytics } from '@/src/services/analytics';
 import { journalBalanceInsightService } from '@/src/services/integrity';
 import type { WorkplaceId } from '@/src/types/ids';
-import { confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
 /**
  * Audits journal balances after startup. The Hub notification stays until the journals are fixed;

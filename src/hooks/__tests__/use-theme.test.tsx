@@ -21,7 +21,7 @@ jest.mock('@/src/hooks/useThemePrefs', () => ({
     setFontId: jest.fn(),
   }),
 }));
-jest.mock('@/src/utils/loadFontSet', () => ({
+jest.mock('@/src/services/fonts/loadFontSet', () => ({
   isFontSetLoaded: (fontId: string) => fontId === 'deep-space',
 }));
 

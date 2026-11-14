@@ -1,7 +1,7 @@
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { AppConfig } from '@/src/constants/app-config';
-import { confirm } from '@/src/utils/alerts';
-import { formatDate } from '@/src/utils/dateUtils';
+import { confirm } from '@/src/services/feedback/alerts';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import type { JournalId } from '@/src/types/ids';
 import type { Money } from '@/src/types/domainReadModels';

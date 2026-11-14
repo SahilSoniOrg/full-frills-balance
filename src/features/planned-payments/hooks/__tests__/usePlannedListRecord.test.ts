@@ -1,4 +1,4 @@
-import { act, renderHook } from '@/src/utils/test-utils';
+import { act, renderHook } from '@/src/testing/render';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';

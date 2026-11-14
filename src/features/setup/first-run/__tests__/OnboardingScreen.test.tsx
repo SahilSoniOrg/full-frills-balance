@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { Keyboard } from 'react-native';
 import type { CreationLaunchEntry } from '@/src/contexts/CreationLaunchContext';
 import type { SetupDraft } from '../../setupTypes';
@@ -7,41 +7,74 @@ import { createCreationSession } from '../creationSession';
 import { asWorkplaceId } from '@/src/types/ids';
 
 const mockSetupStore: { value: SetupDraft | undefined } = { value: undefined };
-let mockLaunchEntry: CreationLaunchEntry = { intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking' };
+let mockLaunchEntry: CreationLaunchEntry = {
+  intent: 'first_run',
+  context: 'unregistered_device',
+  entryPolicy: 'blocking',
+};
 jest.mock('@/src/contexts/CreationLaunchContext', () => ({
-  useCreationLaunch: () => ({ openCreatedWorkplace: jest.fn(async () => {}), entry: mockLaunchEntry }),
+  useCreationLaunch: () => ({
+    openCreatedWorkplace: jest.fn(async () => {}),
+    entry: mockLaunchEntry,
+  }),
 }));
 jest.mock('../../SetupDraftStore', () => ({
   loadSetupDraft: () => mockSetupStore.value,
-  saveSetupDraft: (value: SetupDraft) => { mockSetupStore.value = value; },
-  clearSetupDraft: () => { mockSetupStore.value = undefined; },
+  saveSetupDraft: (value: SetupDraft) => {
+    mockSetupStore.value = value;
+  },
+  clearSetupDraft: () => {
+    mockSetupStore.value = undefined;
+  },
   hasUnreadableSetupDraft: () => false,
   discardUnreadableSetupDraft: jest.fn(),
 }));
 
 jest.mock('@/src/components/core', () => {
-  const { Text: NativeText, Pressable } = jest.requireActual('react-native') as typeof import('react-native');
+  const { Text: NativeText, Pressable } = jest.requireActual(
+    'react-native',
+  ) as typeof import('react-native');
   return {
-    AppText: ({ children, ...props }: { children?: React.ReactNode }) => <NativeText {...props}>{children}</NativeText>,
-    AppButton: ({ children, onPress, testID }: { children?: React.ReactNode; onPress?: () => void; testID?: string }) => <Pressable onPress={onPress} testID={testID}><NativeText>{children}</NativeText></Pressable>,
+    AppText: ({ children, ...props }: { children?: React.ReactNode }) => (
+      <NativeText {...props}>{children}</NativeText>
+    ),
+    AppButton: ({
+      children,
+      onPress,
+      testID,
+    }: {
+      children?: React.ReactNode;
+      onPress?: () => void;
+      testID?: string;
+    }) => (
+      <Pressable onPress={onPress} testID={testID}>
+        <NativeText>{children}</NativeText>
+      </Pressable>
+    ),
     LoadingView: () => null,
   };
 });
 
 jest.mock('@/src/components/shared/MoneyText', () => {
   const { Text: NativeText } = jest.requireActual('react-native') as typeof import('react-native');
-  return { MoneyText: ({ amount, ...props }: { amount: number }) => <NativeText {...props}>{amount}</NativeText> };
+  return {
+    MoneyText: ({ amount, ...props }: { amount: number }) => (
+      <NativeText {...props}>{amount}</NativeText>
+    ),
+  };
 });
 
 jest.mock('../../SetupCoordinator', () => ({ startFirstRunRestoreFromDeviceName: jest.fn() }));
 jest.mock('../../setupFinishers', () => ({ finishDeviceSetup: jest.fn() }));
-jest.mock('@/src/services/analytics', () => ({ analytics: { track: jest.fn(), trackConversion: jest.fn() } }));
+jest.mock('@/src/services/analytics', () => ({
+  analytics: { track: jest.fn(), trackConversion: jest.fn() },
+}));
 jest.mock('@/src/services/legal/privacyPolicyAcceptance', () => ({
   acknowledgeCurrentPrivacyPolicy: jest.fn(),
   hasAcknowledgedCurrentPrivacyPolicy: () => true,
   subscribeToPrivacyPolicyAcknowledgement: () => () => {},
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { back: jest.fn(), toPrivacyNotice: jest.fn(), toSetupJourney: jest.fn() },
 }));
 jest.mock('../commitCashClarity', () => ({
@@ -54,13 +87,30 @@ jest.mock('../commitCashClarity', () => ({
 
 jest.mock('../scenes', () => {
   const { Pressable } = jest.requireActual('react-native') as typeof import('react-native');
-  const button = (testID: string, onPress: () => void) => <Pressable testID={testID} onPress={onPress} />;
+  const button = (testID: string, onPress: () => void) => (
+    <Pressable testID={testID} onPress={onPress} />
+  );
   return {
-    WelcomeScene: ({ onNameChange, onStart }: { onNameChange: (name: string) => void; onStart: () => void }) => (
-      <>{button('name', () => onNameChange('Molly'))}{button('start', onStart)}</>
+    WelcomeScene: ({
+      onNameChange,
+      onStart,
+    }: {
+      onNameChange: (name: string) => void;
+      onStart: () => void;
+    }) => (
+      <>
+        {button('name', () => onNameChange('Molly'))}
+        {button('start', onStart)}
+      </>
     ),
-    CurrencyScene: ({ onContinue }: { onContinue: () => void }) => button('currency-continue', onContinue),
-    MoneyScene: ({ onAccountsChange, onAmountTextChange, onContinue, onDefer }: {
+    CurrencyScene: ({ onContinue }: { onContinue: () => void }) =>
+      button('currency-continue', onContinue),
+    MoneyScene: ({
+      onAccountsChange,
+      onAmountTextChange,
+      onContinue,
+      onDefer,
+    }: {
       onAccountsChange: (accounts: unknown[]) => void;
       onAmountTextChange: (key: string, value: string | undefined) => void;
       onContinue: (heard: string) => void;
@@ -72,7 +122,10 @@ jest.mock('../scenes', () => {
           onAccountsChange([{ id: 'bank-1', kind: 'bank', name: 'Bank', balance: 0 }]);
         })}
         {button('money-continue', () => onContinue('Got your money'))}
-        {button('defer-accounts', () => { onDefer(); onContinue('No money entered'); })}
+        {button('defer-accounts', () => {
+          onDefer();
+          onContinue('No money entered');
+        })}
         {button('clear-raw', () => onAmountTextChange('bank-1', undefined))}
       </>
     ),
@@ -86,7 +139,11 @@ jest.mock('../scenes', () => {
 describe('OnboardingScreen durable parent session', () => {
   beforeEach(() => {
     mockSetupStore.value = undefined;
-    mockLaunchEntry = { intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking' };
+    mockLaunchEntry = {
+      intent: 'first_run',
+      context: 'unregistered_device',
+      entryPolicy: 'blocking',
+    };
     jest.useFakeTimers();
     jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() } as never);
   });
@@ -97,7 +154,11 @@ describe('OnboardingScreen durable parent session', () => {
   });
 
   it('starts registered empty devices at currency with add-workplace intent', () => {
-    mockLaunchEntry = { intent: 'add_workplace', context: 'registered_empty_device', entryPolicy: 'blocking' };
+    mockLaunchEntry = {
+      intent: 'add_workplace',
+      context: 'registered_empty_device',
+      entryPolicy: 'blocking',
+    };
     render(<OnboardingScreen />);
     expect(screen.queryByTestId('name')).toBeNull();
     expect(screen.getByTestId('currency-continue')).toBeTruthy();
@@ -120,7 +181,9 @@ describe('OnboardingScreen durable parent session', () => {
     if (afterEdit?.kind !== 'cash_clarity') throw new Error('Expected a Cash Clarity session');
     expect(afterEdit.editableInput.amountTextById['bank-1']).toBe('500');
     expect(afterEdit.draft.accounts).toHaveLength(1);
-    act(() => { jest.advanceTimersByTime(600); });
+    act(() => {
+      jest.advanceTimersByTime(600);
+    });
     expect(screen.getByTestId('onboarding-sts-change')).toHaveTextContent(/Bank added/);
 
     fireEvent.press(screen.getByTestId('money-continue'));
@@ -192,6 +255,8 @@ describe('OnboardingScreen durable parent session', () => {
     const saved = mockSetupStore.value;
     expect(saved?.kind).toBe('cash_clarity');
     if (saved?.kind !== 'cash_clarity') throw new Error('Expected a Cash Clarity session');
-    expect(Object.prototype.hasOwnProperty.call(saved.editableInput.amountTextById, 'bank-1')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(saved.editableInput.amountTextById, 'bank-1')).toBe(
+      false,
+    );
   });
 });

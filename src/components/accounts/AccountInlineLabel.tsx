@@ -2,10 +2,13 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { isAccountArchived } from '@/src/utils/accountArchive';
+import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { getAccountTypeVariant, resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import {
+  getAccountTypeVariant,
+  resolveAccountAppearance,
+} from '@/src/design-system/accountPresentation';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 

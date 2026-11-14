@@ -1,7 +1,7 @@
 import { analytics } from '@/src/services/analytics';
 import type { Insight } from '@/src/services/insight/insightTypes';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import {
   findUnbalancedJournals,
   findUnbalancedJournalsByIds,

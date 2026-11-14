@@ -8,7 +8,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';

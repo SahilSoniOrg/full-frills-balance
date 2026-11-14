@@ -9,7 +9,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';

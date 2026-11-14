@@ -6,7 +6,7 @@ import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchi
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
+import { filterAccountsForDisplay } from '@/src/domain/accounts/accountArchive';
 import { firstValueFrom } from 'rxjs';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 

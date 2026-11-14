@@ -3,7 +3,7 @@ import { AccountsListView } from '../AccountsListView';
 import { AccountSectionViewModel, AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { StyleSheet } from 'react-native';
 
 jest.mock('@shopify/flash-list', () => {

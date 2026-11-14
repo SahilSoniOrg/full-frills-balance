@@ -1,11 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
+import { fireEvent, render, screen, waitFor } from '@/src/testing/render';
 import { AccountMatcherSavedRow } from '../AccountMatcherSavedRow';
 import type { AccountMatcherMatches } from '@/src/services/accounts/accountMatcherMatchQueries';
 import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toJournalDetails: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({
+  AppNavigation: { toJournalDetails: jest.fn() },
+}));
 jest.mock('@/src/components/core/AppToggle', () => {
   const React = jest.requireActual('react') as typeof import('react');
   const { Pressable } = jest.requireActual('react-native') as typeof import('react-native');

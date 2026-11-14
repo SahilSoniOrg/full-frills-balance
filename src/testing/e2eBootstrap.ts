@@ -1,4 +1,4 @@
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { readE2eLaunchConfig } from './e2eLaunchArgs';
 
 let bootstrapPromise: Promise<void> | null = null;

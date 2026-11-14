@@ -9,8 +9,8 @@ import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { asPlannedPaymentId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { headlineCurrency, safeAdd } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { headlineCurrency, safeAdd } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 
 export interface PlannedPaymentCurrencyTotal {

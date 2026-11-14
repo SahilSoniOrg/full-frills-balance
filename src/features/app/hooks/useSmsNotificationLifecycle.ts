@@ -8,7 +8,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { smsNotificationIntentStore } from '@/src/services/sms/SmsNotificationIntentStore';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { notificationService } from '@/src/services/notification/NotificationService';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import {
   recognitionRefreshState,
   refreshSmsRecognitionBestEffort,

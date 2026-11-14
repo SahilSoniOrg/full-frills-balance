@@ -1,7 +1,8 @@
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { DateRange, formatDate, formatShortDate } from '@/src/utils/dateUtils';
+import { DateRange } from '@/src/domain/calendar/dateRanges';
+import { formatDate, formatShortDate } from '@/src/utils/dateFormatting';
 import { useMemo } from 'react';
 import { Keyboard, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 

@@ -18,7 +18,7 @@ import { journalEnrichmentQueries } from '@/src/data/repositories/journal/Journa
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { MetadataKeys, MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -31,7 +31,7 @@ import {
   JournalBalanceError,
   resolveCurrencyPrecisions,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 
 export interface SubmitJournalResult {
@@ -48,7 +48,7 @@ export type PlannedJournalMode = 'auto' | 'manual' | 'post';
 function withPlannedStatus(data: CreateJournalData, mode?: PlannedJournalMode): CreateJournalData {
   if (!mode || mode === 'post' || data.journalDate <= Date.now()) return data;
   if (mode === 'manual') return { ...data, status: JournalStatus.PLANNED };
-  const metadataJson = safeParseJSON<Record<string, unknown>>(data.metadata?.metadataJson, {});
+  const metadataJson = parseJSONRecord(data.metadata?.metadataJson);
   return {
     ...data,
     status: JournalStatus.PLANNED,

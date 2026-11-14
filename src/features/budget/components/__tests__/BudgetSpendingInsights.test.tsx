@@ -1,5 +1,5 @@
 import { BudgetSpendingInsights } from '../BudgetSpendingInsights';
-import { cleanup, fireEvent, render } from '@/src/utils/test-utils';
+import { cleanup, fireEvent, render } from '@/src/testing/render';
 import { AccountType } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';

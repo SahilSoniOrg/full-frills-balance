@@ -1,6 +1,6 @@
 import { ExtractedInfo, RawTransactionInput, TransactionExtractor } from './TransactionExtractor';
-import { extractSmsReference } from '@/src/utils/sms/SmsReferenceExtractor';
-import { SMS_CURRENCY_SYMBOLS_PATTERN } from '@/src/utils/sms/smsCurrencyPattern';
+import { extractSmsReference } from '@/src/domain/transaction-intelligence/smsReference';
+import { SMS_CURRENCY_SYMBOLS_PATTERN } from '@/src/domain/transaction-intelligence/smsCurrencyPattern';
 
 export class SmsExtractor implements TransactionExtractor {
   canExtract(input: RawTransactionInput): boolean {

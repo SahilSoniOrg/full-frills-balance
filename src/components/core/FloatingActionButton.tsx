@@ -4,7 +4,7 @@ import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaLayout } from '@/src/design-system/SafeArea';

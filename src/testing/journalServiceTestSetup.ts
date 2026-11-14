@@ -4,7 +4,7 @@ jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
-jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/observability/logger');
 jest.mock('@/src/services/journal/JournalPersistenceService', () => ({
   journalPersistenceService: {
     put: jest.fn(),

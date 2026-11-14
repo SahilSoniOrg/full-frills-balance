@@ -4,7 +4,7 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Opacity } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { blendColors } from '@/src/utils/color-math';
+import { blendColors } from '@/src/design-system/colorMath';
 import type { JournalPlannedModel } from '../../journalDetailsPresentation';
 
 export function JournalPlannedActions({ planned }: { planned: JournalPlannedModel }) {

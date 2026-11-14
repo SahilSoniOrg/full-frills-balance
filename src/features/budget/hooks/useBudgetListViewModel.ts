@@ -5,7 +5,7 @@ import { EMPTY } from 'rxjs';
 import { BudgetItem } from '../types';
 import { sortBudgetItems, summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useMemo } from 'react';
 
 export function useBudgetListViewModel(

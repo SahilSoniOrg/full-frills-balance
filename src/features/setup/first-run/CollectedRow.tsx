@@ -14,7 +14,7 @@ import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 import { getLocales } from 'expo-localization';
 import dayjs from 'dayjs';
 import { useState } from 'react';

@@ -1,5 +1,5 @@
 import type { WorkplaceId } from '@/src/types/ids';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 
 const RESTORE_PUBLICATION_CLAIMS_KEY = 'restore_publication_claims_v1';
 

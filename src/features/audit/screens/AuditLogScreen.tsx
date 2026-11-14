@@ -2,7 +2,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { AuditLogView } from '@/src/features/audit/components/AuditLogView';
 import { useAuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 

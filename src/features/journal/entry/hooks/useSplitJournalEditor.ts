@@ -18,12 +18,12 @@ import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelp
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 import { TransactionType } from '@/src/types/enums';
-import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import {
   filterGuidedLegAccounts,
   isAccountAllowedOnGuidedLeg,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
-import { getInferredAccountType } from '@/src/utils/accountCategory';
+import { getInferredAccountType } from '@/src/domain/journal/journalAccountTypes';
 import { preferences } from '@/src/services/preferences';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';

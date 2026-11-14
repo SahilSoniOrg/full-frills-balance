@@ -18,7 +18,7 @@ jest.mock('@/src/services/preferences', () => ({
     workplace: { getSnapshot: (...args: unknown[]) => mockGetPreferences(...args) },
   },
 }));
-jest.mock('@/src/utils/compression', () => ({
+jest.mock('@/src/services/files/compression', () => ({
   compression: { createZipArchive: (...args: unknown[]) => mockCreateZipArchive(...args) },
 }));
 

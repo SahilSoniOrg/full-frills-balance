@@ -3,10 +3,10 @@ import { isAccountType } from '@/src/types/accountSubtype';
 import Currency from '@/src/data/models/Currency';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import type { BatchImportData, CanonicalTransaction } from '@/src/types/importContracts';
-import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
-import { isActiveJournalStatus } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
-import { roundToPrecision } from '@/src/utils/money';
+import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
+import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
+import { logger } from '@/src/services/observability/logger';
+import { roundToPrecision } from '@/src/domain/money/money';
 
 export type ImportBalancePatch = {
   transactionId: string;

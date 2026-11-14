@@ -1,6 +1,6 @@
 import { CollectStep, ConversationStep } from '../conversationUi';
 import { Spacing } from '@/src/constants/design-tokens';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { Keyboard, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { usePageKeyboard } from '@/src/design-system';
 

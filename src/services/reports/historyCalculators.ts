@@ -1,10 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { AccountType } from '@/src/types/enums';
 
 import { IncomeVsExpense } from '@/src/services/reports/reportSnapshot';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 
 export function getHistoryConfig(startDate: number, endDate: number) {

@@ -6,7 +6,7 @@ import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboard
 import { Inline, Stack } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import { MotiView } from 'moti';
 import { type ReactNode, useState } from 'react';
 import { StyleSheet } from 'react-native';

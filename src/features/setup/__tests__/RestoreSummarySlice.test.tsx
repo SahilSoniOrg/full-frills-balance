@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { asWorkplaceId } from '@/src/types/ids';
 import { RestoreSummarySlice } from '../RestoreSummarySlice';
 import type { RestoreSetupDraft } from '../setupTypes';

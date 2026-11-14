@@ -1,7 +1,7 @@
 import type JournalMetadata from '@/src/data/models/JournalMetadata';
 import { readCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
 import { readHistoricalSmsEvidence } from '@/src/domain/transaction-intelligence/historicalSmsEvidence';
-import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
+import { referenceNumberFromMetadataJson } from '@/src/domain/transaction-intelligence/smsReference';
 
 /**
  * Keep queryable journal_metadata columns aligned with metadata_json.

@@ -1,4 +1,4 @@
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 import { useState, useEffect } from 'react';
 import { ChromeMotion, Opacity, Shape } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';

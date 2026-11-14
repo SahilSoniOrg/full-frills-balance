@@ -1,4 +1,4 @@
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -28,13 +28,7 @@ export async function enrichTransactionInboxRecords(
   const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
   return records.map((record): TransactionInboxItem => {
-    const metadata = safeParseJSON<{
-      duplicateReasons?: string[];
-      captureReviewReason?: unknown;
-      emailSubject?: unknown;
-      gmailMessageId?: unknown;
-      internetMessageId?: unknown;
-    }>(record.metadataJson, {});
+    const metadata = parseJSONRecord(record.metadataJson);
     const captureReviewReason =
       record.processingStatus === InboxProcessingStatus.PENDING &&
       typeof metadata.captureReviewReason === 'string'
@@ -53,7 +47,11 @@ export async function enrichTransactionInboxRecords(
             totalAmount: duplicateJournal?.totalAmount,
             currencyCode: duplicateJournal?.currencyCode,
             score: record.duplicateConfidence || 0,
-            reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
+            reasons: Array.isArray(metadata.duplicateReasons)
+              ? metadata.duplicateReasons.filter(
+                  (reason): reason is string => typeof reason === 'string',
+                )
+              : [],
           }
         : undefined;
     const linkedJournal = record.linkedJournalId

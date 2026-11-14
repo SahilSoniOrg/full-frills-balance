@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { JournalEntryListView } from '../JournalEntryListView';
 import { AppConfig } from '@/src/constants';
 

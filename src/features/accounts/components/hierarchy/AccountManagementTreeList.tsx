@@ -9,7 +9,7 @@ import type {
 } from '@/src/services/accounts/accountTreeTargets';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { getAccountTreeSiblingMoveTargets } from '@/src/services/accounts/accountTreeTargets';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo } from 'react';

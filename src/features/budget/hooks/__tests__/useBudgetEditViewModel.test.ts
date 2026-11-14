@@ -44,7 +44,7 @@ jest.mock('@/src/services/budget/budgetReadService', () => ({
 jest.mock('@/src/services/budget/budgetWriteService', () => ({
   budgetWriteService: { createBudget: jest.fn(), updateBudget: jest.fn() },
 }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { back: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: { back: jest.fn() } }));
 
 const budget: PlainBudget = {
   id: asBudgetId('food'),

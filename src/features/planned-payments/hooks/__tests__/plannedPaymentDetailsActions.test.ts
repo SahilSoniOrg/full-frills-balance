@@ -1,15 +1,15 @@
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { type PlainPlannedPayment } from '@/src/types/plainDtos';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { AppConfig } from '@/src/constants/app-config';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import {
   buildPlannedPaymentDetailsActions,
   resolvePlannedPaymentActionTarget,
 } from '../plannedPaymentDetailsActions';
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
 }));
 

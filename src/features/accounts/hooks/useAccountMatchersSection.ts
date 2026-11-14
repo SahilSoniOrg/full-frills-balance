@@ -5,7 +5,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { setAccountMatcherEnabled } from '@/src/services/accounts/accountMatcherCommands';
 import type { AccountId } from '@/src/types/ids';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 import { useCallback, useState } from 'react';
 import type { AccountMatchersSectionModel } from './details/types';
 import { useAccountMatcherManagementViewModel } from './useAccountMatcherManagementViewModel';

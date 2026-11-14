@@ -5,7 +5,7 @@ import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants/desi
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import type { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

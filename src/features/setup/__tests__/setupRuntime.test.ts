@@ -1,5 +1,5 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { discardRestorePublication } from '../setupFinishers';
 import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from '../SetupDraftStore';
 import { getSetupRecipe } from '../setupRecipes';
@@ -14,7 +14,7 @@ import {
 } from '../setupRuntime';
 import type { RestoreSetupDraft } from '../setupTypes';
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toDashboard: jest.fn(),
     toSettings: jest.fn(),
@@ -104,22 +104,25 @@ describe('abandon restore', () => {
   });
 
   it('deletes published books, clears the draft, then follows discardTo', async () => {
-    await abandonRestoreJourney(
-      restoreDraft(true),
-      getSetupRecipe('first_run_restore'),
-    );
+    await abandonRestoreJourney(restoreDraft(true), getSetupRecipe('first_run_restore'));
     expect(discard).toHaveBeenCalledTimes(1);
     expect(clear).toHaveBeenCalledTimes(1);
     expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
   });
 
   it('returns picker restore to the dashboard after abandon', async () => {
-    await abandonRestoreJourney(restoreDraft(false, 'picker_restore'), getSetupRecipe('picker_restore'));
+    await abandonRestoreJourney(
+      restoreDraft(false, 'picker_restore'),
+      getSetupRecipe('picker_restore'),
+    );
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
   });
 
   it('dismisses Settings/drawer restore back to Settings after abandon', async () => {
-    await abandonRestoreJourney(restoreDraft(false, 'settings_restore'), getSetupRecipe('settings_restore'));
+    await abandonRestoreJourney(
+      restoreDraft(false, 'settings_restore'),
+      getSetupRecipe('settings_restore'),
+    );
     expect(AppNavigation.returnToSettings).toHaveBeenCalledTimes(1);
     expect(AppNavigation.back).not.toHaveBeenCalled();
     expect(AppNavigation.toSettings).not.toHaveBeenCalled();
@@ -135,11 +138,7 @@ describe('abandon restore', () => {
   });
 
   it('returns first-run restore to onboarding with the entered name', () => {
-    applySetupOutcome(
-      { kind: 'journey_discarded' },
-      getSetupRecipe('first_run_restore'),
-      'Sahil',
-    );
+    applySetupOutcome({ kind: 'journey_discarded' }, getSetupRecipe('first_run_restore'), 'Sahil');
     expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
   });
 });
@@ -153,7 +152,9 @@ describe('restore routing', () => {
 
   it('keeps an existing blocking restore ahead of a creation route parameter', () => {
     (loadSetupDraft as jest.Mock).mockReturnValue(restoreDraft(false));
-    expect(resolveSetupJourney({ journey: 'add_workplace', mode: 'full' })).toBe('first_run_restore');
+    expect(resolveSetupJourney({ journey: 'add_workplace', mode: 'full' })).toBe(
+      'first_run_restore',
+    );
   });
 
   it('replaces empty-device restore with the typed blocking creation entry on discard', async () => {

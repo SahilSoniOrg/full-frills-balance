@@ -1,12 +1,12 @@
 import { AccountType } from '@/src/types/enums';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
-import { getVariantColors } from '@/src/utils/style-helpers';
+import { getVariantColors } from '@/src/design-system/variants';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
+import { isValidHexColor } from '@/src/design-system/colorMath';
 import {
-  countAccountsVsCategories,
-  isValidHexColor,
   resolveAccountAccentColor,
   resolveAccountAppearance,
-} from '@/src/utils/accountCategory';
+} from '@/src/design-system/accountPresentation';
 
 const mockTheme = {
   asset: '#10B981',

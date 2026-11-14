@@ -7,7 +7,7 @@ import {
   getValuationIssues,
   type JournalBalanceEvaluation,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
-import { fromMinorUnits } from '@/src/utils/money';
+import { fromMinorUnits } from '@/src/domain/money/money';
 
 export function JournalAccountingIssues({ evaluation }: { evaluation?: JournalBalanceEvaluation }) {
   if (!evaluation || evaluation.isBalanced) return null;

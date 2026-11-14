@@ -1,6 +1,6 @@
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { Icon } from '@/src/types/domainIcons';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 describe('NoticeBanner', () => {
   it('renders the message and tone icon as an alert', () => {

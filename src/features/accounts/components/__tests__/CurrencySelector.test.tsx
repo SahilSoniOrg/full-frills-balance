@@ -1,6 +1,6 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
-import { render } from '@/src/utils/test-utils';
+import { render } from '@/src/testing/render';
 
 jest.mock('react-native/Libraries/Modal/Modal', () => ({
   __esModule: true,

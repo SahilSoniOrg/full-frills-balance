@@ -10,7 +10,7 @@ import {
 } from '@/src/services/currency/historicalExchangeRateProvider';
 import { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 import { isE2eOfflineMode } from '@/src/testing/e2eRuntimeGate';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Subject, type Observable } from 'rxjs';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours

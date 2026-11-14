@@ -1,5 +1,5 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { KeyboardAvoidingView, Text } from 'react-native';
 
 describe('BulkActionModalSurface', () => {

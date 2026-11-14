@@ -1,5 +1,5 @@
 import { toByteArray } from 'base64-js';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 interface GmailPart {
   mimeType?: string;

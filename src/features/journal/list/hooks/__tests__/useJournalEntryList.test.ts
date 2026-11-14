@@ -1,5 +1,5 @@
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { JournalDisplayType } from '@/src/types/enums';
 import { WorkplaceId, AccountId, JournalId } from '@/src/types/ids';
@@ -20,7 +20,7 @@ jest.mock('@/src/features/journal/hooks/useJournals', () => ({
   useJournals: jest.fn(),
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toJournalDetails: jest.fn() },
 }));
 
@@ -56,7 +56,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
   },
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
 
@@ -92,7 +92,7 @@ jest.mock('@/src/constants', () => {
   };
 });
 
-jest.mock('@/src/utils/money', () => ({
+jest.mock('@/src/domain/money/money', () => ({
   safeAdd: (a: number, b: number) => a + b,
   safeSubtract: (a: number, b: number) => a - b,
 }));

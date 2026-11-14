@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants';
 import { HubView } from '@/src/features/hub/components/HubView';
 import { useHubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo } from 'react';
 
 function HubScreen() {

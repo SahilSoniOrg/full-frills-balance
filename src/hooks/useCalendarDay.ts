@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import dayjs from 'dayjs';
-import { getNow } from '@/src/utils/dateUtils';
+import { getNow } from '@/src/utils/dateFormatting';
 
 export function useCalendarDay(): number {
   const [day, setDay] = useState(() => dayjs(getNow()).startOf('day').valueOf());

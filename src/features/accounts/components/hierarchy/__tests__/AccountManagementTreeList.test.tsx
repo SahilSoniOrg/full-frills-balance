@@ -1,5 +1,5 @@
 import { AccountManagementTreeList } from '../AccountManagementTreeList';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 jest.mock('@shopify/flash-list', () => ({ FlashList: () => null }));
 
 describe('AccountManagementTreeList', () => {

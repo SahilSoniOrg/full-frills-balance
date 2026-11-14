@@ -4,7 +4,7 @@ import {
   type SmsJournalInfoDisplay,
 } from '@/src/services/journal/journalDetailsHelpers';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 
 export interface JournalImportSource {
   name: string;

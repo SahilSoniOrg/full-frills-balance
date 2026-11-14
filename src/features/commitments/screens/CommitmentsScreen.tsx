@@ -6,7 +6,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { usePrimaryLeafPrepared } from '@/src/navigation/primaryPageNavigation';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 
 export type CommitmentsTab = 'budgets' | 'planned';

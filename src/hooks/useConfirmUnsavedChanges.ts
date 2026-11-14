@@ -1,5 +1,5 @@
-import { confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUpdateRestartGuard } from './useUpdateRestartGuard';

@@ -3,7 +3,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction } from '@/src/types/enums';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { BalanceVerificationResult, IntegrityRepairTrigger } from './types';
 import { verifyAccountBalance } from './integrityVerification';
 

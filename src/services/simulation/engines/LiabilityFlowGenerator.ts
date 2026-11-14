@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { isLoanSubtype } from '@/src/domain/accounts/accountSubtypes';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 import { AccountSubtype } from '@/src/types/enums';
 import {

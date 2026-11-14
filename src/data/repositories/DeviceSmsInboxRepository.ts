@@ -1,3 +1,4 @@
+import { readReviewStates } from './deviceSmsReviewState';
 import { database } from '@/src/data/database/Database';
 import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import type {
@@ -11,8 +12,8 @@ import type { SmsRecognitionSummary } from '@/src/types/accountMatcher';
 import { stageModelWrite, type AccountingWriteSession } from './AccountingWriteSession';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
-import { isSmsRedelivery } from '@/src/utils/smsDeliveryIdentity';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { isSmsRedelivery } from '@/src/domain/transaction-intelligence/smsDeliveryIdentity';
+import { parseJSONStringArray } from '@/src/utils/serialization';
 import { AppConfig } from '@/src/constants/app-config';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -48,9 +49,7 @@ export function deviceSmsSnapshot(
   record: DeviceSmsInboxRecord,
   workplaceId: WorkplaceId,
 ): InboxRecordSnapshot {
-  const state = safeParseJSON<Record<string, SmsWorkplaceReviewState>>(record.reviewStatesJson, {})[
-    workplaceId
-  ];
+  const state = readReviewStates(record.reviewStatesJson)[workplaceId];
   return {
     id: record.id,
     deviceInboxId: record.id,
@@ -143,10 +142,7 @@ export class DeviceSmsInboxRepository {
       return records.flatMap(record => {
         const update = byId.get(record.id);
         if (!update) return [];
-        const states = safeParseJSON<Record<string, SmsWorkplaceReviewState>>(
-          record.reviewStatesJson,
-          {},
-        );
+        const states = readReviewStates(record.reviewStatesJson);
         const current = states[workplaceId];
         const currentStatus =
           current?.processingStatus ??
@@ -239,11 +235,8 @@ export class DeviceSmsInboxRepository {
         data,
         options,
         reviewCompleted: false,
-        aliases: new Set(safeParseJSON<string[]>(existing?.providerAliasesJson, [])),
-        states: safeParseJSON<Record<string, SmsWorkplaceReviewState>>(
-          existing?.reviewStatesJson,
-          {},
-        ),
+        aliases: new Set(parseJSONStringArray(existing?.providerAliasesJson)),
+        states: readReviewStates(existing?.reviewStatesJson),
       };
       writes.set(id, staged);
       const write = staged;

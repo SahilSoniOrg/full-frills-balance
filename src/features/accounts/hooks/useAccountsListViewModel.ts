@@ -32,7 +32,7 @@ import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useSelection } from '@/src/hooks/useSelection';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
 import { useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

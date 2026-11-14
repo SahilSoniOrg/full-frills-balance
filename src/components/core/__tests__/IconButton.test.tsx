@@ -1,6 +1,6 @@
 import { IconButton } from '../IconButton';
 import { Icon } from '@/src/types/domainIcons';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 
 describe('IconButton accessibility', () => {
   it('honors an explicit checkbox role and mixed selection state', () => {

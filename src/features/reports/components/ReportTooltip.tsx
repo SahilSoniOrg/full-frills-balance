@@ -3,7 +3,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 
 interface NetWorthTooltipContentProps {

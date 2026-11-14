@@ -4,7 +4,7 @@ import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { AccountId } from '@/src/types/ids';
 import { StyleSheet, View } from 'react-native';
 import { accountMatcherNeedsAttention } from '../helpers/accountMatcherAttention';
@@ -16,7 +16,7 @@ import {
   AccountMatcherSuppressedRow,
 } from './AccountMatcherProposalRow';
 import { AccountMatcherSavedRow } from './AccountMatcherSavedRow';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 
 export function AccountMatchersSection({
   accountId,

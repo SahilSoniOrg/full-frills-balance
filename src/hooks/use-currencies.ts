@@ -1,9 +1,10 @@
+import { getCurrencyPrecision, normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { useObservable } from '@/src/hooks/useObservable';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { PlainCurrency } from '@/src/types/plainDtos';
-import { CurrencyFormatter, normalizeCurrencyCode } from '@/src/utils/currencyFormatter';
-import { logger } from '@/src/utils/logger';
+
+import { logger } from '@/src/services/observability/logger';
 import { useEffect, useMemo } from 'react';
 
 /**
@@ -37,7 +38,7 @@ export function useCurrencyPrecision(code: string | undefined) {
     const currency = currencies.find(c => normalizeCurrencyCode(c.code) === normalizedCode);
     if (currency) return currency.precision;
 
-    return CurrencyFormatter.getPrecisionFallback(normalizedCode);
+    return getCurrencyPrecision(normalizedCode);
   }, [currencies, code]);
 
   return { precision, isLoading };

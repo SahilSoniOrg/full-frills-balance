@@ -3,9 +3,9 @@ import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { analytics } from '@/src/services/analytics';
-import { compression } from '@/src/utils/compression';
-import { logger } from '@/src/utils/logger';
-import { safeDiagnosticError } from '@/src/utils/observabilityPrivacy';
+import { compression } from '@/src/services/files/compression';
+import { logger } from '@/src/services/observability/logger';
+import { safeDiagnosticError } from '@/src/services/observability/privacy';
 import { ShareFormat, type Shareable } from '@/src/types/sharing';
 import { throwIfShareAborted } from './sharingCancellation';
 
@@ -62,7 +62,7 @@ export function createDiagnosticShareable(
         try {
           return { kind: 'base64', content: archive.base64 };
         } finally {
-          archive.cleanup();
+          await archive.cleanup();
         }
       }
       return { kind: 'text', content: `${metadata}\n\n--- RECENT LOGS ---\n${logs}` };

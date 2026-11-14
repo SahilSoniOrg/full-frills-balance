@@ -2,7 +2,7 @@ import { ANALYTICS_SANITIZE_CASES } from '@/src/testing/analyticsPrivacyFixtures
 import { AnalyticsService } from '../analytics/analyticsService';
 import * as Sentry from '@sentry/react-native';
 import { AppConfig } from '@/src/constants/app-config';
-import { sanitizeAnalyticsProperties } from '@/src/utils/observabilityPrivacy';
+import { sanitizeAnalyticsProperties } from '@/src/services/observability/privacy';
 
 // Mock PostHog
 jest.mock('posthog-react-native', () => {

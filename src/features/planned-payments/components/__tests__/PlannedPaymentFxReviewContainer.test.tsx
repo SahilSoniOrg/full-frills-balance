@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { PlannedPaymentFxReviewSheet } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
 import type { PlannedPaymentFxReviewRequest } from '@/src/services/planned-payment/plannedPaymentFx';
 import { asAccountId, asPlannedPaymentId, asWorkplaceId } from '@/src/types/ids';

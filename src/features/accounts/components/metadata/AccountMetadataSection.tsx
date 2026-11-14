@@ -7,7 +7,7 @@ import { accountFormStrings as copy } from '@/src/constants/copy/domains/account
 import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { AccountType, type AccountSubtype } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/domain/accounts/accountSubtypes';
 import { View } from 'react-native';
 import { CreditCardMetadataFields } from './CreditCardMetadataFields';
 import { LoanMetadataFields } from './LoanMetadataFields';

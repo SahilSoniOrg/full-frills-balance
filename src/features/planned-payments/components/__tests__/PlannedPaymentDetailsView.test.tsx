@@ -1,6 +1,6 @@
 import { PlannedPaymentDetailsView } from '../PlannedPaymentDetailsView';
 import type { PlannedPaymentDetailsViewModel } from '../../hooks/usePlannedPaymentDetailsViewModel';
-import { cleanup, fireEvent, render, within } from '@/src/utils/test-utils';
+import { cleanup, fireEvent, render, within } from '@/src/testing/render';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
 import { AccountType, JournalDisplayType, PlannedPaymentStatus } from '@/src/types/enums';
 import { asJournalId, type AccountId, type JournalId } from '@/src/types/ids';

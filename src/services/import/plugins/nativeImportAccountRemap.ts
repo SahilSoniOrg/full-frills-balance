@@ -21,7 +21,7 @@ import {
   parseFundingAccountIds,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import {
   conditionsKeyFor,
   parseStoredMatcherDefinition,

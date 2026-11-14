@@ -2,7 +2,7 @@ import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/co
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { InboxProcessingStatus } from '@/src/types/enums';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { AccountMatcherEditorViewModel } from '../hooks/details/types';

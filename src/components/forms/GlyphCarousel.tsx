@@ -12,7 +12,7 @@ import {
   type LayoutChangeEvent,
   type ListRenderItemInfo,
 } from 'react-native';
-import { getReadableColor, withOpacity } from '@/src/utils/color-math';
+import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 
 export interface GlyphCarouselItem {
   key: string;

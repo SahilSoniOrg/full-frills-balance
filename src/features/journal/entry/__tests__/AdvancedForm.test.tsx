@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { AdvancedForm } from '../components/AdvancedForm';
 import { resolveFxPair } from '@/src/domain/accounting/fxPair';
 import type { AdvancedJournalFormController } from '../hooks/useAdvancedJournalForm';

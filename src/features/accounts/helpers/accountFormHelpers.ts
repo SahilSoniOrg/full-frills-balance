@@ -2,8 +2,8 @@ import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { getAccountTreeParentCandidates } from '@/src/services/accounts/accountTree';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
+import { getAccountTreeParentCandidates } from '@/src/domain/accounts/accountTree';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
 
 export { isCategoryAccountType };
 

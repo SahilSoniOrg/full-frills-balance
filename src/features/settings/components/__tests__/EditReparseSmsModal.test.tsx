@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@/src/utils/test-utils';
+import { act, fireEvent, render, waitFor } from '@/src/testing/render';
 import { EditReparseSmsModal } from '../EditReparseSmsModal';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';

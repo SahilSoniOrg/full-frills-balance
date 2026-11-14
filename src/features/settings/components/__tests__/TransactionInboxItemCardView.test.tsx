@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { TransactionInboxItemCardView } from '../TransactionInboxItemCardView';
 import { JournalId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';

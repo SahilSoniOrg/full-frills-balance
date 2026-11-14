@@ -3,7 +3,7 @@ import { SelectionCheckmark } from './SelectionIndicator';
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useEffect, useRef } from 'react';

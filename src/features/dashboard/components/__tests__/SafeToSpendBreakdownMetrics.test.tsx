@@ -1,5 +1,5 @@
 import { SafeToSpendBreakdownMetrics } from '@/src/features/dashboard/components/SafeToSpendBreakdownMetrics';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { StyleSheet } from 'react-native';
 
 const defaultProps = {

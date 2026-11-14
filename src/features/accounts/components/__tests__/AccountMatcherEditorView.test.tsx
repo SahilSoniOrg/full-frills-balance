@@ -92,7 +92,7 @@ jest.mock('@/src/features/accounts/components/SelectableSmsText', () => ({
 jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({ theme: { surfaceSecondary: '#fff' } }),
 }));
-jest.mock('@/src/utils/dateUtils', () => ({ formatDate: () => 'date' }));
+jest.mock('@/src/utils/dateFormatting', () => ({ formatDate: () => 'date' }));
 
 const makeViewModel = () =>
   ({

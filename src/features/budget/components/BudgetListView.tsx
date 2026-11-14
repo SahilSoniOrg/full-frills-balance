@@ -1,7 +1,7 @@
 import { AppText, EmptyStateView, ErrorStateView, LoadingView } from '@/src/components/core';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';

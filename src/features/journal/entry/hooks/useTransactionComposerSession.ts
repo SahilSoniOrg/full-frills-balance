@@ -6,7 +6,7 @@ import type {
 } from '@/src/types/domainTransaction';
 import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useSplitDraftProjection } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import { useCallback, useMemo } from 'react';

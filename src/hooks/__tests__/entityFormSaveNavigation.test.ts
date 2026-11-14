@@ -6,7 +6,7 @@ import { useConfirmUnsavedChanges } from '../useConfirmUnsavedChanges';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { createPlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { asAccountId } from '@/src/types/ids';
-import { confirm } from '@/src/utils/alerts';
+import { confirm } from '@/src/services/feedback/alerts';
 import { isUpdateRestartBlocked } from '@/src/services/update/updateRestartGuard';
 import type Budget from '@/src/data/models/Budget';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -29,7 +29,7 @@ jest.mock('expo-router', () => ({
     }, [enabled, callback]);
   },
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: jest.fn(() => {
       mockGuardAtNavigation(mockPreventRemove);
@@ -65,11 +65,11 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
 }));
 jest.mock('@/src/hooks/use-currencies', () => ({ useCurrencies: () => ({ currencies: [] }) }));
 jest.mock('@/src/services/analytics', () => ({ analytics: { trackFeatureUsage: jest.fn() } }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   toast: { error: jest.fn() },
 }));
-jest.mock('@/src/utils/logger', () => ({ logger: { error: jest.fn() } }));
+jest.mock('@/src/services/observability/logger', () => ({ logger: { error: jest.fn() } }));
 
 function useBudgetHarness() {
   const vm = useBudgetEditViewModel({});

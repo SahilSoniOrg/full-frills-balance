@@ -9,7 +9,7 @@ import {
 import { isValidIconName } from '@/src/types/domainIcons';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
+import { isDebitNormalAccountType } from '@/src/domain/accounts/accountClassification';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import {
   isCategoryAccountType,

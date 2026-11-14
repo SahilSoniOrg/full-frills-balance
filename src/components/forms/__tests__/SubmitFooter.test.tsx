@@ -1,6 +1,6 @@
 import { ThemeIds } from '@/src/constants/design-tokens';
 import { ThemeOverride } from '@/src/contexts/UIContext';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { SubmitFooter } from '../SubmitFooter';
 
 jest.mock('@/src/design-system/Keyboard', () => ({
@@ -23,8 +23,6 @@ describe('SubmitFooter', () => {
     expect(screen.queryByText('Choose a category')).toBeNull();
     fireEvent.press(screen.getByText('Save budget'));
     expect(screen.getByText('Choose a category')).toBeTruthy();
-    expect(screen.getByTestId('submit-footer-button').props.accessibilityState.disabled).toBe(
-      true,
-    );
+    expect(screen.getByTestId('submit-footer-button').props.accessibilityState.disabled).toBe(true);
   });
 });

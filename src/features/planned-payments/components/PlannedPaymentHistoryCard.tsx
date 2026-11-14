@@ -14,9 +14,9 @@ import {
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { JournalDisplayType } from '@/src/types/enums';
-import { getVariantColors, type ComponentVariant } from '@/src/utils/style-helpers';
+import { getVariantColors, type ComponentVariant } from '@/src/design-system/variants';
 const copy = AppConfig.strings.plannedDetailRedesign;
 
 export interface PlannedPaymentHistoryCardProps {

@@ -23,9 +23,9 @@ import {
 } from '@/src/types/ids';
 import { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
-import * as Alerts from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
-import { logger } from '@/src/utils/logger';
+import * as Alerts from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { logger } from '@/src/services/observability/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';

@@ -1,8 +1,8 @@
 import { Typography } from '@/src/constants/design-tokens';
 import { resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { getReadableColor } from '@/src/utils/color-math';
-import { ComponentVariant } from '@/src/utils/style-helpers';
+import { getReadableColor } from '@/src/design-system/colorMath';
+import { ComponentVariant } from '@/src/design-system/variants';
 import { memo, useMemo } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 

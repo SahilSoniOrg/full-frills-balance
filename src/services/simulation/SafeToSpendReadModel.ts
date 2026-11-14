@@ -13,7 +13,7 @@ import {
 } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Platform } from 'react-native';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';

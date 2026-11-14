@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
-import type { ActiveJournalStatus } from '@/src/utils/journalStatus';
+import type { ActiveJournalStatus } from '@/src/domain/journal/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { Observable, of } from 'rxjs';
 import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';

@@ -17,7 +17,7 @@ import {
   usePrimaryPageNavigation,
 } from '@/src/navigation/primaryPageNavigation';
 import { analytics } from '@/src/services/analytics';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useScrollToTop, useIsFocused } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';

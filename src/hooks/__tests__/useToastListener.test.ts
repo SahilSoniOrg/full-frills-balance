@@ -1,9 +1,9 @@
-import { clearToastListener, setToastListener, ToastPayload } from '@/src/utils/alerts';
+import { clearToastListener, setToastListener, ToastPayload } from '@/src/services/feedback/alerts';
 import { act, renderHook } from '@testing-library/react-native';
 import { useToastListener } from '../useToastListener';
 
 // Mock alerts utility
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   setToastListener: jest.fn(),
   clearToastListener: jest.fn(),
 }));

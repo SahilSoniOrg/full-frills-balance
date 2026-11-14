@@ -7,7 +7,7 @@ import {
   readPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
 
-jest.mock('@/src/utils/storage', () => {
+jest.mock('@/src/data/storage/storage', () => {
   const memory = new Map<string, string>();
   return {
     storage: {

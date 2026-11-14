@@ -1,4 +1,4 @@
-import { isActiveJournalStatus } from '@/src/utils/journalStatus';
+import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
 import dayjs from 'dayjs';
 
 /**

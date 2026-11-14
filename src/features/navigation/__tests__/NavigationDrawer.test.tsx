@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { NavigationDrawer } from '@/src/features/navigation/NavigationDrawer';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import type { ComponentProps } from 'react';
 import { BackHandler, Platform, View } from 'react-native';
@@ -82,7 +82,7 @@ jest.mock('@/src/hooks/useObservable', () => ({
     ],
   }),
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toReports: jest.fn(),
     toHub: jest.fn(),

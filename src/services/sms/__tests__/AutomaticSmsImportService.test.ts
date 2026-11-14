@@ -2,7 +2,7 @@ import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImport
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { preferences } from '@/src/services/preferences';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 
@@ -40,7 +40,7 @@ jest.mock('@/src/services/preferences', () => ({
   },
 }));
 
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     getString: jest.fn(),
     set: jest.fn(),

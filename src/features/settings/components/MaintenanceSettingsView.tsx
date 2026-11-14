@@ -13,8 +13,8 @@ import {
   journalBalanceInsightService,
   resetDatabase,
 } from '@/src/services/integrity';
-import { AppNavigation } from '@/src/utils/navigation';
-import { toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { toast } from '@/src/services/feedback/alerts';
 import { useCallback } from 'react';
 
 function MaintenanceSettingsView() {

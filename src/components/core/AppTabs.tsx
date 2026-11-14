@@ -3,7 +3,7 @@ import { BorderWidth, ChromeMotion, Opacity, Size, Spacing } from '@/src/constan
 import { Box } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 import React, { memo, useEffect, useRef, useState } from 'react';
 import {
   Animated,

@@ -20,8 +20,8 @@ import {
 } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { useTheme } from '@/src/hooks/use-theme';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { withOpacity } from '@/src/utils/color-math';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 

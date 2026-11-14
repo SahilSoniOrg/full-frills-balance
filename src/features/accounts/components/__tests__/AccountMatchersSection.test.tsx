@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { AccountMatchersSection } from '../AccountMatchersSection';
 import { useAccountMatcherManagementViewModel } from '@/src/features/accounts/hooks/useAccountMatcherManagementViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { asAccountId } from '@/src/types/ids';
 import type {
   AccountMatcherProposal,
@@ -17,7 +17,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 jest.mock('@/src/features/accounts/hooks/useAccountMatcherManagementViewModel', () => ({
   useAccountMatcherManagementViewModel: jest.fn(),
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toAccountMatcherEditor: jest.fn() },
 }));
 

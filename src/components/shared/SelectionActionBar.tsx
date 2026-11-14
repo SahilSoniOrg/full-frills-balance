@@ -9,7 +9,7 @@ import {
 } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';

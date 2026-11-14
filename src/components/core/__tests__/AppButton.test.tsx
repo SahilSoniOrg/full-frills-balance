@@ -1,6 +1,6 @@
 import { AppButton } from '@/src/components/core/AppButton';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { MotiView } from 'moti';
 import { StyleSheet } from 'react-native';
 

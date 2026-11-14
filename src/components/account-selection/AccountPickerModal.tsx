@@ -6,7 +6,7 @@ import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet } from 'react-native';
 

@@ -1,9 +1,9 @@
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import type { WorkplaceId } from '@/src/types/ids';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { connectGmail, disconnectGmail, gmailAccessToken } from './gmailAuthorization';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/utils/gmailBindingKey';
+import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/services/email/gmailBindingKey';
 
 interface GmailBinding {
   accountId: string;
@@ -26,7 +26,7 @@ function connectedGmailAccountIds(): Set<string> {
   for (const key of storage.getAllKeys()) {
     if (!key.startsWith(GMAIL_BINDING_KEY_PREFIX)) continue;
     const raw = storage.getString(key);
-    const value = raw ? safeParseJSON<{ accountId?: unknown } | null>(raw, null) : null;
+    const value = raw ? parseJSONRecord(raw) : null;
     if (typeof value?.accountId === 'string' && value.accountId) accountIds.add(value.accountId);
   }
   return accountIds;
@@ -35,7 +35,7 @@ function connectedGmailAccountIds(): Set<string> {
 /** Device-local association; a Workplace backup never contains Google identity or authorization. */
 export function gmailBinding(workplaceId: WorkplaceId): GmailBinding | null {
   const raw = storage.getString(gmailBindingKey(workplaceId));
-  const value = raw ? safeParseJSON<Partial<GmailBinding> | null>(raw, null) : null;
+  const value = raw ? parseJSONRecord(raw) : null;
   return value &&
     typeof value.accountId === 'string' &&
     value.accountId &&

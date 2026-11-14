@@ -7,7 +7,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
 import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';

@@ -16,8 +16,8 @@ import {
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import type { TabType } from '@/src/types/domainJournal';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
+import { logger } from '@/src/services/observability/logger';
 import { Q } from '@nozbe/watermelondb';
 
 /** Row shape returned by `getEnrichmentDataRaw`. */

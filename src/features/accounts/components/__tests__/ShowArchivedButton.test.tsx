@@ -3,7 +3,7 @@ import {
   ArchiveVisibilityScopeProvider,
   useArchiveVisibility,
 } from '@/src/contexts/ArchiveVisibilityScope';
-import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/testing/render';
 import { Pressable, Text } from 'react-native';
 
 function EnableShowArchived() {

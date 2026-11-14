@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@/src/utils/test-utils';
+import { act, renderHook, waitFor } from '@/src/testing/render';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import {
@@ -9,7 +9,7 @@ import {
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
 import { usePlannedPayments } from '../usePlannedPayments';
 
@@ -22,7 +22,7 @@ jest.mock('@/src/services/planned-payment/plannedPaymentReadService', () => ({
   ...jest.requireActual('@/src/services/planned-payment/plannedPaymentReadService'),
   plannedPaymentReadService: { observeListData: jest.fn() },
 }));
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toPlannedPaymentDetails: jest.fn() },
 }));
 

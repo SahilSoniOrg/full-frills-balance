@@ -4,7 +4,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { JournalEntryLeg, JournalEntryAccountFlow } from '@/src/types/journalEntryCard';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
 import { useId, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';

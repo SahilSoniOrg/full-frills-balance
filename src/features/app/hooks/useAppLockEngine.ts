@@ -1,10 +1,10 @@
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppConfig } from '@/src/constants/app-config';
-import * as LocalAuthentication from '@/src/utils/auth';
+import * as LocalAuthentication from '@/src/services/auth/localAuthentication';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 const AUTH_COOLDOWN_MS = 2000;
 

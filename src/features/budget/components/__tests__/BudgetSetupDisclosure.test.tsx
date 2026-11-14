@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { BudgetSetupDisclosure } from '../BudgetSetupDisclosure';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, BudgetId } from '@/src/types/ids';

@@ -15,8 +15,8 @@ import type {
 import { AccountType } from '@/src/types/enums';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { ComponentVariant } from '@/src/utils/style-helpers';
+import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
+import { ComponentVariant } from '@/src/design-system/variants';
 
 export type {
   AncestorAccountViewModel,

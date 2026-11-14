@@ -5,7 +5,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { buildFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
+import { triggerSaveOutcomeHaptic } from '@/src/design-system/haptics';
 import { act, renderHook } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
@@ -27,7 +27,7 @@ jest.mock('@/src/services/journal/journalDomainService', () => ({
   },
 }));
 
-jest.mock('@/src/utils/haptics', () => ({
+jest.mock('@/src/design-system/haptics', () => ({
   triggerSaveOutcomeHaptic: jest.fn(),
 }));
 

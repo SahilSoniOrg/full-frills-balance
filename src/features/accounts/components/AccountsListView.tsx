@@ -28,7 +28,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
 export function AccountsListView({
   sections,

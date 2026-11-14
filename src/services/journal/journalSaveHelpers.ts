@@ -2,10 +2,10 @@ import { transactionInboxRepository } from '@/src/data/repositories/TransactionI
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { AccountType } from '@/src/types/enums';
 import { preferences } from '@/src/services/preferences';
 import {

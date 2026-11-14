@@ -8,8 +8,8 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { logger } from '@/src/utils/logger';
-import { Trace, startTrace } from '@/src/utils/TraceService';
+import { logger } from '@/src/services/observability/logger';
+import { Trace, startTrace } from '@/src/services/observability/TraceService';
 import { balanceHierarchyAggregator } from './balanceHierarchyAggregator';
 
 export class BalanceReadService {

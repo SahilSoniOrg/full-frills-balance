@@ -19,7 +19,7 @@ import { generatePlannedOccurrence } from '@/src/services/planned-payment/planne
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 const dueProcessingByWorkplace = new Map<WorkplaceId, Promise<void>>();
 

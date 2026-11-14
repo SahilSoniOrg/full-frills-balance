@@ -1,5 +1,5 @@
 import type AccountMetadata from '@/src/data/models/AccountMetadata';
-import { getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
 import { AccountId } from '@/src/types/ids';

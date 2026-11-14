@@ -2,10 +2,10 @@ import type { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
-import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { normalizeSmsReferenceNumber } from '@/src/domain/transaction-intelligence/smsReference';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/domain/transaction-intelligence/smsFingerprintHash';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;

@@ -1,5 +1,5 @@
 import { SafeToSpendCardLayout } from '@/src/features/dashboard/components/SafeToSpendCardLayout';
-import { fireEvent, render, screen, within } from '@/src/utils/test-utils';
+import { fireEvent, render, screen, within } from '@/src/testing/render';
 import { Text } from 'react-native';
 
 function renderLayout() {

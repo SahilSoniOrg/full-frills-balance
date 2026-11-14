@@ -3,7 +3,7 @@ import {
   createAccountTreeSnapshot,
   type AccountTreeSnapshot,
   type OrderedAccount,
-} from './accountTree';
+} from '@/src/domain/accounts/accountTree';
 
 export type AccountTreeDropKind = 'sibling-before' | 'sibling-after' | 'outside' | 'child';
 

@@ -1,6 +1,6 @@
 import { Spacing } from '@/src/constants/design-tokens';
 import { Page, usePageKeyboard } from '@/src/design-system/Page';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 import { Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SafeAreaFrame } from '@/src/design-system/SafeArea';

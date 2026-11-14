@@ -1,5 +1,5 @@
 import { getThemeColors, ThemeIds, type Theme } from '../design-tokens';
-import { getContrastRatio, getLuminance } from '@/src/utils/color-math';
+import { getContrastRatio, getLuminance } from '@/src/design-system/colorMath';
 
 const ratio = (foreground: string, background: string) =>
   getContrastRatio(getLuminance(foreground), getLuminance(background));

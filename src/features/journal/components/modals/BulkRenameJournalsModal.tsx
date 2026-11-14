@@ -6,7 +6,7 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType } from '@/src/types/enums';
 import { JournalId } from '@/src/types/ids';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDate } from '@/src/utils/dateUtils';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 

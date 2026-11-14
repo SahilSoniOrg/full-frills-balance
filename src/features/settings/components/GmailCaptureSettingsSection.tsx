@@ -2,7 +2,7 @@ import { AppButton, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { gmailCaptureStrings as strings } from '@/src/constants/copy/domains/gmailCaptureStrings';
 import type { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { Platform } from 'react-native';
 
 export function GmailCaptureSettingsSection({

@@ -49,7 +49,7 @@ import {
 } from '@/src/domain/planned-payment/sharedMovementMatcher';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { generator } from '@/src/data/database/idGenerator';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 export type PlannedOccurrenceAction =
   | { kind: 'generate'; asOf: number }

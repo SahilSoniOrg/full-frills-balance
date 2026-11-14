@@ -3,7 +3,7 @@ import Collection from '@nozbe/watermelondb/Collection';
 import Model from '@nozbe/watermelondb/Model';
 import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { WorkplaceId } from '@/src/types/ids';
 import { syncWatermelonWorkplaceCache } from '@/src/data/database/WatermelonWorkplaceCacheBridge';
 

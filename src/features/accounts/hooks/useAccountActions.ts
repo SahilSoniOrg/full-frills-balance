@@ -23,7 +23,7 @@ import {
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
 import { disbandAccountGroup } from '@/src/services/accounts/accountGroupCommands';
-import { AccountArchiveChanges } from '@/src/utils/accountArchive';
+import { AccountArchiveChanges } from '@/src/domain/accounts/accountArchive';
 import { useCallback } from 'react';
 
 /** CRUD + management actions. Prefer importing this over the fat `useAccounts` module. */

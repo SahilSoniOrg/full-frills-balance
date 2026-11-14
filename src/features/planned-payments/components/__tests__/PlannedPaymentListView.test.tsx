@@ -12,7 +12,7 @@ import {
   fixturePlannedPaymentObligation,
   fixturePlannedPaymentSavedForPlan as saved,
 } from '@/src/testing/plannedPaymentFixtures';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { StyleSheet, View } from 'react-native';
 
 jest.mock('@/src/features/planned-payments/hooks/usePlannedListRecord', () => ({

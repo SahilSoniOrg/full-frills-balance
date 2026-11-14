@@ -10,9 +10,9 @@ import { updateAccounts as updateAccountsCommand } from '@/src/services/accounts
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { confirm, showErrorAlert } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { confirm, showErrorAlert } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { Dispatch, SetStateAction, useCallback } from 'react';
 
 interface UseAccountsListActionsInput {

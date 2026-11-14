@@ -40,7 +40,7 @@ jest.mock('@/src/hooks/useDateRangeFilter', () => ({
   }),
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toJournalDetails: jest.fn() },
 }));
 
@@ -71,7 +71,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
   },
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/src/services/observability/logger', () => ({
   logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), metric: jest.fn() },
 }));
 
@@ -107,7 +107,7 @@ jest.mock('@/src/constants', () => {
   };
 });
 
-jest.mock('@/src/utils/money', () => ({
+jest.mock('@/src/domain/money/money', () => ({
   safeAdd: (a: number, b: number) => a + b,
   safeSubtract: (a: number, b: number) => a - b,
 }));

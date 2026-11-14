@@ -30,10 +30,10 @@ import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from 
 import { AccountId, brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
-import { isActiveJournalStatus } from '@/src/utils/journalStatus';
-import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
+import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
+import { hashSmsMetadataFingerprints } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { stageJournalCaptureMetadataWrite } from '@/src/data/repositories/AccountingWriteSession';
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import {
@@ -523,9 +523,7 @@ export async function stagePost(
     .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
     .fetch();
   const originalMetadataJson = JSON.stringify({
-    ...(existingMetadata
-      ? safeParseJSON<Record<string, unknown>>(existingMetadata.metadataJson, {})
-      : {}),
+    ...(existingMetadata ? parseJSONRecord(existingMetadata.metadataJson) : {}),
     [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalPlannedDate,
   });
   stageJournalCaptureMetadataWrite(

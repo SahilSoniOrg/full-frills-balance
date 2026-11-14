@@ -2,7 +2,7 @@ import { SelectableGrid, type SelectableItem } from '@/src/components/shared/Sel
 import { AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { orderSetupCurrencies } from '@/src/features/setup/orderSetupCurrencies';

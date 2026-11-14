@@ -25,12 +25,12 @@ import {
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import type { PlainAccountMetadata } from '@/src/types/plainDtos';
-import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
-import { isValidHexColor } from '@/src/utils/accountCategory';
+import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
+import { isValidHexColor } from '@/src/design-system/colorMath';
 import {
   createAccountTreeSnapshot,
   planAccountTreePlacementChange,
-} from '@/src/services/accounts/accountTree';
+} from '@/src/domain/accounts/accountTree';
 
 export type AccountDetailsUpdate = Partial<
   Pick<

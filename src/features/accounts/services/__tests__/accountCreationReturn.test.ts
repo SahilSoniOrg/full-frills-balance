@@ -3,7 +3,7 @@ import {
   decodeAccountCreationReturnTarget,
   encodeAccountCreationReturnTarget,
   returnCreatedAccountToJournalEntry,
-} from '@/src/utils/accountCreationReturn';
+} from '@/src/navigation/accountCreationReturn';
 
 function createNavigation(routes: { key: string; name: string }[], index = routes.length - 1) {
   return {

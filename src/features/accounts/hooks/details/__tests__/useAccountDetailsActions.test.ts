@@ -1,10 +1,10 @@
-import { renderHook } from '@/src/utils/test-utils';
+import { renderHook } from '@/src/testing/render';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useAccountDetailsActions } from '../useAccountDetailsActions';
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: { toJournalEntry: jest.fn(), toSimpleJournalEntry: jest.fn() },
 }));
 

@@ -1,5 +1,5 @@
 import { createWorkletRuntime, runOnRuntimeAsync } from 'react-native-worklets';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { runBalanceSimulation, type BalanceSimulationInput } from './balanceSimulation';
 import { LatestSimulationRunner } from './LatestSimulationRunner';
 import { throwIfSimulationAborted } from './simulationCancellation';

@@ -1,7 +1,7 @@
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { analytics } from '@/src/services/analytics';
-import { alert, confirm } from '@/src/utils/alerts';
-import * as LocalAuthentication from '@/src/utils/auth';
+import { alert, confirm } from '@/src/services/feedback/alerts';
+import * as LocalAuthentication from '@/src/services/auth/localAuthentication';
 import { useCallback } from 'react';
 import { Linking, Platform } from 'react-native';
 

@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
-import { isAccountArchived } from '@/src/utils/accountArchive';
-import { confirm, type ConfirmOptions } from '@/src/utils/alerts';
+import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
+import { confirm, type ConfirmOptions } from '@/src/services/feedback/alerts';
 import { AccountId } from '@/src/types/ids';
 
 export type ArchiveIntent = {

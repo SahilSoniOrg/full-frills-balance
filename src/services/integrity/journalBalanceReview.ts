@@ -3,17 +3,15 @@ import {
   type JournalBalanceSource,
   type JournalBalanceSourceLine,
 } from '@/src/data/repositories/journal/journalBalanceLineQueries';
-import {
-  normalizeCurrencyCode,
-  proposeUniqueJournalFxRate,
-} from '@/src/domain/accounting/journalBalanceEvaluator';
+import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
+import { proposeUniqueJournalFxRate } from '@/src/domain/accounting/journalBalanceEvaluator';
 import type {
   JournalBalanceLineEdit,
   JournalBalanceReviewEntry,
 } from '@/src/domain/accounting/journalBalanceReview';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
-import { sanitizeAmount } from '@/src/utils/validation';
+import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { resolveJournalPrecisions, type UnbalancedJournal } from './journalBalanceAudit';
 import {
   journalBalanceInsightService,

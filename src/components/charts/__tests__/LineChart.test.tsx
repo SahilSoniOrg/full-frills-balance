@@ -1,6 +1,6 @@
 import { LineChart, type DataPoint } from '../LineChart';
 import { ChartInteractionProvider } from '../ChartInteractionProvider';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 describe('LineChart accessibility', () => {
   it.each([

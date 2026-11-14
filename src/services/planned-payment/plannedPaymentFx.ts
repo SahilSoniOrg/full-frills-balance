@@ -10,12 +10,12 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { resolveRequiredExchangeRate } from '@/src/services/currencyConversion';
 import { requirePlannedPayment } from './plannedPaymentWorkplace';
 import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
-import { normalizeCurrencyCode } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import type { JournalWriteLine, JournalWriteMetadata } from '@/src/types/journalWrite';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { AppConfig } from '@/src/constants';
 
 export interface PlannedPaymentFxReview {
@@ -84,7 +84,7 @@ export async function readPlannedPaymentFxContext(
   const storedMetadata = journal
     ? await findJournalMetadataByJournalId(journal.id, payment.workplaceId)
     : undefined;
-  const metadataJson = safeParseJSON<Record<string, unknown>>(storedMetadata?.metadataJson, {});
+  const metadataJson = parseJSONRecord(storedMetadata?.metadataJson);
   const snapshot = metadataJson[FX_METADATA_KEY];
   const policy =
     snapshot && typeof snapshot === 'object'
@@ -220,7 +220,7 @@ export function plannedPaymentFxMetadata(
     ...context.metadata,
     importSource: context.metadata?.importSource ?? 'planned_payment',
     metadataJson: JSON.stringify({
-      ...safeParseJSON<Record<string, unknown>>(context.metadata?.metadataJson, {}),
+      ...parseJSONRecord(context.metadata?.metadataJson),
       [FX_METADATA_KEY]: { mode: context.mode, destinationAmount: context.fixedDestinationAmount },
       ...extra,
     }),

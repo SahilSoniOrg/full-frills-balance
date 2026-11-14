@@ -7,7 +7,7 @@ import {
   PrimaryPager,
   type ContextualAddAction,
 } from '@/src/features/navigation';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { PRIMARY_PAGES } from '@/src/navigation/primaryPages';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';

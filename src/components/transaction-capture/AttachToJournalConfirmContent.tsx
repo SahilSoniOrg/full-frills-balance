@@ -4,10 +4,10 @@ import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/
 import type {
   JournalLinkConfirmMode,
   JournalLinkConfirmTarget,
-} from '@/src/utils/attachToJournalConfirm';
+} from '@/src/components/transaction-capture/attachToJournalConfirm';
 import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';

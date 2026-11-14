@@ -1,4 +1,4 @@
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import dayjs from 'dayjs';
 
 /**

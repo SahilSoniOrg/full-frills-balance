@@ -1,7 +1,7 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { useState } from 'react';

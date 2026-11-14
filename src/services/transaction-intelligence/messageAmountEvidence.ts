@@ -1,6 +1,6 @@
 import { extractMessageEconomicEvidence } from '@/src/domain/transaction-intelligence/messageEconomicEvidence';
 import { SmsExtractor } from '@/src/services/ledger/SmsExtractor';
-import { SMS_CURRENCY_SYMBOLS_PATTERN } from '@/src/utils/sms/smsCurrencyPattern';
+import { SMS_CURRENCY_SYMBOLS_PATTERN } from '@/src/domain/transaction-intelligence/smsCurrencyPattern';
 
 interface MessageForAmount {
   id: string;

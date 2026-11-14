@@ -5,9 +5,9 @@
  * Platform-agnostic utilities used by the import hook.
  */
 
-import { compression } from '@/src/utils/compression';
-import { files } from '@/src/utils/files';
-import { logger } from '@/src/utils/logger';
+import { compression } from '@/src/services/files/compression';
+import { files } from '@/src/services/files/files';
+import { logger } from '@/src/services/observability/logger';
 import { Platform } from 'react-native';
 
 /**

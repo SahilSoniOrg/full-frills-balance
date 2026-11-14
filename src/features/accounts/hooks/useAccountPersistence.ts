@@ -9,12 +9,12 @@ import {
 } from '@/src/services/accounts/balanceChangeClassification';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
-import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { ValidationError } from '@/src/utils/errors';
-import { logger } from '@/src/utils/logger';
-import { AppNavigation } from '@/src/utils/navigation';
+import { logger } from '@/src/services/observability/logger';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { sanitizeInput } from '@/src/utils/validation';
-import { returnCreatedAccountToJournalEntry } from '@/src/utils/accountCreationReturn';
+import { returnCreatedAccountToJournalEntry } from '@/src/navigation/accountCreationReturn';
 import { useNavigation } from 'expo-router';
 import { useRef, useState } from 'react';
 

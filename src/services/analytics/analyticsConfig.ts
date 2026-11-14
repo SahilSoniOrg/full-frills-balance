@@ -1,14 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { readAppVariant } from './appVariant';
 import { schema } from '@/src/data/database/schema';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { preferences } from '@/src/services/preferences';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import * as Updates from 'expo-updates';
 import { Platform } from 'react-native';
-import { sanitizeGlobalAnalyticsProperties } from '@/src/utils/observabilityPrivacy';
+import { sanitizeGlobalAnalyticsProperties } from '@/src/services/observability/privacy';
 
 export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 export const BUILD_TYPE = readAppVariant();

@@ -1,5 +1,5 @@
 import { ContextualExplanation } from '../ContextualExplanation';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import type { ReactNode } from 'react';
 
 jest.mock('@/src/components/overlays/InfoSheet', () => {

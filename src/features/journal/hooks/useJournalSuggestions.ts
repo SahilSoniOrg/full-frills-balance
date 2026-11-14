@@ -3,7 +3,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import type { TabType } from '@/src/types/domainJournal';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
 export type { JournalSuggestionPage };

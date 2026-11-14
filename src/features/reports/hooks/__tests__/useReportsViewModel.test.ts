@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { AccountId, JournalId } from '@/src/types/ids';
 
 jest.mock('../useReports');
@@ -40,7 +40,7 @@ jest.mock('@/src/hooks/use-theme', () => {
   };
 });
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toJournalSearch: jest.fn(),
     toAccountDetails: jest.fn(),

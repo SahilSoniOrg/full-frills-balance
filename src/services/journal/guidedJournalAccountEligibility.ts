@@ -3,11 +3,11 @@ import { TransactionType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 
+import { getAllowedAccountTypes } from '@/src/domain/journal/journalAccountTypes';
 import {
-  getAllowedAccountTypes,
   isBalanceSheetAccount,
   isCategoryAccountType,
-} from '@/src/utils/accountCategory';
+} from '@/src/domain/accounts/accountClassification';
 
 /** Postable accounts only — excludes parents that have child accounts. */
 export function filterToLeafAccounts(accounts: AccountFields[]): AccountFields[] {

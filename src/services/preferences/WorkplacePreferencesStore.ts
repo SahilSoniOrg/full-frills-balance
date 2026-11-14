@@ -1,11 +1,11 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { parseCategoryDefaults } from '@/src/domain/transaction-intelligence/categoryDefaults';
-import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/utils/gmailBindingKey';
+import { GMAIL_BINDING_KEY_PREFIX, gmailBindingKey } from '@/src/services/email/gmailBindingKey';
 import {
   DEFAULT_WORKPLACE_PREFERENCES,
   WORKPLACE_PREFERENCES_KEY_PREFIX,

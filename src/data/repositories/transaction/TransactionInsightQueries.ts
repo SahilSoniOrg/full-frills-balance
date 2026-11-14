@@ -4,7 +4,7 @@ import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/id
 import {
   ACTIVE_JOURNAL_STATUSES,
   activeJournalStatusSqlPlaceholders,
-} from '@/src/utils/journalStatus';
+} from '@/src/domain/journal/journalStatus';
 import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import type { TransactionMetadata } from '../TransactionTypes';

@@ -4,7 +4,7 @@ import {
   toSafeToSpendPaintSnapshot,
   type SafeToSpendPaintSnapshot,
 } from '../safeToSpendSnapshotWriter';
-import { snapshotService } from '@/src/utils/SnapshotService';
+import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { FlowType } from '@/src/services/simulation/types';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { AccountSubtype } from '@/src/types/enums';
@@ -12,7 +12,7 @@ import { WorkplaceId } from '@/src/types/ids';
 
 const mockSnapshotStore = new Map<string, unknown>();
 
-jest.mock('@/src/utils/storage', () => ({
+jest.mock('@/src/data/storage/storage', () => ({
   storage: {
     set: jest.fn((key: string, value: unknown) => mockSnapshotStore.set(key, value)),
     getString: jest.fn((key: string) => mockSnapshotStore.get(key) as string | undefined),

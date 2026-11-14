@@ -21,12 +21,12 @@ import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountFl
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
+import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MotiView } from 'moti';
 import { usePressScale } from '@/src/components/core/PressScaleTouchable';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 
 interface AccountCardProps {
   account: AccountCardViewModel;

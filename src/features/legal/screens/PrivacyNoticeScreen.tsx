@@ -10,12 +10,12 @@ import {
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { analytics } from '@/src/services/analytics';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { useLocalSearchParams } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { Linking } from 'react-native';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 
 const copy = PRIVACY_NOTICE_STRINGS;
 

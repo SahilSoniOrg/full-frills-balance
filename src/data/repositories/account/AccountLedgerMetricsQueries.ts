@@ -3,13 +3,13 @@ import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
+import { effect, periodFlowSQL } from '@/src/domain/accounting/BalanceEffects';
 import {
   ACTIVE_JOURNAL_STATUSES,
   activeJournalStatusSqlPlaceholders,
-} from '@/src/utils/journalStatus';
+} from '@/src/domain/journal/journalStatus';
 import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { Q } from '@nozbe/watermelondb';
 import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';

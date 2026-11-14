@@ -3,8 +3,8 @@ import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel
 import type { AccountFields } from '@/src/types/plainDtos';
 import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { withOpacity } from '@/src/utils/color-math';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useMemo } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 

@@ -1,35 +1,27 @@
-import { logger } from '@/src/utils/logger';
-
 export const snakeToCamel = (str: string) => str.replace(/(_\w)/g, match => match[1].toUpperCase());
 
-/**
- * Safely parse a JSON string with an optional fallback.
- * Logs an error if parsing fails.
- */
-export function safeParseJSON<T>(json: string | null | undefined, fallback: T): T {
+/** Parsing establishes JSON syntax only. Owners must validate the decoded shape. */
+export function safeParseJSON(json: string | null | undefined, fallback: unknown = null): unknown {
   if (!json) return fallback;
   try {
-    return JSON.parse(json) as T;
-  } catch (error) {
-    logger.error('[Serialization] Failed to parse JSON', {
-      error,
-      json: json.substring(0, 100),
-    });
+    return JSON.parse(json) as unknown;
+  } catch {
     return fallback;
   }
 }
 
-/**
- * Efficiently converts Uint8Array to Base64 string.
- * Uses chunking to avoid stack size limits and minimize memory churn.
- */
-export function bytesToBase64(bytes: Uint8Array): string {
-  // Use chunks to avoid "Maximum call stack size exceeded" with String.fromCharCode.apply
-  const CHUNK_SIZE = 0x8000; // 32KB
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
-    binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
-  }
-  return btoa(binary);
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function parseJSONRecord(json: string | null | undefined): Record<string, unknown> {
+  const value = safeParseJSON(json);
+  return isRecord(value) ? value : {};
+}
+
+export function parseJSONStringArray(json: string | null | undefined): string[] {
+  const value = safeParseJSON(json);
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }

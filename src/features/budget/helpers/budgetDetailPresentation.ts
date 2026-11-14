@@ -1,5 +1,5 @@
 import { BudgetUsage } from '@/src/services/budget/types';
-import { describePeriodRange } from '@/src/utils/dateUtils';
+import { describePeriodRange } from '@/src/domain/calendar/dateRanges';
 
 export function presentBudgetPeriod(
   range: { startDate: number; endDate: number },

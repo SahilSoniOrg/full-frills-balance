@@ -12,7 +12,7 @@ import { preferences } from '@/src/services/preferences';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 import type { LaunchCoordinatorState } from '../LaunchCoordinator.types';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 
 const WORKPLACE_SCOPE_TIMEOUT_MS = 15_000;
 const WORKPLACE_SWITCH_TIMEOUT_MESSAGE = 'Switching workplace took too long. Try again.';
@@ -66,10 +66,7 @@ export function shouldRollbackWorkplacePointer({
   readonly targetWorkplaceId: WorkplaceId;
 }): boolean {
   return (
-    pointerMoved ||
-    (strict &&
-      targetWasActiveAtStart &&
-      fromWorkplaceId !== targetWorkplaceId)
+    pointerMoved || (strict && targetWasActiveAtStart && fromWorkplaceId !== targetWorkplaceId)
   );
 }
 
@@ -241,7 +238,7 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
         });
         try {
           safeRootState = previousRootState
-            ? rewriteStackForWorkplaceSwitch(previousRootState) ?? previousRootState
+            ? (rewriteStackForWorkplaceSwitch(previousRootState) ?? previousRootState)
             : undefined;
           // Validate under the prior provider, clear record routes, then hold the overlay
           // until the next provider has committed the target workplace.

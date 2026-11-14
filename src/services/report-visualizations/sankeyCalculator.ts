@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { formatCategoryLabel } from './reportCategoryLabel';
-import { roundToPrecision } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/domain/money/money';
 import type { SankeyData, SankeyLink, SankeyNode, SankeySummary } from './types';
 
 type CategoryBreakdownAmount = { category: string; amount: number };

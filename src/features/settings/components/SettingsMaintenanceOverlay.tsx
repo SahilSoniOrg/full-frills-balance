@@ -1,7 +1,7 @@
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Modal, StyleSheet, View } from 'react-native';
 

@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { BulkHierarchyMoveModal } from '../BulkHierarchyMoveModal';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { act, fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/testing/render';
 
 const mockCandidates = [
   {

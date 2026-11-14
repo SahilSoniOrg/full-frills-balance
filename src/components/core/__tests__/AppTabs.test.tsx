@@ -1,12 +1,12 @@
 import { AppTabs } from '@/src/components/core/AppTabs';
 import { Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { triggerPressHaptic } from '@/src/utils/haptics';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { ScrollView } from 'react-native';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 
-jest.mock('@/src/utils/haptics', () => ({
+jest.mock('@/src/design-system/haptics', () => ({
   triggerPressHaptic: jest.fn(),
 }));
 

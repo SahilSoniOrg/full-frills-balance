@@ -29,10 +29,10 @@ import type {
 import { forceRunCheck, resetWorkplace } from '@/src/services/integrity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { countAccountsVsCategories } from '@/src/utils/accountCategory';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
 import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { ImportStats } from './types';
 
 export class MockDataSeederService {

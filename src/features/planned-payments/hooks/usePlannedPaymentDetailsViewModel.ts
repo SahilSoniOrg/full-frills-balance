@@ -35,9 +35,9 @@ import { analytics } from '@/src/services/analytics';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
-import { toast } from '@/src/utils/alerts';
-import { formatDate, getNow } from '@/src/utils/dateUtils';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { toast } from '@/src/services/feedback/alerts';
+import { formatDate, getNow } from '@/src/utils/dateFormatting';
 import {
   getNextPlannedPaymentOccurrences,
   plannedPaymentDetailService,

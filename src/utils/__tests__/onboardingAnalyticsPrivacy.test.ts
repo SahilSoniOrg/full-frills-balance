@@ -1,7 +1,7 @@
 import {
   sanitizeAnalyticsProperties,
   sanitizeGlobalAnalyticsProperties,
-} from '../observabilityPrivacy';
+} from '@/src/services/observability/privacy';
 
 const PRIVATE_MARKER = 'PrivateOnboardingValue';
 
@@ -14,15 +14,20 @@ const FLOW = {
 
 describe('onboarding analytics privacy boundary', () => {
   it('allows estimate timing while removing financial input', () => {
-    expect(sanitizeAnalyticsProperties('onboarding_first_estimate', {
-      ...FLOW, duration_ms: 1200, balance: 500, name: 'Bank',
-    })).toEqual({ ...FLOW, duration_ms: 1200 });
+    expect(
+      sanitizeAnalyticsProperties('onboarding_first_estimate', {
+        ...FLOW,
+        duration_ms: 1200,
+        balance: 500,
+        name: 'Bank',
+      }),
+    ).toEqual({ ...FLOW, duration_ms: 1200 });
   });
 
   it('accepts the creation lifecycle events with allowlisted categorical metadata', () => {
-    expect(
-      sanitizeAnalyticsProperties('onboarding_flow_started', { ...FLOW }),
-    ).toEqual({ ...FLOW });
+    expect(sanitizeAnalyticsProperties('onboarding_flow_started', { ...FLOW })).toEqual({
+      ...FLOW,
+    });
     expect(
       sanitizeAnalyticsProperties('onboarding_flow_resumed', {
         ...FLOW,

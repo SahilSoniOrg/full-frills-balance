@@ -7,7 +7,7 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListModals } from '@/src/features/journal';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from './BudgetDetailHeader';
 import { BudgetSetupDisclosure } from './BudgetSetupDisclosure';
@@ -15,7 +15,7 @@ import { BudgetSpendingChart } from './BudgetSpendingChart';
 import { BudgetSpendingInsights } from './BudgetSpendingInsights';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
-import { getNow } from '@/src/utils/dateUtils';
+import { getNow } from '@/src/utils/dateFormatting';
 import { Column, Row } from '@/src/design-system';
 
 export function BudgetDetailView({

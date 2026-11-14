@@ -5,7 +5,7 @@ import { preferences } from '@/src/services/preferences';
 import { resolveAccountFlowRoles } from '@/src/services/sms/recognition/accountFlowRoles';
 import { InboxParseStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import type { GmailObservation } from './gmailApi';
 import { readGmailRawMessage } from './gmailApi';
 import { gmailBinding } from './gmailConnection';

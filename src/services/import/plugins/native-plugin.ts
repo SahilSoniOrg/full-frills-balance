@@ -28,8 +28,8 @@ import {
   remapNativeAuditLog,
   type AuditImportEntityIdMaps,
 } from '@/src/services/import/plugins/nativeImportAuditRemap';
-import { countAccountsVsCategories } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
+import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
+import { logger } from '@/src/services/observability/logger';
 import { UIPreferences } from '@/src/services/preferences';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 import type { CaptureCategoryLine } from '@/src/domain/transaction-intelligence/captureMetadata';

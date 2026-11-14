@@ -1,6 +1,6 @@
 import { BudgetDetailHeader } from '../BudgetDetailHeader';
 import { presentBudgetPeriod } from '../../helpers/budgetDetailPresentation';
-import { render, cleanup } from '@/src/utils/test-utils';
+import { render, cleanup } from '@/src/testing/render';
 import { BudgetId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';

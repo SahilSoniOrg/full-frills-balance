@@ -3,7 +3,7 @@ import { AccountActionSheet } from '../AccountActionSheet';
 import { AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 
 const mockAccount: AccountCardViewModel = {
   id: 'acc-1' as AccountId,

@@ -1,6 +1,6 @@
 import type { WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { getCurrentBuild } from '../versionPolicyService';
 import { updateInsightService } from '../updateInsightService';
 
@@ -16,7 +16,7 @@ jest.mock('@/src/services/preferences', () => ({
   },
 }));
 
-jest.mock('@/src/utils/storage', () => {
+jest.mock('@/src/data/storage/storage', () => {
   const values = new Map<string, string>();
   return {
     storage: {

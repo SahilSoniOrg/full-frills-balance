@@ -2,8 +2,8 @@ import { ReportSpendingSection } from '../ReportSpendingSection';
 import type { ReportSpendingTabVm } from '@/src/features/reports/hooks/reportTabTypes';
 import type { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
 import type { JournalId } from '@/src/types/ids';
-import { formatDate } from '@/src/utils/dateUtils';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 jest.mock('@/src/components/charts/HeatmapChart', () => {
   const { Pressable, Text } = jest.requireActual<typeof import('react-native')>('react-native');

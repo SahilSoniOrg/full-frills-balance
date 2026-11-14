@@ -2,7 +2,7 @@ import Account from '@/src/data/models/Account';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { LocalTransactionClassifier } from '@/src/utils/nlp/BayesClassifier';
+import { LocalTransactionClassifier } from '@/src/services/ledger/resolution/LocalTransactionClassifier';
 import { fuzzyMatch } from './fuzzyMatcher';
 import { getBayesTrainingData, resolveFromHistory } from './historyResolver';
 import { SYNONYM_DICTIONARY } from './synonymDictionary';

@@ -127,7 +127,7 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
     findNearbyJournals: jest.fn().mockResolvedValue([]),
   },
 }));
-jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/observability/logger');
 jest.mock('@/src/services/sms/SmsPrivacyService', () => ({
   smsPrivacyService: { cleanupLegacyContent: jest.fn().mockResolvedValue(undefined) },
 }));

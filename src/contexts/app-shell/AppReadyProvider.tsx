@@ -1,6 +1,6 @@
 import { FontId, FontIds } from '@/src/constants/design-tokens';
 import { AppReadyContext, type AppReadyValue } from '@/src/contexts/app-shell/appReady';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { preferences } from '@/src/services/preferences';
 import React, { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 

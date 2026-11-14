@@ -3,8 +3,8 @@ import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journal
 import { asAccountId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
-import { act, fireEvent, render } from '@/src/utils/test-utils';
-import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
+import { act, fireEvent, render } from '@/src/testing/render';
+import { formatClockTime, formatDate } from '@/src/utils/dateFormatting';
 
 import { getLayoutPath as contentLayout } from '@/src/testing/layoutAssertions';
 

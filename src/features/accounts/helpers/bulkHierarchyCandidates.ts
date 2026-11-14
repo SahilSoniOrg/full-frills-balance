@@ -1,3 +1,4 @@
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import type { IconName } from '@/src/types/domainIcons';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
@@ -27,29 +28,8 @@ export function getBulkHierarchyCandidates(
   if (selectedTypes.size !== 1) return [];
   const targetType = selected[0].accountType;
 
-  const childrenByParent = new Map<AccountId, AccountId[]>();
-
-  for (const account of accounts) {
-    if (!account.parentAccountId) continue;
-    const parentId = account.parentAccountId;
-    const children = childrenByParent.get(parentId) ?? [];
-    children.push(account.id);
-    childrenByParent.set(parentId, children);
-  }
-
-  const descendants = new Set<AccountId>();
-  const pending = [...selectedIds];
-  while (pending.length > 0) {
-    const nextId = pending.pop();
-    if (!nextId) break;
-    const childIds = childrenByParent.get(nextId) ?? [];
-    for (const childId of childIds) {
-      if (!descendants.has(childId)) {
-        descendants.add(childId);
-        pending.push(childId);
-      }
-    }
-  }
+  const tree = createAccountTreeSnapshot(accounts);
+  const descendants = new Set([...selectedIds].flatMap(id => [...tree.getDescendants(id)]));
 
   return accounts
     .filter(

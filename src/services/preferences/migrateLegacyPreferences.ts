@@ -1,5 +1,5 @@
-import { logger } from '@/src/utils/logger';
-import { storage } from '@/src/utils/storage';
+import { logger } from '@/src/services/observability/logger';
+import { storage } from '@/src/data/storage/storage';
 import { DEVICE_PREFERENCES_KEY, DevicePreferences } from './deviceTypes';
 import {
   hasDevicePreferenceValues,

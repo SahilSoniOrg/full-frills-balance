@@ -21,12 +21,12 @@ import {
   observeWorkplaceActiveTransactionCount,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
-import { logger } from '@/src/utils/logger';
+import { isLiquidAssetSubtype } from '@/src/domain/accounts/accountSubtypes';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
+import { logger } from '@/src/services/observability/logger';
 import { preferences } from '@/src/services/preferences';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import type { UnvaluedStartingBalance } from './types';
 import { latestActiveJournalAt } from '@/src/services/simulation/booksFreshness';
 import { observeForecastDateBasis, type ForecastDateBasis } from './forecastDateBasis';

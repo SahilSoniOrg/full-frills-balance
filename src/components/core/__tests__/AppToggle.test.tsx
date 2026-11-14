@@ -1,6 +1,6 @@
 import { AppToggle } from '@/src/components/core/AppToggle';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { Animated } from 'react-native';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({

@@ -4,7 +4,7 @@ import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
+import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 
 export interface JournalDayHeaderProps {

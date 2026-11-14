@@ -2,7 +2,7 @@ import { setStringAsync } from 'expo-clipboard';
 import { ListGroup } from '@/src/components/core';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { AppConfig, JOURNAL_DETAILS_LIMITS } from '@/src/constants';
-import { toast } from '@/src/utils/alerts';
+import { toast } from '@/src/services/feedback/alerts';
 
 export function JournalRecord({ journalId }: { journalId: string }) {
   const { journalNumberLength, journalNumberGroupLength } = JOURNAL_DETAILS_LIMITS;

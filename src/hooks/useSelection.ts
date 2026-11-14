@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { useNavigation } from 'expo-router';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 
 export interface UseSelectionResult<T> {
   selectedIds: Set<T>;

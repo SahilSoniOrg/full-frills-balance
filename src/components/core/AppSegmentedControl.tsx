@@ -18,8 +18,8 @@ import {
   ViewStyle,
   Keyboard,
 } from 'react-native';
-import { logger } from '@/src/utils/logger';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { logger } from '@/src/services/observability/logger';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 import { AppIcon } from './AppIcon';
 import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';

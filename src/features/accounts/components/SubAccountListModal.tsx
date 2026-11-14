@@ -4,9 +4,9 @@ import { AppText, Icon, IconButton, IvyIcon, type IconName } from '@/src/compone
 import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
-import { getReadableColor, withOpacity } from '@/src/utils/color-math';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo, useCallback, useState } from 'react';

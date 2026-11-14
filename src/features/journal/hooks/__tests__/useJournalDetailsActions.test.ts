@@ -3,8 +3,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useJournalDetailsActions } from '../useJournalDetailsActions';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { AppNavigation } from '@/src/utils/navigation';
-import { showConfirmationAlert } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { showConfirmationAlert } from '@/src/services/feedback/alerts';
 
 jest.mock('@/src/features/journal/hooks/useJournalActions', () => ({
   useJournalActions: jest.fn(),
@@ -14,13 +14,13 @@ jest.mock('@/src/contexts/PrivacyScope', () => ({
   useEffectivePrivacyMode: () => false,
 }));
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   showConfirmationAlert: jest.fn(),
   showErrorAlert: jest.fn(),
   toast: { success: jest.fn() },
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: jest.fn(),
     toJournalEntry: jest.fn(),

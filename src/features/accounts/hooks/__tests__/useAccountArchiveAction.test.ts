@@ -1,6 +1,6 @@
-import { act, renderHook, AllTheProviders } from '@/src/utils/test-utils';
+import { act, renderHook, AllTheProviders } from '@/src/testing/render';
 import { useAccountArchiveAction } from '../useAccountArchiveAction';
-import { confirm, toast } from '@/src/utils/alerts';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
@@ -12,7 +12,7 @@ jest.mock('../useAccountActions', () => ({
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'workplace' }),
 }));
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   toast: { success: jest.fn() },
   showErrorAlert: jest.fn(),

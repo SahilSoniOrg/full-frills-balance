@@ -3,11 +3,11 @@ import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journal
 import { asAccountId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
-import { act, fireEvent, render, within, type RenderAPI } from '@/src/utils/test-utils';
-import { formatClockTime } from '@/src/utils/dateUtils';
+import { act, fireEvent, render, within, type RenderAPI } from '@/src/testing/render';
+import { formatClockTime } from '@/src/utils/dateFormatting';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
-import { getContrastRatio, getLuminance } from '@/src/utils/color-math';
+import { getContrastRatio, getLuminance } from '@/src/design-system/colorMath';
 import { Dimensions, StyleSheet } from 'react-native';
 
 jest.mock('@/src/hooks/useHourCyclePrefs', () => ({

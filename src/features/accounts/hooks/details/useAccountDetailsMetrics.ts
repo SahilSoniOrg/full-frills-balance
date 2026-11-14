@@ -16,8 +16,8 @@ import {
   buildAccountRollingBalanceSeries,
   type AccountRollingBalanceSeries,
 } from '@/src/services/projections';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
-import { DateRange, describePeriodRange } from '@/src/utils/dateUtils';
+import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
+import { DateRange, describePeriodRange } from '@/src/domain/calendar/dateRanges';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { combineLatest, map, of } from 'rxjs';

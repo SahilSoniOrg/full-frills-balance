@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/testing/render';
 import { useSharedValue } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/use-theme';
 import { asAccountId } from '@/src/types/ids';

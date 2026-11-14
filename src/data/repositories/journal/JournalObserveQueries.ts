@@ -4,7 +4,7 @@ import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQue
 import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { PlainJournal } from '@/src/types/plainDtos';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 

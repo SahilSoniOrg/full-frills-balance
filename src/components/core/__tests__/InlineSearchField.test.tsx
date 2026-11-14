@@ -1,5 +1,5 @@
 import { InlineSearchField } from '@/src/components/core/InlineSearchField';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 const defaultProps = {
   value: '',

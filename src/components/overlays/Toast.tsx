@@ -6,7 +6,7 @@ import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/d
 import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
-import { ToastPayload } from '@/src/utils/alerts';
+import { ToastPayload } from '@/src/services/feedback/alerts';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { Animated, PanResponder, StyleSheet, View, TouchableOpacity } from 'react-native';
 

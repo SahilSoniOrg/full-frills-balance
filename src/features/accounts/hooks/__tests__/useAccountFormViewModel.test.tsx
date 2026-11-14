@@ -3,7 +3,7 @@ import { AppearancePickerModal } from '@/src/components/overlays/AppearancePicke
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
 import { AccountTypeSheet } from '@/src/features/accounts/components/AccountTypeSheet';
 import { AccountSubtypeSheet } from '@/src/features/accounts/components/AccountSubtypeSheet';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { act, renderHook } from '@testing-library/react-native';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';

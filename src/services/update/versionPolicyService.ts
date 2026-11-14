@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 import { AppConfig } from '@/src/constants/app-config';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import type { VersionCheckResult, VersionPolicy, VersionPolicyManifest } from './types';
 import { parseBuild } from './playUpdateTypes';

@@ -1,8 +1,8 @@
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { storage } from '@/src/utils/storage';
+import { storage } from '@/src/data/storage/storage';
 import {
   DEFAULT_DEVICE_PREFERENCES,
   DEVICE_PREFERENCES_KEY,

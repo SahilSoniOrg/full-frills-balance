@@ -7,7 +7,7 @@ import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAppLockEngine } from '@/src/features/app/hooks/useAppLockEngine';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { MotiView } from 'moti';
 import { allowScreenCaptureAsync, preventScreenCaptureAsync } from 'expo-screen-capture';
 import React, { useEffect } from 'react';

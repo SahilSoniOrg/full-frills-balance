@@ -23,8 +23,8 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import type { JournalEntryLine } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { formatRoundedAmount } from '@/src/utils/money';
+import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
+import { formatRoundedAmount } from '@/src/domain/money/money';
 import { useCallback, useMemo } from 'react';
 
 type Editor = Pick<

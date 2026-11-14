@@ -1,6 +1,6 @@
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { analytics } from '@/src/services/analytics';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface PersonalizationViewModel {

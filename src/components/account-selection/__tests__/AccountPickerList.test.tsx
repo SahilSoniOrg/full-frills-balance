@@ -2,7 +2,7 @@ import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibility
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/testing/render';
 import { SectionList } from 'react-native';
 import { AccountPickerList, AccountPickerPill } from '../AccountPickerList';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';

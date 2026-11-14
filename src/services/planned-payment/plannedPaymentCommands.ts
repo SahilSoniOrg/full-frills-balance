@@ -18,7 +18,7 @@ import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 
 export async function createPlannedPayment(
   workplaceId: WorkplaceId,

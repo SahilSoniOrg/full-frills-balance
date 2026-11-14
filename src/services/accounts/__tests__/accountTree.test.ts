@@ -6,7 +6,7 @@ import {
   planAccountTreePlacementChange,
   validateAccountTreeStructure,
   validateAccountTreeMove,
-} from '../accountTree';
+} from '@/src/domain/accounts/accountTree';
 
 const accounts = [
   { id: 'root-a' as never, orderNum: 8 },

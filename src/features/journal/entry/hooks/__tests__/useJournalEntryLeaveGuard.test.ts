@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { confirm } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { EMPTY_ACCOUNT_ID, asAccountId } from '@/src/types/ids';
 import { resolveFxPair } from '@/src/domain/accounting/fxPair';
 import type { BulkJournalRow } from '../../types/bulkJournal';
@@ -23,8 +23,8 @@ jest.mock('expo-router', () => ({
     mockPreventCallback = callback;
   },
 }));
-jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
-jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { back: jest.fn() } }));
+jest.mock('@/src/services/feedback/alerts', () => ({ confirm: { show: jest.fn() } }));
+jest.mock('@/src/navigation/AppNavigation', () => ({ AppNavigation: { back: jest.fn() } }));
 
 function latestConfirm() {
   return (confirm.show as jest.Mock).mock.calls.at(-1)?.[0] as { onConfirm: () => void };

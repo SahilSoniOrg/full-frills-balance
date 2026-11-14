@@ -8,7 +8,7 @@ import {
   ConfirmPayload,
   setAlertListener,
   setConfirmListener,
-} from '@/src/utils/alerts';
+} from '@/src/services/feedback/alerts';
 import { useEffect, useRef, useState } from 'react';
 
 type AlertState =

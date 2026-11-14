@@ -3,10 +3,10 @@ import { AccountSectionViewModel } from '@/src/features/accounts/utils/transform
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrentMonthRange, getLastNRange } from '@/src/domain/calendar/dateRanges';
+import { roundToPrecision } from '@/src/domain/money/money';
 import { AppConfig } from '@/src/constants/app-config';
-import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 
 export type AccountsListInflowPeriod = 'overall' | 'month' | '30days';
 export type AccountsListTab = 'accounts' | 'categories';

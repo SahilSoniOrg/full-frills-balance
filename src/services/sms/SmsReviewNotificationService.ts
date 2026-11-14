@@ -14,7 +14,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { formatSmsReviewNotification } from './smsReviewNotification';
 import { merge, auditTime } from 'rxjs';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { recognitionRefreshState } from './refreshSmsRecognition';
 
 const actionable = (record: InboxRecordSnapshot | null) =>

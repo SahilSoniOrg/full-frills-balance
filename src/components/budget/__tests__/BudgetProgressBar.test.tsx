@@ -1,5 +1,5 @@
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
-import { render, screen } from '@/src/utils/test-utils';
+import { render, screen } from '@/src/testing/render';
 
 describe('BudgetProgressBar', () => {
   it('renders label, percentage, and accessibility for progress', () => {

@@ -3,8 +3,8 @@ import { AccountType } from '@/src/types/enums';
 import { type AccountFields } from '@/src/types/plainDtos';
 import { type AccountId } from '@/src/types/ids';
 import { useAccountManagementViewModel } from '../useAccountManagementViewModel';
-import { confirm, toast } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
+import { confirm, toast } from '@/src/services/feedback/alerts';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { saveAccountTreeDraft } from '@/src/services/accounts/accountHierarchyCommands';
 
 const firstId = 'first' as AccountId;
@@ -56,12 +56,12 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-jest.mock('@/src/utils/alerts', () => ({
+jest.mock('@/src/services/feedback/alerts', () => ({
   confirm: { show: jest.fn() },
   toast: { success: jest.fn(), error: jest.fn() },
 }));
 
-jest.mock('@/src/utils/navigation', () => ({
+jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: jest.fn(),
     toAccountCreation: jest.fn(),

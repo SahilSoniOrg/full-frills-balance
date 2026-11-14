@@ -7,9 +7,9 @@ import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTre
 import type { AccountTreeDropKind } from '@/src/services/accounts/accountTreeTargets';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
-import { isAccountArchived } from '@/src/utils/accountArchive';
-import { resolveAccountAppearance } from '@/src/utils/accountCategory';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
+import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
+import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
 import { useEffect } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {

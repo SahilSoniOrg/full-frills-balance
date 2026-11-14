@@ -2,9 +2,9 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountBalances, useAccounts } from '@/src/hooks/useAccounts';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
-import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
-import { AppNavigation } from '@/src/utils/navigation';
-import { confirm, toast } from '@/src/utils/alerts';
+import { isBalanceSheetAccount } from '@/src/domain/accounts/accountClassification';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import { useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -19,7 +19,7 @@ import {
 import {
   createAccountTreeSnapshot,
   type AccountTreeRowState,
-} from '@/src/services/accounts/accountTree';
+} from '@/src/domain/accounts/accountTree';
 import { saveAccountTreeDraft } from '@/src/services/accounts/accountHierarchyCommands';
 import type { AccountTreeDropTarget } from '@/src/services/accounts/accountTreeTargets';
 import { flattenAccountTree } from '@/src/services/accounts/accountTreeProjection';

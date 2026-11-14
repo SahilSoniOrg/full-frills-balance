@@ -8,7 +8,7 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(),
 }));
 
-jest.mock('@/src/utils/files', () => ({
+jest.mock('@/src/services/files/files', () => ({
   files: {
     document: '/mock/documents/',
     ensureDirectory: jest.fn().mockResolvedValue(undefined),

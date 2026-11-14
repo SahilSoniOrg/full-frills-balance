@@ -19,7 +19,7 @@ import {
 } from '@/src/services/journal/bulk';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
-import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
+import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { useCallback, useMemo } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 

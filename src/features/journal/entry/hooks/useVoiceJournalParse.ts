@@ -2,7 +2,7 @@ import { analytics } from '@/src/services/analytics';
 import type { ParserOutput } from '@/src/services/transaction-ingestion';
 import { ingestTransaction } from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
+import { logger } from '@/src/services/observability/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';

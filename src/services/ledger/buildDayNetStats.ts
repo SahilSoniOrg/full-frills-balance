@@ -1,4 +1,4 @@
-import { safeAdd } from '@/src/utils/money';
+import { safeAdd } from '@/src/domain/money/money';
 
 export type DayNetStats = {
   count: number;

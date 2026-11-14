@@ -29,7 +29,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readObject(json: string | undefined): Record<string, unknown> {
-  const parsed = json ? safeParseJSON<unknown>(json, null) : null;
+  const parsed = json ? safeParseJSON(json, null) : null;
   return isRecord(parsed) ? parsed : {};
 }
 

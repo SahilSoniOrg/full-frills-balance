@@ -33,7 +33,7 @@ import {
 } from '@/src/types/enums';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { safeParseJSON } from '@/src/utils/serialization';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { inferSimpleJournalTypeFromAccounts } from './inferSimpleJournalTypeFromAccounts';
 import { projectPlannedOccurrencesForHorizon } from './plannedOccurrenceHorizon';
 import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
@@ -178,7 +178,7 @@ function readOriginalPlannedDate(
 ): number | undefined {
   const row = metadataByJournal.get(journal.id);
   if (!row) return undefined;
-  const metadataJson = safeParseJSON<Record<string, unknown>>(row.metadataJson, {});
+  const metadataJson = parseJSONRecord(row.metadataJson);
   const raw = metadataJson[MetadataKeys.ORIGINAL_PLANNED_DATE];
   const value = typeof raw === 'number' || typeof raw === 'string' ? Number(raw) : Number.NaN;
   return Number.isFinite(value) ? value : undefined;

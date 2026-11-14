@@ -6,7 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { usePrimaryPagerNavigation } from '@/src/navigation/primaryPageNavigation';
 import { usePrimaryNavigation } from '@/src/navigation/primaryNavigation';
 import { PRIMARY_PAGES, primaryPageFromRouteName } from '@/src/navigation/primaryPages';
-import { getReadableColor } from '@/src/utils/color-math';
+import { getReadableColor } from '@/src/design-system/colorMath';
 
 /** Each pane owns a static subtab strip that travels with the pane during swipes. */
 export function HomeV2Subtabs({ routeName }: { routeName: string }) {

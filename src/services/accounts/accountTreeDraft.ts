@@ -4,7 +4,7 @@ import {
   planAccountTreeMove,
   type AccountTreePlacement,
   type OrderedAccount,
-} from './accountTree';
+} from '@/src/domain/accounts/accountTree';
 import type { AccountTreeDropTarget } from './accountTreeTargets';
 
 export interface AccountTreeDraftOperation {

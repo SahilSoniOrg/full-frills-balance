@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { JournalEntrySubmitBar } from '../JournalEntrySubmitBar';
 
 jest.mock('@/src/design-system/Keyboard', () => ({

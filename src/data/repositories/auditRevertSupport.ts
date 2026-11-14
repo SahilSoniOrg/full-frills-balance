@@ -1,4 +1,4 @@
-import { stableAuditJson } from '@/src/utils/stableAuditJson';
+import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 
 export function restoreAuditFieldsFromRevert(
   current: Record<string, unknown>,

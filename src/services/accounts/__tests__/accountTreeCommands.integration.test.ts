@@ -9,7 +9,7 @@ import {
   saveAccountTreeDraft,
   saveAccount,
 } from '../accountHierarchyCommands';
-import { planAccountTreeMove } from '../accountTree';
+import { planAccountTreeMove } from '@/src/domain/accounts/accountTree';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'tree-command-workplace' as WorkplaceId;

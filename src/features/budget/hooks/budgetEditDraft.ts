@@ -1,7 +1,7 @@
 import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
-import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { roundToPrecision } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
 import { AccountId, BudgetId } from '@/src/types/ids';
 import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 

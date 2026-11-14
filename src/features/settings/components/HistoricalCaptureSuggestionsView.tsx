@@ -17,8 +17,8 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { Icon } from '@/src/types/domainIcons';
-import { AppNavigation } from '@/src/utils/navigation';
-import { formatDate } from '@/src/utils/dateUtils';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { formatDate } from '@/src/utils/dateFormatting';
 import { Fragment, useMemo, useState } from 'react';
 
 const PAGE_SIZE = 20;

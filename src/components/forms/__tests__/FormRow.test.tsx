@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render } from '@/src/testing/render';
 import { FormRow } from '../FormRow';
 import { AppToggle } from '@/src/components/core/AppToggle';
 import { AppIcon, Icon } from '@/src/components/core';

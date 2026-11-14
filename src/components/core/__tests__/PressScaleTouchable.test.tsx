@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { triggerPressHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 
-jest.mock('@/src/utils/haptics', () => ({
-  ...jest.requireActual('@/src/utils/haptics'),
+jest.mock('@/src/design-system/haptics', () => ({
+  ...jest.requireActual('@/src/design-system/haptics'),
   triggerPressHaptic: jest.fn(),
 }));
 

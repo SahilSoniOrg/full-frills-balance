@@ -9,15 +9,15 @@ import {
   resolveJournalEntrySelectedAccountId,
 } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
-import { getInferredAccountType } from '@/src/utils/accountCategory';
-import { AppNavigation } from '@/src/utils/navigation';
+import { getInferredAccountType } from '@/src/domain/journal/journalAccountTypes';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { useBulkJournalEditor } from './useBulkJournalEditor';
 import {
   type AccountCreationResultParams,
   type AccountCreationReturnTarget,
   decodeAccountCreationReturnTarget,
-} from '@/src/utils/accountCreationReturn';
+} from '@/src/navigation/accountCreationReturn';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

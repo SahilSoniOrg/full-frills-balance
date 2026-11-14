@@ -5,8 +5,8 @@ import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PRIMARY_TABS, primaryTabFromRouteName } from '@/src/navigation/primaryNavigation';
 import { PRIMARY_PAGES, primaryRouteForGroup } from '@/src/navigation/primaryPages';
-import { getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { toast } from '@/src/utils/alerts';
+import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
+import { toast } from '@/src/services/feedback/alerts';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,

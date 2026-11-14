@@ -15,7 +15,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
 import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
-import { createAccountTreeSnapshot, isUndeletedAccount } from '@/src/services/accounts/accountTree';
+import { createAccountTreeSnapshot, isUndeletedAccount } from '@/src/domain/accounts/accountTree';
 import { useMemo } from 'react';
 
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };

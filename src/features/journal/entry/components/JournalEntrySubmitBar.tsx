@@ -10,7 +10,7 @@ import type { PlannedJournalMode } from '@/src/services/journal/journalDomainSer
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import React from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 

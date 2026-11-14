@@ -17,7 +17,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { isRebuildEligibleJournalStatus } from '@/src/utils/journalStatus';
+import { isRebuildEligibleJournalStatus } from '@/src/domain/journal/journalStatus';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 
 /** Display type is always derived by the repository from the lines it persists. */

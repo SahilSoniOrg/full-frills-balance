@@ -5,7 +5,7 @@ import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { BudgetDetailView } from '@/src/features/budget/components/BudgetDetailView';
 import { useBudgetDetailViewModel } from '@/src/features/budget/hooks/useBudgetDetailViewModel';
-import { AppNavigation } from '@/src/utils/navigation';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useMemo } from 'react';
 
 function BudgetDetailScreenInner() {

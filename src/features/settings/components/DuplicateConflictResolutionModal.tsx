@@ -3,10 +3,10 @@ import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/compone
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { withOpacity } from '@/src/design-system/colorMath';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 
 interface DuplicateConflictResolutionModalProps {

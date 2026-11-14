@@ -18,15 +18,15 @@ import {
   AccountSection,
   getAccountTypeVariant,
   getSectionColor,
-} from '@/src/utils/accountCategory';
+} from '@/src/design-system/accountPresentation';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { getAccountIcon } from '@/src/utils/accountIcon';
-import { withOpacity } from '@/src/utils/color-math';
+import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
+import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useAccountPickerList } from './useAccountPickerList';
