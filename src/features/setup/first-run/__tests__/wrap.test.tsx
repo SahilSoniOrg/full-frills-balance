@@ -133,6 +133,7 @@ describe('ClarityScene progressive explanation', () => {
     render(<ClarityScene {...emptyResult} />);
     expect(screen.getByText(copy.clarityUnknown)).toBeTruthy();
     expect(screen.queryByTestId('onboarding-clarity-sts')).toBeNull();
+    expect(screen.queryByTestId('onboarding-clarity-formula')).toBeNull();
   });
 
   it('retries opening a saved workplace without committing again', () => {

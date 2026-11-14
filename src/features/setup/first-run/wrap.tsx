@@ -192,14 +192,14 @@ export function ClarityScene({
           </Stack>
         ) : null}
 
-        <Stack gap="sm">
+        {estimateAvailable ? <Stack gap="sm">
           <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
           <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
             <ClarityFormula projection={projection} currency={currency} />
           </AppCard>
-        </Stack>
+        </Stack> : null}
 
-        {todayBeats.length > 0 ? (
+        {estimateAvailable && todayBeats.length > 0 ? (
           <ClarityBeatCard
             testID="onboarding-clarity-now"
             title={copy.stageNow}
@@ -208,7 +208,7 @@ export function ClarityScene({
             stsColor={stsColor}
           />
         ) : null}
-        {projection.ahead.length > 0 ? (
+        {estimateAvailable && projection.ahead.length > 0 ? (
           <ClarityBeatCard
             testID="onboarding-clarity-next"
             title={copy.stageNext}
@@ -237,11 +237,11 @@ export function ClarityScene({
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityFooter}
           </AppText>
-          <ClarityChart
+          {estimateAvailable ? <ClarityChart
             points={projection.chart}
             safeToSpend={projection.safeToSpend}
             currency={currency}
-          />
+          /> : null}
           {hasAnyInput ? (
             <Stack gap="lg">
               {detailGroups.map(group => (
