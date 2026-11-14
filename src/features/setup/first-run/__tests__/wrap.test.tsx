@@ -75,15 +75,29 @@ jest.mock('@/src/components/overlays/InfoSheet', () => {
 });
 
 jest.mock('../conversationUi', () => {
-  const { View: NativeView, Pressable, Text } = jest.requireActual('react-native') as typeof import('react-native');
+  const {
+    View: NativeView,
+    Pressable,
+    Text,
+  } = jest.requireActual('react-native') as typeof import('react-native');
   return {
-    ConversationStep: ({ children, footer, onPrimary, primaryLabel }: {
-      children: React.ReactNode; footer?: React.ReactNode;
-      onPrimary?: () => void; primaryLabel?: string;
+    ConversationStep: ({
+      children,
+      footer,
+      onPrimary,
+      primaryLabel,
+    }: {
+      children: React.ReactNode;
+      footer?: React.ReactNode;
+      onPrimary?: () => void;
+      primaryLabel?: string;
     }) => (
       <NativeView>
-        {children}{footer}
-        <Pressable testID="result-primary" onPress={onPrimary}><Text>{primaryLabel}</Text></Pressable>
+        {children}
+        {footer}
+        <Pressable testID="result-primary" onPress={onPrimary}>
+          <Text>{primaryLabel}</Text>
+        </Pressable>
       </NativeView>
     ),
   };
@@ -118,16 +132,35 @@ describe('ClarityScene progressive explanation', () => {
   const emptyResult = {
     currency: 'USD',
     draft: {
-      operationId: asWorkplaceId('result-operation'), displayName: 'Ada',
-      workplaceName: 'Personal', workplaceIcon: Icon.Home, currency: 'USD', accounts: [],
-      income: { kind: 'unset' }, commitment: { kind: 'unset' }, budget: { kind: 'unset' },
+      operationId: asWorkplaceId('result-operation'),
+      displayName: 'Ada',
+      workplaceName: 'Personal',
+      workplaceIcon: Icon.Home,
+      currency: 'USD',
+      accounts: [],
+      income: { kind: 'unset' },
+      commitment: { kind: 'unset' },
+      budget: { kind: 'unset' },
     },
     projection: {
-      safeToSpend: 0, windowDays: 30, chart: [], liquidNow: 0,
-      expectedIncomeInWindow: 0, plannedOutflowInWindow: 0, budgetReserveInWindow: 0,
-      projectedRoom: 0, heldNow: 0, heldLabel: '', today: [], ahead: [], explanation: '', omitted: [],
+      safeToSpend: 0,
+      windowDays: 30,
+      chart: [],
+      liquidNow: 0,
+      expectedIncomeInWindow: 0,
+      plannedOutflowInWindow: 0,
+      budgetReserveInWindow: 0,
+      projectedRoom: 0,
+      heldNow: 0,
+      heldLabel: '',
+      today: [],
+      ahead: [],
+      explanation: '',
+      omitted: [],
     },
-    finishing: false, onEnter: jest.fn(), onBack: jest.fn(),
+    finishing: false,
+    onEnter: jest.fn(),
+    onBack: jest.fn(),
   } satisfies React.ComponentProps<typeof ClarityScene>;
 
   it('shows unknown instead of a numeric estimate with no usable input', () => {
@@ -138,10 +171,23 @@ describe('ClarityScene progressive explanation', () => {
   });
 
   it('shows preserved metadata without inventing a balance or an estimate', () => {
-    render(<ClarityScene {...emptyResult} hasUsableEstimate={false} draft={{
-      ...emptyResult.draft,
-      preservedStarterAccounts: [{ id: asAccountId('brokerage'), name: 'Brokerage', type: AccountType.ASSET, icon: Icon.Briefcase }],
-    }} />);
+    render(
+      <ClarityScene
+        {...emptyResult}
+        hasUsableEstimate={false}
+        draft={{
+          ...emptyResult.draft,
+          preservedStarterAccounts: [
+            {
+              id: asAccountId('brokerage'),
+              name: 'Brokerage',
+              type: AccountType.ASSET,
+              icon: Icon.Briefcase,
+            },
+          ],
+        }}
+      />,
+    );
     expect(screen.getByText('Brokerage')).toBeTruthy();
     expect(screen.getByText(copy.balanceNotProvided)).toBeTruthy();
     expect(screen.queryByTestId('onboarding-clarity-sts')).toBeNull();
@@ -150,13 +196,19 @@ describe('ClarityScene progressive explanation', () => {
   it('retries opening a saved workplace without committing again', () => {
     const onEnter = jest.fn();
     const onRetryOpen = jest.fn();
-    render(<ClarityScene {...emptyResult} onEnter={onEnter} publishedOutcome={{ retryOpen: onRetryOpen }} />);
+    render(
+      <ClarityScene
+        {...emptyResult}
+        onEnter={onEnter}
+        publishedOutcome={{ retryOpen: onRetryOpen }}
+      />,
+    );
     fireEvent.press(screen.getByTestId('result-primary'));
     expect(onRetryOpen).toHaveBeenCalledTimes(1);
     expect(onEnter).not.toHaveBeenCalled();
   });
 
-  it('keeps the definition and calculation visible, then opens the detailed sheet', () => {
+  it('keeps the result concise and opens calculations on demand', () => {
     render(
       <ClarityScene
         currency="USD"
@@ -193,15 +245,16 @@ describe('ClarityScene progressive explanation', () => {
       />,
     );
 
-    expect(screen.getByText(/Safe to Spend is the cash/)).toBeTruthy();
     expect(screen.getByTestId('onboarding-clarity-result')).toBeTruthy();
-    expect(screen.getByTestId('onboarding-clarity-calculation')).toBeTruthy();
-    expect(screen.getByTestId('onboarding-clarity-formula')).toBeTruthy();
-    expect(screen.queryByTestId('onboarding-clarity-sheet')).toBeNull();
+    expect(screen.queryByText(copy.clarityDefinition)).toBeNull();
+    expect(screen.queryByTestId('onboarding-clarity-calculation')).toBeNull();
+    expect(screen.queryByTestId('onboarding-clarity-formula')).toBeNull();
 
     fireEvent.press(screen.getByTestId('onboarding-clarity-info-button'));
 
     expect(screen.getByTestId('onboarding-clarity-sheet-bottom-sheet')).toBeTruthy();
     expect(screen.getByText('How Safe to Spend works')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-clarity-calculation')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-clarity-formula')).toBeTruthy();
   });
 });
