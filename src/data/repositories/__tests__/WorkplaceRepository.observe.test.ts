@@ -1,6 +1,9 @@
 import { Icon } from '@/src/types/domainIcons';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { WorkplaceId } from '@/src/types/ids';
+import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { AccountType } from '@/src/types/enums';
+import { asAccountId, asWorkplaceId, WorkplaceId } from '@/src/types/ids';
 import { waitFor } from '@testing-library/react-native';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
@@ -50,5 +53,47 @@ describe('WorkplaceRepository observation', () => {
 
     expect(snapshots[0]).toEqual(['Household']);
     expect(snapshots[1]).toEqual(['Studio']);
+  });
+
+  it('gives setup accounts contiguous sibling order in entry order', async () => {
+    const workplaceId = asWorkplaceId('wp-setup-order');
+    await runAccountingWriteSession(session =>
+      workplaceRepository.createSetupInSession(session, {
+        id: workplaceId,
+        name: 'Home',
+        icon: Icon.Home,
+        defaultCurrencyCode: 'USD',
+        accounts: [
+          {
+            id: asAccountId('checking'),
+            name: 'Checking',
+            accountType: AccountType.ASSET,
+            currencyCode: 'USD',
+            workplaceId,
+          },
+          {
+            id: asAccountId('cash'),
+            name: 'Cash',
+            accountType: AccountType.ASSET,
+            currencyCode: 'USD',
+            workplaceId,
+          },
+        ],
+      }),
+    );
+
+    const accounts = await accountQueryRepository.findAll(workplaceId);
+    const assets = accounts
+      .filter(account => account.accountType === AccountType.ASSET)
+      .sort((left, right) => (left.orderNum ?? 0) - (right.orderNum ?? 0));
+    expect(assets.map(account => [account.name, account.orderNum])).toEqual([
+      ['Checking', 0],
+      ['Cash', 1],
+    ]);
+    const equity = accounts
+      .filter(account => account.accountType === AccountType.EQUITY)
+      .map(account => account.orderNum)
+      .sort((left, right) => (left ?? 0) - (right ?? 0));
+    expect(equity).toEqual([0, 1]);
   });
 });

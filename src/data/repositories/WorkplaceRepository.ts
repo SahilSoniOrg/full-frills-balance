@@ -113,24 +113,31 @@ export class WorkplaceRepository {
     },
   ): Promise<Workplace> {
     const workplace = this.prepareCreate(data);
-    stageModelWrite(session, [
-      workplace,
-      this.prepareCreatedAuditLog(workplace, data.id),
-    ]);
+    stageModelWrite(session, [workplace, this.prepareCreatedAuditLog(workplace, data.id)]);
 
     const opening = getOpeningBalancesAccountInput(data.defaultCurrencyCode, data.id);
     const correction = getBalanceCorrectionAccountInput(data.defaultCurrencyCode, data.id);
-    await accountWriteRepository.createInSession(session, {
-      ...opening,
-      id: `${data.id}:system:opening-balances` as AccountId,
-    });
-    await accountWriteRepository.createInSession(session, {
-      ...correction,
-      id: `${data.id}:system:balance-corrections` as AccountId,
-    });
+    const append = { appendWithinSiblingList: true } as const;
+    await accountWriteRepository.createInSession(
+      session,
+      {
+        ...opening,
+        id: `${data.id}:system:opening-balances` as AccountId,
+      },
+      append,
+    );
+    await accountWriteRepository.createInSession(
+      session,
+      {
+        ...correction,
+        id: `${data.id}:system:balance-corrections` as AccountId,
+      },
+      append,
+    );
 
     for (const account of data.accounts) {
       await accountWriteRepository.createInSession(session, account, {
+        ...append,
         audit: { correlationId: data.id },
       });
     }
