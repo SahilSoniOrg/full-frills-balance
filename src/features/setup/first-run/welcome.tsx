@@ -8,7 +8,6 @@ import { Box, Stack } from '@/src/design-system';
 import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { Keyboard, Platform, StyleSheet } from 'react-native';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 
 export function WelcomeScene({
   name,
@@ -18,7 +17,6 @@ export function WelcomeScene({
   onPrivacyNotice,
   onStart,
   onRestore,
-  privacySummary,
 }: {
   readonly name: string;
   readonly onNameChange: (name: string) => void;
@@ -27,7 +25,6 @@ export function WelcomeScene({
   readonly onPrivacyNotice: () => void;
   readonly onStart: () => void;
   readonly onRestore: () => void;
-  readonly privacySummary?: ReactNode;
 }) {
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
@@ -114,40 +111,12 @@ export function WelcomeScene({
                   </AppText>
                 </Stack>
 
-                {privacySummary ?? (
-                  <Box testID="onboarding-privacy-summary" paddingHorizontal="md" width="100%">
-                    <Stack gap="sm">
-                      <AppText variant="subheading">
-                        {PRIVACY_NOTICE_STRINGS.acknowledgementPromptCalloutTitle}
-                      </AppText>
-                      <AppText variant="body" color="secondary">
-                        {PRIVACY_NOTICE_STRINGS.acknowledgementPromptCalloutBody}
-                      </AppText>
-                      <Stack gap="xs">
-                        {PRIVACY_NOTICE_STRINGS.onboardingSummaryBullets.map((bullet, index) => (
-                          <AppText key={index} variant="caption" color="secondary">
-                            {bullet}
-                          </AppText>
-                        ))}
-                      </Stack>
-                      <AppButton
-                        variant="ghost"
-                        size="sm"
-                        onPress={onPrivacyNotice}
-                        accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
-                        testID="onboarding-privacy-notice-button"
-                      >
-                        {PRIVACY_NOTICE_STRINGS.onboardingAction}
-                      </AppButton>
-                    </Stack>
-                  </Box>
-                )}
-
                 <Stack gap="lg" width="100%" paddingHorizontal="md">
                   <AppInput
                     label={splash.inputLabel}
                     placeholder={splash.inputPlaceholder}
                     value={name ?? ''}
+                    maxLength={120}
                     onChangeText={onNameChange}
                     autoCapitalize="words"
                     autoCorrect={false}

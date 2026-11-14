@@ -3,9 +3,9 @@ export const PRIVACY_NOTICE_STRINGS = {
   onboardingSummary: 'Before you begin, review how your data is handled.',
   onboardingAction: 'Review privacy policy',
   onboardingSummaryBullets: [
-    'Your accounts, balances, and entries stay on this device unless you export or share a backup.',
-    'Exchange rates and limited analytics may use the network; analytics does not receive your financial details.',
-    'Optional capture and voice features use external services only when you enable them.',
+    'Financial records stay on this device. Local storage and exported backups have no separate app-level encryption; device backups may retain copies.',
+    'Exchange rates and limited analytics use the network. Analytics requests send your IP address, but not your financial records.',
+    'Gmail capture and voice are optional and can use Google or speech services. Review the full policy before enabling them.',
   ],
   acknowledgementPromptTitle: 'Before you continue',
   acknowledgementPromptBody:

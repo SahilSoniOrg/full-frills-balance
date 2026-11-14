@@ -2,6 +2,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
@@ -461,6 +462,11 @@ function SetupJourneyScreen({
       testID="setup-screen"
       currentStep={displayProgress.current}
       totalSteps={displayProgress.total}
+      stepName={slice === 'workplace'
+        ? workplaceStep === 'currency' ? copy.progressCurrency : copy.progressIdentity
+        : slice === 'restore_source' ? copy.progressRestoreSource
+        : slice === 'restore_summary' || slice === 'summary' ? copy.progressReview
+        : slice === 'device' ? copy.progressDevice : copy.progressSetup}
       keyboardAvoiding
       backAction={
         !resolving && (slice === 'restore_source' || slice === 'restore_summary')

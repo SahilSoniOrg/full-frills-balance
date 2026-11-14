@@ -1,5 +1,6 @@
 import { render, screen } from '@/src/utils/test-utils';
 import { WelcomeScene } from '../welcome';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 
 jest.mock('@/src/components/core', () => {
   const { Text: NativeText, TextInput: NativeTextInput, TouchableOpacity, View } = jest.requireActual(
@@ -33,8 +34,8 @@ jest.mock('@/src/design-system', () => {
   return { Box: passthrough, FadeIn: passthrough, Stack: passthrough };
 });
 
-describe('WelcomeScene privacy summary', () => {
-  it('shows the short privacy summary before financial input', () => {
+describe('WelcomeScene privacy access', () => {
+  it('shows privacy access on the name-only welcome', () => {
     render(
       <WelcomeScene
         name=""
@@ -47,7 +48,7 @@ describe('WelcomeScene privacy summary', () => {
       />,
     );
 
-    expect(screen.getByTestId('onboarding-privacy-summary')).toBeTruthy();
-    expect(screen.getByText(/Local by default/i)).toBeTruthy();
+    expect(screen.getByTestId('onboarding-privacy-notice-button')).toBeTruthy();
+    expect(screen.getByText(copy.privacyFootnote)).toBeTruthy();
   });
 });

@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppConfig, ChromeMotion, Spacing, Typography } from '@/src/constants';
+import { AppConfig, ChromeMotion, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Inline, Page, SetupProgressBar, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -43,7 +43,6 @@ export function OnboardingChrome({
                   label={stage.label}
                   current={stage.current}
                   total={stage.total}
-                  accessibilityLabel={stage.label}
                 />
               </Box>
             ) : null}
@@ -76,25 +75,15 @@ export function SafeToSpendHeader({
   amount,
   currency,
   change,
-  changeReason,
-  reason,
   spokenEcho,
-  echo,
-  spoken,
 }: {
   readonly amount: number;
   readonly currency: string;
   readonly change?: string | null;
-  readonly changeReason?: string | null;
-  readonly reason?: string | null;
   readonly spokenEcho?: string | null;
-  readonly echo?: string | null;
-  readonly spoken?: string | null;
 }) {
   const { isKeyboardVisible: compact } = usePageKeyboard();
   const reduceMotion = useReducedMotion();
-  const resolvedChangeReason = changeReason ?? reason ?? change ?? null;
-  const resolvedSpokenEcho = spokenEcho ?? echo ?? spoken ?? null;
 
   const amountText = (variant: 'subheading' | 'hero') => (
     <MoneyText
@@ -136,27 +125,25 @@ export function SafeToSpendHeader({
           )}
         </Stack>
       )}
-      {resolvedSpokenEcho ? (
+      {spokenEcho ? (
         <Box paddingBottom="xs">
           <AppText
             variant="caption"
             color="secondary"
-            numberOfLines={2}
             testID="onboarding-sts-echo"
           >
-            {resolvedSpokenEcho}
+            {spokenEcho}
           </AppText>
         </Box>
       ) : null}
-      {resolvedChangeReason ? (
+      {change ? (
         <Box paddingBottom="sm">
           <AppText
             variant="caption"
             color="secondary"
-            numberOfLines={2}
             testID="onboarding-sts-change"
           >
-            {resolvedChangeReason}
+            {change}
           </AppText>
         </Box>
       ) : null}

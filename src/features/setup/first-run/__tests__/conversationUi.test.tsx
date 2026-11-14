@@ -138,18 +138,18 @@ describe('ConversationStep keyboard behavior', () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
-  it('removes the footer from the layout while the keyboard is visible', () => {
+  it('keeps the primary action reachable while the keyboard is visible', () => {
     mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
+    const onContinue = jest.fn();
 
     render(
-      <ConversationStep primaryLabel="Continue" onPrimary={jest.fn()} onBack={jest.fn()}>
+      <ConversationStep primaryLabel="Continue" onPrimary={onContinue} onBack={jest.fn()}>
         <TextInput testID="collector-input" />
       </ConversationStep>,
     );
 
-    expect(screen.queryByTestId('onboarding-continue-button')).toBeNull();
-    const scrollView = screen.UNSAFE_getByType(ScrollView);
-    expect(scrollView.props.contentContainerStyle[1].paddingBottom).toBe(Spacing.lg);
+    fireEvent.press(screen.getByTestId('onboarding-continue-button'));
+    expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
   it('keeps onboarding amount inputs in the same layout flow as their currency symbol', () => {

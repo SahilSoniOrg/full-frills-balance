@@ -47,9 +47,11 @@ export function PrivacyAcknowledgementSheet({
             </AppText>
           </Stack>
         </AppCard>
-        <AppText variant="caption" color="secondary">
-          {copy.acknowledgementPromptDetails}
-        </AppText>
+        <Stack gap="sm">
+          {copy.onboardingSummaryBullets.map(bullet => (
+            <AppText key={bullet} variant="body" color="secondary">{bullet}</AppText>
+          ))}
+        </Stack>
         <AppButton
           variant="ghost"
           size="sm"

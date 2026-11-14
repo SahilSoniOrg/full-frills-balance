@@ -30,18 +30,10 @@ export function ConversationStep({
   skipLabel,
   onSkip,
   onBack,
-  validation,
-  validationSlot,
-  footerValidation,
-  fieldValidation,
-  error,
-  errors,
-  errorMessage,
+  backDisabled,
+  validationMessage,
   recovery,
-  recoveryActions,
-  recoverySlot,
   footer,
-  footerSlot,
 }: {
   readonly title?: string;
   readonly subtitle?: string;
@@ -54,44 +46,40 @@ export function ConversationStep({
   readonly skipLabel?: string;
   readonly onSkip?: () => void;
   readonly onBack: () => void;
-  readonly validation?: ReactNode;
-  readonly validationSlot?: ReactNode;
-  readonly footerValidation?: ReactNode;
-  readonly fieldValidation?: ReactNode;
-  readonly error?: ReactNode;
-  readonly errors?: ReactNode;
-  readonly errorMessage?: ReactNode;
+  readonly backDisabled?: boolean;
+  readonly validationMessage?: string | null;
   readonly recovery?: ReactNode;
-  readonly recoveryActions?: ReactNode;
-  readonly recoverySlot?: ReactNode;
   readonly footer?: ReactNode;
-  readonly footerSlot?: ReactNode;
 }) {
-  const [footerHeight, setFooterHeight] = useState(0);
   const { isKeyboardVisible } = usePageKeyboard();
-  const footerValidationNodes = [
-    validation,
-    validationSlot,
-    footerValidation,
-    fieldValidation,
-    error,
-    errors,
-    errorMessage,
-    recovery,
-    recoveryActions,
-    recoverySlot,
-    footer,
-    footerSlot,
-  ].filter(Boolean);
+  const secondaryActions = (
+    <Stack direction={isKeyboardVisible ? 'row' : 'column'} gap="xs">
+      {onSkip ? (
+        <Box flex={isKeyboardVisible ? 1 : undefined}>
+          <AppButton
+            variant="ghost"
+            size="md"
+            onPress={() => { Keyboard.dismiss(); onSkip(); }}
+            disabled={primaryLoading}
+            testID="onboarding-skip"
+          >
+            {skipLabel ?? copy.addLater}
+          </AppButton>
+        </Box>
+      ) : null}
+      <Box flex={isKeyboardVisible ? 1 : undefined}>
+        <AppButton variant="ghost" size="md" onPress={onBack} disabled={primaryLoading || backDisabled}>
+          {copy.back}
+        </AppButton>
+      </Box>
+    </Stack>
+  );
 
   return (
     <Box flex={1} minHeight={0}>
       <KeyboardAwareScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: footerHeight + Spacing.lg },
-        ]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
@@ -100,13 +88,7 @@ export function ConversationStep({
           <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
             {title ? (
               <Stack gap="sm" align="center">
-                <AppText
-                  variant="title"
-                  align="center"
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}
-                  style={styles.title}
-                >
+                <AppText variant="title" align="center" style={styles.title}>
                   {title}
                 </AppText>
                 {subtitle ? (
@@ -120,35 +102,20 @@ export function ConversationStep({
           </Stack>
         </OnboardingFadePanel>
       </KeyboardAwareScrollView>
-      <Box
-        background="background"
-        borderTopWidth={1}
-        borderColor="border"
-        paddingTop="md"
-        onLayout={event => {
-          const height = event.nativeEvent.layout.height;
-          setFooterHeight(previousHeight =>
-            previousHeight === height ? previousHeight : height,
-          );
-        }}
-      >
-        <Stack space="xs">
-          {footerValidationNodes.length > 0 ? (
-            <Stack space="xs">{footerValidationNodes}</Stack>
+      <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="sm">
+        <Stack gap="xs">
+          {validationMessage ? (
+            <AppText variant="body" color="error" accessibilityRole="alert">
+              {validationMessage}
+            </AppText>
           ) : null}
-          {onSkip ? (
-            <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
-              {skipLabel ?? copy.addLater}
-            </AppButton>
-          ) : null}
+          {recovery}
+          {footer}
           {onPrimary ? (
             <AppButton
               variant="primary"
               size="lg"
-              onPress={() => {
-                Keyboard.dismiss();
-                onPrimary();
-              }}
+              onPress={() => { Keyboard.dismiss(); onPrimary(); }}
               disabled={primaryDisabled || primaryLoading}
               loading={primaryLoading}
               testID={primaryTestID}
@@ -157,9 +124,7 @@ export function ConversationStep({
               {primaryLabel}
             </AppButton>
           ) : null}
-          <AppButton variant="ghost" size="md" onPress={onBack}>
-            {copy.back}
-          </AppButton>
+          {secondaryActions}
         </Stack>
       </Box>
     </Box>
@@ -244,31 +209,9 @@ export function CollectedList({
 }
 
 export function CollectStep({
-  title,
-  subtitle,
-  continueLabel,
-  onContinue,
-  continueDisabled,
-  skipLabel,
-  onSkip,
-  onBack,
-  chipLabel,
-  chips,
-  onAddChip,
-  currency,
-  items,
-  validation,
-  validationSlot,
-  footerValidation,
-  fieldValidation,
-  error,
-  errors,
-  errorMessage,
-  recovery,
-  recoveryActions,
-  recoverySlot,
-  footer,
-  footerSlot,
+  title, subtitle, continueLabel, onContinue, continueDisabled, skipLabel,
+  onSkip, onBack, chipLabel, chips, onAddChip, currency, items,
+  validationMessage, recovery, footer,
 }: {
   readonly title: string;
   readonly subtitle?: string;
@@ -283,18 +226,9 @@ export function CollectStep({
   readonly onAddChip: (id: string) => void;
   readonly currency: string;
   readonly items: readonly CollectedItem[];
-  readonly validation?: ReactNode;
-  readonly validationSlot?: ReactNode;
-  readonly footerValidation?: ReactNode;
-  readonly fieldValidation?: ReactNode;
-  readonly error?: ReactNode;
-  readonly errors?: ReactNode;
-  readonly errorMessage?: ReactNode;
+  readonly validationMessage?: string | null;
   readonly recovery?: ReactNode;
-  readonly recoveryActions?: ReactNode;
-  readonly recoverySlot?: ReactNode;
   readonly footer?: ReactNode;
-  readonly footerSlot?: ReactNode;
 }) {
   return (
     <ConversationStep
@@ -306,23 +240,12 @@ export function CollectStep({
       skipLabel={skipLabel}
       onSkip={onSkip}
       onBack={onBack}
-      validation={validation}
-      validationSlot={validationSlot}
-      footerValidation={footerValidation}
-      fieldValidation={fieldValidation}
-      error={error}
-      errors={errors}
-      errorMessage={errorMessage}
+      validationMessage={validationMessage}
       recovery={recovery}
-      recoveryActions={recoveryActions}
-      recoverySlot={recoverySlot}
       footer={footer}
-      footerSlot={footerSlot}
     >
       <Stack gap="md">
-        <AppText variant="caption" color="secondary">
-          {chipLabel}
-        </AppText>
+        <AppText variant="caption" color="secondary">{chipLabel}</AppText>
         <ChoiceChips options={chips} onSelect={onAddChip} />
         <CollectedList items={items} currency={currency} />
       </Stack>

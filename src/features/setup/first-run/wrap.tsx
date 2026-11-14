@@ -49,17 +49,11 @@ export function ClarityScene({
   finishing,
   finishError,
   openError,
-  openErrorMessage,
   savedButNotOpened,
   onRetryOpen,
   retryOpenLabel,
   omissions,
-  omitted,
-  deferred,
-  deferredOmissions,
   editActions,
-  onEdit,
-  editTargets,
   onEnter,
   onBack,
 }: {
@@ -69,19 +63,13 @@ export function ClarityScene({
   readonly finishing: boolean;
   readonly finishError?: string | null;
   readonly openError?: string | null;
-  readonly openErrorMessage?: string | null;
   readonly savedButNotOpened?: boolean;
   readonly onRetryOpen?: () => void;
   readonly retryOpenLabel?: string;
   readonly omissions?:
     | readonly (string | ClarityOmission)[]
     | null;
-  readonly omitted?: readonly (string | ClarityOmission)[] | null;
-  readonly deferred?: readonly (string | ClarityOmission)[] | null;
-  readonly deferredOmissions?: readonly (string | ClarityOmission)[] | null;
   readonly editActions?: readonly ClarityEditAction[] | null;
-  readonly onEdit?: (target: string) => void;
-  readonly editTargets?: readonly string[] | null;
   readonly onEnter: () => void;
   readonly onBack: () => void;
 }) {
@@ -91,19 +79,13 @@ export function ClarityScene({
     draft,
     projection,
   );
-  const resolvedOmissions = omissions ?? omitted ?? deferred ?? deferredOmissions ?? [];
-  const normalizedOmissions = resolvedOmissions.map((item, index) =>
+  const normalizedOmissions = (omissions ?? []).map((item, index) =>
     typeof item === 'string' ? { id: `omission-${index}`, label: item } : item,
   );
-  const resolvedOpenError = openError ?? openErrorMessage ?? null;
-  const resolvedEditActions = [
-    ...(editActions ?? []),
-    ...((editTargets ?? []).map((target, index) => ({
-      id: `edit-target-${index}`,
-      label: `Edit ${target}`,
-      onPress: () => onEdit?.(target),
-    })) as ClarityEditAction[]),
-  ];
+  const published = savedButNotOpened || Boolean(openError);
+  const resultStatus = !hasAnyInput ? copy.clarityUnknown
+    : projection.safeToSpend < 0 ? copy.clarityShortfall
+    : projection.safeToSpend === 0 ? copy.clarityZero : copy.safeToSpend;
   const groupDots = {
     cash: theme.asset,
     income: theme.success,
@@ -113,37 +95,23 @@ export function ClarityScene({
 
   return (
     <ConversationStep
-      primaryLabel={finishing ? copy.finishing : copy.enterDashboard}
+      primaryLabel={finishing ? copy.finishing : published ? (retryOpenLabel ?? copy.retryOpen)
+        : normalizedOmissions.length > 0 ? copy.finishWithoutDeferred : copy.enterDashboard}
       primaryTestID="onboarding-finish-button"
-      onPrimary={onEnter}
+      onPrimary={published ? onRetryOpen : onEnter}
       primaryLoading={finishing}
-      primaryDisabled={finishing}
+      primaryDisabled={finishing || (published && !onRetryOpen)}
       onBack={onBack}
+      backDisabled={published || finishing}
+      validationMessage={openError ?? (published ? copy.savedCouldNotOpen : finishError)}
+      footer={normalizedOmissions.length > 0 && !published ? (
+        <AppText variant="caption" color="secondary">{copy.willNotBeSaved}</AppText>
+      ) : null}
     >
       <Stack gap="lg">
-        {finishError ? (
-          <AppText variant="body" color="error" accessibilityRole="alert">
-            {finishError}
-          </AppText>
-        ) : null}
-        {resolvedOpenError || savedButNotOpened ? (
-          <AppText variant="body" color="error" accessibilityRole="alert">
-            {resolvedOpenError ?? copy.savedCouldNotOpen}
-          </AppText>
-        ) : null}
-        {onRetryOpen && (resolvedOpenError || savedButNotOpened) ? (
-          <AppButton
-            variant="secondary"
-            size="md"
-            onPress={onRetryOpen}
-            testID="onboarding-retry-open-button"
-          >
-            {retryOpenLabel ?? copy.retryOpen}
-          </AppButton>
-        ) : null}
         <ClarityResultPanel>
           <AppCard
-            variant={projection.safeToSpend > 0 ? 'ghost' : 'outline'}
+            variant="ghost"
             paddingSize="lg"
             testID="onboarding-clarity-result"
           >
@@ -151,7 +119,7 @@ export function ClarityScene({
               <Inline align="center" justify="space-between" gap="md">
                 <Stack gap="xs" flex={1}>
                   <AppText variant="overline" color="secondary">
-                    {copy.safeToSpend}
+                    {resultStatus}
                   </AppText>
                   <AppText variant="caption" color="secondary">
                     {copy.overNextDays(projection.windowDays)}
@@ -165,12 +133,13 @@ export function ClarityScene({
                   testID="onboarding-clarity-info-button"
                 />
               </Inline>
+              {hasAnyInput ? (
               <MoneyText
                 amount={projection.safeToSpend}
                 currencyCode={currency}
                 formatStyle="sts"
                 variant="hero"
-                color={stsColor}
+                color={projection.safeToSpend < 0 ? 'error' : 'primary'}
                 fit={{
                   maxFontSize: Typography.roles.hero.fontSize,
                   minFontSize: Typography.sizes.xxxl + Spacing.xs,
@@ -178,6 +147,7 @@ export function ClarityScene({
                 }}
                 testID="onboarding-clarity-sts"
               />
+              ) : null}
               <AppText variant="body" color="secondary" style={styles.proseCopy}>
                 {copy.clarityDefinition}
               </AppText>
@@ -197,14 +167,15 @@ export function ClarityScene({
           </Stack>
         ) : null}
 
-        {resolvedEditActions.length > 0 ? (
+        {editActions && editActions.length > 0 ? (
           <Stack gap="sm" testID="onboarding-clarity-edit-actions">
-            {resolvedEditActions.map(action => (
+            {editActions.map(action => (
               <AppButton
                 key={action.id ?? action.label}
                 variant="ghost"
                 size="md"
                 onPress={action.onPress}
+                disabled={finishing || published}
                 testID={`onboarding-edit-${action.id ?? action.label}`}
               >
                 {action.label}
