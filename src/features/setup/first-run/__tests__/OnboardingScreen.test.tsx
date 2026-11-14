@@ -43,7 +43,13 @@ jest.mock('@/src/services/legal/privacyPolicyAcceptance', () => ({
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: { back: jest.fn(), toPrivacyNotice: jest.fn(), toSetupJourney: jest.fn() },
 }));
-jest.mock('../commitCashClarity', () => ({ publishCashClarity: jest.fn() }));
+jest.mock('../commitCashClarity', () => ({
+  publishCashClarity: jest.fn(),
+  recoverCashClarityPublication: jest.fn(async () => undefined),
+  CashClarityPublicationError: class extends Error {
+    readonly code = 'save_failed';
+  },
+}));
 
 jest.mock('../scenes', () => {
   const { Pressable } = jest.requireActual('react-native') as typeof import('react-native');

@@ -1,7 +1,7 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
-import { commitCashClarity, publishCashClarity } from '../commitCashClarity';
+import { commitCashClarity, publishCashClarity, recoverCashClarityPublication } from '../commitCashClarity';
 import { cashClarityDraft, cashClaritySalaryIncome } from './cashClarityTestFixtures';
 
 const mockRunSession = jest.fn();
@@ -72,7 +72,7 @@ jest.mock('@/src/services/analytics', () => ({
     trackFeatureUsage: (...args: unknown[]) => mockTrackFeatureUsage(...args),
   },
 }));
-jest.mock('../setupFinishers', () => ({ finishDeviceSetup: (...args: unknown[]) => mockFinishDeviceSetup(...args) }));
+jest.mock('../../setupFinishers', () => ({ finishDeviceSetup: (...args: unknown[]) => mockFinishDeviceSetup(...args) }));
 jest.mock('../../SetupDraftStore', () => ({ clearSetupDraft: (...args: unknown[]) => mockClearDraft(...args) }));
 jest.mock('../pendingWorkplace', () => ({ clearPendingCashClarityWorkplaceId: (...args: unknown[]) => mockClearPending(...args) }));
 
@@ -307,7 +307,7 @@ describe('publishCashClarity', () => {
     });
     mockFindWorkplace.mockResolvedValue({ id: draft.operationId });
 
-    await expect(publishCashClarity(draft)).resolves.toEqual({
+    await expect(recoverCashClarityPublication(draft.operationId)).resolves.toEqual({
       workplaceId: draft.operationId,
       status: 'already_published',
     });
@@ -326,6 +326,10 @@ describe('publishCashClarity', () => {
     expect(mockCreateSetup).toHaveBeenCalledTimes(1);
     expect(mockPutJournal).toHaveBeenCalledTimes(1);
     expect(mockStageModelWrite).toHaveBeenCalledTimes(1);
+    mockAfterCommit.mockImplementationOnce(() => { throw new Error('queue unavailable'); });
+    await expect(recoverCashClarityPublication(draft.operationId)).rejects.toMatchObject({
+      code: 'finalization_failed',
+    });
   });
 
   it('rejects a receipt with missing published rows without enqueueing or republishing', async () => {

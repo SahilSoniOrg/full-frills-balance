@@ -10,6 +10,7 @@ export type CashClarityPublicationErrorCode =
   | 'missing_spendable_account'
   | 'ambiguous_existing_publication'
   | 'incomplete_publication'
+  | 'finalization_failed'
   | 'save_failed';
 
 export class CashClarityPublicationError extends Error {

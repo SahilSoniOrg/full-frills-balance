@@ -583,6 +583,34 @@ export async function publishCashClarity(
   return { workplaceId: result.workplaceId, status: result.status };
 }
 
+/** Verify saved books and replay derived effects without accepting another creation payload. */
+export async function recoverCashClarityPublication(
+  workplaceId: WorkplaceId,
+): Promise<CashClarityPublicationOutcome> {
+  try {
+    const impact = await runAccountingWriteSession(async () => {
+      const receipt = await auditRepository.find(receiptId(workplaceId), workplaceId);
+      const workplace = await workplaceRepository.find(workplaceId);
+      if (!receipt || !workplace) {
+        throw new CashClarityPublicationError(
+          workplace && !receipt ? 'ambiguous_existing_publication' : 'incomplete_publication',
+          'Saved setup needs recovery before it can be opened.',
+        );
+      }
+      return verifyCompletedPublication(workplaceId, receipt);
+    });
+    journalPersistenceService.afterAtomicWriteCommit(impact, workplaceId);
+    return { workplaceId, status: 'already_published' };
+  } catch (cause) {
+    if (cause instanceof CashClarityPublicationError) throw cause;
+    throw new CashClarityPublicationError(
+      'finalization_failed',
+      'Books are saved, but setup could not finish. Try again.',
+      { cause },
+    );
+  }
+}
+
 /**
  * Compatibility wrapper for the retired first-run screen. New setup code must call
  * publishCashClarity, then let LaunchCoordinator activate the returned Workplace and

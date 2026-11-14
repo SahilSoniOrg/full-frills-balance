@@ -143,6 +143,7 @@ export interface CashClaritySetupDraft {
     | 'missing_spendable_account'
     | 'ambiguous_existing_publication'
     | 'incomplete_publication'
+    | 'finalization_failed'
     | 'save_failed';
   /** Accepted legacy provenance retained as migration metadata. */
   readonly legacyProvenance?: {

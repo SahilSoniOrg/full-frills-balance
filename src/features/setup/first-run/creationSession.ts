@@ -135,7 +135,7 @@ export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraf
       !['published', 'already_published'].includes(String(value.publication.status))) return undefined;
     publication = { workplaceId: asWorkplaceId(value.publication.workplaceId as string), status: value.publication.status as 'published' | 'already_published' };
   }
-  const errorCodes = ['invalid_input', 'missing_spendable_account', 'ambiguous_existing_publication', 'incomplete_publication', 'save_failed'];
+  const errorCodes = ['invalid_input', 'missing_spendable_account', 'ambiguous_existing_publication', 'incomplete_publication', 'finalization_failed', 'save_failed'];
   if (value.publicationErrorCode !== undefined && !errorCodes.includes(String(value.publicationErrorCode))) return undefined;
   let legacyProvenance: CashClaritySetupDraft['legacyProvenance'];
   if (value.legacyProvenance !== undefined) {

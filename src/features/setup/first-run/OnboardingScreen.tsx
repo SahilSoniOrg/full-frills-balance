@@ -27,7 +27,7 @@ import {
 } from '../SetupDraftStore';
 import type { CashClaritySetupDraft, CreationContext, CreationIntent, SetupDraft } from '../setupTypes';
 import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
-import { CashClarityPublicationError, publishCashClarity } from './commitCashClarity';
+import { CashClarityPublicationError, publishCashClarity, recoverCashClarityPublication } from './commitCashClarity';
 import { createCreationSession } from './creationSession';
 import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
 import {
@@ -159,6 +159,7 @@ function publicationMessage(code: CashClarityPublicationError['code']): string {
     case 'missing_spendable_account': return copy.publishMissingAccount;
     case 'ambiguous_existing_publication': return copy.publishAmbiguous;
     case 'incomplete_publication': return copy.publishIncomplete;
+    case 'finalization_failed': return copy.publishFinalization;
     case 'save_failed': return copy.publishFailed;
   }
 }
@@ -538,6 +539,7 @@ export function OnboardingScreen() {
   const openPublished = async (current: CashClaritySetupDraft) => {
     const published = current.publication;
     if (!published) return;
+    await recoverCashClarityPublication(published.workplaceId);
     if (current.intent === 'first_run') {
       finishDeviceSetup({ displayName: { value: current.draft.displayName.trim(), source: 'user_entered' } });
     }

@@ -180,6 +180,7 @@ export const ONBOARDING_STRINGS = {
   finishWithoutDeferred: 'Continue without these entries',
   retryOpen: 'Retry opening',
   savedCouldNotOpen: 'Saved, but could not open.',
+  publishFinalization: 'Your books are saved. Setup could not finish; try again.',
   clarityUnknown: 'No estimate yet',
   estimateIncomplete: 'Based on the valid entries included so far.',
   cardPaymentOptional: 'Leave blank or enter 0 for no planned payment.',
