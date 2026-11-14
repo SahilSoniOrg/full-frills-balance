@@ -217,10 +217,14 @@ export class JournalPersistenceService {
 
   /** Enqueue derived-balance rebuilds only after the enclosing session has committed. */
   afterAtomicWriteCommit(
-    results: readonly JournalPersistenceResult[],
+    committed: readonly JournalPersistenceResult[] | JournalRebuildImpact,
     workplaceId: WorkplaceId,
   ): void {
-    this.enqueueRebuilds(results, workplaceId);
+    if (Array.isArray(committed)) {
+      this.enqueueRebuilds(committed as readonly JournalPersistenceResult[], workplaceId);
+      return;
+    }
+    this.enqueueImpacts([committed as JournalRebuildImpact], workplaceId);
   }
 
   async reverse(

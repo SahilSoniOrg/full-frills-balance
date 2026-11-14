@@ -1,12 +1,15 @@
-import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { cashClarityPublicationRepository } from '@/src/data/repositories/CashClarityPublicationRepository';
 import {
   runAccountingWriteSession,
   stageModelWrite,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
+import type {
+  JournalPersistenceResult,
+  JournalRebuildImpact,
+} from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -27,12 +30,20 @@ import {
   asPlannedPaymentId,
   type WorkplaceId,
 } from '@/src/types/ids';
-import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { roundToPrecision } from '@/src/utils/money';
 import { generateWorkplaceName } from '@/src/utils/workplaceName';
 import { logger } from '@/src/utils/logger';
 import type { CashClarityDraft } from './draft';
+import {
+  invalid,
+  snapshotCashClarityDraft,
+  validateCashClarityCurrencyPrecision,
+  validateCashClarityDraft,
+} from './cashClarityPublicationValidation';
+import {
+  CashClarityPublicationError,
+  type CashClarityPublicationOutcome,
+} from './cashClarityPublicationTypes';
 import {
   ACCOUNT_KIND_META,
   budgetLookupName,
@@ -42,40 +53,20 @@ import {
   paymentCategoryName,
   paymentItemName,
   subtypeForAccount,
-  type CommitmentKind,
-  type IncomeDraft,
-  type CommitmentDraft,
 } from './draft';
 import {
-  draftAccountId,
   mapDraftToWorkplaceOutput,
+  publishedDraftAccountId,
   starterCategoryId,
 } from './mapToWorkplaceOutput';
 
+export { CashClarityPublicationError };
+export type {
+  CashClarityPublicationErrorCode,
+  CashClarityPublicationOutcome,
+} from './cashClarityPublicationTypes';
+
 const PUBLICATION_RECEIPT_PREFIX = 'cash-clarity-publication:';
-
-export type CashClarityPublicationOutcome = {
-  readonly workplaceId: WorkplaceId;
-  readonly status: 'published' | 'already_published';
-};
-
-export type CashClarityPublicationErrorCode =
-  | 'invalid_input'
-  | 'missing_spendable_account'
-  | 'ambiguous_existing_publication'
-  | 'incomplete_publication'
-  | 'save_failed';
-
-export class CashClarityPublicationError extends Error {
-  constructor(
-    readonly code: CashClarityPublicationErrorCode,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = 'CashClarityPublicationError';
-  }
-}
 
 type PublicationManifest = {
   operationId: string;
@@ -84,209 +75,18 @@ type PublicationManifest = {
   plannedPaymentIds: string[];
   budgetIds: string[];
   budgetScopeIds: string[];
+  balanceRebuildAccountIds?: string[];
+  balanceRebuildFromDate?: number | null;
 };
 
 type AtomicPublicationResult = {
   readonly status: CashClarityPublicationOutcome['status'];
   readonly workplaceId: WorkplaceId;
-  readonly journals: JournalPersistenceResult[];
+  readonly balanceRebuild: JournalRebuildImpact;
 };
-
-function invalid(message: string): never {
-  throw new CashClarityPublicationError('invalid_input', message);
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function assertFiniteMoney(value: unknown, label: string, allowZero: boolean): asserts value is number {
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    (allowZero ? false : value <= 0)
-  ) {
-    invalid(`${label} must be a finite ${allowZero ? 'amount' : 'positive amount'}.`);
-  }
-}
-
-function assertTimestamp(value: unknown, label: string): asserts value is number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !dayjs(value).isValid()) {
-    invalid(`${label} must be a valid date.`);
-  }
-}
-
-function assertName(value: unknown, label: string, optional = false): asserts value is string {
-  if (typeof value !== 'string' || (!optional && !value.trim())) {
-    invalid(`${label} is required.`);
-  }
-}
-
-function assertUniqueIds(items: readonly { id: string }[], label: string): void {
-  const ids = new Set<string>();
-  for (const candidate of items as readonly unknown[]) {
-    if (!isRecord(candidate) || typeof candidate.id !== 'string' || !candidate.id.trim() || ids.has(candidate.id)) {
-      invalid(`${label} must have unique, non-empty item IDs.`);
-    }
-    ids.add(candidate.id);
-  }
-}
-
-function validateIncome(draft: CashClarityDraft): void {
-  const income = draft.income as IncomeDraft;
-  if (!isRecord(income) || !['unset', 'skipped', 'recurring'].includes(String(income.kind))) {
-    invalid('Income setup is malformed.');
-  }
-  if (income.kind !== 'recurring') return;
-  if (!Array.isArray(income.items)) invalid('Income setup is malformed.');
-  assertUniqueIds(income.items, 'Income');
-  const sources = new Set(['salary', 'family', 'retirement', 'freelance', 'other']);
-  for (const item of income.items) {
-    if (!isRecord(item) || !sources.has(String(item.source))) invalid('An income source is invalid.');
-    assertName(item.name, 'Income name', true);
-    assertFiniteMoney(item.amount, 'Income amount', false);
-    assertTimestamp(item.nextDate, 'Income date');
-    if (
-      !Object.values(PlannedPaymentInterval).includes(item.interval as PlannedPaymentInterval) ||
-      !Number.isInteger(item.intervalN) ||
-      item.intervalN < 1 ||
-      item.intervalN > 9999
-    ) {
-      invalid('Income recurrence is invalid.');
-    }
-  }
-}
-
-function validateCommitments(draft: CashClarityDraft): void {
-  const commitment = draft.commitment as CommitmentDraft;
-  if (
-    !isRecord(commitment) ||
-    !['unset', 'skipped', 'payment'].includes(String(commitment.kind))
-  ) {
-    invalid('Payment setup is malformed.');
-  }
-  if (commitment.kind !== 'payment') return;
-  if (!Array.isArray(commitment.items)) invalid('Payment setup is malformed.');
-  assertUniqueIds(commitment.items, 'Payment');
-  const types = new Set<CommitmentKind>(['rent', 'subscription', 'loan', 'utilities']);
-  for (const item of commitment.items) {
-    if (!isRecord(item) || !types.has(item.type as CommitmentKind)) invalid('A payment type is invalid.');
-    assertName(item.name, 'Payment name', true);
-    assertFiniteMoney(item.amount, 'Payment amount', false);
-    assertTimestamp(item.dueDate, 'Payment due date');
-  }
-}
-
-function validateBudgets(draft: CashClarityDraft): void {
-  const budget = draft.budget;
-  if (!isRecord(budget) || !['unset', 'skipped', 'set'].includes(String(budget.kind))) {
-    invalid('Budget setup is malformed.');
-  }
-  if (budget.kind !== 'set') return;
-  if (!Array.isArray(budget.items)) invalid('Budget setup is malformed.');
-  assertUniqueIds(budget.items, 'Budget');
-  for (const item of budget.items) {
-    if (!isRecord(item)) invalid('A budget is malformed.');
-    assertName(item.name, 'Budget name');
-    if (item.category !== undefined) assertName(item.category, 'Budget category');
-    assertFiniteMoney(item.amount, 'Budget amount', false);
-  }
-}
-
-function validateDraft(draft: CashClarityDraft): void {
-  if (!isRecord(draft)) invalid('Setup details are malformed.');
-  assertName(draft.operationId, 'Setup operation ID');
-  assertName(draft.workplaceName, 'Workplace name');
-  assertName(draft.workplaceIcon, 'Workplace icon');
-  assertName(draft.displayName, 'Device name', true);
-  if (typeof draft.currency !== 'string' || !/^[A-Z]{3}$/.test(draft.currency)) {
-    invalid('Choose a supported currency.');
-  }
-  if (!Array.isArray(draft.accounts)) invalid('Account setup is malformed.');
-  assertUniqueIds(draft.accounts, 'Account');
-  const kinds = new Set(['bank', 'cash', 'savings', 'card']);
-  for (const account of draft.accounts) {
-    if (!isRecord(account) || !kinds.has(String(account.kind))) invalid('An account type is invalid.');
-    assertName(account.name, 'Account name', true);
-    assertFiniteMoney(account.balance, 'Account balance', true);
-    if (account.kind === 'card' && account.balance < 0) invalid('Card debt cannot be negative.');
-    if (
-      account.kind === 'savings' &&
-      account.spendable !== true &&
-      account.spendable !== false
-    ) {
-      invalid('Choose whether the savings account is available to spend.');
-    }
-    if (account.kind !== 'savings' && account.spendable !== undefined) {
-      invalid('Spendable status is only valid for savings accounts.');
-    }
-    if (account.kind !== 'card' && (account.cardPaymentAmount !== undefined || account.cardPaymentDate !== undefined)) {
-      invalid('Card payment details require a credit card.');
-    }
-    if (account.kind === 'card') {
-      if (account.cardPaymentAmount !== undefined) {
-        assertFiniteMoney(account.cardPaymentAmount, 'Card payment amount', false);
-        assertTimestamp(account.cardPaymentDate, 'Card payment date');
-      } else if (account.cardPaymentDate !== undefined) {
-        invalid('Card payment amount is missing.');
-      }
-    }
-  }
-  validateIncome(draft);
-  validateCommitments(draft);
-  validateBudgets(draft);
-
-  const needsSpendableAccount =
-    (draft.income.kind === 'recurring' && draft.income.items.length > 0) ||
-    (draft.commitment.kind === 'payment' && draft.commitment.items.length > 0) ||
-    (draft.budget.kind === 'set' && draft.budget.items.length > 0) ||
-    draft.accounts.some(account => account.kind === 'card' && account.cardPaymentAmount !== undefined);
-  if (needsSpendableAccount && !draft.accounts.some(isSpendableAccount)) {
-    throw new CashClarityPublicationError(
-      'missing_spendable_account',
-      'Add a spendable account before saving planned money.',
-    );
-  }
-}
-
-function snapshotDraft(draft: CashClarityDraft): CashClarityDraft {
-  const income =
-    draft.income.kind === 'recurring'
-      ? { ...draft.income, items: draft.income.items.map(item => ({ ...item })) }
-      : { ...draft.income };
-  const commitment =
-    draft.commitment.kind === 'payment'
-      ? { ...draft.commitment, items: draft.commitment.items.map(item => ({ ...item })) }
-      : { ...draft.commitment };
-  const budget =
-    draft.budget.kind === 'set'
-      ? { ...draft.budget, items: draft.budget.items.map(item => ({ ...item })) }
-      : { ...draft.budget };
-  const result: CashClarityDraft = {
-    ...draft,
-    accounts: draft.accounts.map(account => ({ ...account })),
-    income,
-    commitment,
-    budget,
-  };
-  result.accounts.forEach(account => Object.freeze(account));
-  Object.freeze(result.accounts);
-  if (result.income.kind === 'recurring') {
-    result.income.items.forEach(Object.freeze);
-    Object.freeze(result.income.items);
-  }
-  if (result.commitment.kind === 'payment') {
-    result.commitment.items.forEach(Object.freeze);
-    Object.freeze(result.commitment.items);
-  }
-  if (result.budget.kind === 'set') {
-    result.budget.items.forEach(Object.freeze);
-    Object.freeze(result.budget.items);
-  }
-  Object.freeze(result.income);
-  Object.freeze(result.commitment);
-  Object.freeze(result.budget);
-  return Object.freeze(result);
 }
 
 function receiptId(operationId: WorkplaceId): string {
@@ -308,13 +108,28 @@ function isStringArray(value: unknown): value is string[] {
 function readManifest(receipt: { parsedChanges: Record<string, unknown> | null }): PublicationManifest | undefined {
   const after = receipt.parsedChanges?.after;
   if (!isRecord(after)) return undefined;
+  const hasRebuildAccounts = after.balanceRebuildAccountIds !== undefined;
+  const hasRebuildDate = after.balanceRebuildFromDate !== undefined;
   if (
     typeof after.operationId !== 'string' ||
     !isStringArray(after.accountIds) ||
     !isStringArray(after.journalIds) ||
     !isStringArray(after.plannedPaymentIds) ||
     !isStringArray(after.budgetIds) ||
-    !isStringArray(after.budgetScopeIds)
+    !isStringArray(after.budgetScopeIds) ||
+    hasRebuildAccounts !== hasRebuildDate ||
+    (hasRebuildAccounts && !isStringArray(after.balanceRebuildAccountIds)) ||
+    (hasRebuildDate &&
+      !(after.balanceRebuildFromDate === null ||
+        (typeof after.balanceRebuildFromDate === 'number' &&
+          Number.isFinite(after.balanceRebuildFromDate) &&
+          after.balanceRebuildFromDate > 0))) ||
+    (hasRebuildAccounts &&
+      (after.balanceRebuildAccountIds as string[]).length > 0 &&
+      after.balanceRebuildFromDate === null) ||
+    (hasRebuildAccounts &&
+      ((after.journalIds as string[]).length > 0) !==
+        ((after.balanceRebuildAccountIds as string[]).length > 0))
   ) {
     return undefined;
   }
@@ -325,23 +140,19 @@ function readManifest(receipt: { parsedChanges: Record<string, unknown> | null }
     plannedPaymentIds: after.plannedPaymentIds,
     budgetIds: after.budgetIds,
     budgetScopeIds: after.budgetScopeIds,
+    ...(hasRebuildAccounts
+      ? { balanceRebuildAccountIds: after.balanceRebuildAccountIds as string[] }
+      : {}),
+    ...(hasRebuildDate
+      ? { balanceRebuildFromDate: after.balanceRebuildFromDate as number | null }
+      : {}),
   };
-}
-
-async function countIds(table: string, workplaceId: WorkplaceId, ids: readonly string[]): Promise<number> {
-  if (ids.length === 0) return 0;
-  return (
-    await database
-      .get(table)
-      .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf([...ids])))
-      .fetch()
-  ).length;
 }
 
 async function verifyCompletedPublication(
   workplaceId: WorkplaceId,
   receipt: NonNullable<Awaited<ReturnType<typeof auditRepository.find>>>,
-): Promise<void> {
+): Promise<JournalRebuildImpact> {
   const manifest = readManifest(receipt);
   if (
     receipt.eventType !== 'workplace.setup_published' ||
@@ -354,39 +165,68 @@ async function verifyCompletedPublication(
       'The saved setup receipt is incomplete. Keep this setup for recovery.',
     );
   }
-  const checks = await Promise.all([
-    countIds('accounts', workplaceId, manifest.accountIds),
-    countIds('journals', workplaceId, manifest.journalIds),
-    countIds('planned_payments', workplaceId, manifest.plannedPaymentIds),
-    countIds('budgets', workplaceId, manifest.budgetIds),
-    countIds('budget_scopes', workplaceId, manifest.budgetScopeIds),
-  ]);
-  const expected = [
-    manifest.accountIds.length,
-    manifest.journalIds.length,
-    manifest.plannedPaymentIds.length,
-    manifest.budgetIds.length,
-    manifest.budgetScopeIds.length,
-  ];
-  if (checks.some((count, index) => count !== expected[index])) {
+  if (!(await cashClarityPublicationRepository.hasCompletePublication(workplaceId, manifest))) {
     throw new CashClarityPublicationError(
       'incomplete_publication',
       'Saved setup records are incomplete. Keep this setup for recovery.',
     );
   }
+  let accountIds: string[];
+  let fromDate: number | null;
+  if (
+    manifest.balanceRebuildAccountIds !== undefined &&
+    manifest.balanceRebuildFromDate !== undefined
+  ) {
+    accountIds = manifest.balanceRebuildAccountIds;
+    fromDate = manifest.balanceRebuildFromDate;
+  } else {
+    const recovered = await cashClarityPublicationRepository.findBalanceRebuildImpact(
+      workplaceId,
+      manifest.journalIds,
+    );
+    accountIds = [...recovered.accountIds];
+    fromDate = recovered.fromDate;
+  }
+  if (
+    accountIds.some(id => !manifest.accountIds.includes(id)) ||
+    (manifest.journalIds.length > 0 && (accountIds.length === 0 || fromDate === null))
+  ) {
+    throw new CashClarityPublicationError(
+      'incomplete_publication',
+      'Saved opening balances are incomplete. Keep this setup for recovery.',
+    );
+  }
+  return {
+    affectedAccountIds: new Set(accountIds.map(asAccountId)),
+    rebuildFromDate: fromDate ?? Date.now(),
+  };
 }
 
 function accountInputs(draft: CashClarityDraft, workplaceId: WorkplaceId) {
   const output = mapDraftToWorkplaceOutput(draft);
-  const accounts = draft.accounts.map(account => ({
-    id: draftAccountId(workplaceId, account.id),
-    name: account.name.trim() || ACCOUNT_KIND_META[account.kind].name,
-    accountType: ACCOUNT_KIND_META[account.kind].type,
-    accountSubtype: subtypeForAccount(account),
-    currencyCode: draft.currency,
-    icon: ACCOUNT_KIND_META[account.kind].icon,
-    workplaceId,
-  }));
+  const draftPublicationIds = new Set<string>();
+  for (const candidate of draft.accounts) {
+    const id = publishedDraftAccountId(draft, candidate);
+    if (draftPublicationIds.has(id)) invalid('Account definitions must have unique stable identities.');
+    draftPublicationIds.add(id);
+  }
+  const accounts = output.selectedAccounts.map(account => {
+    if (typeof account.id !== 'string' || !account.id.trim()) {
+      invalid('Every published account must have a stable ID.');
+    }
+    const draftAccount = draft.accounts.find(
+      candidate => publishedDraftAccountId(draft, candidate) === account.id,
+    );
+    return {
+      id: account.id,
+      name: account.name,
+      accountType: account.type,
+      ...(draftAccount ? { accountSubtype: subtypeForAccount(draftAccount) } : {}),
+      currencyCode: draft.currency,
+      icon: account.icon,
+      workplaceId,
+    };
+  });
   const categories = output.selectedCategories.map(category => ({
     id: category.id ?? starterCategoryId(workplaceId, category.name),
     name: category.name,
@@ -404,7 +244,13 @@ function accountInputs(draft: CashClarityDraft, workplaceId: WorkplaceId) {
     if (!key || names.has(key)) invalid('Account and category names must be unique.');
     names.add(key);
   }
-  const categoryIds = new Set(categories.map(item => item.id));
+  const categoryIdsByName = new Map<string, string>();
+  for (const category of categories) {
+    const key = category.name.trim().toLowerCase();
+    const existing = categoryIdsByName.get(key);
+    if (existing && existing !== category.id) invalid('Category names must be unique.');
+    categoryIdsByName.set(key, category.id);
+  }
   const referencedCategoryNames = [
     ...(draft.income.kind === 'recurring'
       ? draft.income.items.map(item => incomeSourceName(item.source))
@@ -414,30 +260,15 @@ function accountInputs(draft: CashClarityDraft, workplaceId: WorkplaceId) {
       : []),
     ...(draft.budget.kind === 'set' ? draft.budget.items.map(budgetLookupName) : []),
   ];
-  if (
-    referencedCategoryNames.some(name => !categoryIds.has(starterCategoryId(workplaceId, name)))
-  ) {
+  if (referencedCategoryNames.some(name => !categoryIdsByName.has(name.trim().toLowerCase()))) {
     invalid('A planned item refers to a missing category.');
   }
-  return { output, accounts: [...accounts, ...categories] };
-}
-
-function validateCurrencyPrecision(draft: CashClarityDraft, precision: number): void {
-  if (!Number.isInteger(precision) || precision < 0 || precision > 6) {
-    invalid('Currency precision is invalid.');
-  }
-  const values = [
-    ...draft.accounts.map(account => account.balance),
-    ...(draft.accounts.flatMap(account =>
-      account.cardPaymentAmount === undefined ? [] : [account.cardPaymentAmount],
-    )),
-    ...(draft.income.kind === 'recurring' ? draft.income.items.map(item => item.amount) : []),
-    ...(draft.commitment.kind === 'payment' ? draft.commitment.items.map(item => item.amount) : []),
-    ...(draft.budget.kind === 'set' ? draft.budget.items.map(item => item.amount) : []),
-  ];
-  if (values.some(value => Math.abs(value - roundToPrecision(value, precision)) > 1e-8)) {
-    invalid(`Amounts must use no more than ${precision} decimal places.`);
-  }
+  const categoryIdForName = (name: string) => {
+    const id = categoryIdsByName.get(name.trim().toLowerCase());
+    if (!id) invalid('A planned item refers to a missing category.');
+    return id as ReturnType<typeof asAccountId>;
+  };
+  return { output, accounts: [...accounts, ...categories], categoryIdForName };
 }
 
 function plannedPaymentId(operationId: WorkplaceId, itemId: string) {
@@ -463,25 +294,16 @@ async function uniqueDefaultName(name: string, isDefault: boolean): Promise<stri
 export async function publishCashClarity(
   draft: CashClarityDraft,
 ): Promise<CashClarityPublicationOutcome> {
-  validateDraft(draft);
-  const submitted = snapshotDraft(draft);
+  validateCashClarityDraft(draft);
+  const submitted = snapshotCashClarityDraft(draft);
   let precision: number;
   try {
     precision = await currencyReadService.getPrecision(submitted.currency);
   } catch {
     invalid('Choose a supported currency.');
   }
-  validateCurrencyPrecision(submitted, precision);
-  const { output, accounts } = accountInputs(submitted, submitted.operationId);
-  let workplaceName: string;
-  try {
-    workplaceName = await uniqueDefaultName(
-      output.name.value,
-      output.name.source === 'defaulted',
-    );
-  } catch (cause) {
-    throw new CashClarityPublicationError('save_failed', 'Could not save setup.', { cause });
-  }
+  validateCashClarityCurrencyPrecision(submitted, precision);
+  const { output, accounts, categoryIdForName } = accountInputs(submitted, submitted.operationId);
 
   const needsSpendableAccount =
     (submitted.income.kind === 'recurring' && submitted.income.items.length > 0) ||
@@ -495,7 +317,7 @@ export async function publishCashClarity(
       'Add a spendable account before saving planned money.',
     );
   }
-  const payFromId = spendable ? draftAccountId(submitted.operationId, spendable.id) : undefined;
+  const payFromId = spendable ? publishedDraftAccountId(submitted, spendable) : undefined;
   const manifest: PublicationManifest = {
     operationId: submitted.operationId,
     accountIds: [
@@ -509,6 +331,8 @@ export async function publishCashClarity(
     plannedPaymentIds: [],
     budgetIds: [],
     budgetScopeIds: [],
+    balanceRebuildAccountIds: [],
+    balanceRebuildFromDate: null,
   };
   if (submitted.income.kind === 'recurring') {
     manifest.plannedPaymentIds.push(
@@ -532,7 +356,7 @@ export async function publishCashClarity(
       const id = stableItemId('budget', submitted.operationId, item.id);
       manifest.budgetIds.push(id);
       manifest.budgetScopeIds.push(
-        `${id}:scope:${starterCategoryId(submitted.operationId, budgetLookupName(item))}`,
+        `${id}:scope:${categoryIdForName(budgetLookupName(item))}`,
       );
     }
   }
@@ -549,8 +373,8 @@ export async function publishCashClarity(
           'The setup receipt exists without its Workplace. Keep this setup for recovery.',
         );
       }
-      await verifyCompletedPublication(submitted.operationId, receipt);
-      return { status: 'already_published' as const, workplaceId: submitted.operationId, journals: [] };
+      const balanceRebuild = await verifyCompletedPublication(submitted.operationId, receipt);
+      return { status: 'already_published' as const, workplaceId: submitted.operationId, balanceRebuild };
     }
 
     if (await workplaceRepository.find(submitted.operationId)) {
@@ -558,6 +382,16 @@ export async function publishCashClarity(
         'ambiguous_existing_publication',
         'This Workplace was created by an older partial save and needs recovery before retrying.',
       );
+    }
+
+    let workplaceName: string;
+    try {
+      workplaceName = await uniqueDefaultName(
+        output.name.value,
+        output.name.source === 'defaulted',
+      );
+    } catch (cause) {
+      throw new CashClarityPublicationError('save_failed', 'Could not save setup.', { cause });
     }
 
     await workplaceRepository.createSetupInSession(session, {
@@ -572,7 +406,7 @@ export async function publishCashClarity(
     const journalResults: JournalPersistenceResult[] = [];
     for (const account of submitted.accounts) {
       if (account.balance === 0) continue;
-      const accountId = draftAccountId(submitted.operationId, account.id);
+      const accountId = publishedDraftAccountId(submitted, account);
       const accountType = ACCOUNT_KIND_META[account.kind].type;
       const legTypes = journalLegTypesForSignedAmount(accountType, account.balance);
       const journalId = asJournalId(
@@ -617,10 +451,7 @@ export async function publishCashClarity(
             name: incomeItemName(item),
             amount: item.amount,
             currencyCode: submitted.currency,
-            fromAccountId: starterCategoryId(
-              submitted.operationId,
-              incomeSourceName(item.source),
-            ),
+            fromAccountId: categoryIdForName(incomeSourceName(item.source)),
             toAccountId: payFromId,
             intervalN: recurrence.intervalN,
             intervalType: recurrence.intervalType,
@@ -644,10 +475,7 @@ export async function publishCashClarity(
             amount: item.amount,
             currencyCode: submitted.currency,
             fromAccountId: payFromId,
-            toAccountId: starterCategoryId(
-              submitted.operationId,
-              paymentCategoryName(item.type),
-            ),
+            toAccountId: categoryIdForName(paymentCategoryName(item.type)),
             intervalN: 1,
             intervalType: PlannedPaymentInterval.MONTHLY,
             startDate: dayjs(item.dueDate).startOf('day').valueOf(),
@@ -669,7 +497,7 @@ export async function publishCashClarity(
           amount: account.cardPaymentAmount,
           currencyCode: submitted.currency,
           fromAccountId: payFromId,
-          toAccountId: draftAccountId(submitted.operationId, account.id),
+          toAccountId: publishedDraftAccountId(submitted, account),
           intervalN: 1,
           intervalType: PlannedPaymentInterval.MONTHLY,
           startDate: dayjs(account.cardPaymentDate).startOf('day').valueOf(),
@@ -698,11 +526,24 @@ export async function publishCashClarity(
             recurrenceDay: 1,
             assetAccountIds: [payFromId],
           },
-          [starterCategoryId(submitted.operationId, budgetLookupName(item))],
+          [categoryIdForName(budgetLookupName(item))],
           submitted.operationId,
         );
       }
     }
+
+    const affectedAccountIds = new Set(
+      journalResults.flatMap(result => [...result.affectedAccountIds]),
+    );
+    const rebuildFromDate = journalResults.length
+      ? Math.min(...journalResults.map(result => result.rebuildFromDate))
+      : null;
+    manifest.balanceRebuildAccountIds = [...affectedAccountIds];
+    manifest.balanceRebuildFromDate = rebuildFromDate;
+    const balanceRebuild: JournalRebuildImpact = {
+      affectedAccountIds,
+      rebuildFromDate: rebuildFromDate ?? Date.now(),
+    };
 
     stageModelWrite(session, [
       auditRepository.prepareLog(
@@ -723,7 +564,7 @@ export async function publishCashClarity(
     return {
       status: 'published' as const,
       workplaceId: submitted.operationId,
-      journals: journalResults,
+      balanceRebuild,
     };
     });
   } catch (cause) {
@@ -731,15 +572,13 @@ export async function publishCashClarity(
     throw new CashClarityPublicationError('save_failed', 'Could not save setup.', { cause });
   }
 
-  if (result.journals.length > 0) {
-    try {
-      journalPersistenceService.afterAtomicWriteCommit(result.journals, result.workplaceId);
-    } catch {
-      // The receipt proves books committed; a rebuild-queue problem must not invite republishing.
-      logger.error('[CashClarity] Opening balance rebuild enqueue failed after publication', {
-        operationId: result.workplaceId,
-      });
-    }
+  try {
+    journalPersistenceService.afterAtomicWriteCommit(result.balanceRebuild, result.workplaceId);
+  } catch {
+    // The receipt proves books committed; retry can re-enqueue the persisted impact.
+    logger.error('[CashClarity] Opening balance rebuild enqueue failed after publication', {
+      operationId: result.workplaceId,
+    });
   }
   return { workplaceId: result.workplaceId, status: result.status };
 }

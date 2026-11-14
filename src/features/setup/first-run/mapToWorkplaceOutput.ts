@@ -40,25 +40,47 @@ export function draftAccountId(workplaceId: WorkplaceId, draftAccountId: string)
   return `${workplaceId}:onboarding-account:${draftAccountId}` as AccountId;
 }
 
+function normalizedName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function publishedDraftAccountId(
+  draft: CashClarityDraft,
+  account: CashClarityDraft['accounts'][number],
+): AccountId {
+  const meta = ACCOUNT_KIND_META[account.kind];
+  const name = account.name.trim() || meta.name;
+  const preserved = draft.preservedStarterAccounts?.find(
+    item => item.type === meta.type && normalizedName(item.name) === normalizedName(name),
+  );
+  return preserved?.id ?? draftAccountId(draft.operationId, account.id);
+}
+
 export function starterCategoryId(workplaceId: WorkplaceId, name: string): AccountId {
   return `${workplaceId}:onboarding-category:${name.trim().toLowerCase()}` as AccountId;
 }
 
 export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSetupOutput {
-  const accounts: StarterAccountInput[] = draft.accounts.map(account => {
+  const accountsById = new Map<string, StarterAccountInput>();
+  for (const account of draft.accounts) {
     const meta = ACCOUNT_KIND_META[account.kind];
-    return {
-      id: draftAccountId(draft.operationId, account.id),
-      name: account.name || meta.name,
+    const name = account.name.trim() || meta.name;
+    const id = publishedDraftAccountId(draft, account);
+    accountsById.set(id, {
+      id,
+      name,
       type: meta.type,
       icon: meta.icon,
-    };
-  });
+    });
+  }
+  for (const item of draft.preservedStarterAccounts ?? []) {
+    if (item.id) accountsById.set(item.id, { ...item });
+  }
 
   const categories = new Map<string, StarterCategoryInput>();
   const add = (item: StarterCategoryInput | undefined) => {
     if (!item) return;
-    categories.set(item.name.toLowerCase(), {
+    categories.set(normalizedName(item.name), {
       ...item,
       id: item.id ?? starterCategoryId(draft.operationId, item.name),
     });
@@ -104,6 +126,19 @@ export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSet
     }
   }
 
+  const preservedCategoriesById = new Map<AccountId, StarterCategoryInput & { id: AccountId }>(
+    (draft.preservedStarterCategories ?? [])
+      .filter((item): item is StarterCategoryInput & { id: AccountId } => !!item.id)
+      .map(item => [item.id, item] as const),
+  );
+  for (const item of preservedCategoriesById.values()) {
+    // A preserved definition with the same name is the accepted identity for that category.
+    for (const [name, existing] of categories) {
+      if (existing.id === item.id && name !== normalizedName(item.name)) categories.delete(name);
+    }
+    categories.set(normalizedName(item.name), { ...item });
+  }
+
   const name = draft.workplaceName.trim() || 'Personal';
   return {
     name: {
@@ -115,7 +150,7 @@ export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSet
       source: draft.workplaceIcon === Icon.Home ? 'defaulted' : 'user_entered',
     },
     baseCurrency: { value: draft.currency, source: 'user_entered' },
-    selectedAccounts: accounts,
+    selectedAccounts: [...accountsById.values()],
     selectedCategories: [...categories.values()],
     acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
   };

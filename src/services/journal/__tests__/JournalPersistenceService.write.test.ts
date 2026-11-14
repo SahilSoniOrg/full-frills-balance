@@ -85,6 +85,20 @@ describe('JournalPersistenceService write paths', () => {
     expect(result).toEqual([]);
   });
 
+  it('re-enqueues a persisted committed balance impact during publication recovery', () => {
+    const enqueueMany = jest.spyOn(rebuildQueueService, 'enqueueMany').mockImplementation(() => {});
+    const fromDate = Date.UTC(2026, 10, 1);
+    const affectedAccountIds = new Set([cashAccountId, expenseAccountId]);
+
+    journalPersistenceService.afterAtomicWriteCommit(
+      { affectedAccountIds, rebuildFromDate: fromDate },
+      workplaceId,
+    );
+
+    expect(enqueueMany).toHaveBeenCalledWith(affectedAccountIds, fromDate, workplaceId);
+    enqueueMany.mockRestore();
+  });
+
   it('putMany saves multiple journals in one write', async () => {
     const date1 = Date.UTC(2024, 3, 1, 12, 0, 0);
     const date2 = Date.UTC(2024, 3, 2, 12, 0, 0);
