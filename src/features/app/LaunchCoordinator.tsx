@@ -30,7 +30,6 @@ import {
   CreationLaunchProvider,
   CreationOpeningCoordinatorProvider,
   type CreationLaunchEntry,
-  type CreationLaunchEntryContext,
   type CreationOpeningCoordinatorValue,
   type CreationOpeningTarget,
   useCreationOpeningCoordinator,
@@ -80,9 +79,8 @@ export function shouldRenderGateChildren(
     : SETUP_GATE_ROUTES.has(pathname);
 }
 
-function creationLaunchEntry(
+export function creationLaunchEntry(
   state: LaunchCoordinatorState,
-  requestedContext?: string,
 ): CreationLaunchEntry | undefined {
   if (state.kind === 'setup') {
     if (state.journeyId === 'first_run') {
@@ -111,30 +109,16 @@ function creationLaunchEntry(
   }
 
   if (state.kind === 'open') {
-    const context = creationLaunchContext(requestedContext) ?? 'existing_workplace_entry';
+    // An open workplace is an existing session. A route parameter cannot turn
+    // it into first-run registration or a blocking empty-device flow.
     return {
-      intent: context === 'unregistered_device' ? 'first_run' : 'add_workplace',
-      context,
-      entryPolicy:
-        context === 'unregistered_device' || context === 'registered_empty_device'
-          ? 'blocking'
-          : 'optional',
+      intent: 'add_workplace',
+      context: 'existing_workplace_entry',
+      entryPolicy: 'optional',
     };
   }
 
   return undefined;
-}
-
-function creationLaunchContext(value?: string): CreationLaunchEntryContext | undefined {
-  switch (value) {
-    case 'unregistered_device':
-    case 'registered_empty_device':
-    case 'workplace_picker':
-    case 'existing_workplace_entry':
-      return value;
-    default:
-      return undefined;
-  }
 }
 
 export function shouldRedirectToPrivacyNotice(
@@ -468,7 +452,7 @@ export function LaunchCoordinatorContent({
   const routeOrigin = Array.isArray(routeParams.origin)
     ? routeParams.origin[0]
     : routeParams.origin;
-  const creationEntry = creationLaunchEntry(state, routeContext);
+  const creationEntry = creationLaunchEntry(state);
   const {
     deleteWorkplace,
     isTransitioning,

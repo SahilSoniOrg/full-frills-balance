@@ -1,4 +1,5 @@
 import {
+  creationLaunchEntry,
   setupEntryPath,
   shouldRedirectSetupToEntry,
   shouldRedirectToPrivacyNotice,
@@ -47,10 +48,14 @@ describe('LaunchCoordinator gate routing', () => {
   });
 
   it('keeps a blocking restore ahead of a conflicting creation route parameter', () => {
-    expect(shouldShowCashClarity('first_run_restore', 'add_workplace', undefined, true)).toBe(false);
+    expect(shouldShowCashClarity('first_run_restore', 'add_workplace', undefined, true)).toBe(
+      false,
+    );
     expect(shouldShowCashClarity('empty_device_restore', undefined, 'full', true)).toBe(false);
     expect(shouldShowCashClarity('add_workplace', 'empty_device_restore')).toBe(false);
-    expect(shouldShowCashClarity('add_workplace', 'empty_device_restore', undefined, false)).toBe(false);
+    expect(shouldShowCashClarity('add_workplace', 'empty_device_restore', undefined, false)).toBe(
+      false,
+    );
   });
 
   it('keeps first-run off import-selection and the retired v2 URL', () => {
@@ -67,5 +72,19 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldRedirectToPrivacyNotice('open', '/', false)).toBe(true);
     expect(shouldRedirectToPrivacyNotice('open', '/', true)).toBe(false);
     expect(shouldRedirectToPrivacyNotice('open', '/privacy-notice', false)).toBe(false);
+  });
+
+  it('keeps an open workplace on optional add-workplace even if the route says first-run', () => {
+    const open = {
+      kind: 'open' as const,
+      workplaceId: 'wp-1' as never,
+      persistAsActive: false,
+      workplace: {} as never,
+    };
+    expect(creationLaunchEntry(open)).toEqual({
+      intent: 'add_workplace',
+      context: 'existing_workplace_entry',
+      entryPolicy: 'optional',
+    });
   });
 });
