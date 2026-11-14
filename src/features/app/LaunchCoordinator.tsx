@@ -452,6 +452,7 @@ export function LaunchCoordinatorContent({
 }) {
   const state = useLaunchCoordinator();
   const { isRestartRequired, isResetInProgress } = useAppRestart();
+  const hasGateChildren = gateChildren !== undefined && gateChildren !== null;
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams<{
@@ -532,6 +533,10 @@ export function LaunchCoordinatorContent({
     privacyRedirectInFlight.current = false;
 
     if (state.kind === 'setup') {
+      // The render path below owns setup redirects whenever gateChildren is present.
+      // Running router.replace here as well can remount a just-created first-run
+      // session and make it look resumable on a fresh install.
+      if (hasGateChildren) return;
       if (state.unreadable) return;
       if (state.journeyId === 'first_run' || state.journeyId === 'add_workplace') {
         if (!state.hasBlockingDraft && restoreJourneyId(routeJourney ?? '')) return;
@@ -575,6 +580,7 @@ export function LaunchCoordinatorContent({
     routeOrigin,
     router,
     state,
+    hasGateChildren,
   ]);
 
   if (isResetInProgress) {
