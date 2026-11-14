@@ -184,6 +184,7 @@ export const ONBOARDING_STRINGS = {
   clarityUnknown: 'No estimate yet',
   estimateIncomplete: 'Based on the valid entries included so far.',
   cardPaymentOptional: 'Leave blank or enter 0 for no planned payment.',
+  addSpendableAccount: 'Add a spendable account',
   clarityShortfall: 'Shortfall',
   clarityZero: 'Safe to spend is zero',
   editAction: 'Edit',

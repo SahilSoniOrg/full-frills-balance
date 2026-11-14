@@ -17,6 +17,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { getLocales } from 'expo-localization';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useCreationLaunch } from '@/src/features/app/CreationLaunchContext';
+import { useLaunchCoordinator, type LaunchCoordinatorState } from '@/src/features/app/LaunchCoordinator';
+import { preferences } from '@/src/services/preferences';
 import { finishDeviceSetup } from '../setupFinishers';
 import {
   clearSetupDraft,
@@ -44,6 +46,7 @@ import {
   trackOnboardingFlowResumed,
   trackOnboardingFlowRestarted,
   trackOnboardingFlowStarted,
+  trackOnboardingFirstEstimate,
   trackOnboardingResultViewed,
   trackOnboardingSaveResult,
   trackOnboardingStepCompleted,
@@ -63,9 +66,10 @@ import {
   WelcomeScene,
 } from './scenes';
 
-const FLOW_VERSION = 'cash_clarity_v2';
+const FLOW_VERSION = '2.0.0';
 const startedInRuntime = new Set<string>();
 const viewedInRuntime = new Set<string>();
+const estimateViewedInRuntime = new Set<string>();
 const resultViewedInRuntime = new Set<string>();
 const completedInRuntime = new Set<string>();
 const blockedInRuntime = new Set<string>();
@@ -84,14 +88,25 @@ function requestedEntry(params: {
   journey?: string | string[];
   context?: string | string[];
   entryPolicy?: string | string[];
-}): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
-  const intent: CreationIntent = firstParam(params.journey) === 'add_workplace' ? 'add_workplace' : 'first_run';
+}, launch: LaunchCoordinatorState): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
+  const launchJourney = launch.kind === 'setup' ? launch.journeyId : undefined;
+  const requested = firstParam(params.journey);
+  const intent: CreationIntent = launchJourney === 'first_run' ? 'first_run'
+    : launchJourney === 'add_workplace' || preferences.device.deviceRegistered
+      || requested === 'add_workplace' || requested === 'create_workplace' || requested === 'empty_device_workplace'
+      ? 'add_workplace' : 'first_run';
   const rawContext = firstParam(params.context);
   const validContext: readonly CreationContext[] = [
     'unregistered_device', 'registered_empty_device', 'workplace_picker', 'existing_workplace_entry',
   ];
   const context: CreationContext = intent === 'first_run'
     ? 'unregistered_device'
+    : launch.kind === 'setup' && launchJourney === 'add_workplace'
+      ? 'registered_empty_device'
+      : launch.kind === 'open'
+        ? 'existing_workplace_entry'
+        : launch.kind === 'picker'
+          ? 'workplace_picker'
     : validContext.includes(rawContext as CreationContext) && rawContext !== 'unregistered_device'
       ? rawContext as CreationContext
       : 'workplace_picker';
@@ -118,7 +133,7 @@ function bootstrapSession(
     ...entry,
     currency: defaultOnboardingCurrency(),
     workplaceName: defaultWorkplaceName(),
-    displayName: entry.intent === 'first_run' ? name ?? '' : '',
+    displayName: entry.intent === 'first_run' ? name ?? '' : preferences.userName ?? '',
   });
   return { kind: 'session', session, resumed: false };
 }
@@ -177,7 +192,8 @@ export function OnboardingScreen() {
     name?: string | string[];
   }>();
   const nameParam = firstParam(params.name);
-  const entry = useMemo(() => requestedEntry(params), [params.journey, params.context, params.entryPolicy]);
+  const launch = useLaunchCoordinator();
+  const entry = useMemo(() => requestedEntry(params, launch), [params.journey, params.context, params.entryPolicy, launch]);
   const [bootstrap] = useState(() => bootstrapSession(entry, nameParam));
   const [session, setSession] = useState<CashClaritySetupDraft | null>(
     bootstrap.kind === 'session' ? bootstrap.session : null,
@@ -195,9 +211,11 @@ export function OnboardingScreen() {
   const [repairMessage, setRepairMessage] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
   const [latestDraftChange, setLatestDraftChange] = useState<string | null>(null);
+  const segmentStartedAt = useRef(Date.now());
+  const stepStartedAt = useRef({ step: session?.step, at: Date.now() });
   const acknowledgedDraft = useRef<CashClaritySetupDraft['draft'] | null>(null);
   const { openCreatedWorkplace } = useCreationLaunch();
-  const locale = getLocales()[0]?.languageTag ?? 'en-US';
+  const locale = session?.inputLocale ?? getLocales()[0]?.languageTag ?? 'en-US';
 
   useEffect(() => {
     if (bootstrap.kind === 'session' && !bootstrap.resumed) saveSetupDraft(bootstrap.session);
@@ -207,6 +225,8 @@ export function OnboardingScreen() {
     const current = sessionRef.current;
     if (!current) return;
     const next = update(current);
+    segmentStartedAt.current = Date.now();
+    acknowledgedDraft.current = null;
     sessionRef.current = next;
     saveSetupDraft(next);
     setSession(next);
@@ -218,10 +238,13 @@ export function OnboardingScreen() {
   const projection = useMemo(() => prepared
     ? projectCashClarityDraft(prepared.effectiveDraft)
     : undefined, [prepared]);
-  const spendable = session ? hasSpendableAccount(session.draft.accounts) : false;
+  const spendable = prepared ? hasSpendableAccount(prepared.effectiveDraft.accounts) : false;
 
   useEffect(() => {
     if (!session || resumePrompt) return;
+    if (stepStartedAt.current.step !== session.step) {
+      stepStartedAt.current = { step: session.step, at: Date.now() };
+    }
     const analyticsProps = {
       flowVersion: FLOW_VERSION,
       intent: session.intent,
@@ -238,6 +261,10 @@ export function OnboardingScreen() {
       trackOnboardingStepViewed({ ...analyticsProps, step: analyticsStep(session.step) });
       viewedInRuntime.add(stepKey);
     }
+    if (prepared?.hasUsableEstimate && !estimateViewedInRuntime.has(session.operationId)) {
+      trackOnboardingFirstEstimate({ ...analyticsProps, durationMs: Date.now() - segmentStartedAt.current });
+      estimateViewedInRuntime.add(session.operationId);
+    }
     if (session.step === 'clarity' && !resultViewedInRuntime.has(session.operationId) && prepared) {
       const outcome = !prepared.hasUsableEstimate
         ? 'unknown'
@@ -246,10 +273,9 @@ export function OnboardingScreen() {
           : (projection?.safeToSpend ?? 0) < 0
             ? 'negative'
             : 'positive';
-      trackOnboardingResultViewed({ ...analyticsProps, outcome });
+      trackOnboardingResultViewed({ ...analyticsProps, outcome, durationMs: Date.now() - segmentStartedAt.current });
       resultViewedInRuntime.add(session.operationId);
     }
-    setResumed(false);
   }, [session?.operationId, session?.step, session?.intent, session?.context, resumed, prepared, projection, resumePrompt]);
 
   useEffect(() => {
@@ -333,14 +359,12 @@ export function OnboardingScreen() {
         persistSession(value => ({
           ...value,
           repairReturnStep: current.step,
-          step: 'now',
-          history: [...value.history, current.step],
         }));
         setRepairMessage(copy.accountRepairMessage);
       }
       return;
     }
-    if (current.step === 'now' && current.repairReturnStep && !currentPrepared.hasUsableEstimate) {
+    if (action === 'continue' && current.step === 'now' && current.repairReturnStep && !currentPrepared.hasUsableEstimate) {
       setRepairMessage(copy.accountRepairMessage);
       return;
     }
@@ -352,15 +376,20 @@ export function OnboardingScreen() {
         context: current.context,
         resumed,
         step: analyticsStep(current.step),
+        durationMs: Date.now() - stepStartedAt.current.at,
       } as const;
       if (action === 'defer') trackOnboardingStepDeferred({ ...props, action: 'defer' });
       else trackOnboardingStepCompleted({ ...props, action: current.step === 'clarity' ? 'complete' : 'continue' });
       completedInRuntime.add(eventKey);
     }
-    const shouldReturnFromRepair = current.step === 'now' && current.repairReturnStep !== undefined &&
-      currentPrepared.hasUsableEstimate && current.repairReturnStep !== 'now';
-    const actualNext = shouldReturnFromRepair ? current.repairReturnStep! : next;
-    const history = shouldReturnFromRepair
+    const repairTarget = current.repairReturnStep;
+    const shouldReturnFromRepair = current.step === 'now' && repairTarget !== undefined &&
+      (currentPrepared.hasUsableEstimate || action === 'defer') && repairTarget !== 'now';
+    const shouldReturnFromReview = current.step !== 'clarity' && current.history.at(-1) === 'clarity';
+    const actualNext = shouldReturnFromRepair && repairTarget ? repairTarget
+      : shouldReturnFromReview ? 'clarity'
+        : current.step === 'now' && next === 'now' ? 'next' : next;
+    const history = shouldReturnFromRepair || shouldReturnFromReview
       ? current.history.slice(0, -1)
       : actualNext === current.step
         ? current.history
@@ -369,7 +398,8 @@ export function OnboardingScreen() {
       ...value,
       step: actualNext,
       history,
-      ...(shouldReturnFromRepair ? { repairReturnStep: undefined } : {}),
+      ...((current.step === 'now' || current.step === repairTarget) &&
+        (currentPrepared.hasUsableEstimate || action === 'defer') ? { repairReturnStep: undefined } : {}),
     }));
     setHeard(echo ?? null);
     setRepairMessage(null);
@@ -405,9 +435,6 @@ export function OnboardingScreen() {
     persistSession(value => ({
       ...value,
       repairReturnStep: current.step,
-      ...(current.step !== 'now'
-        ? { step: 'now' as const, history: [...value.history, current.step] }
-        : {}),
     }));
     setRepairMessage(copy.accountRepairMessage);
   };
@@ -451,7 +478,7 @@ export function OnboardingScreen() {
       ...entry,
       currency: defaultOnboardingCurrency(),
       workplaceName: defaultWorkplaceName(),
-      displayName: entry.intent === 'first_run' ? name ?? '' : '',
+      displayName: entry.intent === 'first_run' ? name ?? '' : preferences.userName ?? '',
     });
     saveSetupDraft(next);
     sessionRef.current = next;
@@ -493,8 +520,10 @@ export function OnboardingScreen() {
       ...entry,
       currency: defaultOnboardingCurrency(),
       workplaceName: defaultWorkplaceName(),
-      displayName: entry.intent === 'first_run' ? firstParam(params.name) ?? '' : '',
+      displayName: entry.intent === 'first_run' ? firstParam(params.name) ?? '' : preferences.userName ?? '',
     });
+    segmentStartedAt.current = Date.now();
+    acknowledgedDraft.current = null;
     sessionRef.current = next;
     saveSetupDraft(next);
     setSession(next);
@@ -504,6 +533,7 @@ export function OnboardingScreen() {
   };
 
   const resumeSession = () => {
+    segmentStartedAt.current = Date.now();
     setResumePrompt(false);
     setResumed(true);
   };
@@ -548,10 +578,10 @@ export function OnboardingScreen() {
       flowVersion: FLOW_VERSION,
       intent: current.intent,
       context: current.context,
-      resumed: false,
+      resumed,
     } as const;
     if (!openedInRuntime.has(current.operationId)) {
-      trackOnboardingDashboardOpened({ ...props, outcome: 'opened' });
+      trackOnboardingDashboardOpened({ ...props, outcome: 'opened', durationMs: Date.now() - segmentStartedAt.current });
       if (current.intent === 'first_run') {
         analytics.track('onboarding_complete');
         analytics.trackConversion('onboarding_completed');
@@ -715,12 +745,21 @@ export function OnboardingScreen() {
     onAmountTextChange: updateAmountText,
     onDefer: () => setCollectionDeferred(collection, true),
     onInclude: () => setCollectionDeferred(collection, false),
+    continueLabel: session.history.at(-1) === 'clarity' || (step === 'now' && session.repairReturnStep)
+      ? copy.continue : undefined,
     validationMessage: step === 'now' || step === 'next' || step === 'protect' || step === 'reserve'
-      ? repairMessage
+      ? repairMessage ?? (session.repairReturnStep
+        ? prepared.issues.find(issue => issue.collection === collection && issue.reason === 'dependency')?.message
+        : null)
       : null,
-    recovery: step === 'now' && session.repairReturnStep ? (
+    recovery: session.repairReturnStep && !prepared.hasUsableEstimate ? (
       <Stack gap="xs">
         <AppText variant="caption" color="secondary">{copy.accountRepairMessage}</AppText>
+        {step !== 'now' ? (
+          <AppButton variant="secondary" size="md" onPress={() => persistSession(value => ({
+            ...value, step: 'now', history: [...value.history, value.step],
+          }))}>{copy.addSpendableAccount}</AppButton>
+        ) : null}
         <AppButton variant="ghost" size="md" onPress={deferRepairGroup}>{copy.leaveForLater}</AppButton>
       </Stack>
     ) : undefined,

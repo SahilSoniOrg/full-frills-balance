@@ -18,7 +18,7 @@ import { getLocales } from 'expo-localization';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, TextInput } from 'react-native';
-import { amountIssueMessage, currencyPrecision, parseAmountInput } from './amountValidation';
+import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
 import { MAX_ONBOARDING_ITEM_NAME_LENGTH } from './validation';
 
 export type CadenceId = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
@@ -97,13 +97,13 @@ export function CollectedRow({
   const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
   const [amountText, setAmountText] = useState(
-    item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? String(item.amount) : ''),
+    item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : ''),
   );
   const [editingName, setEditingName] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
   useEffect(() => {
-    setAmountText(item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? String(item.amount) : ''));
-  }, [item.amountText, item.amount, item.kind]);
+    setAmountText(item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : ''));
+  }, [item.amountText, item.amount, item.kind, locale]);
   useEffect(() => {
     if (!editingName) setName(item.title);
   }, [editingName, item.title]);
@@ -305,12 +305,12 @@ function CardPaymentDetails({
 }) {
   const { theme, tokens, fonts } = useTheme();
   const [amountText, setAmountText] = useState(
-    detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? String(detail.paymentPlan.amount) : ''),
+    detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : ''),
   );
   const [amountTouched, setAmountTouched] = useState(false);
   useEffect(() => {
-    setAmountText(detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? String(detail.paymentPlan.amount) : ''));
-  }, [detail.paymentAmountText, detail.paymentPlan.amount]);
+    setAmountText(detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : ''));
+  }, [detail.paymentAmountText, detail.paymentPlan.amount, locale]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const parsedPayment = parseAmountInput(amountText, locale, currencyPrecision(currency));
   const paymentIssue =

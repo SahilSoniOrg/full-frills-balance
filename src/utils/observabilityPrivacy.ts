@@ -274,6 +274,13 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
     error_code: 'token',
     resumed: 'boolean',
   },
+  onboarding_first_estimate: {
+    flow_version: 'version',
+    intent: 'token',
+    context: 'token',
+    resumed: 'boolean',
+    duration_ms: 'duration',
+  },
   onboarding_result_viewed: {
     flow_version: 'version',
     intent: 'token',

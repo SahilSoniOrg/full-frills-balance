@@ -43,6 +43,23 @@ describe('Cash Clarity creation session persistence', () => {
     expect(prepareCashClarityInput(restored!.draft, restored!.editableInput, 'en-US').issues).toHaveLength(1);
   });
 
+  it('preserves the input locale and numeric fallbacks when a session is restored', () => {
+    const session = createCreationSession({
+      intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking',
+      currency: 'EUR', workplaceName: 'Personal', inputLocale: 'de-DE',
+    });
+    const withAccount = {
+      ...session,
+      draft: { ...session.draft, accounts: [{ id: 'bank', kind: 'bank' as const, name: 'Bank', balance: 12.5 }] },
+    };
+    const restored = parseCashClaritySetupDraft(JSON.parse(serializeCashClaritySetupDraft(withAccount)));
+    if (!restored) throw new Error('Expected a restored session');
+    expect(restored.inputLocale).toBe('de-DE');
+    const prepared = prepareCashClarityInput(restored.draft, restored.editableInput, restored.inputLocale);
+    expect(prepared.isValid).toBe(true);
+    expect(prepared.effectiveDraft.accounts[0].balance).toBe(12.5);
+  });
+
   it('rejects route data that tries to turn first-run into an optional workplace entry', () => {
     const session = createCreationSession({
       intent: 'first_run',

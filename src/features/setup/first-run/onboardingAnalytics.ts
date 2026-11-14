@@ -176,6 +176,16 @@ export function trackOnboardingValidationBlocked(
   });
 }
 
+/** First usable estimate in this runtime segment; no amount is included. */
+export function trackOnboardingFirstEstimate(
+  input: OnboardingFlowAnalytics & { readonly durationMs?: number },
+): boolean {
+  return analytics.track('onboarding_first_estimate', {
+    ...flowProps(input),
+    duration_ms: boundedDuration(input.durationMs),
+  });
+}
+
 export function trackOnboardingResultViewed(
   input: OnboardingFlowAnalytics & {
     readonly outcome: OnboardingResultOutcome;

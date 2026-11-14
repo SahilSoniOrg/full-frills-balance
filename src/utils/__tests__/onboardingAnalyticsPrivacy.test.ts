@@ -13,6 +13,12 @@ const FLOW = {
 } as const;
 
 describe('onboarding analytics privacy boundary', () => {
+  it('allows estimate timing while removing financial input', () => {
+    expect(sanitizeAnalyticsProperties('onboarding_first_estimate', {
+      ...FLOW, duration_ms: 1200, balance: 500, name: 'Bank',
+    })).toEqual({ ...FLOW, duration_ms: 1200 });
+  });
+
   it('accepts the creation lifecycle events with allowlisted categorical metadata', () => {
     expect(
       sanitizeAnalyticsProperties('onboarding_flow_started', { ...FLOW }),

@@ -16,6 +16,15 @@ type LocaleNumberParts = {
 
 const localePartsCache = new Map<string, LocaleNumberParts>();
 
+/** Format a trusted numeric fallback using the same separators the editor parser expects. */
+export function formatAmountInput(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { useGrouping: false, maximumFractionDigits: 20 })
+    .formatToParts(value)
+    .filter(part => part.type !== 'literal')
+    .map(part => part.value)
+    .join('');
+}
+
 function localeNumberParts(locale: string): LocaleNumberParts {
   const cached = localePartsCache.get(locale);
   if (cached) return cached;

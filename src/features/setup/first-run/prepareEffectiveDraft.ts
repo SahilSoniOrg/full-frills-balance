@@ -1,5 +1,5 @@
 import { getLocales } from 'expo-localization';
-import { amountIssueMessage, currencyPrecision, parseAmountInput } from './amountValidation';
+import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
 import {
   amountInputKey,
   cardPaymentInputKey,
@@ -38,10 +38,6 @@ export interface PreparedCashClarityInput {
   readonly isIncomplete: boolean;
 }
 
-function displayAmount(value: number): string {
-  return String(value);
-}
-
 function deferred(
   input: CashClarityEditableInput,
   collection: CashClarityCollection,
@@ -49,9 +45,9 @@ function deferred(
   return input.deferredCollections?.[collection] === true;
 }
 
-function rawText(input: CashClarityEditableInput, key: string, fallback: number): string {
+function rawText(input: CashClarityEditableInput, key: string, fallback: number, locale: string): string {
   const value = input.amountTextById[key];
-  return typeof value === 'string' ? value : displayAmount(fallback);
+  return typeof value === 'string' ? value : formatAmountInput(fallback, locale);
 }
 
 /**
@@ -77,7 +73,7 @@ export function prepareCashClarityInput(
     ? []
     : draft.accounts.flatMap(account => {
         const parsed = parseAmountInput(
-          rawText(editableInput, amountInputKey(account.id), account.balance),
+          rawText(editableInput, amountInputKey(account.id), account.balance, locale),
           locale,
           precision,
         );
@@ -120,7 +116,7 @@ export function prepareCashClarityInput(
       const rawCardValue = editableInput.amountTextById[cardPaymentInputKey(account.id)];
       const rawCardPayment = typeof rawCardValue === 'string'
         ? rawCardValue
-        : account.cardPaymentAmount ? String(account.cardPaymentAmount) : '';
+        : account.cardPaymentAmount ? formatAmountInput(account.cardPaymentAmount, locale) : '';
       if (rawCardPayment.trim() === '') {
         return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
       }
@@ -275,7 +271,7 @@ function preparePositiveItems<T extends RecurringIncome | PaymentItem | BudgetIt
 ): T[] {
   return items.flatMap(item => {
     const parsed = parseAmountInput(
-      rawText(editableInput, amountInputKey(item.id), item.amount),
+      rawText(editableInput, amountInputKey(item.id), item.amount, locale),
       locale,
       precision,
     );

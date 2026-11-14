@@ -1,11 +1,16 @@
 import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Keyboard } from 'react-native';
+import type { LaunchCoordinatorState } from '@/src/features/app/LaunchCoordinator';
 import type { SetupDraft } from '../../setupTypes';
 import { OnboardingScreen } from '../OnboardingScreen';
 import { createCreationSession } from '../creationSession';
 import { asWorkplaceId } from '@/src/types/ids';
 
 const mockSetupStore: { value: SetupDraft | undefined } = { value: undefined };
+let mockLaunch: LaunchCoordinatorState = { kind: 'setup', journeyId: 'first_run' };
+jest.mock('@/src/features/app/LaunchCoordinator', () => ({
+  useLaunchCoordinator: () => mockLaunch,
+}));
 jest.mock('../../SetupDraftStore', () => ({
   loadSetupDraft: () => mockSetupStore.value,
   saveSetupDraft: (value: SetupDraft) => { mockSetupStore.value = value; },
@@ -85,6 +90,7 @@ jest.mock('../scenes', () => {
 describe('OnboardingScreen durable parent session', () => {
   beforeEach(() => {
     mockSetupStore.value = undefined;
+    mockLaunch = { kind: 'setup', journeyId: 'first_run' };
     jest.useFakeTimers();
     jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() } as never);
   });
@@ -92,6 +98,18 @@ describe('OnboardingScreen durable parent session', () => {
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+  });
+
+  it('starts registered empty devices at currency with add-workplace intent', () => {
+    mockLaunch = { kind: 'setup', journeyId: 'add_workplace' };
+    render(<OnboardingScreen />);
+    expect(screen.queryByTestId('name')).toBeNull();
+    expect(screen.getByTestId('currency-continue')).toBeTruthy();
+    const saved = mockSetupStore.value;
+    if (saved?.kind !== 'cash_clarity') throw new Error('Expected a creation session');
+    expect(saved.intent).toBe('add_workplace');
+    expect(saved.context).toBe('registered_empty_device');
+    expect(saved.entryPolicy).toBe('blocking');
   });
 
   it('composes amount text, account changes, and the following transition against the latest session', () => {

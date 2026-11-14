@@ -131,6 +131,8 @@ export interface CashClaritySetupDraft {
   readonly operationId: WorkplaceId;
   readonly draft: CashClarityDraft;
   readonly editableInput: CashClarityEditableInput;
+  /** The locale that gives saved raw amount text its meaning. */
+  readonly inputLocale: string;
   readonly step: OnboardingStep;
   readonly history: readonly OnboardingStep[];
   readonly repairReturnStep?: OnboardingStep;

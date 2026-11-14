@@ -6,6 +6,7 @@ import type { AccountKind, CashClarityDraft, CashClarityEditableInput, Onboardin
 import { cashClarityWorkplaceId } from './pendingWorkplace';
 import type { CreationContext, CreationIntent } from '../setupTypes';
 import { ONBOARDING_STEPS } from './flow';
+import { getLocales } from 'expo-localization';
 
 export const CASH_CLARITY_SETUP_SCHEMA_VERSION = 2 as const;
 
@@ -108,11 +109,24 @@ function parseEditableInput(value: unknown): CashClarityEditableInput | undefine
     if (!record(value.deferredCollections) || Object.keys(value.deferredCollections).some(key => !COLLECTIONS.includes(key as (typeof COLLECTIONS)[number])) ||
       !Object.values(value.deferredCollections).every(item => typeof item === 'boolean')) return undefined;
   }
-  return value as unknown as CashClarityEditableInput;
+  const rawAmounts: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(amountTextById)) {
+    if (typeof raw === 'string') rawAmounts[key] = raw;
+  }
+  const deferredCollections: Partial<Record<(typeof COLLECTIONS)[number], boolean>> = {};
+  if (record(value.deferredCollections)) {
+    for (const collection of COLLECTIONS) {
+      const flag = value.deferredCollections[collection];
+      if (typeof flag === 'boolean') deferredCollections[collection] = flag;
+    }
+  }
+  return { amountTextById: rawAmounts, deferredCollections };
 }
 
 export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraft | undefined {
-  if (!record(value) || !onlyKeys(value, ['schemaVersion', 'kind', 'journeyId', 'intent', 'context', 'entryPolicy', 'operationId', 'draft', 'editableInput', 'step', 'history', 'repairReturnStep', 'publication', 'publicationErrorCode', 'legacyProvenance']) || value.schemaVersion !== CASH_CLARITY_SETUP_SCHEMA_VERSION || value.kind !== 'cash_clarity') return undefined;
+  if (!record(value) || !onlyKeys(value, ['schemaVersion', 'kind', 'journeyId', 'intent', 'context', 'entryPolicy', 'operationId', 'draft', 'editableInput', 'inputLocale', 'step', 'history', 'repairReturnStep', 'publication', 'publicationErrorCode', 'legacyProvenance']) || value.schemaVersion !== CASH_CLARITY_SETUP_SCHEMA_VERSION || value.kind !== 'cash_clarity') return undefined;
+  if (typeof value.inputLocale !== 'string' || !value.inputLocale.trim()) return undefined;
+  try { new Intl.NumberFormat(value.inputLocale); } catch { return undefined; }
   const intent = value.intent;
   const context = value.context;
   const entryPolicy = value.entryPolicy;
@@ -154,6 +168,7 @@ export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraf
     operationId: asWorkplaceId(value.operationId),
     draft: reconstructNumericPlaceholders(value.draft as CashClarityDraft),
     editableInput: input,
+    inputLocale: value.inputLocale,
     step: value.step as OnboardingStep,
     history: value.history as OnboardingStep[],
     ...(value.repairReturnStep ? { repairReturnStep: value.repairReturnStep as OnboardingStep } : {}),
@@ -214,6 +229,7 @@ export function createCreationSession(options: {
   readonly currency: string;
   readonly workplaceName: string;
   readonly displayName?: string;
+  readonly inputLocale?: string;
   readonly operationId?: WorkplaceId;
 }): CashClaritySetupDraft {
   const operationId = options.operationId ?? cashClarityWorkplaceId();
@@ -238,6 +254,7 @@ export function createCreationSession(options: {
     operationId,
     draft,
     editableInput: { amountTextById: {} },
+    inputLocale: options.inputLocale ?? getLocales()[0]?.languageTag ?? 'en-US',
     step: options.intent === 'first_run' ? 'welcome' : 'currency',
     history: [],
   };

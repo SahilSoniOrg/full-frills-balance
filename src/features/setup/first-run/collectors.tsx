@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { CollectStep } from './conversationUi';
 import type { CollectedItem } from './CollectedRow';
-import { amountIssueMessage, currencyPrecision, parseAmountInput } from './amountValidation';
+import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
 import {
   ACCOUNT_KIND_META,
   amountInputKey,
@@ -44,6 +44,7 @@ export type CollectorSessionHooks = {
   /** Parent session clears this collector's defer flag after valid Continue. */
   readonly onInclude?: () => void;
   readonly locale?: string;
+  readonly continueLabel?: string;
   readonly validationMessage?: string | null;
   readonly recovery?: ReactNode;
   readonly footer?: ReactNode;
@@ -53,12 +54,13 @@ export type CollectorSessionHooks = {
 function useAmountEditor(
   editableInput: CashClarityEditableInput | undefined,
   onAmountTextChange: CollectorSessionHooks['onAmountTextChange'],
+  locale: string,
 ) {
   const [local, setLocal] = useState<Record<string, string>>({});
   const read = (key: string, amount: number, blankZero = false) =>
     editableInput?.amountTextById[key] ??
     local[key] ??
-    (blankZero && amount === 0 ? '' : String(amount));
+    (blankZero && amount === 0 ? '' : formatAmountInput(amount, locale));
   const write = (key: string, raw: string | undefined) => {
     setLocal(previous => {
       if (raw === undefined) {
@@ -172,6 +174,7 @@ export function MoneyScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  continueLabel,
   validationMessage,
   recovery,
   footer,
@@ -186,7 +189,7 @@ export function MoneyScene({
   readonly onBack: () => void;
   readonly onNeedAccount: () => void;
 } & CollectorSessionHooks) {
-  const amountEditor = useAmountEditor(editableInput, onAmountTextChange);
+  const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const accountAmountsValid = accounts.every(account =>
     amountIsValid(
@@ -343,7 +346,7 @@ export function MoneyScene({
     <CollectStep
       title={copy.moneyQuestion}
       subtitle={deferred ? `Not included yet. ${copy.moneyHint}` : copy.moneyHint}
-      continueLabel={copy.continueToNext}
+      continueLabel={continueLabel ?? copy.continueToNext}
       continueDisabled={accounts.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
@@ -414,6 +417,7 @@ export function IncomeScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  continueLabel,
   validationMessage,
   recovery,
   footer,
@@ -428,7 +432,7 @@ export function IncomeScene({
   readonly hasSpendable: boolean;
   readonly onNeedAccount: () => void;
 } & CollectorSessionHooks) {
-  const amountEditor = useAmountEditor(editableInput, onAmountTextChange);
+  const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = income.kind === 'recurring' ? income.items : [];
   const monthly = incomeRecurrence('MONTHLY');
@@ -444,7 +448,7 @@ export function IncomeScene({
   return (
     <CollectStep
       title={copy.incomeSource}
-      continueLabel={copy.continueToPayments}
+      continueLabel={continueLabel ?? copy.continueToPayments}
       subtitle={deferred ? 'Not included yet.' : undefined}
       continueDisabled={items.length === 0}
       onContinue={() => {
@@ -570,6 +574,7 @@ export function ProtectScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  continueLabel,
   validationMessage,
   recovery,
   footer,
@@ -584,7 +589,7 @@ export function ProtectScene({
   readonly hasSpendable: boolean;
   readonly onNeedAccount: () => void;
 } & CollectorSessionHooks) {
-  const amountEditor = useAmountEditor(editableInput, onAmountTextChange);
+  const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = commitment.kind === 'payment' ? commitment.items : [];
   const amountsValid = items.length > 0 && items.every(item =>
@@ -600,7 +605,7 @@ export function ProtectScene({
     <CollectStep
       title={copy.protectQuestion}
       subtitle={deferred ? 'Not included yet.' : undefined}
-      continueLabel={copy.continueToBoundaries}
+      continueLabel={continueLabel ?? copy.continueToBoundaries}
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
@@ -709,6 +714,7 @@ export function ReserveScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  continueLabel,
   validationMessage,
   recovery,
   footer,
@@ -723,7 +729,7 @@ export function ReserveScene({
   readonly hasSpendable: boolean;
   readonly onNeedAccount: () => void;
 } & CollectorSessionHooks) {
-  const amountEditor = useAmountEditor(editableInput, onAmountTextChange);
+  const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = budget.kind === 'set' ? budget.items : [];
   const amountsValid = items.length > 0 && items.every(item =>
@@ -739,7 +745,7 @@ export function ReserveScene({
     <CollectStep
       title={copy.reserveQuestion}
       subtitle={deferred ? `Not included yet. ${copy.reserveHint}` : copy.reserveHint}
-      continueLabel={copy.continueToClarity}
+      continueLabel={continueLabel ?? copy.continueToClarity}
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
