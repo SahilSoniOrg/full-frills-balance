@@ -18,6 +18,7 @@ export const UI_STRINGS = {
     retry: 'Retry',
     loading: 'Loading…',
     loadingMore: 'Loading…',
+    iconPickerTitle: 'Select Icon',
     save: 'Save',
     saveChanges: 'Save Changes',
     cancel: 'Cancel',
@@ -994,26 +995,6 @@ export const UI_STRINGS = {
     editing: 'Editing',
   },
   onboarding: {
-    iconPickerTitle: 'Select Icon',
-    splash: {
-      eyebrow: 'A calmer way to track money',
-      title: 'Know what you can actually spend.',
-      subtitle:
-        'Add your balances, expected income, upcoming bills, and monthly spending limits. We’ll show what you can use for everyday spending.',
-      inputLabel: 'What should we call you?',
-      inputPlaceholder: 'Your name or nickname',
-      nameRequired: 'Add a name to start',
-      btnGetStarted: 'Set up Safe to Spend',
-      dividerOr: 'OR',
-      restorePrompt: 'Already have your data?',
-      btnRestore: 'Restore from backup',
-    },
-    currency: {
-      title: 'Choose your main currency',
-      subtitle: 'This is the default for your accounts. You can add other currencies anytime.',
-      searchPlaceholder: 'Search currencies…',
-      emptySearch: 'No currencies match that search.',
-    },
     accounts: {
       title: 'Where is your money today?',
       subtitle: 'Pick the accounts you use every day. You can add cards and loans later.',

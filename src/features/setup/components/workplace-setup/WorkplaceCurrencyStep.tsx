@@ -1,6 +1,7 @@
 import { SelectableGrid, type SelectableItem } from '@/src/components/shared/SelectableGrid';
 import { AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Opacity } from '@/src/constants';
+import { Opacity } from '@/src/constants';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { withOpacity } from '@/src/utils/color-math';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -40,8 +41,8 @@ export function WorkplaceCurrencyStep({
 
   return (
     <SelectableGrid
-      title={AppConfig.strings.onboarding.currency.title}
-      subtitle={AppConfig.strings.onboarding.currency.subtitle}
+      title={copy.currency.title}
+      subtitle={copy.currency.subtitle}
       items={currencyItems}
       selectedIds={[selectedCurrency]}
       onToggle={onSelectCurrency}
@@ -50,14 +51,14 @@ export function WorkplaceCurrencyStep({
       isCompleting={isCompleting}
       headerContent={
         <AppInput
-          placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
+          placeholder={copy.currency.searchPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           accessibilityLabel="Search currency"
           returnKeyType="search"
         />
       }
-      emptyMessage={AppConfig.strings.onboarding.currency.emptySearch}
+      emptyMessage={copy.currency.emptySearch}
       renderSubtitle={(item, isSelected) => (
         <AppText
           variant="caption"

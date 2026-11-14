@@ -76,19 +76,19 @@ function firstListChange<T extends Identified>(
   return null;
 }
 
-function accountUpdate(previous: DraftAccount, current: DraftAccount): string | null {
+function accountUpdate(previous: DraftAccount, current: DraftAccount, currency: string): string | null {
   if (previous.balance !== current.balance) {
-    return `${current.name} balance ${current.balance > previous.balance ? 'increased' : 'decreased'}`;
+    return copy.transitionBalanceSet(current.name, formatDraftAmount(current.balance, currency));
   }
   if (
     previous.cardPaymentAmount !== current.cardPaymentAmount ||
     previous.cardPaymentDate !== current.cardPaymentDate
   ) {
-    return `${current.name} card payment updated`;
+    return copy.transitionCardPaymentUpdated(current.name);
   }
-  if (previous.spendable !== current.spendable) return `${current.name} availability updated`;
+  if (previous.spendable !== current.spendable) return copy.transitionAvailabilityUpdated(current.name);
   if (previous.name !== current.name || previous.kind !== current.kind) {
-    return `${current.name} account updated`;
+    return copy.transitionAccountUpdated(current.name);
   }
   return null;
 }
@@ -101,7 +101,7 @@ function incomeUpdate(previous: RecurringIncome, current: RecurringIncome): stri
     previous.interval !== current.interval ||
     previous.intervalN !== current.intervalN ||
     previous.nextDate !== current.nextDate;
-  return changed ? `${incomeItemName(current)} income changed` : null;
+  return changed ? copy.transitionIncomeChanged(incomeItemName(current)) : null;
 }
 
 function paymentUpdate(previous: PaymentItem, current: PaymentItem): string | null {
@@ -110,7 +110,7 @@ function paymentUpdate(previous: PaymentItem, current: PaymentItem): string | nu
     previous.type !== current.type ||
     previous.amount !== current.amount ||
     previous.dueDate !== current.dueDate;
-  return changed ? `${paymentItemName(current)} payment changed` : null;
+  return changed ? copy.transitionPaymentChanged(paymentItemName(current)) : null;
 }
 
 function budgetUpdate(previous: BudgetItem, current: BudgetItem): string | null {
@@ -118,56 +118,56 @@ function budgetUpdate(previous: BudgetItem, current: BudgetItem): string | null 
     previous.name !== current.name ||
     previous.category !== current.category ||
     previous.amount !== current.amount;
-  return changed ? `${current.name} budget changed` : null;
+  return changed ? copy.transitionBudgetChanged(current.name) : null;
 }
 
 function describeDraftChange(previous: CashClarityDraft, current: CashClarityDraft): string | null {
-  if (previous.currency !== current.currency) return 'currency changed';
+  if (previous.currency !== current.currency) return copy.transitionCurrencyChanged;
 
   const accountChange = firstListChange(previous.accounts, current.accounts, {
-    added: item => `${item.name} added`,
-    removed: item => `${item.name} removed`,
-    updated: accountUpdate,
+    added: item => copy.transitionAccountAdded(item.name),
+    removed: item => copy.transitionAccountRemoved(item.name),
+    updated: (before, item) => accountUpdate(before, item, current.currency),
   });
   if (accountChange) return accountChange;
 
   if (current.income.kind === 'skipped' && previous.income.kind !== 'skipped') {
-    return 'income skipped';
+    return copy.transitionIncomeSkipped;
   }
   const incomeChange = firstListChange(
     previous.income.kind === 'recurring' ? previous.income.items : [],
     current.income.kind === 'recurring' ? current.income.items : [],
     {
-      added: item => `${incomeItemName(item)} income added`,
-      removed: item => `${incomeItemName(item)} income removed`,
+      added: item => copy.transitionIncomeAdded(incomeItemName(item)),
+      removed: item => copy.transitionIncomeRemoved(incomeItemName(item)),
       updated: incomeUpdate,
     },
   );
   if (incomeChange) return incomeChange;
 
   if (current.commitment.kind === 'skipped' && previous.commitment.kind !== 'skipped') {
-    return 'planned payments skipped';
+    return copy.transitionPaymentsSkipped;
   }
   const paymentChange = firstListChange(
     previous.commitment.kind === 'payment' ? previous.commitment.items : [],
     current.commitment.kind === 'payment' ? current.commitment.items : [],
     {
-      added: item => `${paymentItemName(item)} payment added`,
-      removed: item => `${paymentItemName(item)} payment removed`,
+      added: item => copy.transitionPaymentAdded(paymentItemName(item)),
+      removed: item => copy.transitionPaymentRemoved(paymentItemName(item)),
       updated: paymentUpdate,
     },
   );
   if (paymentChange) return paymentChange;
 
   if (current.budget.kind === 'skipped' && previous.budget.kind !== 'skipped') {
-    return 'budgets skipped';
+    return copy.transitionBudgetsSkipped;
   }
   return firstListChange(
     previous.budget.kind === 'set' ? previous.budget.items : [],
     current.budget.kind === 'set' ? current.budget.items : [],
     {
-      added: item => `${item.name} budget added`,
-      removed: item => `${item.name} budget removed`,
+      added: item => copy.transitionBudgetAdded(item.name),
+      removed: item => copy.transitionBudgetRemoved(item.name),
       updated: budgetUpdate,
     },
   );

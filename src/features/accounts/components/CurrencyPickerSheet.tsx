@@ -7,6 +7,7 @@ import {
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { toCurrencyPickerSections } from '@/src/features/accounts/helpers/currencyPickerOptions';
 import { useTheme } from '@/src/hooks/use-theme';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -63,8 +64,8 @@ export function CurrencyPickerSheet({
       title={title}
       sections={sections}
       selectedValue={selectedCurrency}
-      searchPlaceholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
-      emptyMessage={AppConfig.strings.onboarding.currency.emptySearch}
+      searchPlaceholder={copy.currency.searchPlaceholder}
+      emptyMessage={copy.currency.emptySearch}
       showSearch
       onClose={onClose}
       onSelect={onSelect}

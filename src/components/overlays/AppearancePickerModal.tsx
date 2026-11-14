@@ -119,7 +119,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
   const resolvedTitle =
     title ||
     (mode === 'icon'
-      ? AppConfig.strings.onboarding.iconPickerTitle
+      ? AppConfig.strings.common.iconPickerTitle
       : mode === 'color'
         ? 'Select Color'
         : 'Account appearance');

@@ -1,6 +1,7 @@
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { Spacing, Typography } from '@/src/constants';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Keyboard, StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
@@ -70,23 +71,23 @@ export function DeviceNameStep({
             <Stack gap={Spacing.xxxxl + Spacing.xxl}>
               <Stack gap="md" paddingTop="xl" align="center">
                 <AppText variant="caption" color="primary" weight="semibold" style={styles.eyebrow}>
-                  {AppConfig.strings.onboarding.splash.eyebrow}
+                  {copy.welcome.eyebrow}
                 </AppText>
                 <AppText variant="hero" style={styles.title}>
-                  {AppConfig.strings.onboarding.splash.title}
+                  {copy.welcome.title}
                 </AppText>
                 <AppText variant="body" color="secondary" style={styles.subtitle}>
-                  {AppConfig.strings.onboarding.splash.subtitle}
+                  {copy.welcome.subtitle}
                 </AppText>
               </Stack>
 
               <Stack gap="lg" marginHorizontal="md">
                 <AppInput
-                  label={AppConfig.strings.onboarding.splash.inputLabel}
-                  placeholder={AppConfig.strings.onboarding.splash.inputPlaceholder}
+                  label={copy.welcome.nameLabel}
+                  placeholder={copy.welcome.namePlaceholder}
                   value={name}
                   onChangeText={setName}
-                  accessibilityLabel={AppConfig.strings.onboarding.splash.inputLabel}
+                  accessibilityLabel={copy.welcome.nameLabel}
                   testID="onboarding-name-input"
                   returnKeyType="next"
                   onSubmitEditing={() => runAction('continue')}
@@ -97,25 +98,25 @@ export function DeviceNameStep({
                   size="lg"
                   onPress={() => runAction('continue')}
                   disabled={!name.trim() || isCompleting}
-                  accessibilityLabel={AppConfig.strings.onboarding.splash.btnGetStarted}
+                  accessibilityLabel={copy.startWithMoney}
                   testID="onboarding-continue-button"
                 >
-                  {AppConfig.strings.onboarding.splash.btnGetStarted}
+                  {copy.startWithMoney}
                 </AppButton>
 
                 <Stack gap="xs" align="center">
                   <AppText variant="caption" color="secondary">
-                    {AppConfig.strings.onboarding.splash.restorePrompt}
+                    {copy.welcome.restorePrompt}
                   </AppText>
                   <AppButton
                     variant="ghost"
                     size="md"
                     onPress={() => runAction('restore')}
                     disabled={isCompleting}
-                    accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}
+                    accessibilityLabel={copy.restoreBackup}
                     testID="onboarding-restore-button"
                   >
-                    {AppConfig.strings.onboarding.splash.btnRestore}
+                    {copy.restoreBackup}
                   </AppButton>
                 </Stack>
               </Stack>

@@ -25,7 +25,7 @@ describe('explainDraftTransition', () => {
     };
 
     expect(explainDraftTransition(previous, current, now)).toBe(
-      '$25 added to Safe to Spend — Bank balance increased',
+      '$25 added to Safe to Spend — Bank balance set to $125',
     );
   });
 
@@ -87,7 +87,7 @@ describe('explainDraftTransition', () => {
         },
         now,
       ),
-    ).toBe('Safe to Spend unchanged — Salary income added');
+    ).toBe('Safe to Spend unchanged — Salary expected income added');
     expect(
       explainDraftTransition(
         withCash,
@@ -163,7 +163,7 @@ describe('explainDraftTransition', () => {
     };
 
     expect(explainDraftTransition(previous, current, now)).toBe(
-      'Safe to Spend unchanged — Bank balance increased',
+      'Safe to Spend unchanged — Bank balance set to ¥100.40',
     );
   });
 

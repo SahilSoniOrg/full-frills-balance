@@ -1,7 +1,7 @@
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { Box, Stack } from '@/src/design-system';
@@ -29,7 +29,7 @@ export function WelcomeScene({
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
   const [nameMissing, setNameMissing] = useState(false);
-  const splash = AppConfig.strings.onboarding.splash;
+  const welcome = copy.welcome;
   const trimmed = (name ?? '').trim();
 
   const run = (action: 'start' | 'restore') => {
@@ -52,7 +52,7 @@ export function WelcomeScene({
       <Stack gap="xs" align="center" paddingHorizontal="md" paddingTop="sm" paddingBottom="sm">
         <Stack gap="xs" align="center">
           <AppText variant="caption" color="secondary">
-            {splash.restorePrompt}
+            {welcome.restorePrompt}
           </AppText>
           <AppButton
             variant="ghost"
@@ -101,27 +101,27 @@ export function WelcomeScene({
                     weight="semibold"
                     style={styles.eyebrow}
                   >
-                    {splash.eyebrow}
+                    {welcome.eyebrow}
                   </AppText>
                   <AppText variant="hero" style={styles.title}>
-                    {splash.title}
+                    {welcome.title}
                   </AppText>
                   <AppText variant="body" color="secondary" style={styles.subtitle}>
-                    {splash.subtitle}
+                    {welcome.subtitle}
                   </AppText>
                 </Stack>
 
                 <Stack gap="lg" width="100%" paddingHorizontal="md">
                   <AppInput
-                    label={splash.inputLabel}
-                    placeholder={splash.inputPlaceholder}
+                    label={welcome.nameLabel}
+                    placeholder={welcome.namePlaceholder}
                     value={name ?? ''}
                     maxLength={120}
                     onChangeText={onNameChange}
                     autoCapitalize="words"
                     autoCorrect={false}
-                    accessibilityLabel={splash.inputLabel}
-                    error={nameMissing && !trimmed ? splash.nameRequired : undefined}
+                    accessibilityLabel={welcome.nameLabel}
+                    error={nameMissing && !trimmed ? welcome.nameRequired : undefined}
                     testID="onboarding-name-input"
                     returnKeyType="done"
                     onSubmitEditing={() => run('start')}

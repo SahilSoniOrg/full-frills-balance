@@ -1,4 +1,5 @@
 import { CURRENCY_PRECISIONS } from '@/src/constants/currency-definitions';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 
 export type AmountInputResult =
   | { readonly status: 'empty' }
@@ -122,13 +123,13 @@ export function amountIssueMessage(
   positiveOnly: boolean,
   signedAllowed: boolean,
 ): string | undefined {
-  if (result.status === 'empty') return 'Enter an amount.';
+  if (result.status === 'empty') return copy.amountEmpty;
   if (result.status === 'invalid') {
-    if (result.reason === 'precision') return 'Use fewer decimal places for this currency.';
-    if (result.reason === 'non-finite') return 'Enter a finite amount.';
-    return 'Enter a valid amount using the selected locale’s number format.';
+    if (result.reason === 'precision') return copy.amountPrecision;
+    if (result.reason === 'non-finite') return copy.amountNonFinite;
+    return copy.amountMalformed;
   }
-  if (!signedAllowed && result.value < 0) return 'Use a non-negative amount.';
-  if (positiveOnly && result.value <= 0) return 'Enter an amount greater than zero.';
+  if (!signedAllowed && result.value < 0) return copy.amountNonNegative;
+  if (positiveOnly && result.value <= 0) return copy.amountPositive;
   return undefined;
 }
