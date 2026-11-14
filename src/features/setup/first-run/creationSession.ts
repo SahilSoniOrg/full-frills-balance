@@ -1,10 +1,9 @@
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import { Icon, isValidIconName } from '@/src/types/domainIcons';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
-import type { CashClaritySetupDraft, SetupEntryPolicy, SetupFactSource } from '../setupTypes';
+import type { CashClaritySetupDraft, SetupEntryPolicy, SetupFactSource, CreationContext, CreationIntent } from '../setupTypes';
 import type { AccountKind, CashClarityDraft, CashClarityEditableInput, OnboardingStep } from './draft';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
-import type { CreationContext, CreationIntent } from '../setupTypes';
 import { ONBOARDING_STEPS } from './flow';
 import { getLocales } from 'expo-localization';
 
@@ -136,7 +135,7 @@ export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraf
     (entryPolicy !== 'blocking' && entryPolicy !== 'optional') ||
     journeyId !== (intent === 'first_run' ? 'first_run' : 'add_workplace') ||
     (intent === 'first_run' && (context !== 'unregistered_device' || entryPolicy !== 'blocking')) ||
-    (intent === 'add_workplace' && ((context === 'registered_empty_device') !== (entryPolicy === 'blocking'))) ||
+    (intent === 'add_workplace' && (context === 'unregistered_device' || (context === 'registered_empty_device') !== (entryPolicy === 'blocking'))) ||
     typeof value.operationId !== 'string' || !value.operationId.trim()) return undefined;
   const input = parseEditableInput(value.editableInput);
   if (!input || !validDraft(value.draft, input, value.operationId)) return undefined;

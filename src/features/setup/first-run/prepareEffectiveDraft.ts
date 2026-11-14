@@ -1,9 +1,11 @@
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { getLocales } from 'expo-localization';
 import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
 import {
   amountInputKey,
   cardPaymentInputKey,
   hasSpendableAccount,
+  isSpendableAccount,
   type BudgetItem,
   type CashClarityCollection,
   type CashClarityDraft,
@@ -102,7 +104,7 @@ export function prepareCashClarityInput(
             itemId: account.id,
             field: 'dependency',
             reason: 'dependency',
-            message: 'Choose whether these savings are available to spend.',
+            message: copy.savingsAvailabilityRequired,
           });
           return [];
         }
@@ -195,7 +197,7 @@ export function prepareCashClarityInput(
           collection,
           field: 'dependency',
           reason: 'dependency',
-          message: 'Add a spendable account or leave these entries for later.',
+          message: copy.dependentAccountRequired,
         });
       }
     }
@@ -206,7 +208,7 @@ export function prepareCashClarityInput(
           itemId: account.id,
           field: 'dependency',
           reason: 'dependency',
-          message: 'Add a spendable account before planning this card payment.',
+          message: copy.cardAccountRequired,
         });
       }
     }

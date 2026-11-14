@@ -196,7 +196,7 @@ export async function discardRestorePublication(draft: RestoreSetupDraft): Promi
 
 /** Terminal finisher used by the coordinator after Summary acceptance. */
 export async function finishSetup(
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   options: FinishSetupOptions = {},
 ): Promise<WorkplaceId | undefined> {
   if (draft.kind === 'restore') {
@@ -227,8 +227,5 @@ export async function finishSetup(
     return workplace.id;
   }
 
-  if (!draft.workplace) throw new Error('Workplace setup is incomplete');
-  const workplaceId = await finishWorkplaceSetup(draft.operationId, draft.workplace);
-  if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplaceId);
-  return workplaceId;
+  throw new Error('Only restore journeys use this finisher');
 }

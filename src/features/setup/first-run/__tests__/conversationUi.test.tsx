@@ -165,6 +165,7 @@ describe('ConversationStep keyboard behavior', () => {
             kind: 'account',
             id: 'card-1',
             title: 'Card',
+            amountLabel: 'Balance',
             amount: 0,
             detail: {
               kind: 'card',

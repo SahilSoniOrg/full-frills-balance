@@ -293,6 +293,7 @@ async function uniqueDefaultName(name: string, isDefault: boolean): Promise<stri
 /** Publishes all Cash Clarity books and its completion receipt in one database transaction. */
 export async function publishCashClarity(
   draft: CashClarityDraft,
+  options: { readonly preserveWorkplaceName?: boolean } = {},
 ): Promise<CashClarityPublicationOutcome> {
   validateCashClarityDraft(draft);
   const submitted = snapshotCashClarityDraft(draft);
@@ -388,7 +389,7 @@ export async function publishCashClarity(
     try {
       workplaceName = await uniqueDefaultName(
         output.name.value,
-        output.name.source === 'defaulted',
+        output.name.source === 'defaulted' && !options.preserveWorkplaceName,
       );
     } catch (cause) {
       throw new CashClarityPublicationError('save_failed', 'Could not save setup.', { cause });

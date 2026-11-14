@@ -12,6 +12,7 @@ import { type ReactNode, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { ConversationStep } from './conversationUi';
 import { ClarityChart } from './clarityChart';
+import { publishedDraftAccountId } from './mapToWorkplaceOutput';
 import type { CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
 import { useClaritySceneViewModel } from './useClaritySceneViewModel';
@@ -90,6 +91,9 @@ export function ClarityScene({
   const resultStatus = !estimateAvailable ? copy.clarityUnknown
     : projection.safeToSpend < 0 ? copy.clarityShortfall
     : projection.safeToSpend === 0 ? copy.clarityZero : copy.safeToSpend;
+  const includedAccountIds = new Set(draft.accounts.map(account => publishedDraftAccountId(draft, account)));
+  const unvaluedAccounts = (draft.preservedStarterAccounts ?? []).filter(account => !account.id || !includedAccountIds.has(account.id));
+  const preservedCategories = draft.preservedStarterCategories ?? [];
   const groupDots = {
     cash: theme.asset,
     income: theme.success,
@@ -163,6 +167,21 @@ export function ClarityScene({
           </AppCard>
         </ClarityResultPanel>
 
+        {unvaluedAccounts.length > 0 || preservedCategories.length > 0 ? (
+          <Stack gap="sm" testID="onboarding-preserved-definitions">
+            <AppText variant="subheading">{copy.preservedDefinitions}</AppText>
+            {unvaluedAccounts.map(account => (
+              <Stack key={account.id ?? account.name} gap="xs">
+                <AppText variant="body">{account.name}</AppText>
+                <AppText variant="caption" color="secondary">{copy.balanceNotProvided}</AppText>
+              </Stack>
+            ))}
+            {preservedCategories.length > 0 ? (
+              <AppText variant="caption" color="secondary">{copy.preservedCategories}: {preservedCategories.map(category => category.name).join(', ')}</AppText>
+            ) : null}
+          </Stack>
+        ) : null}
+
         {normalizedOmissions.length > 0 ? (
           <Stack gap="sm" testID="onboarding-clarity-omissions">
             <AppText variant="subheading">{copy.notIncludedYet}</AppText>
@@ -228,7 +247,7 @@ export function ClarityScene({
         visible={explanationVisible}
         title={copy.clarityExplainTitle}
         onClose={() => setExplanationVisible(false)}
-        accessibilityCloseLabel="Close Safe to Spend explanation"
+        accessibilityCloseLabel={copy.closeClarityExplanation}
         position="bottomSheet"
         maxHeightPercent={90}
         fixedHeight={false}

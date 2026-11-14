@@ -3,25 +3,23 @@ import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from '../restoreAuto
 import type { SetupRecipe } from '../setupRecipes';
 import type { NextSetupAction } from '../resolveNextSetupAction';
 import {
-  isRestoreJourneyId,
-  type SetupDraft,
-  type SetupJourneyId,
+  type RestoreSetupDraft,
+  type RestoreJourneyId,
   type SetupSliceId,
   type WorkplaceCheckpoint,
 } from '../setupTypes';
 import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from '../visibleSetupProgress';
 
 interface SetupJourneyViewStateOptions {
-  journeyId: SetupJourneyId;
+  journeyId: RestoreJourneyId;
   candidateName: string;
   recipe: SetupRecipe;
-  draft: SetupDraft;
+  draft: RestoreSetupDraft;
   action: NextSetupAction;
   slice: SetupSliceId | undefined;
 }
 
 export function useSetupJourneyViewState({
-  journeyId,
   candidateName,
   recipe,
   draft,
@@ -32,7 +30,7 @@ export function useSetupJourneyViewState({
   const [workplaceStep, setWorkplaceStep] = useState<WorkplaceCheckpoint>(() =>
     resolveWorkplaceStartCheckpoint({
       identityMode: recipe.workplaceIdentity,
-      books: isRestoreJourneyId(journeyId) ? 'imported' : 'starters',
+      books: 'imported',
       initial: draft.workplace ?? getRestoreWorkplacePrefill(draft),
     }),
   );

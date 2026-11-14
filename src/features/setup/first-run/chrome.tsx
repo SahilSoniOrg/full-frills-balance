@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, ChromeMotion, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Box, Inline, Page, SetupProgressBar, Stack, usePageKeyboard } from '@/src/design-system';
+import { Box, Page, SetupProgressBar, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { MotiView } from 'moti';
 import type { ReactNode } from 'react';

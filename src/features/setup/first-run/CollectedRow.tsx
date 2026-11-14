@@ -16,7 +16,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { getLocales } from 'expo-localization';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform, StyleSheet, TextInput } from 'react-native';
 import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
 import { MAX_ONBOARDING_ITEM_NAME_LENGTH } from './validation';
@@ -96,17 +96,11 @@ export function CollectedRow({
   const locale = providedLocale ?? item.locale ?? getLocales()[0]?.languageTag ?? 'en-US';
   const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
-  const [amountText, setAmountText] = useState(
-    item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : ''),
-  );
+  const amountFallback = item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : '';
+  const [localAmount, setLocalAmount] = useState<{ source: string; text: string }>();
+  const amountText = item.amountText ?? (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
   const [editingName, setEditingName] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
-  useEffect(() => {
-    setAmountText(item.amountText ?? (item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : ''));
-  }, [item.amountText, item.amount, item.kind, locale]);
-  useEffect(() => {
-    if (!editingName) setName(item.title);
-  }, [editingName, item.title]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const shownName = editingName ? name : item.title;
   const parsedAmount = parseAmountInput(amountText, locale, currencyPrecision(currency));
@@ -126,10 +120,6 @@ export function CollectedRow({
         variant="outline"
         background="surface"
         paddingSize="none"
-        accessibilityActions={[{ name: 'delete', label: removeLabel }]}
-        onAccessibilityAction={event => {
-          if (event.nativeEvent.actionName === 'delete') item.onRemove();
-        }}
       >
         <Box paddingHorizontal="xl" paddingVertical="sm">
           <Stack gap="xs">
@@ -178,7 +168,7 @@ export function CollectedRow({
                     <TextInput
                       value={amountText}
                       onChangeText={text => {
-                        setAmountText(text);
+                        if (!item.onAmountTextChange) setLocalAmount({ source: amountFallback, text });
                         setAmountTouched(true);
                         item.onAmountTextChange?.(text);
                         const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
@@ -304,13 +294,10 @@ function CardPaymentDetails({
   readonly locale: string;
 }) {
   const { theme, tokens, fonts } = useTheme();
-  const [amountText, setAmountText] = useState(
-    detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : ''),
-  );
+  const amountFallback = detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : '';
+  const [localAmount, setLocalAmount] = useState<{ source: string; text: string }>();
+  const amountText = detail.paymentAmountText ?? (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
   const [amountTouched, setAmountTouched] = useState(false);
-  useEffect(() => {
-    setAmountText(detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : ''));
-  }, [detail.paymentAmountText, detail.paymentPlan.amount, locale]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const parsedPayment = parseAmountInput(amountText, locale, currencyPrecision(currency));
   const paymentIssue =
@@ -333,7 +320,7 @@ function CardPaymentDetails({
           <TextInput
             value={amountText}
             onChangeText={text => {
-              setAmountText(text);
+              if (!detail.onPaymentAmountTextChange) setLocalAmount({ source: amountFallback, text });
               setAmountTouched(true);
               detail.onPaymentAmountTextChange?.(text);
               const parsed = parseAmountInput(text, locale, currencyPrecision(currency));

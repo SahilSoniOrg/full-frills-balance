@@ -2,7 +2,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { ClarityScene } from '../wrap';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { asWorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
+import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
 
 jest.mock('@/src/components/core', () => {
@@ -134,6 +135,16 @@ describe('ClarityScene progressive explanation', () => {
     expect(screen.getByText(copy.clarityUnknown)).toBeTruthy();
     expect(screen.queryByTestId('onboarding-clarity-sts')).toBeNull();
     expect(screen.queryByTestId('onboarding-clarity-formula')).toBeNull();
+  });
+
+  it('shows preserved metadata without inventing a balance or an estimate', () => {
+    render(<ClarityScene {...emptyResult} hasUsableEstimate={false} draft={{
+      ...emptyResult.draft,
+      preservedStarterAccounts: [{ id: asAccountId('brokerage'), name: 'Brokerage', type: AccountType.ASSET, icon: Icon.Briefcase }],
+    }} />);
+    expect(screen.getByText('Brokerage')).toBeTruthy();
+    expect(screen.getByText(copy.balanceNotProvided)).toBeTruthy();
+    expect(screen.queryByTestId('onboarding-clarity-sts')).toBeNull();
   });
 
   it('retries opening a saved workplace without committing again', () => {

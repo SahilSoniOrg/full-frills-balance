@@ -28,6 +28,8 @@ import {
   saveSetupDraft,
 } from '../SetupDraftStore';
 import type { CashClaritySetupDraft, CreationContext, CreationIntent, SetupDraft } from '../setupTypes';
+import { ConversationStep } from './conversationUi';
+import { type CollectorSessionHooks } from './collectors';
 import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
 import { CashClarityPublicationError, publishCashClarity, recoverCashClarityPublication } from './commitCashClarity';
 import { createCreationSession } from './creationSession';
@@ -193,7 +195,7 @@ export function OnboardingScreen() {
   }>();
   const nameParam = firstParam(params.name);
   const launch = useLaunchCoordinator();
-  const entry = useMemo(() => requestedEntry(params, launch), [params.journey, params.context, params.entryPolicy, launch]);
+  const entry = useMemo(() => requestedEntry(params, launch), [params, launch]);
   const [bootstrap] = useState(() => bootstrapSession(entry, nameParam));
   const [session, setSession] = useState<CashClaritySetupDraft | null>(
     bootstrap.kind === 'session' ? bootstrap.session : null,
@@ -211,15 +213,16 @@ export function OnboardingScreen() {
   const [repairMessage, setRepairMessage] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
   const [latestDraftChange, setLatestDraftChange] = useState<string | null>(null);
-  const segmentStartedAt = useRef(Date.now());
-  const stepStartedAt = useRef({ step: session?.step, at: Date.now() });
+  const [mountedAt] = useState(Date.now);
+  const segmentStartedAt = useRef(mountedAt);
+  const stepStartedAt = useRef({ step: session?.step, at: mountedAt });
   const acknowledgedDraft = useRef<CashClaritySetupDraft['draft'] | null>(null);
   const { openCreatedWorkplace } = useCreationLaunch();
   const locale = session?.inputLocale ?? getLocales()[0]?.languageTag ?? 'en-US';
 
   useEffect(() => {
     if (bootstrap.kind === 'session' && !bootstrap.resumed) saveSetupDraft(bootstrap.session);
-  }, []);
+  }, [bootstrap]);
 
   const persistSession = useCallback((update: (current: CashClaritySetupDraft) => CashClaritySetupDraft) => {
     const current = sessionRef.current;
@@ -276,7 +279,7 @@ export function OnboardingScreen() {
       trackOnboardingResultViewed({ ...analyticsProps, outcome, durationMs: Date.now() - segmentStartedAt.current });
       resultViewedInRuntime.add(session.operationId);
     }
-  }, [session?.operationId, session?.step, session?.intent, session?.context, resumed, prepared, projection, resumePrompt]);
+  }, [session, resumed, prepared, projection, resumePrompt]);
 
   useEffect(() => {
     if (!session || !acknowledgedDraft.current) return;
@@ -288,11 +291,11 @@ export function OnboardingScreen() {
       acknowledgedDraft.current = currentDraft;
     }, 600);
     return () => clearTimeout(timer);
-  }, [session?.draft, session?.step, prepared?.effectiveDraft]);
+  }, [session, prepared?.effectiveDraft]);
 
   useEffect(() => {
     if (prepared && session && !acknowledgedDraft.current) acknowledgedDraft.current = prepared.effectiveDraft;
-  }, [prepared, session?.operationId]);
+  }, [prepared, session]);
 
   const updateDraft = (update: (current: CashClaritySetupDraft['draft']) => CashClaritySetupDraft['draft']) => {
     persistSession(current => ({ ...current, draft: update(current.draft) }));
@@ -624,7 +627,7 @@ export function OnboardingScreen() {
         trackOnboardingSaveResult({ ...analyticsProps, outcome: 'failure', errorCode: 'amount_invalid' });
         return;
       }
-      const published = await publishCashClarity(currentPrepared.effectiveDraft);
+      const published = await publishCashClarity(currentPrepared.effectiveDraft, { preserveWorkplaceName: current.legacyProvenance !== undefined });
       const recoverableSession = { ...current };
       delete recoverableSession.publicationErrorCode;
       const withPublication = { ...recoverableSession, publication: published } satisfies CashClaritySetupDraft;
@@ -739,12 +742,13 @@ export function OnboardingScreen() {
 
   const step = session.step;
   const showSafeToSpend = step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
-  const collectorHooks = (collection: CashClarityCollection) => ({
+  const collection = collectionForStep(step);
+  const collectorHooks: CollectorSessionHooks = {
     editableInput: session.editableInput,
     locale,
     onAmountTextChange: updateAmountText,
-    onDefer: () => setCollectionDeferred(collection, true),
-    onInclude: () => setCollectionDeferred(collection, false),
+    onDefer: () => { if (collection) setCollectionDeferred(collection, true); },
+    onInclude: () => { if (collection) setCollectionDeferred(collection, false); },
     continueLabel: session.history.at(-1) === 'clarity' || (step === 'now' && session.repairReturnStep)
       ? copy.continue : undefined,
     validationMessage: step === 'now' || step === 'next' || step === 'protect' || step === 'reserve'
@@ -767,7 +771,7 @@ export function OnboardingScreen() {
       const currentStep = sessionRef.current?.step;
       if (currentStep) trackValidationBlocked(currentStep, reason);
     },
-  });
+  };
 
   const deferredOmissions = prepared.deferredCollections.map(collection => ({
     id: collection,
@@ -818,7 +822,7 @@ export function OnboardingScreen() {
       onSkip={() => undefined}
       onBack={back}
       onNeedAccount={needAccount}
-      {...collectorHooks('accounts')}
+      {...collectorHooks}
     />
   ) : step === 'next' ? (
     <IncomeScene
@@ -829,7 +833,7 @@ export function OnboardingScreen() {
       onBack={back}
       hasSpendable={spendable}
       onNeedAccount={needAccount}
-      {...collectorHooks('income')}
+      {...collectorHooks}
     />
   ) : step === 'protect' ? (
     <ProtectScene
@@ -840,7 +844,7 @@ export function OnboardingScreen() {
       onBack={back}
       hasSpendable={spendable}
       onNeedAccount={needAccount}
-      {...collectorHooks('commitment')}
+      {...collectorHooks}
     />
   ) : step === 'reserve' ? (
     <ReserveScene
@@ -851,7 +855,7 @@ export function OnboardingScreen() {
       onBack={back}
       hasSpendable={spendable}
       onNeedAccount={needAccount}
-      {...collectorHooks('budget')}
+      {...collectorHooks}
     />
   ) : (
     <ClarityScene

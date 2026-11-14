@@ -112,6 +112,7 @@ function validateIncome(draft: CashClarityDraft): void {
     assertTimestamp(item.nextDate, 'Income date');
     if (
       !Object.values(PlannedPaymentInterval).includes(item.interval as PlannedPaymentInterval) ||
+      typeof item.intervalN !== 'number' ||
       !Number.isInteger(item.intervalN) ||
       item.intervalN < 1 ||
       item.intervalN > 9999

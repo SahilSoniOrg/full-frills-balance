@@ -127,6 +127,27 @@ describe('SetupDraftStore', () => {
     expect(migrated?.kind === 'cash_clarity' && migrated.publication).toBeUndefined();
   });
 
+  it('assigns repeatable IDs only to legacy definitions that lack an ID', () => {
+    const legacy = {
+      schemaVersion: 1, kind: 'workplace_creation', journeyId: 'create_workplace',
+      entryPolicy: 'optional', operationId, presentedHistory: ['workplace'], acceptedSlices: ['workplace'],
+      workplace: {
+        name: { value: 'Personal', source: 'defaulted' },
+        icon: { value: Icon.Home, source: 'defaulted' },
+        baseCurrency: { value: 'USD', source: 'defaulted' },
+        selectedAccounts: [{ name: 'Cash', type: AccountType.ASSET, icon: Icon.Wallet }],
+        selectedCategories: [{ name: 'Salary', type: AccountType.INCOME, icon: Icon.TrendingUp }],
+        acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+      },
+    };
+    const migrated = parseSetupDraft(legacy);
+    const retried = parseSetupDraft(legacy);
+    if (migrated?.kind !== 'cash_clarity' || retried?.kind !== 'cash_clarity') throw new Error('Expected migrated sessions');
+    expect(migrated.draft.preservedStarterAccounts?.[0].id).toBe(`${operationId}:legacy-account:0`);
+    expect(migrated.draft.preservedStarterCategories?.[0].id).toBe(`${operationId}:legacy-category:0`);
+    expect(retried.draft).toEqual(migrated.draft);
+  });
+
   it('maps an empty registered-device creation draft to the blocking conversational entry', () => {
     const migrated = parseSetupDraft({
       schemaVersion: 1,

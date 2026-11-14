@@ -13,6 +13,7 @@ import {
 } from '@/src/services/import/restore';
 import { forgetAllPreparedRestores } from './pickRestoreSource';
 import type {
+  CashClaritySetupDraft,
   DeviceSetupOutput,
   RestoreDraftState,
   RestoreHandoff,
@@ -44,7 +45,6 @@ import {
   serializeCashClaritySetupDraft,
 } from './first-run/creationSession';
 import { defaultOnboardingCurrency, defaultWorkplaceName } from './first-run/localeDefaults';
-import type { CashClaritySetupDraft } from './setupTypes';
 
 export { SETUP_DRAFT_KEY };
 export const SETUP_DRAFT_SCHEMA_VERSION = 1 as const;
@@ -497,8 +497,12 @@ function migrateLegacyWorkplaceCreation(
         workplaceName: workplace.name.value,
         workplaceIcon: workplace.icon.value,
         currency: workplace.baseCurrency.value,
-        preservedStarterAccounts: workplace.selectedAccounts,
-        preservedStarterCategories: workplace.selectedCategories,
+        preservedStarterAccounts: workplace.selectedAccounts.map((item, index) => ({
+          ...item, id: item.id ?? asAccountId(`${legacy.operationId}:legacy-account:${index}`),
+        })),
+        preservedStarterCategories: workplace.selectedCategories.map((item, index) => ({
+          ...item, id: item.id ?? asAccountId(`${legacy.operationId}:legacy-category:${index}`),
+        })),
       } : {}),
     },
     step,

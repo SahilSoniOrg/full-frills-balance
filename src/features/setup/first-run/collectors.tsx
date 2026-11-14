@@ -268,7 +268,7 @@ export function MoneyScene({
           options: savingsChoice,
           issue:
             validationAttempted && account.spendable === undefined
-              ? 'Choose whether these savings are available to spend.'
+              ? copy.savingsAvailabilityRequired
               : undefined,
           selectedId:
             account.spendable === true
@@ -345,7 +345,7 @@ export function MoneyScene({
   return (
     <CollectStep
       title={copy.moneyQuestion}
-      subtitle={deferred ? `Not included yet. ${copy.moneyHint}` : copy.moneyHint}
+      subtitle={deferred ? `${copy.notIncludedYet}. ${copy.moneyHint}` : copy.moneyHint}
       continueLabel={continueLabel ?? copy.continueToNext}
       continueDisabled={accounts.length === 0}
       onContinue={() => {
@@ -449,7 +449,7 @@ export function IncomeScene({
     <CollectStep
       title={copy.incomeSource}
       continueLabel={continueLabel ?? copy.continueToPayments}
-      subtitle={deferred ? 'Not included yet.' : undefined}
+      subtitle={deferred ? copy.notIncludedYet : undefined}
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
@@ -604,7 +604,7 @@ export function ProtectScene({
   return (
     <CollectStep
       title={copy.protectQuestion}
-      subtitle={deferred ? 'Not included yet.' : undefined}
+      subtitle={deferred ? copy.notIncludedYet : undefined}
       continueLabel={continueLabel ?? copy.continueToBoundaries}
       continueDisabled={items.length === 0}
       onContinue={() => {
@@ -744,7 +744,7 @@ export function ReserveScene({
   return (
     <CollectStep
       title={copy.reserveQuestion}
-      subtitle={deferred ? `Not included yet. ${copy.reserveHint}` : copy.reserveHint}
+      subtitle={deferred ? `${copy.notIncludedYet}. ${copy.reserveHint}` : copy.reserveHint}
       continueLabel={continueLabel ?? copy.continueToClarity}
       continueDisabled={items.length === 0}
       onContinue={() => {
