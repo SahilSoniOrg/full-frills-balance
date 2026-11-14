@@ -100,7 +100,18 @@ export const AppNavigation = {
   },
 
   toWorkplaceCreation: () => {
-    router.push({ pathname: '/onboarding', params: { journey: 'create_workplace' } });
+    AppNavigation.toAddWorkplace();
+  },
+
+  toAddWorkplace: (context?: string, origin?: string) => {
+    router.replace({
+      pathname: '/onboarding',
+      params: {
+        journey: 'add_workplace',
+        ...(context ? { context } : {}),
+        ...(origin ? { origin } : {}),
+      },
+    });
   },
 
   toAccountMatchers: (accountId: AccountId, workplaceId?: string) => {

@@ -7,12 +7,12 @@ import {
 import type {
   DeviceSetupOutput,
   RestoreHandoff,
+  RestoreJourneyId,
   RestoreSetupDraft,
   RestoreSourceOutput,
   SetupSliceAcceptance,
   SetupSliceOutputById,
   SetupDraft,
-  SetupJourneyId,
   SetupOutcome,
   SetupSliceId,
   SetupSliceOutput,
@@ -34,7 +34,7 @@ const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
 ];
 
 export interface SetupCoordinatorOptions {
-  readonly journeyId: SetupJourneyId;
+  readonly journeyId: RestoreJourneyId;
   readonly operationId: SetupDraft['operationId'];
   readonly recipe?: SetupRecipe;
   readonly draft?: SetupDraft;
@@ -80,7 +80,7 @@ export interface SetupCoordinator {
 }
 
 export function createSetupDraft(
-  journeyId: SetupJourneyId,
+  journeyId: RestoreJourneyId,
   operationId: SetupDraft['operationId'],
   entryPolicyOverride?: SetupDraft['entryPolicy'],
 ): SetupDraft {
@@ -92,12 +92,6 @@ export function createSetupDraft(
     acceptedSlices: [] as const,
     entryPolicy: entryPolicyOverride ?? recipe.entryPolicy,
   };
-  if (recipe.draftKind === 'workplace_creation') {
-    if (journeyId !== 'empty_device_workplace' && journeyId !== 'create_workplace') {
-      throw new Error(`Workplace creation cannot use journey ${journeyId}`);
-    }
-    return { ...base, kind: 'workplace_creation', journeyId };
-  }
   if (!isRestoreJourneyId(journeyId)) {
     throw new Error(`Restore cannot use journey ${journeyId}`);
   }

@@ -34,7 +34,7 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldShowCashClarity('first_run')).toBe(true);
     expect(shouldShowCashClarity('first_run', 'first_run')).toBe(true);
     expect(shouldShowCashClarity('first_run', 'first_run_restore')).toBe(false);
-    expect(shouldShowCashClarity('create_workplace')).toBe(false);
+    expect(shouldShowCashClarity('add_workplace')).toBe(true);
   });
 
   it('keeps first-run off import-selection and the retired v2 URL', () => {

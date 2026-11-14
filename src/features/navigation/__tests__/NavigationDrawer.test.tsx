@@ -90,6 +90,7 @@ jest.mock('@/src/utils/navigation', () => ({
     toWorkplaceManagement: jest.fn(),
     toSettings: jest.fn(),
     toWorkplaceCreation: jest.fn(),
+    toAddWorkplace: jest.fn(),
   },
 }));
 

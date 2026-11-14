@@ -162,7 +162,7 @@ describe('journey coordinator construction', () => {
     (loadSetupDraft as jest.Mock).mockReturnValue(undefined);
     (saveSetupDraft as jest.Mock).mockReset();
 
-    createJourneyCoordinator('create_workplace');
+    createJourneyCoordinator('picker_restore');
 
     expect(saveSetupDraft).not.toHaveBeenCalled();
   });

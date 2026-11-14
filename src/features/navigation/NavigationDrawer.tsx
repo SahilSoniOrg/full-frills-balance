@@ -423,7 +423,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
                       subtitle={settingsCopy.workplacePicker.createSubtitle}
                       chevron={false}
                       disabled={isSwitching}
-                      onPress={() => runNavigationAction(AppNavigation.toWorkplaceCreation)}
+                      onPress={() => runNavigationAction(AppNavigation.toAddWorkplace)}
                       testID="navigation-drawer-create-workplace"
                     />
                     <ListRow

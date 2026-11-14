@@ -3,7 +3,7 @@ import {
   type SetupDraft,
   type SetupEffectId,
   type SetupEntryPolicy,
-  type SetupJourneyId,
+  type RestoreJourneyId,
   type SetupSliceId,
   type SetupSlicePolicy,
 } from './setupTypes';
@@ -19,9 +19,9 @@ export type SetupRecipeEntry =
       readonly effectId: SetupEffectId;
     };
 
-export type SetupAtStart = 'stay' | 'back' | 'dashboard' | 'first_run' | 'empty_device_workplace';
+export type SetupAtStart = 'stay' | 'back' | 'dashboard' | 'first_run' | 'add_workplace';
 export type SetupDiscardTo =
-  'first_run' | 'picker' | 'empty_device_workplace' | 'settings' | 'back';
+  'first_run' | 'picker' | 'add_workplace' | 'settings' | 'back';
 
 export interface RestoreSummaryActions {
   readonly primary: { readonly intent: 'continue' | 'open'; readonly label: string };
@@ -32,7 +32,7 @@ export interface RestoreSummaryActions {
 }
 
 export interface SetupRecipe {
-  readonly journeyId: SetupJourneyId;
+  readonly journeyId: RestoreJourneyId;
   readonly draftKind: SetupDraft['kind'];
   /** Whether the workplace identity step is seeded and hidden for this journey. */
   readonly workplaceIdentity: 'automatic' | 'editable';
@@ -72,22 +72,13 @@ const firstRunRestore: SetupRecipe = {
   entries: [...restoreCore, slice('device', 'when_missing')],
 };
 
-const emptyDeviceWorkplace: SetupRecipe = {
-  journeyId: 'empty_device_workplace',
-  draftKind: 'workplace_creation',
-  workplaceIdentity: 'automatic',
-  entryPolicy: 'blocking',
-  atStart: 'stay',
-  entries: [slice('workplace', 'required'), slice('summary', 'required')],
-};
-
 const emptyDeviceRestore: SetupRecipe = {
   journeyId: 'empty_device_restore',
   draftKind: 'restore',
   workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
-  atStart: 'empty_device_workplace',
-  discardTo: 'empty_device_workplace',
+  atStart: 'add_workplace',
+  discardTo: 'add_workplace',
   restoreSummary: { primary: { intent: 'open', label: 'Activate' } },
   entries: restoreCore,
 };
@@ -121,25 +112,14 @@ const settingsRestore: SetupRecipe = {
   entries: restoreCore,
 };
 
-const createWorkplace: SetupRecipe = {
-  journeyId: 'create_workplace',
-  draftKind: 'workplace_creation',
-  workplaceIdentity: 'editable',
-  entryPolicy: 'optional',
-  atStart: 'back',
-  entries: [slice('workplace', 'required'), slice('summary', 'required')],
-};
-
-export const SETUP_RECIPES: Readonly<Record<SetupJourneyId, SetupRecipe>> = {
+export const SETUP_RECIPES: Readonly<Record<RestoreJourneyId, SetupRecipe>> = {
   first_run_restore: firstRunRestore,
-  empty_device_workplace: emptyDeviceWorkplace,
   empty_device_restore: emptyDeviceRestore,
   picker_restore: pickerRestore,
   settings_restore: settingsRestore,
-  create_workplace: createWorkplace,
 };
 
-export function getSetupRecipe(journeyId: SetupJourneyId): SetupRecipe {
+export function getSetupRecipe(journeyId: RestoreJourneyId): SetupRecipe {
   return SETUP_RECIPES[journeyId];
 }
 

@@ -22,7 +22,7 @@ import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
 import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
-import { SetupSummarySlice } from './SetupSummarySlice';
+
 import { RestoreJournalRecovery } from './RestoreJournalRecovery';
 import {
   applyPreparedRestoreFxSuggestions,
@@ -60,14 +60,7 @@ function restoreSwitchForJourney(
   onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
   workplaceOpen: boolean,
 ): (() => void) | undefined {
-  switch (journeyId) {
-    case 'empty_device_workplace':
-      return () => onSwitchJourney('empty_device_restore');
-    case 'create_workplace':
-      return () => onSwitchJourney(restoreJourneyForWorkplaceCreation(workplaceOpen));
-    default:
-      return undefined;
-  }
+  return undefined;
 }
 
 function restoreChangesSummary(changeCount: number, workplaceCount: number): string {
@@ -434,24 +427,6 @@ function SetupJourneyScreen({
             onIntent={intent => void acceptRestoreIntent(intent)}
           />
         ) : null;
-      case 'summary':
-        return (
-          <SetupSummarySlice
-            draft={coordinator.getDraft()}
-            isCompleting={submittingSlice === 'summary'}
-            onEdit={goTo}
-            onConfirm={() => void finish()}
-            onBack={() =>
-              goTo(
-                draft.kind === 'restore'
-                  ? recipeContainsSlice(recipe, 'device')
-                    ? 'device'
-                    : 'restore_summary'
-                  : 'workplace',
-              )
-            }
-          />
-        );
       default:
         return null;
     }

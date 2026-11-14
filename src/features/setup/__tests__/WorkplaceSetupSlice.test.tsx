@@ -5,7 +5,7 @@ describe('WorkplaceSetupSlice', () => {
   it('restores the parent checkpoint after a remount', () => {
     render(
       <WorkplaceSetupSlice
-        books="starters"
+        books="imported"
         identityMode="editable"
         isCompleting={false}
         onBack={jest.fn()}

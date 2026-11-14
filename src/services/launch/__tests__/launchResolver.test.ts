@@ -7,7 +7,7 @@ const wp2 = asWorkplaceId('wp-2');
 describe('resolveLaunch', () => {
   it.each([
     [false, [], undefined, { kind: 'setup', journeyId: 'first_run' }],
-    [true, [], undefined, { kind: 'setup', journeyId: 'empty_device_workplace' }],
+    [true, [], undefined, { kind: 'setup', journeyId: 'add_workplace' }],
     [true, [], wp1, { kind: 'open', workplaceId: wp1, persistAsActive: false }],
     [true, [wp1], undefined, { kind: 'open', workplaceId: wp1, persistAsActive: true }],
     [true, [wp1, wp2], undefined, { kind: 'picker' }],
@@ -43,7 +43,7 @@ describe('resolveLaunch', () => {
   it('does not let an optional Setup draft block normal launch', () => {
     expect(
       resolveLaunchGate({
-        setupDraft: { journeyId: 'create_workplace', entryPolicy: 'optional' },
+        setupDraft: { journeyId: 'add_workplace', entryPolicy: 'optional' },
         deviceClaimed: true,
         workplaceIds: [wp1],
       }),

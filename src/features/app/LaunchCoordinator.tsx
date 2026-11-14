@@ -26,6 +26,8 @@ import {
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { preferences } from '@/src/services/preferences';
 import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
+import { isRestoreJourneyId } from '@/src/features/setup/setupTypes';
+import { CreationLaunchProvider } from './CreationLaunchContext';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 import { logger } from '@/src/utils/logger';
@@ -194,6 +196,7 @@ export function LaunchCoordinatorProvider({
     id: WorkplaceId;
     workplace: PlainWorkplace | null;
   } | null>(null);
+  const [creationOpeningTarget, setCreationOpeningTarget] = useState<WorkplaceId | null>(null);
   const resolution = useMemo(() => {
     const retry = () => {
       setFailedPointerRepairId(null);
@@ -201,6 +204,18 @@ export function LaunchCoordinatorProvider({
     };
     if (discovery.error) return { kind: 'error' as const, error: discovery.error, retry };
     if (!isInitialized || discovery.loading) return { kind: 'loading' as const, retry };
+    if (creationOpeningTarget) {
+      const workplace =
+        discovery.workplaces.find(item => item.id === creationOpeningTarget) ??
+        (probedWorkplace?.id === creationOpeningTarget ? probedWorkplace.workplace ?? undefined : undefined);
+      if (!workplace) {
+        if (probedWorkplace?.id !== creationOpeningTarget) {
+          // trigger probe below via effect; stay loading
+        }
+        return { kind: 'loading' as const, retry };
+      }
+      return { kind: 'open' as const, workplaceId: creationOpeningTarget, persistAsActive: false, workplace };
+    }
     const next = resolveLaunchGate({
       setupDraft,
       deviceClaimed,
@@ -217,7 +232,7 @@ export function LaunchCoordinatorProvider({
     if (probe?.workplace) return { ...next, workplace: probe.workplace };
     if (probe && !probe.workplace) {
       if (discovery.workplaces.length === 0) {
-        return { kind: 'setup' as const, journeyId: 'empty_device_workplace' as const };
+        return { kind: 'setup' as const, journeyId: 'add_workplace' as const };
       }
       return { kind: 'picker' as const, workplaces: discovery.workplaces };
     }
@@ -231,6 +246,7 @@ export function LaunchCoordinatorProvider({
     discovery.workplaces,
     isInitialized,
     probedWorkplace,
+    creationOpeningTarget,
   ]);
 
   useEffect(() => {
@@ -253,6 +269,21 @@ export function LaunchCoordinatorProvider({
     isInitialized,
     probedWorkplace,
   ]);
+
+  // Probe a transiently opening created workplace so its provider can commit.
+  useEffect(() => {
+    if (!isInitialized || !creationOpeningTarget) return;
+    if (probedWorkplace?.id === creationOpeningTarget) return;
+    if (discovery.workplaces.some(workplace => workplace.id === creationOpeningTarget)) return;
+    let cancelled = false;
+    void workplaceService.findPlainWorkplace(creationOpeningTarget).then(workplace => {
+      if (cancelled) return;
+      setProbedWorkplace({ id: creationOpeningTarget, workplace });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [creationOpeningTarget, discovery.workplaces, isInitialized, probedWorkplace]);
 
   const state = useMemo<LaunchCoordinatorState>(() => {
     if (
@@ -286,9 +317,9 @@ export function LaunchCoordinatorProvider({
 
   useEffect(() => {
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
-    if (!isSetupJourneyId(resolution.journeyId)) return;
+    if (!isRestoreJourneyId(resolution.journeyId)) return;
     if (loadSetupDraft()) return;
-    saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
+    saveSetupDraft(createSetupDraft(resolution.journeyId as any, generator() as WorkplaceId));
   }, [resolution]);
 
   return (
@@ -316,7 +347,24 @@ export function LaunchCoordinatorContent({
     switchWorkplace,
     transitionError,
     transitionToWorkplace,
+    transitionToWorkplaceStrict,
   } = useWorkplaceTransitions(state);
+  const openCreatedWorkplace = React.useCallback(async (id: WorkplaceId) => {
+    if (!id || typeof id !== 'string' || !id.trim()) {
+      throw new Error('A created workplace id is required.');
+    }
+    setCreationOpeningTarget(id);
+    try {
+      await transitionToWorkplaceStrict(
+        id,
+        state.kind === 'open' ? state.workplaceId : undefined,
+        { rejectOnError: true },
+      );
+    } finally {
+      setCreationOpeningTarget(null);
+    }
+  }, [state, transitionToWorkplaceStrict]);
+
   const isPrivacyPolicyAcknowledged = useSyncExternalStore(
     subscribeToPrivacyPolicyAcknowledgement,
     hasAcknowledgedCurrentPrivacyPolicy,
@@ -375,7 +423,9 @@ export function LaunchCoordinatorContent({
           isSwitchingWorkplace={isTransitioning}
           workplaceSwitchError={transitionError}
         >
-          {children}
+          <CreationLaunchProvider value={{ openCreatedWorkplace }}>
+            {children}
+          </CreationLaunchProvider>
         </WorkplaceProvider>
         {isTransitioning ? <WorkplaceSwitchBlockingOverlay /> : null}
       </View>
@@ -406,7 +456,11 @@ export function LaunchCoordinatorContent({
       state.kind === 'setup' ? state.journeyId : undefined,
     )
   ) {
-    return <>{gateChildren}</>;
+    return (
+      <CreationLaunchProvider value={{ openCreatedWorkplace }}>
+        {gateChildren}
+      </CreationLaunchProvider>
+    );
   }
   if (state.kind === 'picker') {
     return (
@@ -416,7 +470,7 @@ export function LaunchCoordinatorContent({
         isTransitioning={isTransitioning}
         onSelect={id => void transitionToWorkplace(id)}
         onCreate={() =>
-          router.replace({ pathname: '/onboarding', params: { journey: 'create_workplace' } })
+          router.replace({ pathname: '/onboarding', params: { journey: 'add_workplace' } })
         }
         onImport={() =>
           router.replace({ pathname: '/onboarding', params: { journey: 'picker_restore' } })

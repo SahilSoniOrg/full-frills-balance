@@ -22,7 +22,7 @@ type DeleteWorkplaceResult = {
 export type WorkplaceTransition = (
   targetId: WorkplaceId,
   previousId?: WorkplaceId,
-  options?: { preserveRoute?: boolean },
+  options?: { preserveRoute?: boolean; rejectOnError?: boolean },
 ) => Promise<void>;
 
 async function awaitWorkplaceScope(
@@ -161,6 +161,7 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
           setTransitionError(
             error instanceof Error ? error.message : 'Could not switch workplace.',
           );
+          if (options?.rejectOnError) throw error;
         } finally {
           releaseSharing();
         }
@@ -266,6 +267,12 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
     [state, transitionToWorkplace],
   );
 
+  const transitionToWorkplaceStrict = useCallback<WorkplaceTransition>(
+    (targetId, previousId, options) =>
+      transitionToWorkplace(targetId, previousId, { ...(options ?? {}), rejectOnError: true }),
+    [transitionToWorkplace],
+  );
+
   return {
     deleteWorkplace,
     isTransitioning,
@@ -274,5 +281,6 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
     switchWorkplace,
     transitionError,
     transitionToWorkplace,
+    transitionToWorkplaceStrict,
   };
 }

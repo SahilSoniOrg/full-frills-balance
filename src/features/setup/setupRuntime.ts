@@ -1,4 +1,5 @@
 import { AppNavigation } from '@/src/utils/navigation';
+import { normalizeCreationJourney } from './setupRouting';
 import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
 import { generator } from '@/src/data/database/idGenerator';
 import { preferences } from '@/src/services/preferences';
@@ -26,8 +27,12 @@ export function resolveOptionalJourney(params: {
   mode?: string;
   journey?: string;
 }): SetupJourneyId | undefined {
-  if (params.mode === 'full') return 'create_workplace';
-  if (params.journey && isSetupJourneyId(params.journey)) return params.journey;
+  if (params.mode === 'full') return 'add_workplace' as SetupJourneyId;
+  if (params.journey) {
+    const normalized = normalizeCreationJourney(params.journey);
+    if (normalized) return normalized as SetupJourneyId;
+    if (isSetupJourneyId(params.journey)) return params.journey;
+  }
   return undefined;
 }
 
@@ -63,7 +68,7 @@ export function resolveSetupJourney(
     resolveOptionalJourney(params) ??
     (draft && isSetupJourneyId(draft.journeyId) ? draft.journeyId : undefined) ??
     (preferences.device.deviceRegistered && !preferences.device.activeWorkplaceId
-      ? 'empty_device_workplace'
+      ? 'add_workplace'
       : undefined)
   );
 }
@@ -188,9 +193,8 @@ export function applySetupOutcome(
   if (recipe.discardTo === 'first_run') AppNavigation.toFirstRun(candidateName);
   else if (recipe.discardTo === 'back') AppNavigation.back();
   else if (recipe.discardTo === 'picker') AppNavigation.toDashboard();
-  else if (recipe.discardTo === 'empty_device_workplace') {
-    onSwitchJourney('empty_device_workplace');
-  } else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
+  else if (recipe.discardTo === 'add_workplace') AppNavigation.toAddWorkplace();
+  else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
   else AppNavigation.returnToSettings();
 }
 

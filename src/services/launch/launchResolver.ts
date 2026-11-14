@@ -58,7 +58,7 @@ export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution 
     if (activeWorkplaceId) {
       return { kind: 'open', workplaceId: activeWorkplaceId, persistAsActive: false };
     }
-    return { kind: 'setup', journeyId: 'empty_device_workplace' };
+    return { kind: 'setup', journeyId: 'add_workplace' };
   }
 
   if (activeWorkplaceId && workplaceIds.includes(activeWorkplaceId)) {
