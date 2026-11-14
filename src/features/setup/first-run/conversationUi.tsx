@@ -1,16 +1,14 @@
-import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppIcon, AppText, FilterChipButton } from '@/src/components/core';
-import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Stack, usePageKeyboard } from '@/src/design-system';
-import { OnboardingFadePanel } from './OnboardingFadePanel';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { type ReactNode, useState } from 'react';
-import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
-import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
+import { useState, type ReactNode } from 'react';
+import { Keyboard, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { CollectedRow, type CollectedItem } from './CollectedRow';
+import { OnboardingFadePanel } from './OnboardingFadePanel';
 
 export interface ConversationOption {
   readonly id: string;
@@ -34,6 +32,8 @@ export function ConversationStep({
   validationMessage,
   recovery,
   footer,
+  centerContent = false,
+  secondaryActionsDirection,
 }: {
   readonly title?: string;
   readonly subtitle?: string;
@@ -50,16 +50,22 @@ export function ConversationStep({
   readonly validationMessage?: string | null;
   readonly recovery?: ReactNode;
   readonly footer?: ReactNode;
+  readonly centerContent?: boolean;
+  readonly secondaryActionsDirection?: 'row' | 'column';
 }) {
   const { isKeyboardVisible } = usePageKeyboard();
+  const actionDirection = secondaryActionsDirection ?? (isKeyboardVisible ? 'row' : 'column');
   const secondaryActions = (
-    <Stack direction={isKeyboardVisible ? 'row' : 'column'} gap="xs">
+    <Stack direction={actionDirection} gap="xs">
       {onSkip ? (
-        <Box flex={isKeyboardVisible ? 1 : undefined}>
+        <Box flex={actionDirection === 'row' ? 1 : undefined}>
           <AppButton
             variant="ghost"
             size="md"
-            onPress={() => { Keyboard.dismiss(); onSkip(); }}
+            onPress={() => {
+              Keyboard.dismiss();
+              onSkip();
+            }}
             disabled={primaryLoading}
             testID="onboarding-skip"
           >
@@ -67,13 +73,36 @@ export function ConversationStep({
           </AppButton>
         </Box>
       ) : null}
-      <Box flex={isKeyboardVisible ? 1 : undefined}>
-        <AppButton variant="ghost" size="md" onPress={onBack} disabled={primaryLoading || backDisabled}>
+      <Box flex={actionDirection === 'row' ? 1 : undefined}>
+        <AppButton
+          variant="ghost"
+          size="md"
+          onPress={onBack}
+          disabled={primaryLoading || backDisabled}
+        >
           {copy.back}
         </AppButton>
       </Box>
     </Stack>
   );
+  const heading = title ? (
+    <Stack gap="sm" align="center">
+      <AppText
+        variant="title"
+        align="center"
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        style={styles.title}
+      >
+        {title}
+      </AppText>
+      {subtitle ? (
+        <AppText variant="body" color="secondary" style={styles.subtitle}>
+          {subtitle}
+        </AppText>
+      ) : null}
+    </Stack>
+  ) : null;
 
   return (
     <Box flex={1} minHeight={0}>
@@ -84,22 +113,20 @@ export function ConversationStep({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
       >
-        <OnboardingFadePanel>
-          <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
-            {title ? (
-              <Stack gap="sm" align="center">
-                <AppText variant="title" align="center" style={styles.title}>
-                  {title}
-                </AppText>
-                {subtitle ? (
-                  <AppText variant="body" color="secondary" style={styles.subtitle}>
-                    {subtitle}
-                  </AppText>
-                ) : null}
-              </Stack>
-            ) : null}
-            {children}
-          </Stack>
+        <OnboardingFadePanel style={centerContent ? styles.fillPanel : undefined}>
+          {centerContent ? (
+            <Stack flex={1} paddingTop={title ? 'xl' : 'sm'}>
+              {heading}
+              <Box flex={1} justifyContent="center">
+                <Stack gap="lg">{children}</Stack>
+              </Box>
+            </Stack>
+          ) : (
+            <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
+              {heading}
+              {children}
+            </Stack>
+          )}
         </OnboardingFadePanel>
       </KeyboardAwareScrollView>
       <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="sm">
@@ -115,7 +142,10 @@ export function ConversationStep({
             <AppButton
               variant="primary"
               size="lg"
-              onPress={() => { Keyboard.dismiss(); onPrimary(); }}
+              onPress={() => {
+                Keyboard.dismiss();
+                onPrimary();
+              }}
               disabled={primaryDisabled || primaryLoading}
               loading={primaryLoading}
               testID={primaryTestID}
@@ -190,29 +220,40 @@ export function CollectedList({
   readonly items: readonly CollectedItem[];
   readonly currency: string;
 }) {
-  const reduceMotion = useReducedMotion();
   if (items.length === 0) return null;
-  const rowLayout = reduceMotion
-    ? undefined
-    : LinearTransition.duration(320).easing(Easing.out(Easing.cubic));
   return (
     <Stack gap="sm">
       {items.map(item => (
-        <Animated.View key={item.id} layout={rowLayout}>
+        <View key={item.id}>
           <CollectedRow item={item} currency={currency} />
-        </Animated.View>
+        </View>
       ))}
-      <AppText variant="caption" color="secondary" style={styles.swipeHint}>
-        {copy.swipeToRemove}
-      </AppText>
+      <Stack direction="row" align="center" justify="center" gap="xs">
+        <AppIcon name={Icon.ChevronLeft} size={Size.iconXs} color="textSecondary" />
+        <AppText variant="caption" color="secondary">
+          {copy.swipeToRemove}
+        </AppText>
+      </Stack>
     </Stack>
   );
 }
 
 export function CollectStep({
-  title, subtitle, continueLabel, onContinue, continueDisabled, skipLabel,
-  onSkip, onBack, chipLabel, chips, onAddChip, currency, items,
-  validationMessage, recovery, footer,
+  title,
+  subtitle,
+  continueLabel,
+  onContinue,
+  continueDisabled,
+  skipLabel,
+  onSkip,
+  onBack,
+  chips,
+  onAddChip,
+  currency,
+  items,
+  validationMessage,
+  recovery,
+  footer,
 }: {
   readonly title: string;
   readonly subtitle?: string;
@@ -222,7 +263,6 @@ export function CollectStep({
   readonly skipLabel?: string;
   readonly onSkip?: () => void;
   readonly onBack: () => void;
-  readonly chipLabel: string;
   readonly chips: readonly ConversationOption[];
   readonly onAddChip: (id: string) => void;
   readonly currency: string;
@@ -246,7 +286,6 @@ export function CollectStep({
       footer={footer}
     >
       <Stack gap="md">
-        <AppText variant="caption" color="secondary">{chipLabel}</AppText>
         <ChoiceChips options={chips} onSelect={onAddChip} />
         <CollectedList items={items} currency={currency} />
       </Stack>
@@ -255,6 +294,10 @@ export function CollectStep({
 }
 
 const styles = StyleSheet.create({
+  fillPanel: {
+    flexGrow: 1,
+    minHeight: 0,
+  },
   chipTarget: {
     minHeight: Platform.OS === 'android' ? 48 : 44,
     justifyContent: 'center',
@@ -286,13 +329,11 @@ const styles = StyleSheet.create({
   },
   title: {
     width: '100%',
-    lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
+    fontSize: Typography.roles.xl.fontSize,
+    lineHeight: Typography.roles.xl.lineHeight,
   },
   subtitle: {
     textAlign: 'center',
     width: '100%',
-  },
-  swipeHint: {
-    textAlign: 'center',
   },
 });

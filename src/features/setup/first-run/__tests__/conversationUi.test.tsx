@@ -156,7 +156,6 @@ describe('ConversationStep keyboard behavior', () => {
     render(
       <CollectStep
         title="Cards"
-        chipLabel="Add a card"
         chips={[]}
         onAddChip={jest.fn()}
         currency="USD"

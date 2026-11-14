@@ -39,11 +39,7 @@ export function OnboardingChrome({
           >
             {stage ? (
               <Box paddingTop="lg" paddingBottom="sm">
-                <SetupProgressBar
-                  label={stage.label}
-                  current={stage.current}
-                  total={stage.total}
-                />
+                <SetupProgressBar label={stage.label} current={stage.current} total={stage.total} />
               </Box>
             ) : null}
             {header ? <Box flexShrink={0}>{header}</Box> : null}
@@ -57,7 +53,6 @@ export function OnboardingChrome({
   );
 }
 
-// Same floors as the old minimumFontScale (0.6 hero, 0.7 compact), now honoured on web too.
 const STS_HERO_FIT = {
   maxFontSize: Typography.roles.hero.fontSize,
   minFontSize: Math.round(Typography.roles.hero.fontSize * 0.6),
@@ -70,7 +65,7 @@ const STS_COMPACT_FIT = {
   hug: true,
 };
 
-/** Collapses to a single row while the keyboard is open so the focused field keeps its room. */
+/** Keeps the estimate prominent, then collapses it while the keyboard is open. */
 export function SafeToSpendHeader({
   amount,
   currency,
@@ -88,18 +83,24 @@ export function SafeToSpendHeader({
 }) {
   const { isKeyboardVisible: compact } = usePageKeyboard();
   const reduceMotion = useReducedMotion();
-
+  const note = spokenEcho ?? change ?? (isIncompleteEstimate ? copy.estimateIncomplete : undefined);
+  const amountColor = !hasUsableEstimate
+    ? 'secondary'
+    : amount > 0
+      ? 'primary'
+      : amount < 0
+        ? 'error'
+        : 'secondary';
   const amountText = (variant: 'subheading' | 'hero') => (
-    hasUsableEstimate ? (
     <MoneyText
-      amount={amount}
+      amount={hasUsableEstimate ? amount : 0}
       currencyCode={currency}
       formatStyle="sts"
       variant={variant}
+      color={amountColor}
       fit={variant === 'hero' ? STS_HERO_FIT : STS_COMPACT_FIT}
       testID="onboarding-sts"
     />
-    ) : <AppText variant={variant} testID="onboarding-estimate-unavailable">{copy.clarityUnknown}</AppText>
   );
 
   return (
@@ -110,12 +111,14 @@ export function SafeToSpendHeader({
             <AppText variant="caption" color="secondary" weight="medium">
               {copy.safeToSpend}
             </AppText>
-            {amountText('subheading')}
+            <Box flex={1} minWidth={0} alignItems="flex-end">
+              {amountText('subheading')}
+            </Box>
           </Stack>
         </Box>
       ) : (
         <Stack gap="xs" paddingTop="sm" paddingBottom="md">
-          <AppText variant="body" color="secondary" weight="medium">
+          <AppText variant="caption" color="secondary" weight="medium">
             {copy.safeToSpend}
           </AppText>
           {reduceMotion ? (
@@ -131,36 +134,35 @@ export function SafeToSpendHeader({
           )}
         </Stack>
       )}
-      {isIncompleteEstimate ? (
-        <AppText variant="caption" color="secondary">{copy.estimateIncomplete}</AppText>
-      ) : null}
-      {spokenEcho ? (
-        <Box paddingBottom="xs">
+      <Box height={Typography.roles.caption.lineHeight} justifyContent="center">
+        {note ? (
           <AppText
             variant="caption"
             color="secondary"
-            testID="onboarding-sts-echo"
+            numberOfLines={1}
+            testID={
+              spokenEcho
+                ? 'onboarding-sts-echo'
+                : change
+                  ? 'onboarding-sts-change'
+                  : 'onboarding-sts-note'
+            }
           >
-            {spokenEcho}
+            {note}
           </AppText>
-        </Box>
-      ) : null}
-      {change ? (
-        <Box paddingBottom="sm">
-          <AppText
-            variant="caption"
-            color="secondary"
-            testID="onboarding-sts-change"
-          >
-            {change}
-          </AppText>
-        </Box>
-      ) : null}
+        ) : null}
+      </Box>
     </>
   );
 }
 
 const progressTotal = ONBOARDING_PROGRESS_FLOW.length;
+
+export function onboardingStepLabel(step: OnboardingStep): string {
+  return (
+    ONBOARDING_PROGRESS_FLOW.find(entry => entry.step === step)?.progressName ?? copy.progressDevice
+  );
+}
 
 export function onboardingStage(step: OnboardingStep): OnboardingStage | null {
   const index = ONBOARDING_PROGRESS_FLOW.findIndex(entry => entry.step === step);

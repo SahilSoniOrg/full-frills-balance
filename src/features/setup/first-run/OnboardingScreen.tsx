@@ -26,21 +26,27 @@ import {
   loadSetupDraft,
   saveSetupDraft,
 } from '../SetupDraftStore';
-import type { CashClaritySetupDraft, CreationContext, CreationIntent, SetupDraft } from '../setupTypes';
+import type {
+  CashClaritySetupDraft,
+  CreationContext,
+  CreationIntent,
+  SetupDraft,
+} from '../setupTypes';
 import { ConversationStep } from './conversationUi';
 import { type CollectorSessionHooks } from './collectors';
 import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
-import { CashClarityPublicationError, publishCashClarity, recoverCashClarityPublication } from './commitCashClarity';
+import {
+  CashClarityPublicationError,
+  publishCashClarity,
+  recoverCashClarityPublication,
+} from './commitCashClarity';
 import { createCreationSession } from './creationSession';
 import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
-import {
-  hasSpendableAccount,
-  type CashClarityCollection,
-  type OnboardingStep,
-} from './draft';
+import { hasSpendableAccount, type CashClarityCollection, type OnboardingStep } from './draft';
 import { defaultOnboardingCurrency, defaultWorkplaceName } from './localeDefaults';
 import { prepareCashClarityInput } from './prepareEffectiveDraft';
 import { projectCashClarityDraft } from './projectCashClarityDraft';
+import { ResumeSetupSummary } from './ResumeSetupSummary';
 import { explainDraftTransition } from './draftTransitionModel';
 import {
   trackOnboardingDashboardOpened,
@@ -84,26 +90,38 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function requestedEntry(params: {
-  journey?: string | string[];
-  context?: string | string[];
-  entryPolicy?: string | string[];
-}, launchEntry?: CreationLaunchEntry): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
+function requestedEntry(
+  params: {
+    journey?: string | string[];
+    context?: string | string[];
+    entryPolicy?: string | string[];
+  },
+  launchEntry?: CreationLaunchEntry,
+): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
   if (launchEntry) return launchEntry;
   const requested = firstParam(params.journey);
-  const intent: CreationIntent = preferences.device.deviceRegistered ||
-    requested === 'add_workplace' || requested === 'create_workplace' || requested === 'empty_device_workplace'
-    ? 'add_workplace' : 'first_run';
+  const intent: CreationIntent =
+    preferences.device.deviceRegistered ||
+    requested === 'add_workplace' ||
+    requested === 'create_workplace' ||
+    requested === 'empty_device_workplace'
+      ? 'add_workplace'
+      : 'first_run';
   const rawContext = firstParam(params.context);
   const validContext: readonly CreationContext[] = [
-    'unregistered_device', 'registered_empty_device', 'workplace_picker', 'existing_workplace_entry',
+    'unregistered_device',
+    'registered_empty_device',
+    'workplace_picker',
+    'existing_workplace_entry',
   ];
-  const context: CreationContext = intent === 'first_run'
-    ? 'unregistered_device'
-    : validContext.includes(rawContext as CreationContext) && rawContext !== 'unregistered_device'
-      ? rawContext as CreationContext
-      : 'workplace_picker';
-  const entryPolicy = intent === 'first_run' || context === 'registered_empty_device' ? 'blocking' : 'optional';
+  const context: CreationContext =
+    intent === 'first_run'
+      ? 'unregistered_device'
+      : validContext.includes(rawContext as CreationContext) && rawContext !== 'unregistered_device'
+        ? (rawContext as CreationContext)
+        : 'workplace_picker';
+  const entryPolicy =
+    intent === 'first_run' || context === 'registered_empty_device' ? 'blocking' : 'optional';
   return { intent, context, entryPolicy };
 }
 
@@ -115,7 +133,11 @@ function bootstrapSession(
   const stored = loadSetupDraft();
   if (stored) {
     if (stored.kind === 'cash_clarity') {
-      if (stored.intent === entry.intent && stored.context === entry.context && stored.entryPolicy === entry.entryPolicy) {
+      if (
+        stored.intent === entry.intent &&
+        stored.context === entry.context &&
+        stored.entryPolicy === entry.entryPolicy
+      ) {
         return { kind: 'session', session: stored, resumed: true };
       }
       return { kind: 'conflict', existing: stored };
@@ -126,34 +148,49 @@ function bootstrapSession(
     ...entry,
     currency: defaultOnboardingCurrency(),
     workplaceName: defaultWorkplaceName(),
-    displayName: entry.intent === 'first_run' ? name ?? '' : preferences.userName ?? '',
+    displayName: entry.intent === 'first_run' ? (name ?? '') : (preferences.userName ?? ''),
   });
   return { kind: 'session', session, resumed: false };
 }
 
 function analyticsStep(step: OnboardingStep): OnboardingStepId {
   switch (step) {
-    case 'welcome': return 'welcome';
-    case 'currency': return 'currency';
-    case 'now': return 'accounts';
-    case 'next': return 'income';
-    case 'protect': return 'payments';
-    case 'reserve': return 'monthly_limits';
-    case 'clarity': return 'result';
+    case 'welcome':
+      return 'welcome';
+    case 'currency':
+      return 'currency';
+    case 'now':
+      return 'accounts';
+    case 'next':
+      return 'income';
+    case 'protect':
+      return 'payments';
+    case 'reserve':
+      return 'monthly_limits';
+    case 'clarity':
+      return 'result';
   }
 }
 
 function collectionForStep(step: OnboardingStep): CashClarityCollection | undefined {
   switch (step) {
-    case 'now': return 'accounts';
-    case 'next': return 'income';
-    case 'protect': return 'commitment';
-    case 'reserve': return 'budget';
-    default: return undefined;
+    case 'now':
+      return 'accounts';
+    case 'next':
+      return 'income';
+    case 'protect':
+      return 'commitment';
+    case 'reserve':
+      return 'budget';
+    default:
+      return undefined;
   }
 }
 
-function errorCodeForStep(step: OnboardingStep, code?: CashClarityPublicationError['code']): OnboardingErrorCode {
+function errorCodeForStep(
+  step: OnboardingStep,
+  code?: CashClarityPublicationError['code'],
+): OnboardingErrorCode {
   if (code === 'missing_spendable_account') return 'missing_spendable_account';
   if (step === 'next') return 'income_invalid';
   if (step === 'protect') return 'payment_invalid';
@@ -163,12 +200,18 @@ function errorCodeForStep(step: OnboardingStep, code?: CashClarityPublicationErr
 
 function publicationMessage(code: CashClarityPublicationError['code']): string {
   switch (code) {
-    case 'invalid_input': return copy.publishInvalid;
-    case 'missing_spendable_account': return copy.publishMissingAccount;
-    case 'ambiguous_existing_publication': return copy.publishAmbiguous;
-    case 'incomplete_publication': return copy.publishIncomplete;
-    case 'finalization_failed': return copy.publishFinalization;
-    case 'save_failed': return copy.publishFailed;
+    case 'invalid_input':
+      return copy.publishInvalid;
+    case 'missing_spendable_account':
+      return copy.publishMissingAccount;
+    case 'ambiguous_existing_publication':
+      return copy.publishAmbiguous;
+    case 'incomplete_publication':
+      return copy.publishIncomplete;
+    case 'finalization_failed':
+      return copy.publishFinalization;
+    case 'save_failed':
+      return copy.publishFailed;
   }
 }
 
@@ -186,7 +229,10 @@ export function OnboardingScreen() {
   }>();
   const nameParam = firstParam(params.name);
   const creationLaunch = useCreationLaunch();
-  const entry = useMemo(() => requestedEntry(params, creationLaunch.entry), [params, creationLaunch.entry]);
+  const entry = useMemo(
+    () => requestedEntry(params, creationLaunch.entry),
+    [params, creationLaunch.entry],
+  );
   const [bootstrap] = useState(() => bootstrapSession(entry, nameParam));
   const [session, setSession] = useState<CashClaritySetupDraft | null>(
     bootstrap.kind === 'session' ? bootstrap.session : null,
@@ -196,7 +242,9 @@ export function OnboardingScreen() {
   const [resumePrompt, setResumePrompt] = useState(
     bootstrap.kind === 'session' && bootstrap.resumed && !bootstrap.session.publication,
   );
-  const [conflict, setConflict] = useState<SetupDraft | null>(bootstrap.kind === 'conflict' ? bootstrap.existing : null);
+  const [conflict, setConflict] = useState<SetupDraft | null>(
+    bootstrap.kind === 'conflict' ? bootstrap.existing : null,
+  );
   const [unreadable, setUnreadable] = useState(bootstrap.kind === 'unreadable');
   const [pendingRestore, setPendingRestore] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -218,31 +266,39 @@ export function OnboardingScreen() {
     if (bootstrap.kind === 'session' && !bootstrap.resumed) saveSetupDraft(bootstrap.session);
   }, [bootstrap]);
 
-  const persistSession = useCallback((update: (current: CashClaritySetupDraft) => CashClaritySetupDraft) => {
-    const current = sessionRef.current;
-    if (!current) return;
-    const next = update(current);
-    if (next.step !== current.step) {
-      if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
-      draftFeedbackTimer.current = null;
-      draftFeedbackEditStep.current = null;
-      draftFeedbackVersion.current += 1;
-      acknowledgedDraft.current = null;
-      setLatestDraftChange(null);
-    }
-    sessionRef.current = next;
-    saveSetupDraft(next);
-    setSession(next);
-  }, []);
+  const persistSession = useCallback(
+    (update: (current: CashClaritySetupDraft) => CashClaritySetupDraft) => {
+      const current = sessionRef.current;
+      if (!current) return;
+      const next = update(current);
+      if (next.step !== current.step) {
+        if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
+        draftFeedbackTimer.current = null;
+        draftFeedbackEditStep.current = null;
+        draftFeedbackVersion.current += 1;
+        acknowledgedDraft.current = null;
+        setLatestDraftChange(null);
+      }
+      sessionRef.current = next;
+      saveSetupDraft(next);
+      setSession(next);
+    },
+    [],
+  );
 
   const sessionDraft = session?.draft;
   const editableInput = session?.editableInput;
-  const prepared = useMemo(() => sessionDraft && editableInput
-    ? prepareCashClarityInput(sessionDraft, editableInput, locale)
-    : undefined, [sessionDraft, editableInput, locale]);
-  const projection = useMemo(() => prepared
-    ? projectCashClarityDraft(prepared.effectiveDraft)
-    : undefined, [prepared]);
+  const prepared = useMemo(
+    () =>
+      sessionDraft && editableInput
+        ? prepareCashClarityInput(sessionDraft, editableInput, locale)
+        : undefined,
+    [sessionDraft, editableInput, locale],
+  );
+  const projection = useMemo(
+    () => (prepared ? projectCashClarityDraft(prepared.effectiveDraft) : undefined),
+    [prepared],
+  );
   const spendable = prepared ? hasSpendableAccount(prepared.effectiveDraft.accounts) : false;
 
   useEffect(() => {
@@ -263,11 +319,18 @@ export function OnboardingScreen() {
     }
     const stepKey = `${session.operationId}:${session.step}`;
     if (!viewedInRuntime.has(stepKey)) {
-      trackOnboardingStepViewed({ ...analyticsProps, step: analyticsStep(session.step), durationMs: Date.now() - segmentStartedAt.current });
+      trackOnboardingStepViewed({
+        ...analyticsProps,
+        step: analyticsStep(session.step),
+        durationMs: Date.now() - segmentStartedAt.current,
+      });
       viewedInRuntime.add(stepKey);
     }
     if (prepared?.hasUsableEstimate && !estimateViewedInRuntime.has(session.operationId)) {
-      trackOnboardingFirstEstimate({ ...analyticsProps, durationMs: Date.now() - segmentStartedAt.current });
+      trackOnboardingFirstEstimate({
+        ...analyticsProps,
+        durationMs: Date.now() - segmentStartedAt.current,
+      });
       estimateViewedInRuntime.add(session.operationId);
     }
     if (session.step === 'clarity' && !resultViewedInRuntime.has(session.operationId) && prepared) {
@@ -278,7 +341,11 @@ export function OnboardingScreen() {
           : (projection?.safeToSpend ?? 0) < 0
             ? 'negative'
             : 'positive';
-      trackOnboardingResultViewed({ ...analyticsProps, outcome, durationMs: Date.now() - segmentStartedAt.current });
+      trackOnboardingResultViewed({
+        ...analyticsProps,
+        outcome,
+        durationMs: Date.now() - segmentStartedAt.current,
+      });
       resultViewedInRuntime.add(session.operationId);
     }
   }, [session, resumed, prepared, projection, resumePrompt]);
@@ -303,7 +370,8 @@ export function OnboardingScreen() {
         latestSession?.operationId !== operationId ||
         latestSession.step !== step ||
         draftFeedbackVersion.current !== version
-      ) return;
+      )
+        return;
       setLatestDraftChange(explainDraftTransition(previous, currentDraft));
       acknowledgedDraft.current = currentDraft;
       draftFeedbackEditStep.current = null;
@@ -316,10 +384,13 @@ export function OnboardingScreen() {
   }, [prepared?.effectiveDraft]);
 
   useEffect(() => {
-    if (prepared && session && !acknowledgedDraft.current) acknowledgedDraft.current = prepared.effectiveDraft;
+    if (prepared && session && !acknowledgedDraft.current)
+      acknowledgedDraft.current = prepared.effectiveDraft;
   }, [prepared, session]);
 
-  const updateDraft = (update: (current: CashClaritySetupDraft['draft']) => CashClaritySetupDraft['draft']) => {
+  const updateDraft = (
+    update: (current: CashClaritySetupDraft['draft']) => CashClaritySetupDraft['draft'],
+  ) => {
     draftFeedbackEditStep.current = sessionRef.current?.step ?? null;
     draftFeedbackVersion.current += 1;
     persistSession(current => ({ ...current, draft: update(current.draft) }));
@@ -376,15 +447,24 @@ export function OnboardingScreen() {
     blockedInRuntime.add(key);
   };
 
-  const advance = (next: OnboardingStep, echo?: string, action: 'continue' | 'defer' = 'continue') => {
+  const advance = (
+    next: OnboardingStep,
+    echo?: string,
+    action: 'continue' | 'defer' = 'continue',
+  ) => {
     const current = sessionRef.current;
     if (!current) return;
     const collection = collectionForStep(current.step);
     const currentPrepared = prepareCashClarityInput(current.draft, current.editableInput, locale);
-    const issues = collection ? currentPrepared.issues.filter(issue => issue.collection === collection) : [];
+    const issues = collection
+      ? currentPrepared.issues.filter(issue => issue.collection === collection)
+      : [];
     if (action === 'continue' && issues.length > 0) {
       const dependencyIssue = issues.find(issue => issue.reason === 'dependency');
-      trackValidationBlocked(current.step, errorCodeForStep(current.step, dependencyIssue ? 'missing_spendable_account' : undefined));
+      trackValidationBlocked(
+        current.step,
+        errorCodeForStep(current.step, dependencyIssue ? 'missing_spendable_account' : undefined),
+      );
       setRepairMessage(issues[0].message);
       if (dependencyIssue && current.step !== 'now') {
         persistSession(value => ({
@@ -395,14 +475,22 @@ export function OnboardingScreen() {
       }
       return;
     }
-    if (action === 'continue' && current.step === 'now' && current.repairReturnStep && !currentPrepared.hasUsableEstimate) {
+    if (
+      action === 'continue' &&
+      current.step === 'now' &&
+      current.repairReturnStep &&
+      !currentPrepared.hasUsableEstimate
+    ) {
       setRepairMessage(copy.accountRepairMessage);
       return;
     }
     const completionKey = `${current.step}:${action === 'defer' ? 'defer' : current.step === 'clarity' ? 'complete' : 'continue'}`;
     const shouldTrackCompletion = !current.completedActions.includes(completionKey);
     if (shouldTrackCompletion) {
-      persistSession(value => ({ ...value, completedActions: [...value.completedActions, completionKey] }));
+      persistSession(value => ({
+        ...value,
+        completedActions: [...value.completedActions, completionKey],
+      }));
       const props = {
         flowVersion: FLOW_VERSION,
         intent: current.intent,
@@ -412,33 +500,53 @@ export function OnboardingScreen() {
         durationMs: Date.now() - stepStartedAt.current.at,
       } as const;
       if (action === 'defer') trackOnboardingStepDeferred({ ...props, action: 'defer' });
-      else trackOnboardingStepCompleted({ ...props, action: current.step === 'clarity' ? 'complete' : 'continue' });
+      else
+        trackOnboardingStepCompleted({
+          ...props,
+          action: current.step === 'clarity' ? 'complete' : 'continue',
+        });
     }
     const repairTarget = current.repairReturnStep;
-    const shouldReturnFromRepair = current.step === 'now' && repairTarget !== undefined &&
-      (currentPrepared.hasUsableEstimate || action === 'defer') && repairTarget !== 'now';
-    const shouldReturnFromReview = current.step !== 'clarity' && current.history.at(-1) === 'clarity';
-    const actualNext = shouldReturnFromRepair && repairTarget ? repairTarget
-      : shouldReturnFromReview ? 'clarity'
-        : current.step === 'now' && next === 'now' ? 'next' : next;
-    const history = shouldReturnFromRepair || shouldReturnFromReview
-      ? current.history.slice(0, -1)
-      : actualNext === current.step
-        ? current.history
-        : [...current.history, current.step];
+    const shouldReturnFromRepair =
+      current.step === 'now' &&
+      repairTarget !== undefined &&
+      (currentPrepared.hasUsableEstimate || action === 'defer') &&
+      repairTarget !== 'now';
+    const shouldReturnFromReview =
+      current.step !== 'clarity' && current.history.at(-1) === 'clarity';
+    const actualNext =
+      shouldReturnFromRepair && repairTarget
+        ? repairTarget
+        : shouldReturnFromReview
+          ? 'clarity'
+          : current.step === 'now' && next === 'now'
+            ? 'next'
+            : next;
+    const history =
+      shouldReturnFromRepair || shouldReturnFromReview
+        ? current.history.slice(0, -1)
+        : actualNext === current.step
+          ? current.history
+          : [...current.history, current.step];
     persistSession(value => ({
       ...value,
       step: actualNext,
       history,
       ...((current.step === 'now' || current.step === repairTarget) &&
-        (currentPrepared.hasUsableEstimate || action === 'defer') ? { repairReturnStep: undefined } : {}),
+      (currentPrepared.hasUsableEstimate || action === 'defer')
+        ? { repairReturnStep: undefined }
+        : {}),
     }));
     setHeard(echo ?? null);
     setRepairMessage(null);
     setLatestDraftChange(null);
   };
 
-  const continueCollection = (collection: CashClarityCollection, next: OnboardingStep, echo: string) => {
+  const continueCollection = (
+    collection: CashClarityCollection,
+    next: OnboardingStep,
+    echo: string,
+  ) => {
     // Collectors can persist defer/include and continue synchronously from one press.
     const latest = sessionRef.current;
     const action = latest?.editableInput.deferredCollections?.[collection] ? 'defer' : 'continue';
@@ -478,12 +586,18 @@ export function OnboardingScreen() {
     if (!collection) return;
     const returnStep = current.repairReturnStep;
     persistSession(value => {
-      const deferredCollections = { ...value.editableInput.deferredCollections, [collection]: true };
+      const deferredCollections = {
+        ...value.editableInput.deferredCollections,
+        [collection]: true,
+      };
       return {
         ...value,
         editableInput: { ...value.editableInput, deferredCollections },
         step: returnStep,
-        history: value.history[value.history.length - 1] === returnStep ? value.history.slice(0, -1) : value.history,
+        history:
+          value.history[value.history.length - 1] === returnStep
+            ? value.history.slice(0, -1)
+            : value.history,
         repairReturnStep: undefined,
       };
     });
@@ -515,7 +629,7 @@ export function OnboardingScreen() {
       ...entry,
       currency: defaultOnboardingCurrency(),
       workplaceName: defaultWorkplaceName(),
-      displayName: entry.intent === 'first_run' ? name ?? '' : preferences.userName ?? '',
+      displayName: entry.intent === 'first_run' ? (name ?? '') : (preferences.userName ?? ''),
     });
     saveSetupDraft(next);
     acknowledgedDraft.current = null;
@@ -563,7 +677,10 @@ export function OnboardingScreen() {
       ...entry,
       currency: defaultOnboardingCurrency(),
       workplaceName: defaultWorkplaceName(),
-      displayName: entry.intent === 'first_run' ? firstParam(params.name) ?? '' : preferences.userName ?? '',
+      displayName:
+        entry.intent === 'first_run'
+          ? (firstParam(params.name) ?? '')
+          : (preferences.userName ?? ''),
     });
     segmentStartedAt.current = Date.now();
     acknowledgedDraft.current = null;
@@ -603,11 +720,12 @@ export function OnboardingScreen() {
       startFirstRunRestoreFromDeviceName(current?.draft.displayName.trim() ?? '');
       AppNavigation.toSetupJourney('first_run_restore');
     } else {
-      const restoreJourney = entry.context === 'registered_empty_device'
-        ? 'empty_device_restore'
-        : entry.context === 'existing_workplace_entry'
-          ? 'settings_restore'
-          : 'picker_restore';
+      const restoreJourney =
+        entry.context === 'registered_empty_device'
+          ? 'empty_device_restore'
+          : entry.context === 'existing_workplace_entry'
+            ? 'settings_restore'
+            : 'picker_restore';
       AppNavigation.toSetupJourney(restoreJourney);
     }
   };
@@ -617,7 +735,9 @@ export function OnboardingScreen() {
     if (!published) return;
     await recoverCashClarityPublication(published.workplaceId);
     if (current.intent === 'first_run') {
-      finishDeviceSetup({ displayName: { value: current.draft.displayName.trim(), source: 'user_entered' } });
+      finishDeviceSetup({
+        displayName: { value: current.draft.displayName.trim(), source: 'user_entered' },
+      });
     }
     await openCreatedWorkplace(published.workplaceId);
     const props = {
@@ -627,7 +747,11 @@ export function OnboardingScreen() {
       resumed,
     } as const;
     if (!openedInRuntime.has(current.operationId)) {
-      trackOnboardingDashboardOpened({ ...props, outcome: 'opened', durationMs: Date.now() - segmentStartedAt.current });
+      trackOnboardingDashboardOpened({
+        ...props,
+        outcome: 'opened',
+        durationMs: Date.now() - segmentStartedAt.current,
+      });
       if (current.intent === 'first_run') {
         analytics.track('onboarding_complete');
         analytics.trackConversion('onboarding_completed');
@@ -661,29 +785,50 @@ export function OnboardingScreen() {
     try {
       if (current.publication) {
         await openPublished(current);
-        trackOnboardingSaveResult({ ...analyticsProps, outcome: 'success', durationMs: Date.now() - startedAt });
+        trackOnboardingSaveResult({
+          ...analyticsProps,
+          outcome: 'success',
+          durationMs: Date.now() - startedAt,
+        });
         return;
       }
       if (current.intent === 'first_run' && !current.draft.displayName.trim()) {
         setFinishError(copy.requiredName);
-        trackOnboardingSaveResult({ ...analyticsProps, outcome: 'failure', errorCode: 'required_field_missing' });
+        trackOnboardingSaveResult({
+          ...analyticsProps,
+          outcome: 'failure',
+          errorCode: 'required_field_missing',
+        });
         return;
       }
       const currentPrepared = prepareCashClarityInput(current.draft, current.editableInput, locale);
       if (!currentPrepared.isValid) {
         setFinishError(currentPrepared.issues[0]?.message ?? copy.publishInvalid);
-        trackOnboardingSaveResult({ ...analyticsProps, outcome: 'failure', errorCode: 'amount_invalid' });
+        trackOnboardingSaveResult({
+          ...analyticsProps,
+          outcome: 'failure',
+          errorCode: 'amount_invalid',
+        });
         return;
       }
-      const published = await publishCashClarity(currentPrepared.effectiveDraft, { preserveWorkplaceName: current.legacyProvenance !== undefined });
+      const published = await publishCashClarity(currentPrepared.effectiveDraft, {
+        preserveWorkplaceName: current.legacyProvenance !== undefined,
+      });
       const recoverableSession = { ...current };
       delete recoverableSession.publicationErrorCode;
-      const withPublication = { ...recoverableSession, publication: published } satisfies CashClaritySetupDraft;
+      const withPublication = {
+        ...recoverableSession,
+        publication: published,
+      } satisfies CashClaritySetupDraft;
       sessionRef.current = withPublication;
       saveSetupDraft(withPublication);
       setSession(withPublication);
       await openPublished(withPublication);
-      trackOnboardingSaveResult({ ...analyticsProps, outcome: 'success', durationMs: Date.now() - startedAt });
+      trackOnboardingSaveResult({
+        ...analyticsProps,
+        outcome: 'success',
+        durationMs: Date.now() - startedAt,
+      });
     } catch (error) {
       triggerSaveOutcomeHaptic(false);
       const code = error instanceof CashClarityPublicationError ? error.code : undefined;
@@ -700,7 +845,11 @@ export function OnboardingScreen() {
       trackOnboardingSaveResult({
         ...analyticsProps,
         outcome: publicationExists ? 'saved' : 'failure',
-        errorCode: publicationExists ? 'open_failed' : code === 'missing_spendable_account' ? 'missing_spendable_account' : 'save_failed',
+        errorCode: publicationExists
+          ? 'open_failed'
+          : code === 'missing_spendable_account'
+            ? 'missing_spendable_account'
+            : 'save_failed',
         durationMs: Date.now() - startedAt,
       });
     } finally {
@@ -710,7 +859,9 @@ export function OnboardingScreen() {
 
   const acknowledgePrivacy = () => {
     acknowledgeCurrentPrivacyPolicy();
-    analytics.track('privacy_policy_acknowledged', { policy_version: AppConfig.legal.privacyPolicyVersion });
+    analytics.track('privacy_policy_acknowledged', {
+      policy_version: AppConfig.legal.privacyPolicyVersion,
+    });
   };
 
   if (unreadable) {
@@ -722,7 +873,9 @@ export function OnboardingScreen() {
           primaryLabel={copy.startOver}
           onPrimary={discardAndBeginRequested}
         >
-          <AppText variant="body" color="secondary">{copy.unreadableDraftBody}</AppText>
+          <AppText variant="body" color="secondary">
+            {copy.unreadableDraftBody}
+          </AppText>
         </ConversationStep>
       </OnboardingChrome>
     );
@@ -736,17 +889,23 @@ export function OnboardingScreen() {
           title={copy.sessionConflictTitle}
           onBack={() => AppNavigation.back()}
           primaryLabel={publishedCreation ? copy.retryOpen : copy.resumeSetup}
-          onPrimary={publishedCreation ? () => {
-            if (conflict.kind !== 'cash_clarity' || !conflict.publication) return;
-            sessionRef.current = conflict;
-            setSession(conflict);
-            setConflict(null);
-            void finish();
-          } : resumeConflict}
+          onPrimary={
+            publishedCreation
+              ? () => {
+                  if (conflict.kind !== 'cash_clarity' || !conflict.publication) return;
+                  sessionRef.current = conflict;
+                  setSession(conflict);
+                  setConflict(null);
+                  void finish();
+                }
+              : resumeConflict
+          }
           skipLabel={publishedCreation ? undefined : copy.discardAndContinue}
           onSkip={publishedCreation ? undefined : discardAndBeginRequested}
         >
-          <AppText variant="body" color="secondary">{copy.sessionConflictBody}</AppText>
+          <AppText variant="body" color="secondary">
+            {copy.sessionConflictBody}
+          </AppText>
         </ConversationStep>
       </OnboardingChrome>
     );
@@ -763,24 +922,29 @@ export function OnboardingScreen() {
           skipLabel={copy.discardAndContinue}
           onSkip={beginRestoreAfterDiscard}
         >
-          <AppText variant="body" color="secondary">{copy.sessionConflictBody}</AppText>
+          <AppText variant="body" color="secondary">
+            {copy.sessionConflictBody}
+          </AppText>
         </ConversationStep>
       </OnboardingChrome>
     );
   }
 
-  if (resumePrompt && session) {
+  if (resumePrompt && session && prepared && projection) {
     return (
       <OnboardingChrome testID="onboarding-screen" stage={null}>
         <ConversationStep
           title={copy.resumeSessionTitle}
+          subtitle={copy.resumeSessionBody}
           onBack={() => AppNavigation.back()}
           primaryLabel={copy.resumeSetup}
           onPrimary={resumeSession}
           skipLabel={copy.startOver}
           onSkip={restartSession}
+          centerContent
+          secondaryActionsDirection="row"
         >
-          <AppText variant="body" color="secondary">{copy.resumeSessionBody}</AppText>
+          <ResumeSetupSummary session={session} prepared={prepared} projection={projection} />
         </ConversationStep>
       </OnboardingChrome>
     );
@@ -789,32 +953,58 @@ export function OnboardingScreen() {
   if (!session || !prepared || !projection) return <LoadingView loading text={copy.finishing} />;
 
   const step = session.step;
-  const showSafeToSpend = step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
+  const showSafeToSpend =
+    step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
   const collection = collectionForStep(step);
   const collectorHooks: CollectorSessionHooks = {
     editableInput: session.editableInput,
     locale,
     onAmountTextChange: updateAmountText,
-    onDefer: () => { if (collection) setCollectionDeferred(collection, true); },
-    onInclude: () => { if (collection) setCollectionDeferred(collection, false); },
-    continueLabel: session.history.at(-1) === 'clarity' || (step === 'now' && session.repairReturnStep)
-      ? copy.continue : undefined,
-    validationMessage: step === 'now' || step === 'next' || step === 'protect' || step === 'reserve'
-      ? repairMessage ?? (session.repairReturnStep
-        ? prepared.issues.find(issue => issue.collection === collection && issue.reason === 'dependency')?.message
-        : null)
-      : null,
-    recovery: session.repairReturnStep && !prepared.hasUsableEstimate ? (
-      <Stack gap="xs">
-        <AppText variant="caption" color="secondary">{copy.accountRepairMessage}</AppText>
-        {step !== 'now' ? (
-          <AppButton variant="secondary" size="md" onPress={() => persistSession(value => ({
-            ...value, step: 'now', history: [...value.history, value.step],
-          }))}>{copy.addSpendableAccount}</AppButton>
-        ) : null}
-        <AppButton variant="ghost" size="md" onPress={deferRepairGroup}>{copy.leaveForLater}</AppButton>
-      </Stack>
-    ) : undefined,
+    onDefer: () => {
+      if (collection) setCollectionDeferred(collection, true);
+    },
+    onInclude: () => {
+      if (collection) setCollectionDeferred(collection, false);
+    },
+    continueLabel:
+      session.history.at(-1) === 'clarity' || (step === 'now' && session.repairReturnStep)
+        ? copy.continue
+        : undefined,
+    validationMessage:
+      step === 'now' || step === 'next' || step === 'protect' || step === 'reserve'
+        ? (repairMessage ??
+          (session.repairReturnStep
+            ? prepared.issues.find(
+                issue => issue.collection === collection && issue.reason === 'dependency',
+              )?.message
+            : null))
+        : null,
+    recovery:
+      session.repairReturnStep && !prepared.hasUsableEstimate ? (
+        <Stack gap="xs">
+          <AppText variant="caption" color="secondary">
+            {copy.accountRepairMessage}
+          </AppText>
+          {step !== 'now' ? (
+            <AppButton
+              variant="secondary"
+              size="md"
+              onPress={() =>
+                persistSession(value => ({
+                  ...value,
+                  step: 'now',
+                  history: [...value.history, value.step],
+                }))
+              }
+            >
+              {copy.addSpendableAccount}
+            </AppButton>
+          ) : null}
+          <AppButton variant="ghost" size="md" onPress={deferRepairGroup}>
+            {copy.leaveForLater}
+          </AppButton>
+        </Stack>
+      ) : undefined,
     onValidationBlocked: reason => {
       const currentStep = sessionRef.current?.step;
       if (currentStep) trackValidationBlocked(currentStep, reason);
@@ -822,142 +1012,223 @@ export function OnboardingScreen() {
   };
 
   const deferredOmissions = prepared.deferredCollections.map(collection => {
-    const detail = collection === 'accounts'
-      ? session.draft.accounts.map(item => item.name).filter(Boolean).join(', ')
-      : collection === 'income'
-        ? (session.draft.income.kind === 'recurring' ? session.draft.income.items.map(item => item.name).filter(Boolean).join(', ') : '')
-        : collection === 'commitment'
-          ? (session.draft.commitment.kind === 'payment' ? session.draft.commitment.items.map(item => item.name).filter(Boolean).join(', ') : '')
-          : (session.draft.budget.kind === 'set' ? session.draft.budget.items.map(item => item.name).filter(Boolean).join(', ') : '');
+    const detail =
+      collection === 'accounts'
+        ? session.draft.accounts
+            .map(item => item.name)
+            .filter(Boolean)
+            .join(', ')
+        : collection === 'income'
+          ? session.draft.income.kind === 'recurring'
+            ? session.draft.income.items
+                .map(item => item.name)
+                .filter(Boolean)
+                .join(', ')
+            : ''
+          : collection === 'commitment'
+            ? session.draft.commitment.kind === 'payment'
+              ? session.draft.commitment.items
+                  .map(item => item.name)
+                  .filter(Boolean)
+                  .join(', ')
+              : ''
+            : session.draft.budget.kind === 'set'
+              ? session.draft.budget.items
+                  .map(item => item.name)
+                  .filter(Boolean)
+                  .join(', ')
+              : '';
     return {
       id: collection,
-      label: collection === 'accounts' ? copy.moneyQuestion
-        : collection === 'income' ? copy.incomeSource
-          : collection === 'commitment' ? copy.protectQuestion : copy.reserveQuestion,
+      label:
+        collection === 'accounts'
+          ? copy.moneyQuestion
+          : collection === 'income'
+            ? copy.incomeSource
+            : collection === 'commitment'
+              ? copy.protectQuestion
+              : copy.reserveQuestion,
       ...(detail ? { detail } : {}),
     };
   });
   const editActions = [
-    { id: 'accounts', label: copy.editAccounts, onPress: () => saveTransition('now', [...session.history, 'clarity']) },
-    { id: 'income', label: copy.editIncome, onPress: () => saveTransition('next', [...session.history, 'clarity']) },
-    { id: 'payments', label: copy.editPayments, onPress: () => saveTransition('protect', [...session.history, 'clarity']) },
-    { id: 'budget', label: copy.editBudgets, onPress: () => saveTransition('reserve', [...session.history, 'clarity']) },
+    {
+      id: 'accounts',
+      label: copy.editAccounts,
+      onPress: () => saveTransition('now', [...session.history, 'clarity']),
+    },
+    {
+      id: 'income',
+      label: copy.editIncome,
+      onPress: () => saveTransition('next', [...session.history, 'clarity']),
+    },
+    {
+      id: 'payments',
+      label: copy.editPayments,
+      onPress: () => saveTransition('protect', [...session.history, 'clarity']),
+    },
+    {
+      id: 'budget',
+      label: copy.editBudgets,
+      onPress: () => saveTransition('reserve', [...session.history, 'clarity']),
+    },
   ];
 
-  const scene = busy && step !== 'clarity' ? (
-    <LoadingView loading text={copy.finishing} />
-  ) : step === 'welcome' ? (
-    <WelcomeScene
-      name={session.draft.displayName}
-      onNameChange={displayName => updateDraft(current => ({ ...current, displayName }))}
-      privacyAcknowledged={privacyAcknowledged}
-      onAcknowledgePrivacy={acknowledgePrivacy}
-      onPrivacyNotice={() => AppNavigation.toPrivacyNotice()}
-      onStart={() => {
-        if (!session.draft.displayName.trim()) return;
-        advance('currency', undefined);
-      }}
-      onRestore={startRestore}
-    />
-  ) : step === 'currency' ? (
-    <Stack gap="md">
-      <CurrencyScene
+  const scene =
+    busy && step !== 'clarity' ? (
+      <LoadingView loading text={copy.finishing} />
+    ) : step === 'welcome' ? (
+      <WelcomeScene
+        name={session.draft.displayName}
+        onNameChange={displayName => updateDraft(current => ({ ...current, displayName }))}
+        privacyAcknowledged={privacyAcknowledged}
+        onAcknowledgePrivacy={acknowledgePrivacy}
+        onPrivacyNotice={() => AppNavigation.toPrivacyNotice()}
+        onStart={() => {
+          if (!session.draft.displayName.trim()) return;
+          advance('currency', undefined);
+        }}
+        onRestore={startRestore}
+      />
+    ) : step === 'currency' ? (
+      <Stack flex={1} minHeight={0} gap="md">
+        <CurrencyScene
+          currency={session.draft.currency}
+          onSelectCurrency={currency => updateDraft(current => ({ ...current, currency }))}
+          onContinue={() =>
+            advance(
+              'now',
+              session.draft.displayName.trim()
+                ? copy.confirmYou(session.draft.displayName.trim())
+                : undefined,
+            )
+          }
+          onBack={back}
+        />
+        {session.context === 'registered_empty_device' ? (
+          <AppButton variant="ghost" size="md" onPress={startRestore}>
+            {copy.restoreBackup}
+          </AppButton>
+        ) : null}
+      </Stack>
+    ) : step === 'now' ? (
+      <MoneyScene
         currency={session.draft.currency}
-        onSelectCurrency={currency => updateDraft(current => ({ ...current, currency }))}
-        onContinue={() => advance('now', session.draft.displayName.trim() ? copy.confirmYou(session.draft.displayName.trim()) : undefined)}
+        accounts={session.draft.accounts}
+        onAccountsChange={accounts => updateDraft(current => ({ ...current, accounts }))}
+        onContinue={echo =>
+          continueCollection('accounts', sessionRef.current?.repairReturnStep ?? 'next', echo)
+        }
+        onSkip={() => undefined}
+        onBack={back}
+        onNeedAccount={needAccount}
+        {...collectorHooks}
+      />
+    ) : step === 'next' ? (
+      <IncomeScene
+        currency={session.draft.currency}
+        income={session.draft.income}
+        onIncomeChange={income => updateDraft(current => ({ ...current, income }))}
+        onContinue={echo => continueCollection('income', 'protect', echo)}
+        onBack={back}
+        hasSpendable={spendable}
+        onNeedAccount={needAccount}
+        {...collectorHooks}
+      />
+    ) : step === 'protect' ? (
+      <ProtectScene
+        currency={session.draft.currency}
+        commitment={session.draft.commitment}
+        onCommitmentChange={commitment => updateDraft(current => ({ ...current, commitment }))}
+        onContinue={echo => continueCollection('commitment', 'reserve', echo)}
+        onBack={back}
+        hasSpendable={spendable}
+        onNeedAccount={needAccount}
+        {...collectorHooks}
+      />
+    ) : step === 'reserve' ? (
+      <ReserveScene
+        currency={session.draft.currency}
+        budget={session.draft.budget}
+        onBudgetChange={budget => updateDraft(current => ({ ...current, budget }))}
+        onContinue={echo => continueCollection('budget', 'clarity', echo)}
+        onBack={back}
+        hasSpendable={spendable}
+        onNeedAccount={needAccount}
+        {...collectorHooks}
+      />
+    ) : (
+      <ClarityScene
+        currency={session.draft.currency}
+        draft={prepared.effectiveDraft}
+        projection={projection}
+        hasUsableEstimate={prepared.hasUsableEstimate}
+        isIncompleteEstimate={prepared.isIncomplete}
+        finishing={busy}
+        finishError={
+          session.publication
+            ? null
+            : (finishError ??
+              (session.publicationErrorCode
+                ? publicationMessage(session.publicationErrorCode)
+                : null))
+        }
+        publishedOutcome={
+          session.publication
+            ? {
+                retryOpen: () => void finish(),
+                error:
+                  finishError ??
+                  (session.publicationErrorCode
+                    ? publicationMessage(session.publicationErrorCode)
+                    : null),
+              }
+            : undefined
+        }
+        omissions={deferredOmissions}
+        editActions={editActions}
+        onEnter={() => void finish()}
         onBack={back}
       />
-      {session.context === 'registered_empty_device' ? (
-        <AppButton variant="ghost" size="md" onPress={startRestore}>{copy.restoreBackup}</AppButton>
-      ) : null}
-    </Stack>
-  ) : step === 'now' ? (
-    <MoneyScene
-      currency={session.draft.currency}
-      accounts={session.draft.accounts}
-      onAccountsChange={accounts => updateDraft(current => ({ ...current, accounts }))}
-      onContinue={echo => continueCollection('accounts', sessionRef.current?.repairReturnStep ?? 'next', echo)}
-      onSkip={() => undefined}
-      onBack={back}
-      onNeedAccount={needAccount}
-      {...collectorHooks}
-    />
-  ) : step === 'next' ? (
-    <IncomeScene
-      currency={session.draft.currency}
-      income={session.draft.income}
-      onIncomeChange={income => updateDraft(current => ({ ...current, income }))}
-      onContinue={echo => continueCollection('income', 'protect', echo)}
-      onBack={back}
-      hasSpendable={spendable}
-      onNeedAccount={needAccount}
-      {...collectorHooks}
-    />
-  ) : step === 'protect' ? (
-    <ProtectScene
-      currency={session.draft.currency}
-      commitment={session.draft.commitment}
-      onCommitmentChange={commitment => updateDraft(current => ({ ...current, commitment }))}
-      onContinue={echo => continueCollection('commitment', 'reserve', echo)}
-      onBack={back}
-      hasSpendable={spendable}
-      onNeedAccount={needAccount}
-      {...collectorHooks}
-    />
-  ) : step === 'reserve' ? (
-    <ReserveScene
-      currency={session.draft.currency}
-      budget={session.draft.budget}
-      onBudgetChange={budget => updateDraft(current => ({ ...current, budget }))}
-      onContinue={echo => continueCollection('budget', 'clarity', echo)}
-      onBack={back}
-      hasSpendable={spendable}
-      onNeedAccount={needAccount}
-      {...collectorHooks}
-    />
-  ) : (
-    <ClarityScene
-      currency={session.draft.currency}
-      draft={prepared.effectiveDraft}
-      projection={projection}
-      hasUsableEstimate={prepared.hasUsableEstimate}
-      isIncompleteEstimate={prepared.isIncomplete}
-      finishing={busy}
-      finishError={session.publication ? null : finishError ?? (session.publicationErrorCode ? publicationMessage(session.publicationErrorCode) : null)}
-      publishedOutcome={session.publication ? {
-        retryOpen: () => void finish(),
-        error: finishError ?? (session.publicationErrorCode ? publicationMessage(session.publicationErrorCode) : null),
-      } : undefined}
-      omissions={deferredOmissions}
-      editActions={editActions}
-      onEnter={() => void finish()}
-      onBack={back}
-    />
-  );
+    );
 
-  const gatedScene = !privacyAcknowledged && step !== 'welcome' ? (
-    <ConversationStep title={copy.privacyBeforeSetup} onBack={back} primaryLabel={copy.continue} onPrimary={() => undefined}>
-      <AppText variant="body" color="secondary">{copy.privacyFootnote}</AppText>
-    </ConversationStep>
-  ) : scene;
+  const gatedScene =
+    !privacyAcknowledged && step !== 'welcome' ? (
+      <ConversationStep
+        title={copy.privacyBeforeSetup}
+        onBack={back}
+        primaryLabel={copy.continue}
+        onPrimary={() => undefined}
+      >
+        <AppText variant="body" color="secondary">
+          {copy.privacyFootnote}
+        </AppText>
+      </ConversationStep>
+    ) : (
+      scene
+    );
 
   return (
     <>
       <OnboardingChrome
         testID="onboarding-screen"
         stage={onboardingStage(step)}
-        header={showSafeToSpend ? (
-          <SafeToSpendHeader
-            amount={projection.safeToSpend}
-            currency={session.draft.currency}
-            change={latestDraftChange}
-            spokenEcho={heard}
-            hasUsableEstimate={prepared.hasUsableEstimate}
-            isIncompleteEstimate={prepared.isIncomplete}
-          />
-        ) : null}
+        header={
+          showSafeToSpend ? (
+            <SafeToSpendHeader
+              amount={projection.safeToSpend}
+              currency={session.draft.currency}
+              change={latestDraftChange}
+              spokenEcho={heard}
+              hasUsableEstimate={prepared.hasUsableEstimate}
+              isIncompleteEstimate={prepared.isIncomplete}
+            />
+          ) : null
+        }
       >
-        <Box flex={1} minHeight={0}>{gatedScene}</Box>
+        <Box flex={1} minHeight={0}>
+          {gatedScene}
+        </Box>
       </OnboardingChrome>
       {!privacyAcknowledged && step !== 'welcome' ? (
         <PrivacyAcknowledgementSheet

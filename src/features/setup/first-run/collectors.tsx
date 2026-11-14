@@ -6,7 +6,12 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { CollectStep } from './conversationUi';
 import type { CollectedItem } from './CollectedRow';
-import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
+import {
+  amountIssueMessage,
+  currencyPrecision,
+  formatAmountInput,
+  parseAmountInput,
+} from './amountValidation';
 import {
   ACCOUNT_KIND_META,
   amountInputKey,
@@ -48,7 +53,9 @@ export type CollectorSessionHooks = {
   readonly validationMessage?: string | null;
   readonly recovery?: ReactNode;
   readonly footer?: ReactNode;
-  readonly onValidationBlocked?: (reason: 'amount_invalid' | 'missing_spendable_account' | 'dependency_unresolved') => void;
+  readonly onValidationBlocked?: (
+    reason: 'amount_invalid' | 'missing_spendable_account' | 'dependency_unresolved',
+  ) => void;
 };
 
 function useAmountEditor(
@@ -202,30 +209,40 @@ export function MoneyScene({
   );
   const cardPaymentAmountsValid = accounts.every(account => {
     if (account.kind !== 'card') return true;
-    const raw = amountEditor.read(cardPaymentInputKey(account.id), account.cardPaymentAmount ?? 0, true);
+    const raw = amountEditor.read(
+      cardPaymentInputKey(account.id),
+      account.cardPaymentAmount ?? 0,
+      true,
+    );
     return !raw.trim() || amountIsValid(raw, currency, locale, false, false);
   });
   const hasIncludedCardPayment = accounts.some(account => {
     if (account.kind !== 'card') return false;
-    const raw = amountEditor.read(cardPaymentInputKey(account.id), account.cardPaymentAmount ?? 0, true);
+    const raw = amountEditor.read(
+      cardPaymentInputKey(account.id),
+      account.cardPaymentAmount ?? 0,
+      true,
+    );
     if (!raw.trim()) return false;
     const parsed = parseAmountInput(raw, locale, currencyPrecision(currency));
     return parsed.status === 'valid' && parsed.value > 0;
   });
-  const spendableAccounts = accounts.filter(isSpendableAccount).filter(account =>
-    amountIsValid(
-      amountEditor.read(amountInputKey(account.id), account.balance),
-      currency,
-      locale,
-      false,
-      true,
-    ),
-  );
+  const spendableAccounts = accounts
+    .filter(isSpendableAccount)
+    .filter(account =>
+      amountIsValid(
+        amountEditor.read(amountInputKey(account.id), account.balance),
+        currency,
+        locale,
+        false,
+        true,
+      ),
+    );
   const hasEligibleSpendable = spendableAccounts.length > 0;
   const deferred = editableInput?.deferredCollections?.accounts === true;
   const savingsChoice = [
-    { id: 'spendable', label: copy.savingsSpendable },
-    { id: 'protected', label: copy.savingsProtected },
+    { id: 'spendable', label: copy.savingsSpendable, icon: Icon.Wallet },
+    { id: 'protected', label: copy.savingsProtected, icon: Icon.ShieldCheck },
   ];
   const collectedItems = accounts.map((account): CollectedItem => {
     const common = {
@@ -303,9 +320,15 @@ export function MoneyScene({
             true,
           ),
           paymentAmountError: validationAttempted
-            ? amountEditor.read(cardPaymentInputKey(account.id), account.cardPaymentAmount ?? 0, true).trim()
+            ? amountEditor
+                .read(cardPaymentInputKey(account.id), account.cardPaymentAmount ?? 0, true)
+                .trim()
               ? amountInputError(
-                  amountEditor.read(cardPaymentInputKey(account.id), account.cardPaymentAmount ?? 0, true),
+                  amountEditor.read(
+                    cardPaymentInputKey(account.id),
+                    account.cardPaymentAmount ?? 0,
+                    true,
+                  ),
                   currency,
                   locale,
                   false,
@@ -322,9 +345,11 @@ export function MoneyScene({
                   ? {
                       ...item,
                       cardPaymentAmount: amount,
-                      cardPaymentDate: amount === undefined
-                        ? undefined
-                        : item.cardPaymentDate ?? nextDateOnDayOfMonth(1).startOf('day').valueOf(),
+                      cardPaymentDate:
+                        amount === undefined
+                          ? undefined
+                          : (item.cardPaymentDate ??
+                            nextDateOnDayOfMonth(1).startOf('day').valueOf()),
                     }
                   : item,
               ),
@@ -351,7 +376,9 @@ export function MoneyScene({
       onContinue={() => {
         setValidationAttempted(true);
         if (!isMoneyReady(accounts) || !accountAmountsValid || !cardPaymentAmountsValid) {
-          onValidationBlocked?.(isMoneyReady(accounts) ? 'amount_invalid' : 'dependency_unresolved');
+          onValidationBlocked?.(
+            isMoneyReady(accounts) ? 'amount_invalid' : 'dependency_unresolved',
+          );
           return;
         }
         if (hasIncludedCardPayment && !hasEligibleSpendable) {
@@ -377,7 +404,6 @@ export function MoneyScene({
       validationMessage={validationMessage}
       recovery={recovery}
       footer={footer}
-      chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(ACCOUNT_CHIPS)}
       onAddChip={id => {
         const kind = id as AccountKind;
@@ -393,10 +419,7 @@ export function MoneyScene({
             ? { cardPaymentDate: nextDateOnDayOfMonth(1).startOf('day').valueOf() }
             : {}),
         };
-        onAccountsChange([
-          ...accounts,
-          account,
-        ]);
+        onAccountsChange([...accounts, account]);
         amountEditor.write(amountInputKey(account.id), '');
       }}
       currency={currency}
@@ -436,9 +459,17 @@ export function IncomeScene({
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = income.kind === 'recurring' ? income.items : [];
   const monthly = incomeRecurrence('MONTHLY');
-  const amountsValid = items.length > 0 && items.every(item =>
-    amountIsValid(amountEditor.read(amountInputKey(item.id), item.amount), currency, locale, true, false),
-  );
+  const amountsValid =
+    items.length > 0 &&
+    items.every(item =>
+      amountIsValid(
+        amountEditor.read(amountInputKey(item.id), item.amount),
+        currency,
+        locale,
+        true,
+        false,
+      ),
+    );
   const deferred = editableInput?.deferredCollections?.income === true;
 
   const finish = (nextItems: readonly RecurringIncome[]) => {
@@ -483,7 +514,6 @@ export function IncomeScene({
       validationMessage={validationMessage}
       recovery={recovery}
       footer={footer}
-      chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(INCOME_CHIPS)}
       onAddChip={id => {
         const source = id as RecurringIncome['source'];
@@ -499,10 +529,7 @@ export function IncomeScene({
           intervalN: monthly.intervalN,
           nextDate: nextDateOnDayOfMonth(25).startOf('day').valueOf(),
         };
-        finish([
-          ...items,
-          item,
-        ]);
+        finish([...items, item]);
         amountEditor.write(amountInputKey(item.id), '');
       }}
       currency={currency}
@@ -592,9 +619,17 @@ export function ProtectScene({
   const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = commitment.kind === 'payment' ? commitment.items : [];
-  const amountsValid = items.length > 0 && items.every(item =>
-    amountIsValid(amountEditor.read(amountInputKey(item.id), item.amount), currency, locale, true, false),
-  );
+  const amountsValid =
+    items.length > 0 &&
+    items.every(item =>
+      amountIsValid(
+        amountEditor.read(amountInputKey(item.id), item.amount),
+        currency,
+        locale,
+        true,
+        false,
+      ),
+    );
   const deferred = editableInput?.deferredCollections?.commitment === true;
 
   const finish = (nextItems: readonly PaymentItem[]) => {
@@ -639,7 +674,6 @@ export function ProtectScene({
       validationMessage={validationMessage}
       recovery={recovery}
       footer={footer}
-      chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(PAYMENT_CHIPS)}
       onAddChip={id => {
         const type = id as CommitmentKind;
@@ -653,10 +687,7 @@ export function ProtectScene({
           amount: 0,
           dueDate: nextDateOnDayOfMonth(1).startOf('day').valueOf(),
         };
-        finish([
-          ...items,
-          item,
-        ]);
+        finish([...items, item]);
         amountEditor.write(amountInputKey(item.id), '');
       }}
       currency={currency}
@@ -732,9 +763,17 @@ export function ReserveScene({
   const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const items = budget.kind === 'set' ? budget.items : [];
-  const amountsValid = items.length > 0 && items.every(item =>
-    amountIsValid(amountEditor.read(amountInputKey(item.id), item.amount), currency, locale, true, false),
-  );
+  const amountsValid =
+    items.length > 0 &&
+    items.every(item =>
+      amountIsValid(
+        amountEditor.read(amountInputKey(item.id), item.amount),
+        currency,
+        locale,
+        true,
+        false,
+      ),
+    );
   const deferred = editableInput?.deferredCollections?.budget === true;
 
   const finish = (nextItems: readonly BudgetItem[]) => {
@@ -779,7 +818,6 @@ export function ReserveScene({
       validationMessage={validationMessage}
       recovery={recovery}
       footer={footer}
-      chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(BUDGET_CHIPS)}
       onAddChip={category => {
         const item: BudgetItem = {
@@ -791,10 +829,7 @@ export function ReserveScene({
           amount: 0,
           category,
         };
-        finish([
-          ...items,
-          item,
-        ]);
+        finish([...items, item]);
         amountEditor.write(amountInputKey(item.id), '');
       }}
       currency={currency}

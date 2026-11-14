@@ -10,15 +10,21 @@ import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModa
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Size, Spacing, Typography } from '@/src/constants';
+import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { getLocales } from 'expo-localization';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { Platform, StyleSheet, TextInput } from 'react-native';
-import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
+import { Keyboard, Platform, StyleSheet, TextInput, View } from 'react-native';
+import {
+  amountIssueMessage,
+  currencyPrecision,
+  formatAmountInput,
+  parseAmountInput,
+} from './amountValidation';
 import { MAX_ONBOARDING_ITEM_NAME_LENGTH } from './validation';
 
 export type CadenceId = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
@@ -44,7 +50,7 @@ type AccountCollectedItem = CollectedItemBase & {
     | { readonly kind: 'plain' }
     | {
         readonly kind: 'savings';
-        readonly options: readonly { id: string; label: string }[];
+        readonly options: readonly { id: string; label: string; icon?: IconName }[];
         readonly selectedId?: string;
         readonly issue?: string;
         readonly onSelect: (choiceId: string) => void;
@@ -96,11 +102,14 @@ export function CollectedRow({
   const locale = providedLocale ?? item.locale ?? getLocales()[0]?.languageTag ?? 'en-US';
   const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
-  const amountFallback = item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : '';
+  const amountFallback =
+    item.kind === 'account' || item.amount !== 0 ? formatAmountInput(item.amount, locale) : '';
   const [localAmount, setLocalAmount] = useState<{ source: string; text: string }>();
-  const amountText = item.amountText ?? (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
+  const amountText =
+    item.amountText ?? (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
   const [editingName, setEditingName] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
+  const [amountFocused, setAmountFocused] = useState(false);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const shownName = editingName ? name : item.title;
   const parsedAmount = parseAmountInput(amountText, locale, currencyPrecision(currency));
@@ -108,10 +117,40 @@ export function CollectedRow({
   const signedAllowed = item.kind === 'account' && item.detail.kind !== 'card';
   const amountIssue =
     item.amountError !== undefined
-      ? item.amountError ?? undefined
+      ? (item.amountError ?? undefined)
       : amountTouched
         ? amountIssueMessage(parsedAmount, positiveOnly, signedAllowed)
         : undefined;
+  const isSpendableAccount =
+    item.kind === 'account' &&
+    (item.detail.kind === 'plain' ||
+      (item.detail.kind === 'savings' && item.detail.selectedId === 'spendable'));
+  const isCardDebt =
+    item.kind === 'account' &&
+    item.detail.kind === 'card' &&
+    parsedAmount.status === 'valid' &&
+    parsedAmount.value !== 0;
+  const amountColor =
+    item.kind !== 'account'
+      ? theme.text
+      : isCardDebt
+        ? theme.error
+        : isSpendableAccount && parsedAmount.status === 'valid' && !amountIssue
+          ? theme.primary
+          : theme.textSecondary;
+  const iconColor = item.kind === 'account' ? amountColor : theme.textSecondary;
+  const accountAmountHint =
+    item.kind !== 'account'
+      ? undefined
+      : item.detail.kind === 'card'
+        ? copy.cardBalanceHint
+        : item.detail.kind === 'savings'
+          ? item.detail.selectedId === 'spendable'
+            ? copy.accountIncludedHint
+            : item.detail.selectedId === 'protected'
+              ? copy.accountProtectedHint
+              : copy.savingsAvailabilityRequired
+          : copy.accountIncludedHint;
   const removeLabel = `${copy.removeItem} ${item.title}`;
 
   return (
@@ -120,14 +159,18 @@ export function CollectedRow({
         variant="outline"
         background="surface"
         paddingSize="none"
+        accessibilityActions={[{ name: 'delete', label: removeLabel }]}
+        onAccessibilityAction={event => {
+          if (event.nativeEvent.actionName === 'delete') item.onRemove();
+        }}
       >
-        <Box paddingHorizontal="xl" paddingVertical="sm">
+        <Box paddingHorizontal="md" paddingVertical="xs">
           <Stack gap="xs">
             <Inline align="center" gap="sm" wrap>
               <Stack flex={1} gap="xs">
                 <Inline align="center" gap="sm">
                   {item.icon ? (
-                    <AppIcon name={item.icon} size={Size.iconXs} color="textSecondary" />
+                    <AppIcon name={item.icon} size={Size.iconXs} color={iconColor} />
                   ) : null}
                   <TextInput
                     value={shownName}
@@ -155,9 +198,11 @@ export function CollectedRow({
                     ]}
                   />
                 </Inline>
-                <AppText variant="caption" color="secondary">
-                  {item.amountLabel}
-                </AppText>
+                {item.kind !== 'account' ? (
+                  <AppText variant="caption" color="secondary">
+                    {item.amountLabel}
+                  </AppText>
+                ) : null}
               </Stack>
               <Box style={styles.amountHit}>
                 <Stack gap="xs" align="flex-end">
@@ -168,7 +213,8 @@ export function CollectedRow({
                     <TextInput
                       value={amountText}
                       onChangeText={text => {
-                        if (!item.onAmountTextChange) setLocalAmount({ source: amountFallback, text });
+                        if (!item.onAmountTextChange)
+                          setLocalAmount({ source: amountFallback, text });
                         setAmountTouched(true);
                         item.onAmountTextChange?.(text);
                         const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
@@ -179,6 +225,8 @@ export function CollectedRow({
                           item.onAmountChange(parsed.value);
                         }
                       }}
+                      onFocus={() => setAmountFocused(true)}
+                      onBlur={() => setAmountFocused(false)}
                       keyboardType={
                         signedAllowed
                           ? Platform.OS === 'ios'
@@ -189,37 +237,26 @@ export function CollectedRow({
                       placeholder=""
                       placeholderTextColor={tokens.input.placeholder}
                       accessibilityLabel={`${item.title}, ${item.amountLabel}`}
-                      accessibilityHint={amountIssue}
+                      accessibilityHint={amountIssue ?? accountAmountHint}
                       testID={`onboarding-amount-${item.id}`}
                       style={[
                         styles.rowInput,
                         styles.amountInput,
                         {
-                          color: theme.text,
+                          color: amountColor,
                           fontFamily: (fonts.numeric ?? fonts).semibold,
                           fontVariant: ['tabular-nums', 'lining-nums'],
                         },
                       ]}
                     />
                   </Inline>
-                  {amountIssue ? (
+                  {amountIssue && !amountFocused ? (
                     <AppText variant="caption" color="error" align="right">
                       {amountIssue}
                     </AppText>
                   ) : null}
                 </Stack>
               </Box>
-              <PressScaleTouchable
-                haptic="selection"
-                onPress={item.onRemove}
-                accessibilityRole="button"
-                accessibilityLabel={removeLabel}
-                accessibilityHint="Removes this entry."
-                testID={`onboarding-remove-${item.id}`}
-                style={styles.removeButton}
-              >
-                <AppIcon name={Icon.Delete} size={Size.iconSm} color="error" />
-              </PressScaleTouchable>
             </Inline>
             {item.kind === 'account' ? (
               <AccountDetails
@@ -253,17 +290,11 @@ function AccountDetails({
   if (detail.kind === 'savings') {
     return (
       <Stack gap="xs">
-        <Inline gap="sm" wrap>
-          {detail.options.map(option => (
-            <FilterChipButton
-              key={option.id}
-              style={styles.touchTarget}
-              label={option.label}
-              isActive={detail.selectedId === option.id}
-              onPress={() => detail.onSelect(option.id)}
-            />
-          ))}
-        </Inline>
+        <SavingsAvailabilityControl
+          options={detail.options}
+          selectedId={detail.selectedId}
+          onSelect={detail.onSelect}
+        />
         {detail.issue ? (
           <AppText variant="caption" color="error">
             {detail.issue}
@@ -272,13 +303,71 @@ function AccountDetails({
       </Stack>
     );
   }
+  return <CardPaymentDetails detail={detail} currency={currency} itemId={itemId} locale={locale} />;
+}
+
+function SavingsAvailabilityControl({
+  options,
+  selectedId,
+  onSelect,
+}: {
+  readonly options: readonly { id: string; label: string; icon?: IconName }[];
+  readonly selectedId?: string;
+  readonly onSelect: (choiceId: string) => void;
+}) {
+  const { theme } = useTheme();
   return (
-    <CardPaymentDetails
-      detail={detail}
-      currency={currency}
-      itemId={itemId}
-      locale={locale}
-    />
+    <View style={styles.savingsControl}>
+      {options.map(option => {
+        const selected = selectedId === option.id;
+        const spendable = selected && option.id === 'spendable';
+        const selectedColor = spendable
+          ? theme.onPrimary || theme.surface
+          : selected
+            ? theme.text
+            : theme.textSecondary;
+        return (
+          <PressScaleTouchable
+            key={option.id}
+            onPress={() => {
+              Keyboard.dismiss();
+              if (!selected) triggerPressHaptic('selection');
+              onSelect(option.id);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={option.label}
+            accessibilityState={{ selected }}
+            style={styles.savingsOptionTarget}
+            surfaceStyle={[
+              styles.savingsOption,
+              {
+                backgroundColor: spendable
+                  ? theme.primary
+                  : selected
+                    ? theme.surfaceSecondary
+                    : theme.surface,
+                borderColor: spendable
+                  ? theme.primary
+                  : selected
+                    ? theme.textSecondary
+                    : theme.border,
+              },
+            ]}
+          >
+            {option.icon ? (
+              <AppIcon name={option.icon} size={Size.iconXs} color={selectedColor} />
+            ) : null}
+            <AppText
+              variant="caption"
+              weight={selected ? 'semibold' : 'medium'}
+              style={{ color: selectedColor }}
+            >
+              {option.label}
+            </AppText>
+          </PressScaleTouchable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -294,15 +383,19 @@ function CardPaymentDetails({
   readonly locale: string;
 }) {
   const { theme, tokens, fonts } = useTheme();
-  const amountFallback = detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : '';
+  const amountFallback =
+    detail.paymentPlan.amount > 0 ? formatAmountInput(detail.paymentPlan.amount, locale) : '';
   const [localAmount, setLocalAmount] = useState<{ source: string; text: string }>();
-  const amountText = detail.paymentAmountText ?? (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
+  const amountText =
+    detail.paymentAmountText ??
+    (localAmount?.source === amountFallback ? localAmount.text : amountFallback);
   const [amountTouched, setAmountTouched] = useState(false);
+  const [amountFocused, setAmountFocused] = useState(false);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const parsedPayment = parseAmountInput(amountText, locale, currencyPrecision(currency));
   const paymentIssue =
     detail.paymentAmountError !== undefined
-      ? detail.paymentAmountError ?? undefined
+      ? (detail.paymentAmountError ?? undefined)
       : amountTouched && parsedPayment.status !== 'empty'
         ? amountIssueMessage(parsedPayment, false, false)
         : undefined;
@@ -320,7 +413,8 @@ function CardPaymentDetails({
           <TextInput
             value={amountText}
             onChangeText={text => {
-              if (!detail.onPaymentAmountTextChange) setLocalAmount({ source: amountFallback, text });
+              if (!detail.onPaymentAmountTextChange)
+                setLocalAmount({ source: amountFallback, text });
               setAmountTouched(true);
               detail.onPaymentAmountTextChange?.(text);
               const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
@@ -330,11 +424,13 @@ function CardPaymentDetails({
                 detail.onAmountChange(undefined);
               }
             }}
+            onFocus={() => setAmountFocused(true)}
+            onBlur={() => setAmountFocused(false)}
             keyboardType="decimal-pad"
             placeholder="0"
             placeholderTextColor={tokens.input.placeholder}
             accessibilityLabel={copy.cardPaymentAmount}
-            accessibilityHint={paymentIssue}
+            accessibilityHint={paymentIssue ?? copy.cardPaymentOptionalHint}
             testID={`onboarding-card-pay-${itemId}`}
             style={[
               styles.rowInput,
@@ -348,8 +444,7 @@ function CardPaymentDetails({
             ]}
           />
         </Inline>
-        <AppText variant="caption" color="secondary">{copy.cardPaymentOptional}</AppText>
-        {paymentIssue ? (
+        {paymentIssue && !amountFocused ? (
           <AppText variant="caption" color="error">
             {paymentIssue}
           </AppText>
@@ -460,7 +555,7 @@ function CollectedDateField({
 
 const styles = StyleSheet.create({
   rowInput: {
-    minHeight: Platform.OS === 'android' ? 48 : 44,
+    minHeight: Platform.OS === 'android' ? 48 : 28,
     paddingVertical: 0,
     fontSize: Typography.sizes.base,
   },
@@ -469,23 +564,39 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   amountHit: {
-    minHeight: Platform.OS === 'android' ? 48 : 44,
+    minHeight: Platform.OS === 'android' ? 48 : 28,
     justifyContent: 'center',
     alignItems: 'flex-end',
-    flexShrink: 1,
-    maxWidth: '55%',
+    flexShrink: 0,
   },
   amountInput: {
-    minWidth: 72,
-    maxWidth: 180,
-    flexGrow: 1,
-    flexShrink: 1,
+    width: Size.fieldAmount,
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
     textAlign: 'right',
     textAlignVertical: 'center',
     includeFontPadding: false,
+  },
+  savingsControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+  },
+  savingsOptionTarget: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  savingsOption: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: Shape.radius.full,
   },
   payInput: {
     width: Size.fieldNarrow,
@@ -497,13 +608,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 4,
     paddingHorizontal: Spacing.sm,
-  },
-  removeButton: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   touchTarget: {
     minHeight: Platform.OS === 'android' ? 48 : 44,
