@@ -117,8 +117,10 @@ export function prepareCashClarityInput(
   if (!deferred(editableInput, 'accounts')) {
     effectiveAccounts = accountDrafts.map(account => {
       if (account.kind !== 'card') return account;
-      const rawCardPayment = editableInput.amountTextById[cardPaymentInputKey(account.id)]
-        ?? (account.cardPaymentAmount ? String(account.cardPaymentAmount) : '');
+      const rawCardValue = editableInput.amountTextById[cardPaymentInputKey(account.id)];
+      const rawCardPayment = typeof rawCardValue === 'string'
+        ? rawCardValue
+        : account.cardPaymentAmount ? String(account.cardPaymentAmount) : '';
       if (rawCardPayment.trim() === '') {
         return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
       }

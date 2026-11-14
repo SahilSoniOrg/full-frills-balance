@@ -307,7 +307,13 @@ export function MoneyScene({
             onAccountsChange(
               accounts.map(item =>
                 item.id === account.id
-                  ? { ...item, cardPaymentAmount: amount, cardPaymentDate: amount === undefined ? undefined : item.cardPaymentDate }
+                  ? {
+                      ...item,
+                      cardPaymentAmount: amount,
+                      cardPaymentDate: amount === undefined
+                        ? undefined
+                        : item.cardPaymentDate ?? nextDateOnDayOfMonth(1).startOf('day').valueOf(),
+                    }
                   : item,
               ),
             ),

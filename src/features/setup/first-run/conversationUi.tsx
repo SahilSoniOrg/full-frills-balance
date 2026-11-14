@@ -8,7 +8,7 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { type ReactNode, useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { CollectedRow, type CollectedItem } from './CollectedRow';
 
@@ -166,6 +166,7 @@ export function ChoiceChips({
         {options.map(option => (
           <FilterChipButton
             key={option.id}
+            style={styles.chipTarget}
             label={option.label}
             icon={option.icon}
             isActive={selectedId === option.id}
@@ -254,6 +255,10 @@ export function CollectStep({
 }
 
 const styles = StyleSheet.create({
+  chipTarget: {
+    minHeight: Platform.OS === 'android' ? 48 : 44,
+    justifyContent: 'center',
+  },
   scrollView: {
     flex: 1,
     minHeight: 0,

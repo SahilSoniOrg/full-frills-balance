@@ -267,6 +267,7 @@ function AccountDetails({
           {detail.options.map(option => (
             <FilterChipButton
               key={option.id}
+              style={styles.touchTarget}
               label={option.label}
               isActive={detail.selectedId === option.id}
               onPress={() => detail.onSelect(option.id)}
@@ -445,6 +446,7 @@ function CollectedDateField({
   return (
     <>
       <FilterChipButton
+        style={styles.touchTarget}
         icon={Icon.Calendar}
         label={`${dateLabel} ${dayjs(date).format('D MMM')}`}
         onPress={() => setVisible(true)}
@@ -465,7 +467,7 @@ function CollectedDateField({
 
 const styles = StyleSheet.create({
   rowInput: {
-    minHeight: 28,
+    minHeight: Platform.OS === 'android' ? 48 : 44,
     paddingVertical: 0,
     fontSize: Typography.sizes.base,
   },
@@ -474,15 +476,16 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   amountHit: {
-    minHeight: 28,
+    minHeight: Platform.OS === 'android' ? 48 : 44,
     justifyContent: 'center',
     alignItems: 'flex-end',
-    flexShrink: 0,
+    flexShrink: 1,
+    maxWidth: '55%',
   },
   amountInput: {
-    width: Size.fieldAmount,
-    minWidth: 48,
-    maxWidth: 160,
+    minWidth: 72,
+    maxWidth: 180,
+    flexGrow: 1,
     flexShrink: 1,
     paddingHorizontal: 0,
     paddingTop: 0,
@@ -497,6 +500,8 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   cadenceTrigger: {
+    minHeight: Platform.OS === 'android' ? 48 : 44,
+    justifyContent: 'center',
     paddingVertical: 4,
     paddingHorizontal: Spacing.sm,
   },
@@ -506,5 +511,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  touchTarget: {
+    minHeight: Platform.OS === 'android' ? 48 : 44,
+    justifyContent: 'center',
   },
 });

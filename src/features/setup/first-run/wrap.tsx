@@ -131,6 +131,7 @@ export function ClarityScene({
                 </Stack>
                 <IconButton
                   name={Icon.HelpCircle}
+                  style={{ minWidth: 48, minHeight: 48 }}
                   variant="clear"
                   accessibilityLabel={copy.clarityExplainAction}
                   onPress={() => setExplanationVisible(true)}
