@@ -27,4 +27,3 @@ export {
   shouldShowCashClarity,
 } from './setupRouting';
 export type * from './setupTypes';
-export { isRestoreJourneyId } from './setupTypes';

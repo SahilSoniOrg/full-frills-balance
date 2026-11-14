@@ -16,8 +16,7 @@ import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { getLocales } from 'expo-localization';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useCreationLaunch } from '@/src/features/app/CreationLaunchContext';
-import { useLaunchCoordinator, type LaunchCoordinatorState } from '@/src/features/app/LaunchCoordinator';
+import { useCreationLaunch, type CreationLaunchEntry } from '@/src/contexts/CreationLaunchContext';
 import { preferences } from '@/src/services/preferences';
 import { finishDeviceSetup } from '../setupFinishers';
 import {
@@ -89,25 +88,18 @@ function requestedEntry(params: {
   journey?: string | string[];
   context?: string | string[];
   entryPolicy?: string | string[];
-}, launch: LaunchCoordinatorState): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
-  const launchJourney = launch.kind === 'setup' ? launch.journeyId : undefined;
+}, launchEntry?: CreationLaunchEntry): { intent: CreationIntent; context: CreationContext; entryPolicy: 'blocking' | 'optional' } {
+  if (launchEntry) return launchEntry;
   const requested = firstParam(params.journey);
-  const intent: CreationIntent = launchJourney === 'first_run' ? 'first_run'
-    : launchJourney === 'add_workplace' || preferences.device.deviceRegistered
-      || requested === 'add_workplace' || requested === 'create_workplace' || requested === 'empty_device_workplace'
-      ? 'add_workplace' : 'first_run';
+  const intent: CreationIntent = preferences.device.deviceRegistered ||
+    requested === 'add_workplace' || requested === 'create_workplace' || requested === 'empty_device_workplace'
+    ? 'add_workplace' : 'first_run';
   const rawContext = firstParam(params.context);
   const validContext: readonly CreationContext[] = [
     'unregistered_device', 'registered_empty_device', 'workplace_picker', 'existing_workplace_entry',
   ];
   const context: CreationContext = intent === 'first_run'
     ? 'unregistered_device'
-    : launch.kind === 'setup' && launchJourney === 'add_workplace'
-      ? 'registered_empty_device'
-      : launch.kind === 'open'
-        ? 'existing_workplace_entry'
-        : launch.kind === 'picker'
-          ? 'workplace_picker'
     : validContext.includes(rawContext as CreationContext) && rawContext !== 'unregistered_device'
       ? rawContext as CreationContext
       : 'workplace_picker';
@@ -193,8 +185,8 @@ export function OnboardingScreen() {
     name?: string | string[];
   }>();
   const nameParam = firstParam(params.name);
-  const launch = useLaunchCoordinator();
-  const entry = useMemo(() => requestedEntry(params, launch), [params, launch]);
+  const creationLaunch = useCreationLaunch();
+  const entry = useMemo(() => requestedEntry(params, creationLaunch.entry), [params, creationLaunch.entry]);
   const [bootstrap] = useState(() => bootstrapSession(entry, nameParam));
   const [session, setSession] = useState<CashClaritySetupDraft | null>(
     bootstrap.kind === 'session' ? bootstrap.session : null,
@@ -215,8 +207,11 @@ export function OnboardingScreen() {
   const [mountedAt] = useState(Date.now);
   const segmentStartedAt = useRef(mountedAt);
   const stepStartedAt = useRef({ step: session?.step, at: mountedAt });
+  const draftFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftFeedbackEditStep = useRef<OnboardingStep | null>(null);
+  const draftFeedbackVersion = useRef(0);
   const acknowledgedDraft = useRef<CashClaritySetupDraft['draft'] | null>(null);
-  const { openCreatedWorkplace } = useCreationLaunch();
+  const { openCreatedWorkplace } = creationLaunch;
   const locale = session?.inputLocale ?? getLocales()[0]?.languageTag ?? 'en-US';
 
   useEffect(() => {
@@ -227,14 +222,24 @@ export function OnboardingScreen() {
     const current = sessionRef.current;
     if (!current) return;
     const next = update(current);
+    if (next.step !== current.step) {
+      if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
+      draftFeedbackTimer.current = null;
+      draftFeedbackEditStep.current = null;
+      draftFeedbackVersion.current += 1;
+      acknowledgedDraft.current = null;
+      setLatestDraftChange(null);
+    }
     sessionRef.current = next;
     saveSetupDraft(next);
     setSession(next);
   }, []);
 
-  const prepared = useMemo(() => session
-    ? prepareCashClarityInput(session.draft, session.editableInput, locale)
-    : undefined, [session, locale]);
+  const sessionDraft = session?.draft;
+  const editableInput = session?.editableInput;
+  const prepared = useMemo(() => sessionDraft && editableInput
+    ? prepareCashClarityInput(sessionDraft, editableInput, locale)
+    : undefined, [sessionDraft, editableInput, locale]);
   const projection = useMemo(() => prepared
     ? projectCashClarityDraft(prepared.effectiveDraft)
     : undefined, [prepared]);
@@ -279,22 +284,44 @@ export function OnboardingScreen() {
   }, [session, resumed, prepared, projection, resumePrompt]);
 
   useEffect(() => {
-    if (!session || !acknowledgedDraft.current) return;
+    const activeSession = sessionRef.current;
+    if (!activeSession || !acknowledgedDraft.current) return;
     const currentDraft = prepared?.effectiveDraft;
     if (!currentDraft) return;
     const previous = acknowledgedDraft.current;
+    if (draftFeedbackEditStep.current !== activeSession.step) {
+      acknowledgedDraft.current = currentDraft;
+      return;
+    }
+    const operationId = activeSession.operationId;
+    const step = activeSession.step;
+    const version = draftFeedbackVersion.current;
     const timer = setTimeout(() => {
+      draftFeedbackTimer.current = null;
+      const latestSession = sessionRef.current;
+      if (
+        latestSession?.operationId !== operationId ||
+        latestSession.step !== step ||
+        draftFeedbackVersion.current !== version
+      ) return;
       setLatestDraftChange(explainDraftTransition(previous, currentDraft));
       acknowledgedDraft.current = currentDraft;
+      draftFeedbackEditStep.current = null;
     }, 600);
-    return () => clearTimeout(timer);
-  }, [session, prepared?.effectiveDraft]);
+    draftFeedbackTimer.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (draftFeedbackTimer.current === timer) draftFeedbackTimer.current = null;
+    };
+  }, [prepared?.effectiveDraft]);
 
   useEffect(() => {
     if (prepared && session && !acknowledgedDraft.current) acknowledgedDraft.current = prepared.effectiveDraft;
   }, [prepared, session]);
 
   const updateDraft = (update: (current: CashClaritySetupDraft['draft']) => CashClaritySetupDraft['draft']) => {
+    draftFeedbackEditStep.current = sessionRef.current?.step ?? null;
+    draftFeedbackVersion.current += 1;
     persistSession(current => ({ ...current, draft: update(current.draft) }));
     setRepairMessage(null);
     setHeard(null);
@@ -302,6 +329,8 @@ export function OnboardingScreen() {
   };
 
   const updateAmountText = (key: string, raw: string | undefined) => {
+    draftFeedbackEditStep.current = sessionRef.current?.step ?? null;
+    draftFeedbackVersion.current += 1;
     persistSession(current => {
       const amountTextById = { ...current.editableInput.amountTextById };
       if (raw === undefined) delete amountTextById[key];
@@ -314,6 +343,8 @@ export function OnboardingScreen() {
   };
 
   const setCollectionDeferred = (collection: CashClarityCollection, value: boolean) => {
+    draftFeedbackEditStep.current = sessionRef.current?.step ?? null;
+    draftFeedbackVersion.current += 1;
     persistSession(current => {
       const deferredCollections = { ...current.editableInput.deferredCollections };
       if (value) deferredCollections[collection] = true;
@@ -474,6 +505,11 @@ export function OnboardingScreen() {
     }
     if (existing) clearSetupDraft();
     if (unreadable) discardUnreadableSetupDraft();
+    if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
+    draftFeedbackTimer.current = null;
+    draftFeedbackEditStep.current = null;
+    draftFeedbackVersion.current += 1;
+    setLatestDraftChange(null);
     const name = firstParam(params.name);
     const next = createCreationSession({
       ...entry,
@@ -518,6 +554,10 @@ export function OnboardingScreen() {
       });
     }
     clearPendingCashClarityWorkplaceId();
+    if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
+    draftFeedbackTimer.current = null;
+    draftFeedbackEditStep.current = null;
+    draftFeedbackVersion.current += 1;
     clearSetupDraft();
     const next = createCreationSession({
       ...entry,
@@ -604,6 +644,11 @@ export function OnboardingScreen() {
   const finish = async () => {
     const current = sessionRef.current;
     if (!current || busy) return;
+    if (draftFeedbackTimer.current !== null) clearTimeout(draftFeedbackTimer.current);
+    draftFeedbackTimer.current = null;
+    draftFeedbackEditStep.current = null;
+    draftFeedbackVersion.current += 1;
+    setLatestDraftChange(null);
     setFinishError(null);
     setBusy(true);
     const startedAt = Date.now();

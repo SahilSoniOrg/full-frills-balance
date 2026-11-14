@@ -17,6 +17,7 @@ export interface CreationLaunchEntry {
 
 export interface CreationLaunchContextValue {
   readonly openCreatedWorkplace: (id: WorkplaceId) => Promise<void>;
+  readonly returnToWorkplacePicker: () => void;
   readonly entry?: CreationLaunchEntry;
 }
 

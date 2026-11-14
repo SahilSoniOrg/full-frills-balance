@@ -42,7 +42,6 @@ export function WorkplaceSetupSlice({
   const [step, setStep] = useState<WorkplaceCheckpoint>(() =>
     resolveWorkplaceStartCheckpoint({
       identityMode,
-      books: 'imported',
       initial,
       initialStep: initialStep ?? resumeStep,
     }),

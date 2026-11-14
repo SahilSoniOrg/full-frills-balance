@@ -236,7 +236,7 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
 
 function hasBlockingSetupDraft(draft?: LaunchSetupDraft): boolean {
   if (!draft) return false;
-  if ('unreadable' in draft) return draft.unreadable;
+  if ('unreadable' in draft) return draft.unreadable === true;
   return draft.entryPolicy === 'blocking';
 }
 
@@ -362,12 +362,14 @@ export function LaunchCoordinatorProvider({
     if (
       !creationOpeningTarget?.committed ||
       activeWorkplaceId !== creationOpeningTarget.id ||
-      setupDraft?.entryPolicy === 'blocking' ||
+      hasBlockingSetupDraft(setupDraft) ||
       (!discovery.workplaces.some(workplace => workplace.id === creationOpeningTarget.id) &&
         !(probedWorkplace?.id === creationOpeningTarget.id && probedWorkplace.workplace))
     ) {
       return;
     }
+    // Clear the transient route exception after the externally committed workplace is visible.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCreationOpeningTarget(current =>
       current?.id === creationOpeningTarget.id ? null : current,
     );
@@ -505,6 +507,10 @@ export function LaunchCoordinatorContent({
       throw error;
     }
   }, [creationOpening, router, state, transitionToWorkplaceStrict]);
+  const returnToWorkplacePicker = React.useCallback(() => {
+    preferences.device.setActiveWorkplaceId(undefined);
+    AppNavigation.toDashboard();
+  }, []);
 
   const isPrivacyPolicyAcknowledged = useSyncExternalStore(
     subscribeToPrivacyPolicyAcknowledgement,
@@ -591,7 +597,7 @@ export function LaunchCoordinatorContent({
           isSwitchingWorkplace={isTransitioning}
           workplaceSwitchError={transitionError}
         >
-          <CreationLaunchProvider value={{ openCreatedWorkplace, entry: creationEntry }}>
+          <CreationLaunchProvider value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}>
             {children}
           </CreationLaunchProvider>
         </WorkplaceProvider>
@@ -635,7 +641,7 @@ export function LaunchCoordinatorContent({
     )
   ) {
     return (
-      <CreationLaunchProvider value={{ openCreatedWorkplace, entry: creationEntry }}>
+      <CreationLaunchProvider value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}>
         {gateChildren}
       </CreationLaunchProvider>
     );

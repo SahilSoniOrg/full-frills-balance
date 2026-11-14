@@ -2,7 +2,6 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
 import { generator } from '@/src/data/database/idGenerator';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
-import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   createSetupCoordinator,
@@ -150,7 +149,6 @@ async function finishJourney(draft: RestoreSetupDraft): Promise<RestoreSetupOutc
     activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
   });
   if (!workplaceId) throw new Error('Restore publication is incomplete');
-  if (isBulkRestore) preferences.device.setActiveWorkplaceId(undefined);
   return {
     kind: 'restore_accepted',
     workplaceId,
@@ -168,9 +166,11 @@ export function applySetupOutcome(
   outcome: RestoreSetupOutcome,
   recipe: ReturnType<typeof getSetupRecipe>,
   candidateName?: string,
+  returnToWorkplacePicker: () => void = AppNavigation.toDashboard,
 ): void {
   if (outcome.kind === 'restore_accepted') {
-    if (outcome.next === 'stay') AppNavigation.returnToSettings();
+    if (outcome.next === 'picker') returnToWorkplacePicker();
+    else if (outcome.next === 'stay') AppNavigation.returnToSettings();
     else AppNavigation.toDashboard();
     return;
   }

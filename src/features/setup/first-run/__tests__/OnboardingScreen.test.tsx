@@ -1,15 +1,15 @@
 import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Keyboard } from 'react-native';
-import type { LaunchCoordinatorState } from '@/src/features/app/LaunchCoordinator';
+import type { CreationLaunchEntry } from '@/src/contexts/CreationLaunchContext';
 import type { SetupDraft } from '../../setupTypes';
 import { OnboardingScreen } from '../OnboardingScreen';
 import { createCreationSession } from '../creationSession';
 import { asWorkplaceId } from '@/src/types/ids';
 
 const mockSetupStore: { value: SetupDraft | undefined } = { value: undefined };
-let mockLaunch: LaunchCoordinatorState = { kind: 'setup', journeyId: 'first_run' };
-jest.mock('@/src/features/app/LaunchCoordinator', () => ({
-  useLaunchCoordinator: () => mockLaunch,
+let mockLaunchEntry: CreationLaunchEntry = { intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking' };
+jest.mock('@/src/contexts/CreationLaunchContext', () => ({
+  useCreationLaunch: () => ({ openCreatedWorkplace: jest.fn(async () => {}), entry: mockLaunchEntry }),
 }));
 jest.mock('../../SetupDraftStore', () => ({
   loadSetupDraft: () => mockSetupStore.value,
@@ -17,10 +17,6 @@ jest.mock('../../SetupDraftStore', () => ({
   clearSetupDraft: () => { mockSetupStore.value = undefined; },
   hasUnreadableSetupDraft: () => false,
   discardUnreadableSetupDraft: jest.fn(),
-}));
-
-jest.mock('@/src/features/app/CreationLaunchContext', () => ({
-  useCreationLaunch: () => ({ openCreatedWorkplace: jest.fn(async () => {}) }),
 }));
 
 jest.mock('@/src/components/core', () => {
@@ -90,7 +86,7 @@ jest.mock('../scenes', () => {
 describe('OnboardingScreen durable parent session', () => {
   beforeEach(() => {
     mockSetupStore.value = undefined;
-    mockLaunch = { kind: 'setup', journeyId: 'first_run' };
+    mockLaunchEntry = { intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking' };
     jest.useFakeTimers();
     jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() } as never);
   });
@@ -101,7 +97,7 @@ describe('OnboardingScreen durable parent session', () => {
   });
 
   it('starts registered empty devices at currency with add-workplace intent', () => {
-    mockLaunch = { kind: 'setup', journeyId: 'add_workplace' };
+    mockLaunchEntry = { intent: 'add_workplace', context: 'registered_empty_device', entryPolicy: 'blocking' };
     render(<OnboardingScreen />);
     expect(screen.queryByTestId('name')).toBeNull();
     expect(screen.getByTestId('currency-continue')).toBeTruthy();

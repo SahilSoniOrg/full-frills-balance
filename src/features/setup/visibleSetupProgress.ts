@@ -10,13 +10,16 @@ import type {
 import { getRestoreWorkplacePrefill } from './restoreAutoOutput';
 
 export function resolveWorkplaceStartCheckpoint({
+  identityMode,
   initial,
   initialStep,
 }: {
+  readonly identityMode: SetupRecipe['workplaceIdentity'];
   readonly initial?: WorkplaceSetupPrefill;
   readonly initialStep?: WorkplaceCheckpoint;
 }): WorkplaceCheckpoint {
   if (initialStep) return initialStep;
+  if (identityMode === 'automatic') return 'currency';
   const hasImportedIdentity =
     Boolean(initial?.name?.value.trim()) && initial?.icon?.source === 'imported';
   const hasImportedCurrency = initial?.baseCurrency?.source === 'imported';
@@ -24,13 +27,15 @@ export function resolveWorkplaceStartCheckpoint({
 }
 
 export function workplaceCheckpointsForProgress({
+  identityMode,
   initial,
   currentCheckpoint,
 }: {
+  readonly identityMode: SetupRecipe['workplaceIdentity'];
   readonly initial?: WorkplaceSetupPrefill;
   readonly currentCheckpoint?: WorkplaceCheckpoint;
 }): readonly WorkplaceCheckpoint[] {
-  const start = resolveWorkplaceStartCheckpoint({ initial });
+  const start = resolveWorkplaceStartCheckpoint({ identityMode, initial });
   if (currentCheckpoint === 'identity' || start === 'identity') return ['identity', 'currency'];
   return ['currency'];
 }
@@ -51,6 +56,7 @@ export function visibleSetupProgress({
   const slices = visibleSetupSliceIds(recipe, draft, definitions, currentSlice);
   const checkpoints = slices.includes('workplace')
     ? workplaceCheckpointsForProgress({
+        identityMode: recipe.workplaceIdentity,
         initial: draft.workplace ?? getRestoreWorkplacePrefill(draft),
         currentCheckpoint: currentSlice === 'workplace' ? workplaceCheckpoint : undefined,
       })

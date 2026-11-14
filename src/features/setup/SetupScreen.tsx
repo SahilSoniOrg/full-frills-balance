@@ -14,6 +14,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
+import { useCreationLaunch } from '@/src/contexts/CreationLaunchContext';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
 import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
@@ -67,6 +68,7 @@ function SetupJourneyScreen({
   readonly candidateName: string;
   onSwitchJourney: (journeyId: RestoreJourneyId, name?: string) => void;
 }) {
+  const { returnToWorkplacePicker } = useCreationLaunch();
   const recipe = getSetupRecipe(journeyId);
   const coordinator = useMemo(() => createJourneyCoordinator(journeyId), [journeyId]);
 
@@ -135,7 +137,7 @@ function SetupJourneyScreen({
         setShowRestoreFxRepairCompletion(true);
         return;
       }
-      applySetupOutcome(await coordinator.finish(), recipe);
+      applySetupOutcome(await coordinator.finish(), recipe, undefined, returnToWorkplacePicker);
     }
   };
 
@@ -284,7 +286,7 @@ function SetupJourneyScreen({
   const continueAfterRestoreChanges = async () => {
     setSubmittingSlice('restore_summary');
     try {
-      applySetupOutcome(await coordinator.finish(), recipe);
+      applySetupOutcome(await coordinator.finish(), recipe, undefined, returnToWorkplacePicker);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not finish restore.');
     } finally {

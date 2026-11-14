@@ -33,7 +33,7 @@ describe('Cash Clarity creation session persistence', () => {
     };
 
     const serialized = serializeCashClaritySetupDraft(session);
-    const raw = JSON.parse(serialized) as { draft: { accounts: Array<Record<string, unknown>> } };
+    const raw = JSON.parse(serialized) as { draft: { accounts: Record<string, unknown>[] } };
     expect(raw.draft.accounts[0]).not.toHaveProperty('balance');
 
     const restored = parseCashClaritySetupDraft(JSON.parse(serialized));

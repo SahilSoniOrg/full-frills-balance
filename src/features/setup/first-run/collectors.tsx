@@ -360,7 +360,7 @@ export function MoneyScene({
           return;
         }
         onInclude?.();
-        onContinue(confirmMoney(accounts, currency));
+        onContinue(confirmMoney(accounts, currency, locale));
       }}
       onSkip={
         onDefer
@@ -463,7 +463,7 @@ export function IncomeScene({
           return;
         }
         onInclude?.();
-        onContinue(confirmIncome(items, currency));
+        onContinue(confirmIncome(items, currency, locale));
       }}
       onSkip={
         onDefer
@@ -619,7 +619,7 @@ export function ProtectScene({
           return;
         }
         onInclude?.();
-        onContinue(confirmPayments(items, currency));
+        onContinue(confirmPayments(items, currency, locale));
       }}
       onSkip={
         onDefer
@@ -759,7 +759,7 @@ export function ReserveScene({
           return;
         }
         onInclude?.();
-        onContinue(confirmBuffer(items, currency));
+        onContinue(confirmBuffer(items, currency, locale));
       }}
       onSkip={
         onDefer

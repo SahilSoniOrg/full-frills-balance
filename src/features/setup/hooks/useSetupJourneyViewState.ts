@@ -4,14 +4,12 @@ import type { SetupRecipe } from '../setupRecipes';
 import type { NextSetupAction } from '../resolveNextSetupAction';
 import {
   type RestoreSetupDraft,
-  type RestoreJourneyId,
   type SetupSliceId,
   type WorkplaceCheckpoint,
 } from '../setupTypes';
 import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from '../visibleSetupProgress';
 
 interface SetupJourneyViewStateOptions {
-  journeyId: RestoreJourneyId;
   candidateName: string;
   recipe: SetupRecipe;
   draft: RestoreSetupDraft;
@@ -30,7 +28,6 @@ export function useSetupJourneyViewState({
   const [workplaceStep, setWorkplaceStep] = useState<WorkplaceCheckpoint>(() =>
     resolveWorkplaceStartCheckpoint({
       identityMode: recipe.workplaceIdentity,
-      books: 'imported',
       initial: draft.workplace ?? getRestoreWorkplacePrefill(draft),
     }),
   );

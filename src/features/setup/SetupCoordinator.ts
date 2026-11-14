@@ -169,6 +169,8 @@ function applyOutput(draft: RestoreSetupDraft, acceptance: SliceAcceptance): Res
         acceptedSlices,
         restore: { ...draft.restore, summary: acceptance.output },
       };
+    default:
+      throw new Error(`Unsupported restore slice: ${String(acceptance.sliceId)}`);
   }
 }
 

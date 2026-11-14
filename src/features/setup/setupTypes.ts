@@ -1,14 +1,21 @@
 import { AccountType } from '@/src/types/enums';
 import { type IconName } from '@/src/types/domainIcons';
-import type { AccountId, WorkplaceId } from '@/src/types/ids';
+import type { WorkplaceId } from '@/src/types/ids';
 import type {
   RestoreFacts as ImportedRestoreFacts,
   RestoreHandoff as ImportedRestoreHandoff,
 } from '@/src/services/import/restore';
 import type { ImportStats } from '@/src/services/import/types';
-import type { CashClarityDraft, CashClarityEditableInput, OnboardingStep } from './first-run/draft';
+import type {
+  CashClarityDraft,
+  CashClarityEditableInput,
+  OnboardingStep,
+  StarterAccountInput,
+  StarterCategoryInput,
+} from './first-run/draft';
 import type { OnboardingContext, OnboardingIntent } from './first-run/onboardingAnalytics';
 
+export type { StarterAccountInput, StarterCategoryInput } from './first-run/draft';
 export { isSetupJourneyId, type SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 
 export type RestoreJourneyId =
@@ -28,16 +35,6 @@ export interface Sourced<T> {
   readonly value: T;
   readonly source: SetupFactSource;
 }
-
-export interface StarterAccountInput {
-  /** Optional stable ID for flows that need to reference the freshly-created account. */
-  readonly id?: AccountId;
-  readonly name: string;
-  readonly type: AccountType;
-  readonly icon: IconName;
-}
-
-export type StarterCategoryInput = StarterAccountInput;
 
 export type WorkplaceCheckpoint = 'identity' | 'currency' | 'accounts' | 'categories';
 

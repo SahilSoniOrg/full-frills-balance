@@ -358,6 +358,7 @@ function CardPaymentDetails({
       <CollectedDateField
         date={detail.paymentPlan.date}
         dateLabel={detail.paymentPlan.dateLabel}
+        locale={locale}
         onChange={detail.onDateChange}
       />
     </Inline>
@@ -390,6 +391,7 @@ function IncomeDetails({ item }: { readonly item: IncomeCollectedItem }) {
       <CollectedDateField
         date={item.cadence.date}
         dateLabel={item.cadence.dateLabel}
+        locale={item.locale}
         onChange={item.onDateChange}
       />
       <SelectionPickerSheet
@@ -414,6 +416,7 @@ function PaymentDetails({ item }: { readonly item: PaymentCollectedItem }) {
       <CollectedDateField
         date={item.date}
         dateLabel={item.dateLabel}
+        locale={item.locale}
         onChange={item.onDateChange}
       />
     </Inline>
@@ -423,19 +426,22 @@ function PaymentDetails({ item }: { readonly item: PaymentCollectedItem }) {
 function CollectedDateField({
   date,
   dateLabel,
+  locale,
   onChange,
 }: {
   readonly date: number;
   readonly dateLabel: string;
+  readonly locale?: string;
   readonly onChange: (date: number) => void;
 }) {
   const [visible, setVisible] = useState(false);
+  const dateLocale = locale ?? getLocales()[0]?.languageTag ?? 'en-US';
   return (
     <>
       <FilterChipButton
         style={styles.touchTarget}
         icon={Icon.Calendar}
-        label={`${dateLabel} ${dayjs(date).format('D MMM')}`}
+        label={`${dateLabel} ${new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'short' }).format(dayjs(date).toDate())}`}
         onPress={() => setVisible(true)}
       />
       <DateTimePickerModal

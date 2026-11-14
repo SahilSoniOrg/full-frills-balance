@@ -14,11 +14,6 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { analytics } from '@/src/services/analytics';
-import { preferences } from '@/src/services/preferences';
-import { finishDeviceSetup } from '../setupFinishers';
-import { clearSetupDraft } from '../SetupDraftStore';
-import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
 import { buildCreatePersistenceInput } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
 import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
 import { journalLegTypesForSignedAmount } from '@/src/services/accounts/accountRules';
@@ -610,33 +605,4 @@ export async function recoverCashClarityPublication(
       { cause },
     );
   }
-}
-
-/**
- * Compatibility wrapper for the retired first-run screen. New setup code must call
- * publishCashClarity, then let LaunchCoordinator activate the returned Workplace and
- * the setup coordinator register the Device, emit analytics, and clear the draft last.
- */
-export async function commitCashClarity(draft: CashClarityDraft): Promise<WorkplaceId> {
-  if (typeof draft.displayName !== 'string' || !draft.displayName.trim()) {
-    throw new CashClarityPublicationError('invalid_input', 'Could not save your name.');
-  }
-  const wasDeviceRegistered = preferences.device.deviceRegistered;
-  const outcome = await publishCashClarity(draft);
-  const { workplaceId } = outcome;
-  if (outcome.status === 'published') {
-    analytics.trackFeatureUsage('settings', 'workplace_created', {
-      name_length: draft.workplaceName.trim().length,
-      icon: draft.workplaceIcon,
-    });
-  }
-  if (!wasDeviceRegistered) {
-    finishDeviceSetup({ displayName: { value: draft.displayName.trim(), source: 'user_entered' } });
-    analytics.track('onboarding_complete');
-    analytics.trackConversion('onboarding_completed');
-  }
-  preferences.device.setActiveWorkplaceId(workplaceId);
-  clearPendingCashClarityWorkplaceId();
-  clearSetupDraft();
-  return workplaceId;
 }

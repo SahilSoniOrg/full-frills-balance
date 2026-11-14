@@ -345,7 +345,7 @@ describe('spoken confirmations', () => {
         'INR',
       ),
     ).toBe(
-      'Noted, ₹20,000 for Salary on the 25th and ₹50,000 for Freelance on the 20th hits your accounts.',
+      'Noted, ₹20,000 for Salary on September 25 and ₹50,000 for Freelance on September 20 hits your accounts.',
     );
   });
 
@@ -363,7 +363,7 @@ describe('spoken confirmations', () => {
         ],
         'INR',
       ),
-    ).toBe('₹5,000 for Rent on the 1st — we’ll keep that in mind.');
+    ).toBe('₹5,000 for Rent on October 1 — we’ll keep that in mind.');
   });
 });
 

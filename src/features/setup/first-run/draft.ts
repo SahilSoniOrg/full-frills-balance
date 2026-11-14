@@ -1,11 +1,18 @@
 import { generator } from '@/src/data/database/idGenerator';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType, PlannedPaymentInterval } from '@/src/types/enums';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import dayjs, { type Dayjs } from 'dayjs';
 import { parseAmountInput } from './amountValidation';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
-import type { StarterAccountInput } from '../setupTypes';
+export interface StarterAccountInput {
+  readonly id?: AccountId;
+  readonly name: string;
+  readonly type: AccountType;
+  readonly icon: IconName;
+}
+
+export type StarterCategoryInput = StarterAccountInput;
 
 export type OnboardingStep =
   'welcome' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';

@@ -34,14 +34,14 @@ export type WorkplaceTransition = (
 ) => Promise<void>;
 
 export interface RootNavigationResetter<State> {
-  resetRoot(state: State): void;
+  dispatch(action: { readonly type: 'RESET'; readonly payload: State }): void;
 }
 
 export function restoreRootNavigationState<State>(
   navigation: RootNavigationResetter<State>,
   previousState: State | undefined,
 ): void {
-  if (previousState !== undefined) navigation.resetRoot(previousState);
+  if (previousState !== undefined) navigation.dispatch({ type: 'RESET', payload: previousState });
 }
 
 export function shouldSkipWorkplaceTransition(
@@ -233,7 +233,7 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
         let historyRewritten = false;
         const targetWasActiveAtStart = preferences.device.activeWorkplaceId === targetId;
         const previousRootState = rootNavigation.getRootState();
-        let safeRootState = previousRootState;
+        let safeRootState: typeof previousRootState | undefined = previousRootState;
         logger.info('[WorkplaceTransition] started', {
           transitionId,
           fromWorkplaceId,
@@ -335,7 +335,7 @@ export function useWorkplaceTransitions(state: LaunchCoordinatorState) {
         }
       }
     },
-    [awaitCommittedWorkplace, clearWorkplaceHistory, rootNavigation, router, state],
+    [awaitCommittedWorkplace, clearWorkplaceHistory, rootNavigation, router],
   );
 
   useEffect(() => {
