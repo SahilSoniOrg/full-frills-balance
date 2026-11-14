@@ -3,6 +3,7 @@ import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import dayjs, { type Dayjs } from 'dayjs';
+import { parseAmountInput } from './amountValidation';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
 
 export type OnboardingStep =
@@ -76,6 +77,23 @@ export interface CashClarityDraft {
   readonly budget: BudgetDraft;
 }
 
+/** Collection-level inclusion metadata; item arrays remain owned by CashClarityDraft. */
+export type CashClarityCollection = 'accounts' | 'income' | 'commitment' | 'budget';
+
+/** Raw editor state. This is the editable source; numeric values remain a derived service shape. */
+export interface CashClarityEditableInput {
+  readonly amountTextById: Readonly<Record<string, string>>;
+  readonly deferredCollections?: Partial<Record<CashClarityCollection, boolean>>;
+}
+
+export function amountInputKey(itemId: string): string {
+  return itemId;
+}
+
+export function cardPaymentInputKey(accountId: string): string {
+  return `${accountId}:card-payment`;
+}
+
 export const ACCOUNT_KIND_META: Record<
   AccountKind,
   { readonly name: string; readonly type: AccountType; readonly icon: IconName }
@@ -110,7 +128,8 @@ export function isSpendableAccount(account: DraftAccount): boolean {
 export function isMoneyReady(accounts: readonly DraftAccount[]): boolean {
   if (accounts.length === 0) return false;
   return accounts.every(account => {
-    if (account.kind === 'card' && account.balance <= 0) return false;
+    if (!Number.isFinite(account.balance)) return false;
+    if (account.kind === 'card' && account.balance < 0) return false;
     if (account.kind === 'savings' && account.spendable !== true && account.spendable !== false) {
       return false;
     }
@@ -160,19 +179,22 @@ export function newDraftId(prefix: string): string {
 }
 
 export function parseAmount(raw: string): number | undefined {
-  const cleaned = raw.replace(/[^\d.]/g, '');
-  if (!cleaned) return undefined;
-  const value = Number(cleaned);
-  if (!Number.isFinite(value) || value < 0) return undefined;
-  return value;
+  const result = parseAmountInput(raw, 'en-US', 20);
+  return result.status === 'valid' ? result.value : undefined;
 }
 
 export function uniqueName(base: string, existing: readonly string[]): string {
-  const taken = new Set(existing.map(name => name.toLowerCase()));
-  if (!taken.has(base.toLowerCase())) return base;
+  const maxLength = 60;
+  const safeBase = base.trim().slice(0, maxLength).trimEnd() || 'Item';
+  const taken = new Set(existing.map(name => name.trim().toLocaleLowerCase()));
+  if (!taken.has(safeBase.toLocaleLowerCase())) return safeBase;
   let next = 2;
-  while (taken.has(`${base} ${next}`.toLowerCase())) next += 1;
-  return `${base} ${next}`;
+  while (true) {
+    const suffix = ` ${next}`;
+    const candidate = `${safeBase.slice(0, maxLength - suffix.length).trimEnd()}${suffix}`;
+    if (!taken.has(candidate.toLocaleLowerCase())) return candidate;
+    next += 1;
+  }
 }
 
 export function paymentCategoryName(type: CommitmentKind): string {

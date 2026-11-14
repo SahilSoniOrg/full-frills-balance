@@ -14,10 +14,12 @@ import { Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
+import { getLocales } from 'expo-localization';
 import dayjs from 'dayjs';
-import { useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
-import { parseAmount } from './draft';
+import { useEffect, useState } from 'react';
+import { Platform, StyleSheet, TextInput } from 'react-native';
+import { amountIssueMessage, currencyPrecision, parseAmountInput } from './amountValidation';
+import { MAX_ONBOARDING_ITEM_NAME_LENGTH } from './validation';
 
 export type CadenceId = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
 
@@ -25,10 +27,14 @@ type CollectedItemBase = {
   readonly id: string;
   readonly title: string;
   readonly amount: number;
+  readonly amountText?: string;
+  readonly amountError?: string | null;
   readonly amountLabel: string;
+  readonly locale?: string;
   readonly icon?: IconName;
   readonly onRename: (title: string) => void;
   readonly onAmountChange: (amount: number) => void;
+  readonly onAmountTextChange?: (raw: string) => void;
   readonly onRemove: () => void;
 };
 
@@ -40,11 +46,15 @@ type AccountCollectedItem = CollectedItemBase & {
         readonly kind: 'savings';
         readonly options: readonly { id: string; label: string }[];
         readonly selectedId?: string;
+        readonly issue?: string;
         readonly onSelect: (choiceId: string) => void;
       }
     | {
         readonly kind: 'card';
         readonly paymentPlan: { amount: number; date: number; dateLabel: string };
+        readonly paymentAmountText?: string;
+        readonly paymentAmountError?: string | null;
+        readonly onPaymentAmountTextChange?: (raw: string) => void;
         readonly onAmountChange: (amount: number) => void;
         readonly onDateChange: (date: number) => void;
       };
@@ -77,31 +87,53 @@ export type CollectedItem =
 export function CollectedRow({
   item,
   currency,
+  locale: providedLocale,
 }: {
   readonly item: CollectedItem;
   readonly currency: string;
+  readonly locale?: string;
 }) {
+  const locale = providedLocale ?? item.locale ?? getLocales()[0]?.languageTag ?? 'en-US';
   const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
-  const [amountText, setAmountText] = useState(item.amount === 0 ? '' : String(item.amount));
+  const [amountText, setAmountText] = useState(
+    item.amountText ?? (item.amount === 0 ? '' : String(item.amount)),
+  );
   const [editingName, setEditingName] = useState(false);
+  const [amountTouched, setAmountTouched] = useState(false);
+  useEffect(() => {
+    if (item.amountText !== undefined) setAmountText(item.amountText);
+  }, [item.amountText]);
+  useEffect(() => {
+    if (!editingName) setName(item.title);
+  }, [editingName, item.title]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const shownName = editingName ? name : item.title;
+  const parsedAmount = parseAmountInput(amountText, locale, currencyPrecision(currency));
+  const positiveOnly = item.kind !== 'account';
+  const signedAllowed = item.kind === 'account' && item.detail.kind !== 'card';
+  const amountIssue =
+    item.amountError !== undefined
+      ? item.amountError ?? undefined
+      : amountTouched
+        ? amountIssueMessage(parsedAmount, positiveOnly, signedAllowed)
+        : undefined;
+  const removeLabel = `${copy.removeItem} ${item.title}`;
 
   return (
-    <SwipeToRemove label={copy.removeItem} onRemove={item.onRemove}>
+    <SwipeToRemove label={removeLabel} onRemove={item.onRemove}>
       <AppCard
         variant="outline"
         background="surface"
         paddingSize="none"
-        accessibilityActions={[{ name: 'delete', label: copy.removeItem }]}
+        accessibilityActions={[{ name: 'delete', label: removeLabel }]}
         onAccessibilityAction={event => {
           if (event.nativeEvent.actionName === 'delete') item.onRemove();
         }}
       >
         <Box paddingHorizontal="xl" paddingVertical="sm">
           <Stack gap="xs">
-            <Inline align="center" gap="sm">
+            <Inline align="center" gap="sm" wrap>
               <Stack flex={1} gap="xs">
                 <Inline align="center" gap="sm">
                   {item.icon ? (
@@ -110,11 +142,17 @@ export function CollectedRow({
                   <TextInput
                     value={shownName}
                     onChangeText={setName}
+                    maxLength={MAX_ONBOARDING_ITEM_NAME_LENGTH}
+                    returnKeyType="done"
                     onFocus={() => {
                       setName(item.title);
                       setEditingName(true);
                     }}
                     onBlur={() => {
+                      setEditingName(false);
+                      item.onRename(name);
+                    }}
+                    onSubmitEditing={() => {
                       setEditingName(false);
                       item.onRename(name);
                     }}
@@ -132,36 +170,74 @@ export function CollectedRow({
                 </AppText>
               </Stack>
               <Box style={styles.amountHit}>
-                <Inline align="center" gap="xs">
-                  <AppText variant="body" color="secondary">
-                    {symbol}
-                  </AppText>
-                  <TextInput
-                    value={amountText}
-                    onChangeText={text => {
-                      setAmountText(text);
-                      item.onAmountChange(parseAmount(text) ?? 0);
-                    }}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={tokens.input.placeholder}
-                    accessibilityLabel={`${item.title}, ${item.amountLabel}`}
-                    testID={`onboarding-amount-${item.id}`}
-                    style={[
-                      styles.rowInput,
-                      styles.amountInput,
-                      {
-                        color: theme.text,
-                        fontFamily: (fonts.numeric ?? fonts).semibold,
-                        fontVariant: ['tabular-nums', 'lining-nums'],
-                      },
-                    ]}
-                  />
-                </Inline>
+                <Stack gap="xs" align="flex-end">
+                  <Inline align="center" gap="xs">
+                    <AppText variant="body" color="secondary">
+                      {symbol}
+                    </AppText>
+                    <TextInput
+                      value={amountText}
+                      onChangeText={text => {
+                        setAmountText(text);
+                        setAmountTouched(true);
+                        item.onAmountTextChange?.(text);
+                        const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
+                        if (
+                          parsed.status === 'valid' &&
+                          !amountIssueMessage(parsed, positiveOnly, signedAllowed)
+                        ) {
+                          item.onAmountChange(parsed.value);
+                        }
+                      }}
+                      keyboardType={
+                        signedAllowed
+                          ? Platform.OS === 'ios'
+                            ? 'numbers-and-punctuation'
+                            : 'default'
+                          : 'decimal-pad'
+                      }
+                      placeholder=""
+                      placeholderTextColor={tokens.input.placeholder}
+                      accessibilityLabel={`${item.title}, ${item.amountLabel}`}
+                      accessibilityHint={amountIssue}
+                      testID={`onboarding-amount-${item.id}`}
+                      style={[
+                        styles.rowInput,
+                        styles.amountInput,
+                        {
+                          color: theme.text,
+                          fontFamily: (fonts.numeric ?? fonts).semibold,
+                          fontVariant: ['tabular-nums', 'lining-nums'],
+                        },
+                      ]}
+                    />
+                  </Inline>
+                  {amountIssue ? (
+                    <AppText variant="caption" color="error" align="right">
+                      {amountIssue}
+                    </AppText>
+                  ) : null}
+                </Stack>
               </Box>
+              <PressScaleTouchable
+                haptic="selection"
+                onPress={item.onRemove}
+                accessibilityRole="button"
+                accessibilityLabel={removeLabel}
+                accessibilityHint="Removes this entry."
+                testID={`onboarding-remove-${item.id}`}
+                style={styles.removeButton}
+              >
+                <AppIcon name={Icon.Delete} size={Size.iconSm} color="error" />
+              </PressScaleTouchable>
             </Inline>
             {item.kind === 'account' ? (
-              <AccountDetails detail={item.detail} currency={currency} itemId={item.id} />
+              <AccountDetails
+                detail={item.detail}
+                currency={currency}
+                itemId={item.id}
+                locale={locale}
+              />
             ) : null}
             {item.kind === 'income' ? <IncomeDetails item={item} /> : null}
             {item.kind === 'payment' ? <PaymentDetails item={item} /> : null}
@@ -176,76 +252,120 @@ function AccountDetails({
   detail,
   currency,
   itemId,
+  locale,
 }: {
   readonly detail: AccountCollectedItem['detail'];
   readonly currency: string;
   readonly itemId: string;
+  readonly locale: string;
 }) {
   if (detail.kind === 'plain') return null;
   if (detail.kind === 'savings') {
     return (
-      <Inline gap="sm" wrap>
-        {detail.options.map(option => (
-          <FilterChipButton
-            key={option.id}
-            label={option.label}
-            isActive={detail.selectedId === option.id}
-            onPress={() => detail.onSelect(option.id)}
-          />
-        ))}
-      </Inline>
+      <Stack gap="xs">
+        <Inline gap="sm" wrap>
+          {detail.options.map(option => (
+            <FilterChipButton
+              key={option.id}
+              label={option.label}
+              isActive={detail.selectedId === option.id}
+              onPress={() => detail.onSelect(option.id)}
+            />
+          ))}
+        </Inline>
+        {detail.issue ? (
+          <AppText variant="caption" color="error">
+            {detail.issue}
+          </AppText>
+        ) : null}
+      </Stack>
     );
   }
-  return <CardPaymentDetails detail={detail} currency={currency} itemId={itemId} />;
+  return (
+    <CardPaymentDetails
+      detail={detail}
+      currency={currency}
+      itemId={itemId}
+      locale={locale}
+    />
+  );
 }
 
 function CardPaymentDetails({
   detail,
   currency,
   itemId,
+  locale,
 }: {
   readonly detail: Extract<AccountCollectedItem['detail'], { kind: 'card' }>;
   readonly currency: string;
   readonly itemId: string;
+  readonly locale: string;
 }) {
   const { theme, tokens, fonts } = useTheme();
   const [amountText, setAmountText] = useState(
-    detail.paymentPlan.amount > 0 ? String(detail.paymentPlan.amount) : '',
+    detail.paymentAmountText ?? (detail.paymentPlan.amount > 0 ? String(detail.paymentPlan.amount) : ''),
   );
+  const [amountTouched, setAmountTouched] = useState(false);
+  useEffect(() => {
+    if (detail.paymentAmountText !== undefined) setAmountText(detail.paymentAmountText);
+  }, [detail.paymentAmountText]);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
+  const parsedPayment = parseAmountInput(amountText, locale, currencyPrecision(currency));
+  const paymentIssue =
+    detail.paymentAmountError !== undefined
+      ? detail.paymentAmountError ?? undefined
+      : amountTouched && parsedPayment.status !== 'empty'
+        ? amountIssueMessage(parsedPayment, false, false)
+        : undefined;
 
   return (
-    <Inline align="center" justify="space-between" gap="sm">
-      <Inline align="center" gap="xs">
-        <AppText variant="caption" color="secondary">
-          {copy.cardPay}
-        </AppText>
-        <AppText variant="caption" color="secondary">
-          {symbol}
-        </AppText>
-        <TextInput
-          value={amountText}
-          onChangeText={text => {
-            setAmountText(text);
-            detail.onAmountChange(parseAmount(text) ?? 0);
-          }}
-          keyboardType="decimal-pad"
-          placeholder="0"
-          placeholderTextColor={tokens.input.placeholder}
-          accessibilityLabel={copy.cardPaymentAmount}
-          testID={`onboarding-card-pay-${itemId}`}
-          style={[
-            styles.rowInput,
-            styles.amountInput,
-            styles.payInput,
-            {
-              color: theme.text,
-              fontFamily: (fonts.numeric ?? fonts).semibold,
-              fontVariant: ['tabular-nums', 'lining-nums'],
-            },
-          ]}
-        />
-      </Inline>
+    <Inline align="center" justify="space-between" gap="sm" wrap>
+      <Stack gap="xs">
+        <Inline align="center" gap="xs">
+          <AppText variant="caption" color="secondary">
+            {copy.cardPay}
+          </AppText>
+          <AppText variant="caption" color="secondary">
+            {symbol}
+          </AppText>
+          <TextInput
+            value={amountText}
+            onChangeText={text => {
+              setAmountText(text);
+              setAmountTouched(true);
+              detail.onPaymentAmountTextChange?.(text);
+              const parsed = parseAmountInput(text, locale, currencyPrecision(currency));
+              if (parsed.status === 'valid' && !amountIssueMessage(parsed, false, false)) {
+                detail.onAmountChange(parsed.value);
+              } else if (parsed.status === 'empty') {
+                detail.onAmountChange(0);
+              }
+            }}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={tokens.input.placeholder}
+            accessibilityLabel={copy.cardPaymentAmount}
+            accessibilityHint={paymentIssue}
+            testID={`onboarding-card-pay-${itemId}`}
+            style={[
+              styles.rowInput,
+              styles.amountInput,
+              styles.payInput,
+              {
+                color: theme.text,
+                fontFamily: (fonts.numeric ?? fonts).semibold,
+                fontVariant: ['tabular-nums', 'lining-nums'],
+              },
+            ]}
+          />
+        </Inline>
+        {paymentIssue ? (
+          <AppText variant="caption" color="error">
+            {paymentIssue}
+          </AppText>
+        ) : null}
+      </Stack>
       <CollectedDateField
         date={detail.paymentPlan.date}
         dateLabel={detail.paymentPlan.dateLabel}
@@ -361,7 +481,8 @@ const styles = StyleSheet.create({
   amountInput: {
     width: Size.fieldAmount,
     minWidth: 48,
-    flexShrink: 0,
+    maxWidth: 160,
+    flexShrink: 1,
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
@@ -377,5 +498,12 @@ const styles = StyleSheet.create({
   cadenceTrigger: {
     paddingVertical: 4,
     paddingHorizontal: Spacing.sm,
+  },
+  removeButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
 });

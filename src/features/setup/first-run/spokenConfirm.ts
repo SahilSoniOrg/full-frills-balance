@@ -4,6 +4,7 @@ import { getCurrencyLocale } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import {
   incomeItemName,
+  isSpendableAccount,
   paymentItemName,
   type BudgetItem,
   type DraftAccount,
@@ -48,7 +49,7 @@ function spokenDay(dateMs: number): string {
 
 function moneyPlaces(accounts: readonly DraftAccount[]): string {
   const kinds = new Set(
-    accounts.filter(account => account.kind !== 'card').map(account => account.kind),
+    accounts.filter(isSpendableAccount).map(account => account.kind),
   );
   const places: string[] = [];
   if (kinds.has('bank')) places.push('banks');
@@ -58,7 +59,7 @@ function moneyPlaces(accounts: readonly DraftAccount[]): string {
 }
 
 export function confirmMoney(accounts: readonly DraftAccount[], currency: string): string {
-  const held = accounts.filter(account => account.kind !== 'card');
+  const held = accounts.filter(isSpendableAccount);
   if (held.length === 0) return copy.clarityNoCashYet;
   const total = held.reduce((sum, account) => sum + account.balance, 0);
   const places = moneyPlaces(held);
