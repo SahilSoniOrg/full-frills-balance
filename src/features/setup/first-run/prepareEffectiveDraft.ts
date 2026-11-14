@@ -1,6 +1,11 @@
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { getLocales } from 'expo-localization';
-import { amountIssueMessage, currencyPrecision, formatAmountInput, parseAmountInput } from './amountValidation';
+import {
+  amountIssueMessage,
+  currencyPrecision,
+  formatAmountInput,
+  parseAmountInput,
+} from './amountValidation';
 import {
   amountInputKey,
   cardPaymentInputKey,
@@ -15,7 +20,8 @@ import {
 } from './draft';
 
 export type DraftAmountField = 'balance' | 'amount' | 'cardPaymentAmount' | 'dependency';
-export type DraftAmountIssueReason = 'empty' | 'malformed' | 'precision' | 'non-finite' | 'range' | 'dependency';
+export type DraftAmountIssueReason =
+  'empty' | 'malformed' | 'precision' | 'non-finite' | 'range' | 'dependency';
 
 export interface DraftAmountIssue {
   readonly collection: CashClarityCollection;
@@ -40,14 +46,16 @@ export interface PreparedCashClarityInput {
   readonly isIncomplete: boolean;
 }
 
-function deferred(
-  input: CashClarityEditableInput,
-  collection: CashClarityCollection,
-): boolean {
+function deferred(input: CashClarityEditableInput, collection: CashClarityCollection): boolean {
   return input.deferredCollections?.[collection] === true;
 }
 
-function rawText(input: CashClarityEditableInput, key: string, fallback: number, locale: string): string {
+function rawText(
+  input: CashClarityEditableInput,
+  key: string,
+  fallback: number,
+  locale: string,
+): string {
   const value = input.amountTextById[key];
   return typeof value === 'string' ? value : formatAmountInput(fallback, locale);
 }
@@ -67,8 +75,8 @@ export function prepareCashClarityInput(
 ): PreparedCashClarityInput {
   const precision = currencyPrecision(draft.currency);
   const issues: DraftAmountIssue[] = [];
-  const deferredCollections = (['accounts', 'income', 'commitment', 'budget'] as const).filter(key =>
-    deferred(editableInput, key),
+  const deferredCollections = (['accounts', 'income', 'commitment', 'budget'] as const).filter(
+    key => deferred(editableInput, key),
   );
 
   const accountDrafts = deferred(editableInput, 'accounts')
@@ -115,10 +123,16 @@ export function prepareCashClarityInput(
   if (!deferred(editableInput, 'accounts')) {
     effectiveAccounts = accountDrafts.map(account => {
       if (account.kind !== 'card') return account;
+      if (editableInput.deferredCardPayments) {
+        return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
+      }
       const rawCardValue = editableInput.amountTextById[cardPaymentInputKey(account.id)];
-      const rawCardPayment = typeof rawCardValue === 'string'
-        ? rawCardValue
-        : account.cardPaymentAmount ? formatAmountInput(account.cardPaymentAmount, locale) : '';
+      const rawCardPayment =
+        typeof rawCardValue === 'string'
+          ? rawCardValue
+          : account.cardPaymentAmount
+            ? formatAmountInput(account.cardPaymentAmount, locale)
+            : '';
       if (rawCardPayment.trim() === '') {
         return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
       }
@@ -153,7 +167,14 @@ export function prepareCashClarityInput(
     : draft.income.kind === 'recurring'
       ? {
           kind: 'recurring' as const,
-          items: preparePositiveItems(draft.income.items, editableInput, 'income', locale, precision, issues),
+          items: preparePositiveItems(
+            draft.income.items,
+            editableInput,
+            'income',
+            locale,
+            precision,
+            issues,
+          ),
         }
       : draft.income;
   const effectiveCommitment = deferred(editableInput, 'commitment')
@@ -176,7 +197,14 @@ export function prepareCashClarityInput(
     : draft.budget.kind === 'set'
       ? {
           kind: 'set' as const,
-          items: preparePositiveItems(draft.budget.items, editableInput, 'budget', locale, precision, issues),
+          items: preparePositiveItems(
+            draft.budget.items,
+            editableInput,
+            'budget',
+            locale,
+            precision,
+            issues,
+          ),
         }
       : draft.budget;
 
@@ -189,9 +217,15 @@ export function prepareCashClarityInput(
   if (!hasSpendable && hasDependentItems) {
     for (const collection of ['income', 'commitment', 'budget'] as const) {
       const collectionHasItems =
-        (collection === 'income' && effectiveIncome.kind === 'recurring' && effectiveIncome.items.length > 0) ||
-        (collection === 'commitment' && effectiveCommitment.kind === 'payment' && effectiveCommitment.items.length > 0) ||
-        (collection === 'budget' && effectiveBudget.kind === 'set' && effectiveBudget.items.length > 0);
+        (collection === 'income' &&
+          effectiveIncome.kind === 'recurring' &&
+          effectiveIncome.items.length > 0) ||
+        (collection === 'commitment' &&
+          effectiveCommitment.kind === 'payment' &&
+          effectiveCommitment.items.length > 0) ||
+        (collection === 'budget' &&
+          effectiveBudget.kind === 'set' &&
+          effectiveBudget.items.length > 0);
       if (collectionHasItems && !deferred(editableInput, collection)) {
         issues.push({
           collection,
@@ -206,7 +240,7 @@ export function prepareCashClarityInput(
         issues.push({
           collection: 'accounts',
           itemId: account.id,
-          field: 'dependency',
+          field: 'cardPaymentAmount',
           reason: 'dependency',
           message: copy.cardAccountRequired,
         });
@@ -214,42 +248,23 @@ export function prepareCashClarityInput(
     }
   }
 
-  // No dependent plan may silently disappear into a projection when its spendable source is absent.
-  const includeDependents = hasSpendable;
-  if (!includeDependents) {
-    effectiveAccounts = effectiveAccounts.map(account =>
-      account.kind === 'card'
-        ? { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined }
-        : account,
-    );
-  }
-
+  // Keep unresolved dependents in the draft. They leave the estimate only after
+  // the user defers those collections. The dependency issues block finishing.
   const effectiveDraft: CashClarityDraft = {
     ...draft,
     accounts: effectiveAccounts,
-    income: deferred(editableInput, 'income')
-      ? { kind: 'skipped' }
-      : includeDependents
-        ? effectiveIncome
-        : { kind: 'skipped' },
-    commitment: deferred(editableInput, 'commitment')
-      ? { kind: 'skipped' }
-      : includeDependents
-        ? effectiveCommitment
-        : { kind: 'skipped' },
-    budget: deferred(editableInput, 'budget')
-      ? { kind: 'skipped' }
-      : includeDependents
-        ? effectiveBudget
-        : { kind: 'skipped' },
+    income: deferred(editableInput, 'income') ? { kind: 'skipped' } : effectiveIncome,
+    commitment: deferred(editableInput, 'commitment') ? { kind: 'skipped' } : effectiveCommitment,
+    budget: deferred(editableInput, 'budget') ? { kind: 'skipped' } : effectiveBudget,
   };
   const finalDraft = deferred(editableInput, 'accounts')
     ? { ...effectiveDraft, accounts: [] }
     : effectiveDraft;
   const isValid = issues.length === 0;
-  const isIncomplete = issues.length > 0 || deferredCollections.length > 0;
+  const cardPaymentsDeferred = editableInput.deferredCardPayments === true;
+  const isIncomplete = issues.length > 0 || deferredCollections.length > 0 || cardPaymentsDeferred;
   const hasUsableEstimate = finalDraft.accounts.some(isSpendableAccount);
-  const isCompleteEstimate = hasUsableEstimate && isValid && deferredCollections.length === 0;
+  const isCompleteEstimate = hasUsableEstimate && !isIncomplete;
 
   return {
     effectiveDraft: finalDraft,
@@ -258,8 +273,42 @@ export function prepareCashClarityInput(
     isValid,
     hasUsableEstimate,
     isCompleteEstimate,
-    estimateStatus: !hasUsableEstimate ? 'unavailable' : isCompleteEstimate ? 'ready' : 'incomplete',
+    estimateStatus: !hasUsableEstimate
+      ? 'unavailable'
+      : isCompleteEstimate
+        ? 'ready'
+        : 'incomplete',
     isIncomplete,
+  };
+}
+
+/** Dependency issues that stay until the user adds a spendable account or defers the group. */
+export function spendableDependencyIssues(
+  issues: readonly DraftAmountIssue[],
+): readonly DraftAmountIssue[] {
+  return issues.filter(issue => {
+    if (issue.reason !== 'dependency') return false;
+    if (
+      issue.collection === 'income' ||
+      issue.collection === 'commitment' ||
+      issue.collection === 'budget'
+    ) {
+      return true;
+    }
+    return issue.collection === 'accounts' && issue.field === 'cardPaymentAmount';
+  });
+}
+
+export function spendableDeferral(issues: readonly DraftAmountIssue[]): {
+  readonly collections: readonly ('income' | 'commitment' | 'budget')[];
+  readonly cardPayments: boolean;
+} {
+  const dependency = spendableDependencyIssues(issues);
+  return {
+    collections: (['income', 'commitment', 'budget'] as const).filter(collection =>
+      dependency.some(issue => issue.collection === collection),
+    ),
+    cardPayments: dependency.some(issue => issue.collection === 'accounts'),
   };
 }
 
@@ -298,4 +347,3 @@ function preparePositiveItems<T extends RecurringIncome | PaymentItem | BudgetIt
     return parsed.status === 'valid' ? [{ ...item, amount: parsed.value }] : [];
   });
 }
-

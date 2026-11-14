@@ -177,6 +177,7 @@ export function MoneyScene({
   onSkip,
   onBack,
   onNeedAccount,
+  onIncludeCardPayments,
   editableInput,
   onAmountTextChange,
   onDefer,
@@ -195,6 +196,7 @@ export function MoneyScene({
   readonly onSkip: () => void;
   readonly onBack: () => void;
   readonly onNeedAccount: () => void;
+  readonly onIncludeCardPayments?: () => void;
 } & CollectorSessionHooks) {
   const amountEditor = useAmountEditor(editableInput, onAmountTextChange, locale);
   const [validationAttempted, setValidationAttempted] = useState(false);
@@ -240,6 +242,7 @@ export function MoneyScene({
     );
   const hasEligibleSpendable = spendableAccounts.length > 0;
   const deferred = editableInput?.deferredCollections?.accounts === true;
+  const cardPaymentsDeferred = editableInput?.deferredCardPayments === true;
   const savingsChoice = [
     { id: 'spendable', label: copy.savingsSpendable, icon: Icon.Wallet },
     { id: 'protected', label: copy.savingsProtected, icon: Icon.ShieldCheck },
@@ -370,22 +373,34 @@ export function MoneyScene({
   return (
     <CollectStep
       title={copy.moneyQuestion}
-      subtitle={deferred ? `${copy.notIncludedYet}. ${copy.moneyHint}` : copy.moneyHint}
+      subtitle={
+        deferred
+          ? `${copy.notIncludedYet}. ${copy.moneyHint}`
+          : cardPaymentsDeferred
+            ? `${copy.cardPaymentsLabel}. ${copy.notIncludedYet}`
+            : copy.moneyHint
+      }
       continueLabel={continueLabel ?? copy.continueToNext}
       continueDisabled={accounts.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
-        if (!isMoneyReady(accounts) || !accountAmountsValid || !cardPaymentAmountsValid) {
+        const includeCardPayments = !cardPaymentsDeferred || hasEligibleSpendable;
+        if (
+          !isMoneyReady(accounts) ||
+          !accountAmountsValid ||
+          (includeCardPayments && !cardPaymentAmountsValid)
+        ) {
           onValidationBlocked?.(
             isMoneyReady(accounts) ? 'amount_invalid' : 'dependency_unresolved',
           );
           return;
         }
-        if (hasIncludedCardPayment && !hasEligibleSpendable) {
+        if (hasIncludedCardPayment && !hasEligibleSpendable && !cardPaymentsDeferred) {
           onValidationBlocked?.('missing_spendable_account');
           onNeedAccount();
           return;
         }
+        if (cardPaymentsDeferred && hasEligibleSpendable) onIncludeCardPayments?.();
         onInclude?.();
         onContinue(confirmMoney(accounts, currency, locale));
       }}
@@ -484,6 +499,10 @@ export function IncomeScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
+        if (deferred && !hasSpendable) {
+          onContinue(copy.confirmIncomeSkipped);
+          return;
+        }
         if (!amountsValid) {
           onValidationBlocked?.('amount_invalid');
           return;
@@ -644,6 +663,10 @@ export function ProtectScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
+        if (deferred && !hasSpendable) {
+          onContinue(copy.noPaymentIncluded);
+          return;
+        }
         if (!amountsValid) {
           onValidationBlocked?.('amount_invalid');
           return;
@@ -788,6 +811,10 @@ export function ReserveScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
+        if (deferred && !hasSpendable) {
+          onContinue(copy.noBufferIncluded);
+          return;
+        }
         if (!amountsValid) {
           onValidationBlocked?.('amount_invalid');
           return;

@@ -44,7 +44,11 @@ import { createCreationSession } from './creationSession';
 import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
 import { hasSpendableAccount, type CashClarityCollection, type OnboardingStep } from './draft';
 import { defaultOnboardingCurrency, defaultWorkplaceName } from './localeDefaults';
-import { prepareCashClarityInput } from './prepareEffectiveDraft';
+import {
+  prepareCashClarityInput,
+  spendableDeferral,
+  spendableDependencyIssues,
+} from './prepareEffectiveDraft';
 import { projectCashClarityDraft } from './projectCashClarityDraft';
 import { ResumeSetupSummary } from './ResumeSetupSummary';
 import { explainDraftTransition } from './draftTransitionModel';
@@ -579,25 +583,46 @@ export function OnboardingScreen() {
     setRepairMessage(copy.accountRepairMessage);
   };
 
-  const deferRepairGroup = () => {
+  const openSpendableAccountStep = () => {
     const current = sessionRef.current;
-    if (!current?.repairReturnStep) return;
-    const collection = collectionForStep(current.repairReturnStep);
-    if (!collection) return;
-    const returnStep = current.repairReturnStep;
+    if (!current || current.step === 'now') return;
+    persistSession(value => ({
+      ...value,
+      repairReturnStep: current.step,
+      step: 'now',
+      history: [...value.history, value.step],
+    }));
+    setRepairMessage(copy.accountRepairMessage);
+  };
+
+  const setCardPaymentsDeferred = (value: boolean) => {
+    persistSession(current => ({
+      ...current,
+      editableInput: {
+        ...current.editableInput,
+        ...(value ? { deferredCardPayments: true } : { deferredCardPayments: undefined }),
+      },
+    }));
+    setRepairMessage(null);
+  };
+
+  const deferAffectedGroups = () => {
+    const current = sessionRef.current;
+    if (!current) return;
+    const deferral = spendableDeferral(
+      prepareCashClarityInput(current.draft, current.editableInput, locale).issues,
+    );
+    if (deferral.collections.length === 0 && !deferral.cardPayments) return;
     persistSession(value => {
-      const deferredCollections = {
-        ...value.editableInput.deferredCollections,
-        [collection]: true,
-      };
+      const deferredCollections = { ...value.editableInput.deferredCollections };
+      for (const collection of deferral.collections) deferredCollections[collection] = true;
       return {
         ...value,
-        editableInput: { ...value.editableInput, deferredCollections },
-        step: returnStep,
-        history:
-          value.history[value.history.length - 1] === returnStep
-            ? value.history.slice(0, -1)
-            : value.history,
+        editableInput: {
+          ...value.editableInput,
+          deferredCollections,
+          ...(deferral.cardPayments ? { deferredCardPayments: true } : {}),
+        },
         repairReturnStep: undefined,
       };
     });
@@ -956,6 +981,42 @@ export function OnboardingScreen() {
   const showSafeToSpend =
     step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
   const collection = collectionForStep(step);
+  const spendableIssues = spendableDependencyIssues(prepared.issues);
+  const spendableLabels = [
+    spendableIssues.some(issue => issue.collection === 'income')
+      ? copy.resumeIncomeLabel
+      : undefined,
+    spendableIssues.some(issue => issue.collection === 'commitment')
+      ? copy.resumePaymentsLabel
+      : undefined,
+    spendableIssues.some(issue => issue.collection === 'budget')
+      ? copy.resumeLimitsLabel
+      : undefined,
+    spendableIssues.some(issue => issue.collection === 'accounts')
+      ? copy.cardPaymentsLabel
+      : undefined,
+  ].filter(label => label !== undefined);
+  const spendableMessage =
+    spendableLabels.length > 0 ? copy.affectedSpendableGroups(spendableLabels.join(', ')) : null;
+  const spendableWork = spendableDeferral(spendableIssues);
+  const showAddSpendableAccount = step !== 'now' && spendableIssues.length > 0;
+  const showLeaveSpendableGroups =
+    spendableWork.collections.length > 0 || spendableWork.cardPayments;
+  const spendableRecovery =
+    showAddSpendableAccount || showLeaveSpendableGroups ? (
+      <Stack gap="xs">
+        {showAddSpendableAccount ? (
+          <AppButton variant="secondary" size="md" onPress={openSpendableAccountStep}>
+            {copy.addSpendableAccount}
+          </AppButton>
+        ) : null}
+        {showLeaveSpendableGroups ? (
+          <AppButton variant="ghost" size="md" onPress={deferAffectedGroups}>
+            {copy.leaveForLater}
+          </AppButton>
+        ) : null}
+      </Stack>
+    ) : undefined;
   const collectorHooks: CollectorSessionHooks = {
     editableInput: session.editableInput,
     locale,
@@ -972,85 +1033,71 @@ export function OnboardingScreen() {
         : undefined,
     validationMessage:
       step === 'now' || step === 'next' || step === 'protect' || step === 'reserve'
-        ? (repairMessage ??
-          (session.repairReturnStep
-            ? prepared.issues.find(
-                issue => issue.collection === collection && issue.reason === 'dependency',
-              )?.message
-            : null))
+        ? (repairMessage ?? spendableMessage)
         : null,
-    recovery:
-      session.repairReturnStep && !prepared.hasUsableEstimate ? (
-        <Stack gap="xs">
-          <AppText variant="caption" color="secondary">
-            {copy.accountRepairMessage}
-          </AppText>
-          {step !== 'now' ? (
-            <AppButton
-              variant="secondary"
-              size="md"
-              onPress={() =>
-                persistSession(value => ({
-                  ...value,
-                  step: 'now',
-                  history: [...value.history, value.step],
-                }))
-              }
-            >
-              {copy.addSpendableAccount}
-            </AppButton>
-          ) : null}
-          <AppButton variant="ghost" size="md" onPress={deferRepairGroup}>
-            {copy.leaveForLater}
-          </AppButton>
-        </Stack>
-      ) : undefined,
+    recovery: spendableRecovery,
     onValidationBlocked: reason => {
       const currentStep = sessionRef.current?.step;
       if (currentStep) trackValidationBlocked(currentStep, reason);
     },
   };
 
-  const deferredOmissions = prepared.deferredCollections.map(collection => {
-    const detail =
-      collection === 'accounts'
-        ? session.draft.accounts
-            .map(item => item.name)
-            .filter(Boolean)
-            .join(', ')
-        : collection === 'income'
-          ? session.draft.income.kind === 'recurring'
-            ? session.draft.income.items
-                .map(item => item.name)
-                .filter(Boolean)
-                .join(', ')
-            : ''
-          : collection === 'commitment'
-            ? session.draft.commitment.kind === 'payment'
-              ? session.draft.commitment.items
+  const cardPaymentDetail = session.draft.accounts
+    .filter(account => account.kind === 'card' && (account.cardPaymentAmount ?? 0) > 0)
+    .map(account => account.name)
+    .filter(Boolean)
+    .join(', ');
+  const deferredOmissions = [
+    ...prepared.deferredCollections.map(collection => {
+      const detail =
+        collection === 'accounts'
+          ? session.draft.accounts
+              .map(item => item.name)
+              .filter(Boolean)
+              .join(', ')
+          : collection === 'income'
+            ? session.draft.income.kind === 'recurring'
+              ? session.draft.income.items
                   .map(item => item.name)
                   .filter(Boolean)
                   .join(', ')
               : ''
-            : session.draft.budget.kind === 'set'
-              ? session.draft.budget.items
-                  .map(item => item.name)
-                  .filter(Boolean)
-                  .join(', ')
-              : '';
-    return {
-      id: collection,
-      label:
-        collection === 'accounts'
-          ? copy.moneyQuestion
-          : collection === 'income'
-            ? copy.incomeSource
             : collection === 'commitment'
-              ? copy.protectQuestion
-              : copy.reserveQuestion,
-      ...(detail ? { detail } : {}),
-    };
-  });
+              ? session.draft.commitment.kind === 'payment'
+                ? session.draft.commitment.items
+                    .map(item => item.name)
+                    .filter(Boolean)
+                    .join(', ')
+                : ''
+              : session.draft.budget.kind === 'set'
+                ? session.draft.budget.items
+                    .map(item => item.name)
+                    .filter(Boolean)
+                    .join(', ')
+                : '';
+      return {
+        id: collection,
+        label:
+          collection === 'accounts'
+            ? copy.moneyQuestion
+            : collection === 'income'
+              ? copy.incomeSource
+              : collection === 'commitment'
+                ? copy.protectQuestion
+                : copy.reserveQuestion,
+        ...(detail ? { detail } : {}),
+      };
+    }),
+    ...(session.editableInput.deferredCardPayments
+      ? [
+          {
+            id: 'card-payments',
+            label: copy.cardPaymentsLabel,
+            ...(cardPaymentDetail ? { detail: cardPaymentDetail } : {}),
+          },
+        ]
+      : []),
+  ];
   const editActions = [
     {
       id: 'accounts',
@@ -1122,6 +1169,7 @@ export function OnboardingScreen() {
         onSkip={() => undefined}
         onBack={back}
         onNeedAccount={needAccount}
+        onIncludeCardPayments={() => setCardPaymentsDeferred(false)}
         {...collectorHooks}
       />
     ) : step === 'next' ? (
@@ -1187,6 +1235,8 @@ export function OnboardingScreen() {
         }
         omissions={deferredOmissions}
         editActions={editActions}
+        recovery={spendableRecovery}
+        dependencyMessage={finishError ? null : spendableMessage}
         onEnter={() => void finish()}
         onBack={back}
       />

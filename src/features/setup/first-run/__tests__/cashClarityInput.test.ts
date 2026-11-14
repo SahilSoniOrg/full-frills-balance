@@ -1,6 +1,6 @@
 import { isMoneyReady } from '../draft';
 import { parseAmountInput } from '../amountValidation';
-import { prepareCashClarityInput } from '../prepareEffectiveDraft';
+import { prepareCashClarityInput, spendableDeferral } from '../prepareEffectiveDraft';
 import { cashClarityDraft as draft, cashClarityNow as now } from './cashClarityTestFixtures';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { projectCashClarityDraft } from '../projectCashClarityDraft';
@@ -86,11 +86,7 @@ describe('prepareCashClarityInput', () => {
     });
 
     const blank = prepareCashClarityInput(source, { amountTextById: { bank: '' } }, 'en-US');
-    const enteredZero = prepareCashClarityInput(
-      source,
-      { amountTextById: { bank: '0' } },
-      'en-US',
-    );
+    const enteredZero = prepareCashClarityInput(source, { amountTextById: { bank: '0' } }, 'en-US');
 
     expect(blank.hasUsableEstimate).toBe(false);
     expect(blank.estimateStatus).toBe('unavailable');
@@ -108,10 +104,7 @@ describe('prepareCashClarityInput', () => {
 
     const prepared = prepareCashClarityInput(
       draft({
-        accounts: [
-          { id: 'bank', kind: 'bank', name: 'Bank', balance: 0 },
-          card,
-        ],
+        accounts: [{ id: 'bank', kind: 'bank', name: 'Bank', balance: 0 }, card],
       }),
       { amountTextById: { bank: '-12.34', card: '0' } },
       'en-US',
@@ -121,7 +114,7 @@ describe('prepareCashClarityInput', () => {
     expect(prepared.isValid).toBe(true);
   });
 
-  it('keeps dependent entries out of the effective draft without spendable cash', () => {
+  it('keeps dependent entries when no spendable account remains', () => {
     const prepared = prepareCashClarityInput(
       draft({
         accounts: [{ id: 'card', kind: 'card', name: 'Card', balance: 0 }],
@@ -144,9 +137,58 @@ describe('prepareCashClarityInput', () => {
       'en-US',
     );
 
-    expect(prepared.effectiveDraft.income).toEqual({ kind: 'skipped' });
+    expect(prepared.effectiveDraft.income.kind).toBe('recurring');
     expect(prepared.issues).toEqual(
-      expect.arrayContaining([expect.objectContaining({ collection: 'income', field: 'dependency' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ collection: 'income', field: 'dependency' }),
+      ]),
     );
+    expect(prepared.isValid).toBe(false);
+    expect(prepared.hasUsableEstimate).toBe(false);
+  });
+
+  it('lets a planned card payment be left out without dropping the card', () => {
+    const accounts = [
+      {
+        id: 'card',
+        kind: 'card' as const,
+        name: 'Card',
+        balance: 0,
+        cardPaymentAmount: 4000,
+        cardPaymentDate: now.add(3, 'day').valueOf(),
+      },
+    ];
+    const unresolved = prepareCashClarityInput(
+      draft({ accounts }),
+      { amountTextById: { card: '0', 'card:card-payment': '40' } },
+      'en-US',
+    );
+    expect(spendableDeferral(unresolved.issues)).toEqual({ collections: [], cardPayments: true });
+    expect(unresolved.isValid).toBe(false);
+
+    const deferred = prepareCashClarityInput(
+      draft({ accounts }),
+      { amountTextById: { card: '0', 'card:card-payment': '40' }, deferredCardPayments: true },
+      'en-US',
+    );
+    expect(deferred.effectiveDraft.accounts[0]).toMatchObject({ name: 'Card', balance: 0 });
+    expect(deferred.effectiveDraft.accounts[0]?.cardPaymentAmount).toBeUndefined();
+    expect(deferred.isValid).toBe(true);
+    expect(deferred.isIncomplete).toBe(true);
+    expect(deferred.isCompleteEstimate).toBe(false);
+  });
+
+  it('does not treat a missing savings choice as a card payment', () => {
+    const prepared = prepareCashClarityInput(
+      draft({
+        accounts: [
+          { id: 'bank', kind: 'bank', name: 'Bank', balance: 100 },
+          { id: 'savings', kind: 'savings', name: 'Savings', balance: 50 },
+        ],
+      }),
+      { amountTextById: { bank: '100', savings: '50' } },
+      'en-US',
+    );
+    expect(spendableDeferral(prepared.issues).cardPayments).toBe(false);
   });
 });

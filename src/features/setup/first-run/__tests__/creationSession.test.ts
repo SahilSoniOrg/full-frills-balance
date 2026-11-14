@@ -28,7 +28,11 @@ describe('Cash Clarity creation session persistence', () => {
         operationId: asWorkplaceId('stable-operation'),
         accounts: [{ id: 'bank-1', kind: 'bank' as const, name: 'Main', balance: 500 }],
       },
-      editableInput: { amountTextById: { 'bank-1': '12x' }, deferredCollections: { income: true } },
+      editableInput: {
+        amountTextById: { 'bank-1': '12x' },
+        deferredCollections: { income: true },
+        deferredCardPayments: true,
+      },
       completedActions: ['currency:continue'],
     };
 
@@ -40,24 +44,40 @@ describe('Cash Clarity creation session persistence', () => {
     expect(restored?.operationId).toBe('stable-operation');
     expect(restored?.editableInput.amountTextById['bank-1']).toBe('12x');
     expect(restored?.editableInput.deferredCollections?.income).toBe(true);
+    expect(restored?.editableInput.deferredCardPayments).toBe(true);
     expect(restored?.completedActions).toEqual(['currency:continue']);
     expect(restored?.draft.accounts[0].balance).toBe(0);
-    expect(prepareCashClarityInput(restored!.draft, restored!.editableInput, 'en-US').issues).toHaveLength(1);
+    expect(
+      prepareCashClarityInput(restored!.draft, restored!.editableInput, 'en-US').issues,
+    ).toHaveLength(1);
   });
 
   it('preserves the input locale and numeric fallbacks when a session is restored', () => {
     const session = createCreationSession({
-      intent: 'first_run', context: 'unregistered_device', entryPolicy: 'blocking',
-      currency: 'EUR', workplaceName: 'Personal', inputLocale: 'de-DE',
+      intent: 'first_run',
+      context: 'unregistered_device',
+      entryPolicy: 'blocking',
+      currency: 'EUR',
+      workplaceName: 'Personal',
+      inputLocale: 'de-DE',
     });
     const withAccount = {
       ...session,
-      draft: { ...session.draft, accounts: [{ id: 'bank', kind: 'bank' as const, name: 'Bank', balance: 12.5 }] },
+      draft: {
+        ...session.draft,
+        accounts: [{ id: 'bank', kind: 'bank' as const, name: 'Bank', balance: 12.5 }],
+      },
     };
-    const restored = parseCashClaritySetupDraft(JSON.parse(serializeCashClaritySetupDraft(withAccount)));
+    const restored = parseCashClaritySetupDraft(
+      JSON.parse(serializeCashClaritySetupDraft(withAccount)),
+    );
     if (!restored) throw new Error('Expected a restored session');
     expect(restored.inputLocale).toBe('de-DE');
-    const prepared = prepareCashClarityInput(restored.draft, restored.editableInput, restored.inputLocale);
+    const prepared = prepareCashClarityInput(
+      restored.draft,
+      restored.editableInput,
+      restored.inputLocale,
+    );
     expect(prepared.isValid).toBe(true);
     expect(prepared.effectiveDraft.accounts[0].balance).toBe(12.5);
   });
@@ -85,11 +105,22 @@ describe('Cash Clarity creation session persistence', () => {
       ...session,
       draft: {
         ...session.draft,
-        preservedStarterAccounts: [{ id: asAccountId('legacy-account'), name: 'Brokerage', type: AccountType.ASSET, icon: Icon.Briefcase }],
+        preservedStarterAccounts: [
+          {
+            id: asAccountId('legacy-account'),
+            name: 'Brokerage',
+            type: AccountType.ASSET,
+            icon: Icon.Briefcase,
+          },
+        ],
       },
     };
-    const restored = parseCashClaritySetupDraft(JSON.parse(serializeCashClaritySetupDraft(migrated)));
-    expect(restored?.draft.preservedStarterAccounts).toEqual(migrated.draft.preservedStarterAccounts);
+    const restored = parseCashClaritySetupDraft(
+      JSON.parse(serializeCashClaritySetupDraft(migrated)),
+    );
+    expect(restored?.draft.preservedStarterAccounts).toEqual(
+      migrated.draft.preservedStarterAccounts,
+    );
     expect(restored?.draft.accounts).toEqual([]);
   });
 });

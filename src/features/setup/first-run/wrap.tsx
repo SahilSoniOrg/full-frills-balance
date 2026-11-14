@@ -59,6 +59,8 @@ export function ClarityScene({
   publishedOutcome,
   omissions,
   editActions,
+  recovery,
+  dependencyMessage,
   onEnter,
   onBack,
 }: {
@@ -70,10 +72,10 @@ export function ClarityScene({
   readonly finishing: boolean;
   readonly finishError?: string | null;
   readonly publishedOutcome?: PublishedClarityOutcome;
-  readonly omissions?:
-    | readonly (string | ClarityOmission)[]
-    | null;
+  readonly omissions?: readonly (string | ClarityOmission)[] | null;
   readonly editActions?: readonly ClarityEditAction[] | null;
+  readonly recovery?: ReactNode;
+  readonly dependencyMessage?: string | null;
   readonly onEnter: () => void;
   readonly onBack: () => void;
 }) {
@@ -88,11 +90,19 @@ export function ClarityScene({
   );
   const published = publishedOutcome !== undefined;
   const estimateAvailable = hasUsableEstimate ?? hasAnyInput;
-  const resultStatus = !estimateAvailable ? copy.clarityUnknown
-    : projection.safeToSpend < 0 ? copy.clarityShortfall
-    : projection.safeToSpend === 0 ? copy.clarityZero : copy.safeToSpend;
-  const includedAccountIds = new Set(draft.accounts.map(account => publishedDraftAccountId(draft, account)));
-  const unvaluedAccounts = (draft.preservedStarterAccounts ?? []).filter(account => !account.id || !includedAccountIds.has(account.id));
+  const resultStatus = !estimateAvailable
+    ? copy.clarityUnknown
+    : projection.safeToSpend < 0
+      ? copy.clarityShortfall
+      : projection.safeToSpend === 0
+        ? copy.clarityZero
+        : copy.safeToSpend;
+  const includedAccountIds = new Set(
+    draft.accounts.map(account => publishedDraftAccountId(draft, account)),
+  );
+  const unvaluedAccounts = (draft.preservedStarterAccounts ?? []).filter(
+    account => !account.id || !includedAccountIds.has(account.id),
+  );
   const preservedCategories = draft.preservedStarterCategories ?? [];
   const groupDots = {
     cash: theme.asset,
@@ -103,26 +113,38 @@ export function ClarityScene({
 
   return (
     <ConversationStep
-      primaryLabel={finishing ? copy.finishing : published ? copy.retryOpen
-        : normalizedOmissions.length > 0 ? copy.finishWithoutDeferred : copy.enterDashboard}
+      primaryLabel={
+        finishing
+          ? copy.finishing
+          : published
+            ? copy.retryOpen
+            : normalizedOmissions.length > 0
+              ? copy.finishWithoutDeferred
+              : copy.enterDashboard
+      }
       primaryTestID="onboarding-finish-button"
       onPrimary={published ? publishedOutcome.retryOpen : onEnter}
       primaryLoading={finishing}
       primaryDisabled={finishing}
       onBack={onBack}
       backDisabled={published || finishing}
-      validationMessage={published ? publishedOutcome.error ?? copy.savedCouldNotOpen : finishError}
-      footer={normalizedOmissions.length > 0 && !published ? (
-        <AppText variant="caption" color="secondary">{copy.willNotBeSaved}</AppText>
-      ) : null}
+      validationMessage={
+        published
+          ? (publishedOutcome.error ?? copy.savedCouldNotOpen)
+          : (finishError ?? dependencyMessage)
+      }
+      recovery={published ? undefined : recovery}
+      footer={
+        normalizedOmissions.length > 0 && !published ? (
+          <AppText variant="caption" color="secondary">
+            {copy.willNotBeSaved}
+          </AppText>
+        ) : null
+      }
     >
       <Stack gap="lg">
         <ClarityResultPanel>
-          <AppCard
-            variant="ghost"
-            paddingSize="lg"
-            testID="onboarding-clarity-result"
-          >
+          <AppCard variant="ghost" paddingSize="lg" testID="onboarding-clarity-result">
             <Stack gap="md">
               <Inline align="center" justify="space-between" gap="md">
                 <Stack gap="xs" flex={1}>
@@ -143,25 +165,27 @@ export function ClarityScene({
                 />
               </Inline>
               {estimateAvailable ? (
-              <MoneyText
-                amount={projection.safeToSpend}
-                currencyCode={currency}
-                formatStyle="sts"
-                variant="hero"
-                color={projection.safeToSpend < 0 ? 'error' : 'primary'}
-                fit={{
-                  maxFontSize: Typography.roles.hero.fontSize,
-                  minFontSize: Typography.sizes.xxxl + Spacing.xs,
-                  lineHeightRatio: Typography.lineHeights.tight,
-                }}
-                testID="onboarding-clarity-sts"
-              />
+                <MoneyText
+                  amount={projection.safeToSpend}
+                  currencyCode={currency}
+                  formatStyle="sts"
+                  variant="hero"
+                  color={projection.safeToSpend < 0 ? 'error' : 'primary'}
+                  fit={{
+                    maxFontSize: Typography.roles.hero.fontSize,
+                    minFontSize: Typography.sizes.xxxl + Spacing.xs,
+                    lineHeightRatio: Typography.lineHeights.tight,
+                  }}
+                  testID="onboarding-clarity-sts"
+                />
               ) : null}
               <AppText variant="body" color="secondary" style={styles.proseCopy}>
                 {copy.clarityDefinition}
               </AppText>
               {isIncompleteEstimate ? (
-                <AppText variant="caption" color="secondary">{copy.estimateIncomplete}</AppText>
+                <AppText variant="caption" color="secondary">
+                  {copy.estimateIncomplete}
+                </AppText>
               ) : null}
             </Stack>
           </AppCard>
@@ -173,11 +197,16 @@ export function ClarityScene({
             {unvaluedAccounts.map(account => (
               <Stack key={account.id ?? account.name} gap="xs">
                 <AppText variant="body">{account.name}</AppText>
-                <AppText variant="caption" color="secondary">{copy.balanceNotProvided}</AppText>
+                <AppText variant="caption" color="secondary">
+                  {copy.balanceNotProvided}
+                </AppText>
               </Stack>
             ))}
             {preservedCategories.length > 0 ? (
-              <AppText variant="caption" color="secondary">{copy.preservedCategories}: {preservedCategories.map(category => category.name).join(', ')}</AppText>
+              <AppText variant="caption" color="secondary">
+                {copy.preservedCategories}:{' '}
+                {preservedCategories.map(category => category.name).join(', ')}
+              </AppText>
             ) : null}
           </Stack>
         ) : null}
@@ -185,7 +214,9 @@ export function ClarityScene({
         {normalizedOmissions.length > 0 ? (
           <Stack gap="sm" testID="onboarding-clarity-omissions">
             <AppText variant="subheading">{copy.notIncludedYet}</AppText>
-            <AppText variant="caption" color="secondary">{copy.willNotBeSaved}</AppText>
+            <AppText variant="caption" color="secondary">
+              {copy.willNotBeSaved}
+            </AppText>
             {normalizedOmissions.map(omission => (
               <AppText key={omission.id ?? omission.label} variant="caption" color="secondary">
                 {omission.detail ? `${omission.label} · ${omission.detail}` : omission.label}
@@ -211,12 +242,14 @@ export function ClarityScene({
           </Stack>
         ) : null}
 
-        {estimateAvailable ? <Stack gap="sm">
-          <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
-          <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
-            <ClarityFormula projection={projection} currency={currency} />
-          </AppCard>
-        </Stack> : null}
+        {estimateAvailable ? (
+          <Stack gap="sm">
+            <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
+            <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
+              <ClarityFormula projection={projection} currency={currency} />
+            </AppCard>
+          </Stack>
+        ) : null}
 
         {estimateAvailable && todayBeats.length > 0 ? (
           <ClarityBeatCard
@@ -256,11 +289,13 @@ export function ClarityScene({
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityFooter}
           </AppText>
-          {estimateAvailable ? <ClarityChart
-            points={projection.chart}
-            safeToSpend={projection.safeToSpend}
-            currency={currency}
-          /> : null}
+          {estimateAvailable ? (
+            <ClarityChart
+              points={projection.chart}
+              safeToSpend={projection.safeToSpend}
+              currency={currency}
+            />
+          ) : null}
           {hasAnyInput ? (
             <Stack gap="lg">
               {detailGroups.map(group => (

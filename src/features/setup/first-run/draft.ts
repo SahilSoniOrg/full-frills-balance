@@ -95,6 +95,8 @@ export type CashClarityCollection = 'accounts' | 'income' | 'commitment' | 'budg
 export interface CashClarityEditableInput {
   readonly amountTextById: Readonly<Record<string, string>>;
   readonly deferredCollections?: Partial<Record<CashClarityCollection, boolean>>;
+  /** Planned card payments stay on the accounts, but leave the estimate until a spendable account exists. */
+  readonly deferredCardPayments?: boolean;
 }
 
 export function amountInputKey(itemId: string): string {

@@ -127,6 +127,8 @@ export const ONBOARDING_STRINGS = {
   savingsAvailabilityRequired: 'Choose whether these savings are available to spend.',
   dependentAccountRequired: 'Add a spendable account or leave these entries for later.',
   cardAccountRequired: 'Add a spendable account before planning this card payment.',
+  cardPaymentsLabel: 'Card payments',
+  affectedSpendableGroups: (groups: string) => `These still need a spendable account: ${groups}.`,
   closeClarityExplanation: 'Close Safe to Spend explanation',
   notIncludedYet: 'Not included yet',
   willNotBeSaved: 'These won’t be saved when setup finishes.',
