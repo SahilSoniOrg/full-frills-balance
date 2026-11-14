@@ -3,9 +3,11 @@ import type { ComponentProps, ReactNode } from 'react';
 import { CollectedRow, type CollectedItem } from '../CollectedRow';
 
 jest.mock('@/src/components/core', () => {
-  const { Pressable: NativePressable, Text: NativeText, View: NativeView } = jest.requireActual(
-    'react-native',
-  ) as typeof import('react-native');
+  const {
+    Pressable: NativePressable,
+    Text: NativeText,
+    View: NativeView,
+  } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     AppCard: ({ children, ...props }: { children?: ReactNode; [key: string]: unknown }) => (
       <NativeView {...(props as ComponentProps<typeof NativeView>)}>{children}</NativeView>
@@ -13,8 +15,18 @@ jest.mock('@/src/components/core', () => {
     AppIcon: () => null,
     AppText: ({ children }: { children?: ReactNode }) => <NativeText>{children}</NativeText>,
     FilterChipButton: () => null,
-    PressScaleTouchable: ({ children, haptic: _haptic, ...props }: { children?: ReactNode; haptic?: string; [key: string]: unknown }) => (
-      <NativePressable {...(props as ComponentProps<typeof NativePressable>)}>{children}</NativePressable>
+    PressScaleTouchable: ({
+      children,
+      haptic: _haptic,
+      ...props
+    }: {
+      children?: ReactNode;
+      haptic?: string;
+      [key: string]: unknown;
+    }) => (
+      <NativePressable {...(props as ComponentProps<typeof NativePressable>)}>
+        {children}
+      </NativePressable>
     ),
     SwipeToRemove: ({ children }: { children?: ReactNode }) => <NativeView>{children}</NativeView>,
   };
@@ -39,11 +51,19 @@ jest.mock('@/src/components/filters/SelectionPickerSheet', () => ({
 describe('CollectedRow field errors', () => {
   it('shows explicit zero when raw account text is absent, including after a reset', () => {
     const item: CollectedItem = {
-      kind: 'account', id: 'bank-zero', title: 'Bank', amount: 0,
-      amountLabel: 'Balance', detail: { kind: 'plain' },
-      onRename: jest.fn(), onAmountChange: jest.fn(), onRemove: jest.fn(),
+      kind: 'account',
+      id: 'bank-zero',
+      title: 'Bank',
+      amount: 0,
+      amountLabel: 'Balance',
+      detail: { kind: 'plain' },
+      onRename: jest.fn(),
+      onAmountChange: jest.fn(),
+      onRemove: jest.fn(),
     };
-    const { rerender } = render(<CollectedRow item={{ ...item, amountText: '99' }} currency="USD" />);
+    const { rerender } = render(
+      <CollectedRow item={{ ...item, amountText: '99' }} currency="USD" />,
+    );
     rerender(<CollectedRow item={item} currency="USD" />);
     expect(screen.getByTestId('onboarding-amount-bank-zero').props.value).toBe('0');
   });
@@ -51,12 +71,20 @@ describe('CollectedRow field errors', () => {
   it('normalizes a blank or zero card payment to no plan', () => {
     const onAmountChange = jest.fn();
     const item: CollectedItem = {
-      kind: 'account', id: 'card-clear', title: 'Card', amount: 10, amountLabel: 'Owed',
+      kind: 'account',
+      id: 'card-clear',
+      title: 'Card',
+      amount: 10,
+      amountLabel: 'Owed',
       detail: {
-        kind: 'card', paymentPlan: { amount: 10, date: Date.now(), dateLabel: 'Due' },
-        onAmountChange, onDateChange: jest.fn(),
+        kind: 'card',
+        paymentPlan: { amount: 10, date: Date.now(), dateLabel: 'Due' },
+        onAmountChange,
+        onDateChange: jest.fn(),
       },
-      onRename: jest.fn(), onAmountChange: jest.fn(), onRemove: jest.fn(),
+      onRename: jest.fn(),
+      onAmountChange: jest.fn(),
+      onRemove: jest.fn(),
     };
     render(<CollectedRow item={item} currency="USD" locale="en-US" />);
     fireEvent.changeText(screen.getByTestId('onboarding-card-pay-card-clear'), '');
@@ -84,7 +112,12 @@ describe('CollectedRow field errors', () => {
 
     expect(screen.getByTestId('onboarding-amount-bank-1').props.value).toBe('');
     expect(screen.getByText('Enter an amount.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Remove Bank' })).toBeTruthy();
+    const card = screen.UNSAFE_getByProps({
+      variant: 'outline',
+    });
+    expect(card.props.accessibilityActions).toEqual([{ name: 'delete', label: 'Remove Bank' }]);
+    fireEvent(card, 'accessibilityAction', { nativeEvent: { actionName: 'delete' } });
+    expect(item.onRemove).toHaveBeenCalledTimes(1);
   });
 
   it('renders the planned card-payment error next to the card-payment input', () => {

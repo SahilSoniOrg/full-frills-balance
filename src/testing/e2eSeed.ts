@@ -598,7 +598,7 @@ async function seedEvidenceSettlePlan(
   });
   await transactionCaptureService.setEnabled(workplaceId, true);
   const { enabledAt } = await transactionCaptureService.getSettings(workplaceId);
-  const smsDate = Math.max((enabledAt ?? Date.now()) + 1, occurrenceDay + 60 * 60 * 1000);
+  const smsDate = (enabledAt ?? Date.now()) + 1;
   const amount = options.softAmountMismatch
     ? E2E_EVIDENCE_SETTLE.softAmount
     : E2E_EVIDENCE_SETTLE.amount;

@@ -293,7 +293,7 @@ describe('mapDraftToWorkplaceOutput', () => {
 });
 
 describe('spoken confirmations', () => {
-  it('totals cash by type instead of naming every account', () => {
+  it('totals spendable cash by type, excluding protected savings and cards', () => {
     expect(
       confirmMoney(
         [
@@ -310,7 +310,7 @@ describe('spoken confirmations', () => {
         ],
         'INR',
       ),
-    ).toBe('Got it. ₹1,30,000 you have in banks and savings.');
+    ).toBe('Got it. ₹50,000 you have in banks.');
   });
 
   it('keeps skipped income from sounding like a forecast', () => {

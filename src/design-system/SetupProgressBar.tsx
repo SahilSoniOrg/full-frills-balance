@@ -10,11 +10,7 @@ export interface SetupProgressBarProps {
   readonly total: number;
 }
 
-export function SetupProgressBar({
-  label,
-  current,
-  total,
-}: SetupProgressBarProps) {
+export function SetupProgressBar({ label, current, total }: SetupProgressBarProps) {
   const reduceMotion = useReducedMotion();
   const safeTotal = Math.max(1, total);
   const boundedCurrent = Math.max(1, Math.min(current, safeTotal));
@@ -22,6 +18,7 @@ export function SetupProgressBar({
 
   return (
     <Box
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={label.split(' · ').at(-1) ?? label}
       accessibilityValue={{
@@ -30,17 +27,18 @@ export function SetupProgressBar({
         now: boundedCurrent,
       }}
     >
-      <Box marginBottom="sm" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <AppText variant="body" color="secondary" weight="medium">{label}</AppText>
+      <Box
+        marginBottom="sm"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <AppText variant="body" color="secondary" weight="medium">
+          {label}
+        </AppText>
       </Box>
       <Box height={Spacing.xs} borderRadius="full" background="border" overflow="hidden">
         {reduceMotion ? (
-          <Box
-            height="100%"
-            width={`${ratio * 100}%`}
-            borderRadius="full"
-            background="primary"
-          />
+          <Box height="100%" width={`${ratio * 100}%`} borderRadius="full" background="primary" />
         ) : (
           <MotiView
             animate={{ width: `${ratio * 100}%` }}
@@ -54,4 +52,3 @@ export function SetupProgressBar({
     </Box>
   );
 }
-

@@ -571,6 +571,7 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     width: Size.fieldAmount,
+    flexShrink: 0,
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,

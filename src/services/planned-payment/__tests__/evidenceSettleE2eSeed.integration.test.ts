@@ -25,6 +25,8 @@ const WP = 'wp-evidence-settle-e2e-seed' as WorkplaceId;
 
 describe('evidence settle e2e seed shape', () => {
   beforeEach(async () => {
+    // Exercise capture before 1 a.m., when a day-start + 1 hour fixture is in the future.
+    jest.spyOn(Date, 'now').mockReturnValue(new Date(2026, 10, 15, 0, 15).getTime());
     await resetDatabase();
     await seedBasicAssetExpenseAccounts(WP, {
       assetName: 'Bank',
@@ -37,6 +39,10 @@ describe('evidence settle e2e seed shape', () => {
       workplaceId: WP,
     });
   }, 20_000);
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('unique SMS settles the ACTIVE monthly PLANNED occurrence', async () => {
     const bank = await accountQueryRepository.findByName(WP, 'Bank');
@@ -68,7 +74,7 @@ describe('evidence settle e2e seed shape', () => {
     });
     await transactionCaptureService.setEnabled(WP, true);
     const { enabledAt } = await transactionCaptureService.getSettings(WP);
-    const smsDate = Math.max((enabledAt ?? Date.now()) + 1, occurrenceDay + 60 * 60 * 1000);
+    const smsDate = (enabledAt ?? Date.now()) + 1;
     const messages = [
       smsMessageFromFixture('swiggyNoRef', {
         id: E2E_EVIDENCE_SETTLE.smsId,

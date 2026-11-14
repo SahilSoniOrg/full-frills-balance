@@ -3,7 +3,7 @@ import { NavigationDrawer } from '@/src/features/navigation/NavigationDrawer';
 import { AppNavigation } from '@/src/utils/navigation';
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import type { ComponentProps } from 'react';
-import { BackHandler, Platform } from 'react-native';
+import { BackHandler, Platform, View } from 'react-native';
 import type { Drawer } from 'react-native-drawer-layout';
 type DrawerProps = ComponentProps<typeof Drawer>;
 
@@ -60,7 +60,11 @@ jest.mock('@/src/hooks/use-theme', () => ({
 }));
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+  usePathname: () => '/',
+  useGlobalSearchParams: () => ({}),
+}));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({
     workplaceId: 'home',
@@ -125,6 +129,16 @@ function renderDrawer({
   );
   return { onClose, onOpen };
 }
+
+beforeEach(() => {
+  jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(callback => {
+    callback(0, 0, 320, 48);
+  });
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 describe('NavigationDrawer shell', () => {
   beforeEach(() => {

@@ -116,9 +116,10 @@ export function mapDraftToWorkplaceOutput(draft: CashClarityDraft): WorkplaceSet
 
   if (draft.budget.kind === 'set') {
     for (const item of draft.budget.items) {
+      const name = budgetLookupName(item, draft.preservedStarterCategories);
       add(
-        starterFromDefault(budgetLookupName(item)) ?? {
-          name: budgetLookupName(item),
+        starterFromDefault(name) ?? {
+          name,
           type: AccountType.EXPENSE,
           icon: Icon.ShoppingCart,
         },

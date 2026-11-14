@@ -219,8 +219,17 @@ export function budgetCategoryName(name: string): string {
   return name === 'Food' ? 'Groceries' : name;
 }
 
-export function budgetLookupName(item: BudgetItem): string {
-  return budgetCategoryName(item.category ?? item.name);
+export function budgetLookupName(
+  item: BudgetItem,
+  preservedCategories: readonly StarterCategoryInput[] = [],
+): string {
+  const name = item.category ?? item.name;
+  const preserved = preservedCategories.find(
+    category =>
+      category.type === AccountType.EXPENSE &&
+      category.name.trim().toLowerCase() === name.trim().toLowerCase(),
+  );
+  return preserved?.name ?? budgetCategoryName(name);
 }
 
 export function incomeItemName(item: RecurringIncome): string {
