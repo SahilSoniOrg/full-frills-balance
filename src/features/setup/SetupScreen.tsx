@@ -20,8 +20,14 @@ import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
-import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
+import {
+  discardUnreadableSetupDraft,
+  clearSetupDraft,
+  loadSetupDraft,
+  saveSetupDraft,
+} from './SetupDraftStore';
 import { getSetupRecipe } from './setupRecipes';
+import { requestedRestoreJourney, setupJourneyConflicts } from './setupRouting';
 
 import { RestoreJournalRecovery } from './RestoreJournalRecovery';
 import {
@@ -46,6 +52,7 @@ import {
   type RestoreJourneyId,
   type RestoreSetupDraft,
   type RestoreSummaryIntent,
+  type SetupDraft,
   type SetupSliceId,
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
@@ -294,25 +301,17 @@ function SetupJourneyScreen({
     }
   };
 
-  const {
-    workplaceStep,
-    setWorkplaceStep,
-    displayName,
-    workplaceInitial,
-    displayProgress,
-  } = useSetupJourneyViewState({
-    candidateName,
-    recipe,
-    draft,
-    action,
-    slice,
-  });
+  const { workplaceStep, setWorkplaceStep, displayName, workplaceInitial, displayProgress } =
+    useSetupJourneyViewState({
+      candidateName,
+      recipe,
+      draft,
+      action,
+      slice,
+    });
 
   const goBack = () => {
-    if (
-      restoreLeaveNeedsConfirm(draft) &&
-      slice === 'restore_summary'
-    ) {
+    if (restoreLeaveNeedsConfirm(draft) && slice === 'restore_summary') {
       confirmAbandonRestore();
       return;
     }
@@ -381,11 +380,19 @@ function SetupJourneyScreen({
       testID="setup-screen"
       currentStep={displayProgress.current}
       totalSteps={displayProgress.total}
-      stepName={slice === 'workplace'
-        ? workplaceStep === 'currency' ? copy.progressCurrency : copy.progressIdentity
-        : slice === 'restore_source' ? copy.progressRestoreSource
-        : slice === 'restore_summary' ? copy.progressReview
-        : slice === 'device' ? copy.progressDevice : copy.progressSetup}
+      stepName={
+        slice === 'workplace'
+          ? workplaceStep === 'currency'
+            ? copy.progressCurrency
+            : copy.progressIdentity
+          : slice === 'restore_source'
+            ? copy.progressRestoreSource
+            : slice === 'restore_summary'
+              ? copy.progressReview
+              : slice === 'device'
+                ? copy.progressDevice
+                : copy.progressSetup
+      }
       keyboardAvoiding
       backAction={
         !resolving && (slice === 'restore_source' || slice === 'restore_summary')
@@ -469,6 +476,60 @@ function SetupJourneyScreen({
   );
 }
 
+function resumeSavedSetup(existing: SetupDraft) {
+  if (existing.kind === 'restore') {
+    AppNavigation.toSetupJourney(existing.journeyId);
+    return;
+  }
+  if (existing.intent === 'first_run') {
+    AppNavigation.toFirstRun(existing.draft.displayName.trim() || undefined);
+    return;
+  }
+  AppNavigation.toAddWorkplace({
+    context:
+      existing.context === 'unregistered_device' ? 'existing_workplace_entry' : existing.context,
+    origin: 'setup_conflict',
+    navigation: 'replace',
+  });
+}
+
+function SetupDraftContention({
+  existing,
+  onResume,
+}: {
+  readonly existing: SetupDraft;
+  readonly onResume: () => void;
+}) {
+  const publishedCreation = existing.kind === 'cash_clarity' && existing.publication !== undefined;
+  return (
+    <Page testID="setup-draft-contention">
+      <Box flex={1} padding="lg" justifyContent="center">
+        <Stack space="md">
+          <AppText variant="title">{copy.sessionConflictTitle}</AppText>
+          <AppText variant="body" color="secondary">
+            {copy.sessionConflictBody}
+          </AppText>
+          <AppButton testID="setup-draft-resume" variant="primary" onPress={onResume}>
+            {publishedCreation ? copy.retryOpen : copy.resumeSetup}
+          </AppButton>
+          {publishedCreation ? null : (
+            <AppButton
+              testID="setup-draft-discard"
+              variant="secondary"
+              onPress={() => clearSetupDraft()}
+            >
+              {copy.discardAndContinue}
+            </AppButton>
+          )}
+          <AppButton variant="ghost" onPress={() => AppNavigation.back()}>
+            {copy.back}
+          </AppButton>
+        </Stack>
+      </Box>
+    </Page>
+  );
+}
+
 function UnreadableSetupDraft() {
   return (
     <Page testID="setup-unreadable-draft">
@@ -509,6 +570,21 @@ function SetupScreen() {
     shouldExitCompletedFirstRunRestore(journey, !!snapshot, preferences.device.deviceRegistered)
   ) {
     return <Redirect href="/(tabs)" />;
+  }
+  const persisted = loadSetupDraft();
+  // Compare the journey this visit asked for. resolveSetupJourney would
+  // substitute the saved restore and hide the conflict with itself.
+  const requestedJourneyId = requestedRestoreJourney(journey, journeyOverride);
+  if (setupJourneyConflicts(persisted, requestedJourneyId)) {
+    return (
+      <SetupDraftContention
+        existing={persisted}
+        onResume={() => {
+          setJourneyOverride(undefined);
+          resumeSavedSetup(persisted);
+        }}
+      />
+    );
   }
   const journeyId = resolveSetupJourney({ mode, journey }, journeyOverride);
   if (!journeyId) {

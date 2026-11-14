@@ -1,3 +1,5 @@
+import type { RestoreJourneyId, SetupDraft } from './setupTypes';
+
 const CREATION_JOURNEYS = new Set(['first_run', 'add_workplace']);
 
 export const SETUP_GATE_ROUTES = new Set(['/onboarding', '/import-selection', '/privacy-notice']);
@@ -10,7 +12,9 @@ export function isCreationJourney(value: unknown): value is 'first_run' | 'add_w
   return typeof value === 'string' && CREATION_JOURNEYS.has(value);
 }
 
-export function normalizeCreationJourney(value: unknown): 'first_run' | 'add_workplace' | undefined {
+export function normalizeCreationJourney(
+  value: unknown,
+): 'first_run' | 'add_workplace' | undefined {
   if (value === 'first_run' || value === 'add_workplace') return value;
   if (value === 'create_workplace' || value === 'empty_device_workplace') return 'add_workplace';
   return undefined;
@@ -50,4 +54,33 @@ export function shouldRedirectSetupToEntry(journeyId: string, pathname: string):
   if (pathname === '/privacy-notice') return false;
   if (isCreationJourney(journeyId)) return pathname !== '/onboarding';
   return !SETUP_GATE_ROUTES.has(pathname);
+}
+
+/**
+ * The restore journey carried by this visit. A saved draft must not replace it
+ * before `setupJourneyConflicts` runs, or a different restore resumes itself.
+ */
+export function requestedRestoreJourney(
+  journey: string | undefined,
+  override?: RestoreJourneyId,
+): RestoreJourneyId | undefined {
+  if (override) return override;
+  switch (journey) {
+    case 'first_run_restore':
+    case 'empty_device_restore':
+    case 'picker_restore':
+    case 'settings_restore':
+      return journey;
+    default:
+      return undefined;
+  }
+}
+
+/** A different saved session must be resumed or discarded before this journey is written. */
+export function setupJourneyConflicts(
+  existing: SetupDraft | undefined,
+  requestedJourneyId: RestoreJourneyId | undefined,
+): existing is SetupDraft {
+  if (!existing || !requestedJourneyId) return false;
+  return existing.kind !== 'restore' || existing.journeyId !== requestedJourneyId;
 }
