@@ -15,40 +15,96 @@ type LocaleNumberParts = {
 };
 
 const localePartsCache = new Map<string, LocaleNumberParts>();
+const bidiControls = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu;
 
 /** Format a trusted numeric fallback using the same separators the editor parser expects. */
 export function formatAmountInput(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale, { useGrouping: false, maximumFractionDigits: 20 })
-    .formatToParts(value)
-    .filter(part => part.type !== 'literal')
-    .map(part => part.value)
-    .join('');
+  const formatter = new Intl.NumberFormat(locale, {
+    useGrouping: false,
+    maximumFractionDigits: 20,
+  });
+  if (typeof formatter.formatToParts === 'function') {
+    return formatter
+      .formatToParts(value)
+      .filter(part => part.type !== 'literal')
+      .map(part => part.value)
+      .join('');
+  }
+  return formatter.format(value).replace(bidiControls, '');
 }
 
 function localeNumberParts(locale: string): LocaleNumberParts {
   const cached = localePartsCache.get(locale);
   if (cached) return cached;
 
-  const decimalParts = new Intl.NumberFormat(locale, { useGrouping: false }).formatToParts(1.1);
-  const decimal = decimalParts.find(part => part.type === 'decimal')?.value ?? '.';
-  const minus = new Intl.NumberFormat(locale, { useGrouping: false })
-    .formatToParts(-1)
-    .find(part => part.type === 'minusSign')?.value ?? '-';
-  const groupingParts = new Intl.NumberFormat(locale).formatToParts(123456789012345);
-  const localizedGroups = [...new Set(groupingParts.filter(part => part.type === 'group').map(part => part.value))];
+  const ungroupedFormatter = new Intl.NumberFormat(locale, { useGrouping: false });
+  const groupedFormatter = new Intl.NumberFormat(locale);
+  const digits = new Map<string, string>();
+  for (let digit = 0; digit <= 9; digit += 1) {
+    const localized = ungroupedFormatter.format(digit).replace(bidiControls, '');
+    digits.set(localized, String(digit));
+  }
+
+  const decimalParts =
+    typeof ungroupedFormatter.formatToParts === 'function'
+      ? ungroupedFormatter.formatToParts(1.1)
+      : undefined;
+  const decimal =
+    decimalParts?.find(part => part.type === 'decimal')?.value ??
+    separatorBetweenDigits(ungroupedFormatter.format(1.1), digits) ??
+    '.';
+  const minusParts =
+    typeof ungroupedFormatter.formatToParts === 'function'
+      ? ungroupedFormatter.formatToParts(-1)
+      : undefined;
+  const minus =
+    minusParts?.find(part => part.type === 'minusSign')?.value ??
+    (normalizeDigits(ungroupedFormatter.format(-1).replace(bidiControls, ''), digits).replace(
+      /[\d\s]/gu,
+      '',
+    ) ||
+      '-');
+  const groupingParts =
+    typeof groupedFormatter.formatToParts === 'function'
+      ? groupedFormatter.formatToParts(123456789012345)
+      : undefined;
+  const fallbackGrouping = groupingParts
+    ? undefined
+    : groupingFromFormattedNumber(groupedFormatter.format(123456789012345), digits);
+  const localizedGroups = groupingParts
+    ? [...new Set(groupingParts.filter(part => part.type === 'group').map(part => part.value))]
+    : [...new Set(fallbackGrouping?.groups ?? [])];
   const groups = localizedGroups.some(separator => /^\s+$/u.test(separator))
     ? [...new Set([...localizedGroups, ' ', '\u00a0', '\u202f'])]
     : localizedGroups;
-  const integerGroups = groupingParts.filter(part => part.type === 'integer').map(part => part.value);
-  const groupSizes = integerGroups.slice(1).reverse().map(part => [...part].length);
-  const digits = new Map<string, string>();
-  for (let digit = 0; digit <= 9; digit += 1) {
-    const localized = new Intl.NumberFormat(locale, { useGrouping: false }).format(digit);
-    digits.set(localized, String(digit));
-  }
+  const integerGroups = groupingParts
+    ? groupingParts.filter(part => part.type === 'integer').map(part => part.value)
+    : (fallbackGrouping?.integerGroups ?? []);
+  const groupSizes = integerGroups
+    .slice(1)
+    .reverse()
+    .map(part => [...part].length);
   const parts = { decimal, groups, minus, digits, groupSizes };
   localePartsCache.set(locale, parts);
   return parts;
+}
+
+function separatorBetweenDigits(
+  value: string,
+  digits: ReadonlyMap<string, string>,
+): string | undefined {
+  const normalized = normalizeDigits(value.replace(bidiControls, ''), digits);
+  return normalized.match(/^\d+([^\d]+)\d+$/u)?.[1];
+}
+
+function groupingFromFormattedNumber(
+  value: string,
+  digits: ReadonlyMap<string, string>,
+): { readonly groups: readonly string[]; readonly integerGroups: readonly string[] } {
+  const normalized = normalizeDigits(value.replace(bidiControls, ''), digits);
+  const integerGroups = normalized.match(/\d+/gu) ?? [];
+  const separators = [...normalized.matchAll(/\d+([^\d]+)(?=\d)/gu)].map(match => match[1]);
+  return { groups: separators, integerGroups };
 }
 
 function normalizeDigits(value: string, digits: ReadonlyMap<string, string>): string {
@@ -88,7 +144,8 @@ export function parseAmountInput(
   if (value.startsWith('+')) value = value.slice(1);
   const sign = value.startsWith('-') ? '-' : '';
   if (sign) value = value.slice(1);
-  if (!value || value.includes('+') || value.includes('-')) return { status: 'invalid', reason: 'malformed' };
+  if (!value || value.includes('+') || value.includes('-'))
+    return { status: 'invalid', reason: 'malformed' };
 
   const decimalPieces = value.split(parts.decimal);
   if (decimalPieces.length > 2) return { status: 'invalid', reason: 'malformed' };
@@ -114,11 +171,16 @@ export function parseAmountInput(
     if (!validGrouping(chunks, parts.groupSizes)) return { status: 'invalid', reason: 'malformed' };
     integerDigits = chunks.join('');
   }
-  if (!integerDigits && fractionText === undefined) return { status: 'invalid', reason: 'malformed' };
-  if (integerDigits && !/^\d+$/.test(integerDigits)) return { status: 'invalid', reason: 'malformed' };
-  if (fractionText === undefined && !integerDigits) return { status: 'invalid', reason: 'malformed' };
+  if (!integerDigits && fractionText === undefined)
+    return { status: 'invalid', reason: 'malformed' };
+  if (integerDigits && !/^\d+$/.test(integerDigits))
+    return { status: 'invalid', reason: 'malformed' };
+  if (fractionText === undefined && !integerDigits)
+    return { status: 'invalid', reason: 'malformed' };
 
-  const parsed = Number(`${sign}${integerDigits || '0'}${fractionText === undefined ? '' : `.${fractionText}`}`);
+  const parsed = Number(
+    `${sign}${integerDigits || '0'}${fractionText === undefined ? '' : `.${fractionText}`}`,
+  );
   if (!Number.isFinite(parsed)) return { status: 'invalid', reason: 'non-finite' };
   return { status: 'valid', value: parsed };
 }
