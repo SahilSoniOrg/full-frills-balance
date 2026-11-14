@@ -19,7 +19,7 @@ import { useCallback } from 'react';
 
 function MaintenanceSettingsView() {
   const { workplaceId } = useWorkplace();
-  const { requireRestart } = useAppRestart();
+  const { beginReset, cancelReset, requireRestart } = useAppRestart();
 
   const runIntegrityCheck = useCallback(
     async (onProgress?: (message: string, progress: number) => void) => {
@@ -46,14 +46,20 @@ function MaintenanceSettingsView() {
 
   const resetApp = useCallback(async () => {
     analytics.track('factory_reset');
-    const result = await resetDatabase();
-    if (result.warnings.length > 0) {
-      toast.warning(
-        'Your data was reset. Some cached displays could not be cleared and may need a restart.',
-      );
+    beginReset();
+    try {
+      const result = await resetDatabase();
+      if (result.warnings.length > 0) {
+        toast.warning(
+          'Your data was reset, but some local cleanup could not finish. Restart the app to retry it.',
+        );
+      }
+      requireRestart({ type: 'RESET' });
+    } catch (error) {
+      cancelReset();
+      throw error;
     }
-    requireRestart({ type: 'RESET' });
-  }, [requireRestart]);
+  }, [beginReset, cancelReset, requireRestart]);
 
   const vm = useDataMaintenanceActions({
     runIntegrityCheck,

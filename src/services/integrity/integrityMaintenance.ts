@@ -17,6 +17,7 @@ import { clearLocalAuditActorId } from '@/src/services/audit-identity';
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { notifySetupDraftChanged } from '@/src/services/setup/launchProjection';
 
 function runPostResetCleanup(
   warnings: string[],
@@ -31,13 +32,6 @@ function runPostResetCleanup(
     }
   }
 }
-
-const RESETTABLE_DRAFT_KEYS = [
-  'onboarding_resume_state_v1',
-  'onboarding_draft_v1',
-  'import_resume_state_v1',
-  'import_draft_v1',
-] as const;
 
 export async function resetWorkplace(
   workplaceId: WorkplaceId,
@@ -113,6 +107,17 @@ export async function resetDatabase(): Promise<{
   const warnings: string[] = [];
   runPostResetCleanup(warnings, [
     {
+      label: 'Local storage cleanup',
+      failureLog: 'MMKV cleanup failed after factory reset',
+      run: () => {
+        try {
+          storage.clearAll();
+        } finally {
+          notifySetupDraftChanged();
+        }
+      },
+    },
+    {
       label: 'Preference cleanup',
       failureLog: 'Preference cleanup failed after factory reset',
       run: () => preferences.clearPreferences(),
@@ -121,15 +126,6 @@ export async function resetDatabase(): Promise<{
       label: 'Audit identity cleanup',
       failureLog: 'Audit identity cleanup failed after factory reset',
       run: () => clearLocalAuditActorId(),
-    },
-    {
-      label: 'Setup draft cleanup',
-      failureLog: 'Setup draft cleanup failed after factory reset',
-      run: () => {
-        RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
-        storage.remove(SETUP_DRAFT_KEY);
-        restorePublicationClaims.clearAll();
-      },
     },
     {
       label: 'Reactive projection cleanup',

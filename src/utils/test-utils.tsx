@@ -13,6 +13,7 @@ const mockUIContext: AppShellValue = {
   fontsReady: true,
   loadedFontId: null,
   isRestartRequired: false,
+  isResetInProgress: false,
   restartType: null,
   importStats: null,
   isDataHydrated: true,
@@ -28,6 +29,8 @@ const mockUIContext: AppShellValue = {
   setIsAppActive: () => {},
   setIsLockAuthenticating: () => {},
   requireRestart: () => {},
+  beginReset: () => {},
+  cancelReset: () => {},
 };
 
 // Custom Render with Providers

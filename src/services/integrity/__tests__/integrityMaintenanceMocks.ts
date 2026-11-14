@@ -34,7 +34,9 @@ jest.mock('@/src/utils/SnapshotService', () => ({
     resumeSnapshotsForWorkplace: jest.fn(),
   },
 }));
-jest.mock('@/src/utils/storage', () => ({ storage: { remove: jest.fn() } }));
+jest.mock('@/src/utils/storage', () => ({
+  storage: { clearAll: jest.fn(), remove: jest.fn() },
+}));
 jest.mock('@/src/services/audit-identity', () => ({ clearLocalAuditActorId: jest.fn() }));
 jest.mock('@/src/services/import/restorePublicationClaims', () => ({
   restorePublicationClaims: { clearAll: jest.fn() },

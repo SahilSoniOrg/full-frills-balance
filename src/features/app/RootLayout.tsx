@@ -239,15 +239,22 @@ function SharingLifecycle() {
   const { isInitialized } = useAppReady();
   const { isUnlocked, isAppActive } = useAppLock();
   const { isAppLockEnabled } = usePrivacyPrefs();
-  const { isRestartRequired } = useAppRestart();
+  const { isRestartRequired, isResetInProgress } = useAppRestart();
   React.useLayoutEffect(() => {
     sharingRuntime.setLifecycle({
       ready: isInitialized,
       locked: isAppLockEnabled && !isUnlocked,
       active: isAppActive,
-      restartRequired: isRestartRequired,
+      restartRequired: isRestartRequired || isResetInProgress,
     });
-  }, [isInitialized, isAppLockEnabled, isUnlocked, isAppActive, isRestartRequired]);
+  }, [
+    isInitialized,
+    isAppLockEnabled,
+    isUnlocked,
+    isAppActive,
+    isRestartRequired,
+    isResetInProgress,
+  ]);
   React.useEffect(
     () => () => {
       sharingRuntime.setLifecycle({ ready: false, locked: false, restartRequired: false });

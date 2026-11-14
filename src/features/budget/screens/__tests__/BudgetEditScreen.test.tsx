@@ -29,6 +29,7 @@ const shellValue: AppShellValue = {
   fontsReady: true,
   loadedFontId: null,
   isRestartRequired: false,
+  isResetInProgress: false,
   restartType: null,
   importStats: null,
   isDataHydrated: true,
@@ -44,6 +45,8 @@ const shellValue: AppShellValue = {
   setIsAppActive: () => {},
   setIsLockAuthenticating: () => {},
   requireRestart: () => {},
+  beginReset: () => {},
+  cancelReset: () => {},
 };
 
 function ProvidersWithoutPrivacyScope({ children }: { children: React.ReactNode }) {

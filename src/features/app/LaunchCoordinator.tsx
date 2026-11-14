@@ -38,11 +38,7 @@ import {
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 import { logger } from '@/src/utils/logger';
-import {
-  AppNavigation,
-  firstRunCreationHref,
-  workplaceCreationHref,
-} from '@/src/utils/navigation';
+import { AppNavigation, firstRunCreationHref, workplaceCreationHref } from '@/src/utils/navigation';
 import { Redirect, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, {
   createContext,
@@ -373,13 +369,7 @@ export function LaunchCoordinatorProvider({
     setCreationOpeningTarget(current =>
       current?.id === creationOpeningTarget.id ? null : current,
     );
-  }, [
-    activeWorkplaceId,
-    creationOpeningTarget,
-    discovery.workplaces,
-    probedWorkplace,
-    setupDraft,
-  ]);
+  }, [activeWorkplaceId, creationOpeningTarget, discovery.workplaces, probedWorkplace, setupDraft]);
 
   useEffect(() => {
     if (!isInitialized || discovery.loading || discovery.error || !activeWorkplaceId) return;
@@ -445,7 +435,9 @@ export function LaunchCoordinatorProvider({
 
   return (
     <CreationOpeningCoordinatorProvider value={creationOpeningCoordinator}>
-      <LaunchCoordinatorContext.Provider value={state}>{children}</LaunchCoordinatorContext.Provider>
+      <LaunchCoordinatorContext.Provider value={state}>
+        {children}
+      </LaunchCoordinatorContext.Provider>
     </CreationOpeningCoordinatorProvider>
   );
 }
@@ -459,7 +451,7 @@ export function LaunchCoordinatorContent({
   gateChildren?: React.ReactNode;
 }) {
   const state = useLaunchCoordinator();
-  const { isRestartRequired } = useAppRestart();
+  const { isRestartRequired, isResetInProgress } = useAppRestart();
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams<{
@@ -473,7 +465,9 @@ export function LaunchCoordinatorContent({
   const routeContext = Array.isArray(routeParams.context)
     ? routeParams.context[0]
     : routeParams.context;
-  const routeOrigin = Array.isArray(routeParams.origin) ? routeParams.origin[0] : routeParams.origin;
+  const routeOrigin = Array.isArray(routeParams.origin)
+    ? routeParams.origin[0]
+    : routeParams.origin;
   const creationEntry = creationLaunchEntry(state, routeContext);
   const {
     deleteWorkplace,
@@ -486,27 +480,30 @@ export function LaunchCoordinatorContent({
     transitionToWorkplaceStrict,
   } = useWorkplaceTransitions(state);
   const creationOpening = useCreationOpeningCoordinator();
-  const openCreatedWorkplace = React.useCallback(async (id: WorkplaceId) => {
-    if (!id || typeof id !== 'string' || !id.trim()) {
-      throw new Error('A created workplace id is required.');
-    }
-    creationOpening.request(id);
-    try {
-      await transitionToWorkplaceStrict(
-        id,
-        state.kind === 'open' ? state.workplaceId : undefined,
-        {
-          rejectOnError: true,
-          onTargetValidated: workplace => creationOpening.markValidated(id, workplace),
-          onTransitionCommitted: () => router.replace('/(tabs)'),
-        },
-      );
-      creationOpening.markCommitted(id);
-    } catch (error) {
-      creationOpening.clear(id);
-      throw error;
-    }
-  }, [creationOpening, router, state, transitionToWorkplaceStrict]);
+  const openCreatedWorkplace = React.useCallback(
+    async (id: WorkplaceId) => {
+      if (!id || typeof id !== 'string' || !id.trim()) {
+        throw new Error('A created workplace id is required.');
+      }
+      creationOpening.request(id);
+      try {
+        await transitionToWorkplaceStrict(
+          id,
+          state.kind === 'open' ? state.workplaceId : undefined,
+          {
+            rejectOnError: true,
+            onTargetValidated: workplace => creationOpening.markValidated(id, workplace),
+            onTransitionCommitted: () => router.replace('/(tabs)'),
+          },
+        );
+        creationOpening.markCommitted(id);
+      } catch (error) {
+        creationOpening.clear(id);
+        throw error;
+      }
+    },
+    [creationOpening, router, state, transitionToWorkplaceStrict],
+  );
   const returnToWorkplacePicker = React.useCallback(() => {
     preferences.device.setActiveWorkplaceId(undefined);
     AppNavigation.toDashboard();
@@ -580,6 +577,9 @@ export function LaunchCoordinatorContent({
     state,
   ]);
 
+  if (isResetInProgress) {
+    return <LoadingView loading text="Resetting all data…" />;
+  }
   if (isRestartRequired) return <RestartRequiredScreen />;
 
   if (state.kind === 'open') {
@@ -597,7 +597,9 @@ export function LaunchCoordinatorContent({
           isSwitchingWorkplace={isTransitioning}
           workplaceSwitchError={transitionError}
         >
-          <CreationLaunchProvider value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}>
+          <CreationLaunchProvider
+            value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}
+          >
             {children}
           </CreationLaunchProvider>
         </WorkplaceProvider>
@@ -626,7 +628,10 @@ export function LaunchCoordinatorContent({
     if (state.journeyId === 'add_workplace') {
       return (
         <Redirect
-          href={workplaceCreationHref({ context: 'registered_empty_device', origin: 'launch_gate' })}
+          href={workplaceCreationHref({
+            context: 'registered_empty_device',
+            origin: 'launch_gate',
+          })}
         />
       );
     }
@@ -641,7 +646,9 @@ export function LaunchCoordinatorContent({
     )
   ) {
     return (
-      <CreationLaunchProvider value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}>
+      <CreationLaunchProvider
+        value={{ openCreatedWorkplace, returnToWorkplacePicker, entry: creationEntry }}
+      >
         {gateChildren}
       </CreationLaunchProvider>
     );
@@ -653,9 +660,7 @@ export function LaunchCoordinatorContent({
         transitionError={transitionError}
         isTransitioning={isTransitioning}
         onSelect={id => void transitionToWorkplace(id)}
-        onCreate={() =>
-          AppNavigation.toAddWorkplace({ context: 'workplace_picker', origin: '/' })
-        }
+        onCreate={() => AppNavigation.toAddWorkplace({ context: 'workplace_picker', origin: '/' })}
         onImport={() =>
           router.replace({ pathname: '/onboarding', params: { journey: 'picker_restore' } })
         }
