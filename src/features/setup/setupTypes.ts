@@ -6,6 +6,8 @@ import type {
   RestoreHandoff as ImportedRestoreHandoff,
 } from '@/src/services/import/restore';
 import type { ImportStats } from '@/src/services/import/types';
+import type { CashClarityDraft, CashClarityEditableInput, OnboardingStep } from './first-run/draft';
+import type { OnboardingContext, OnboardingIntent } from './first-run/onboardingAnalytics';
 
 export { isSetupJourneyId, type SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 
@@ -13,6 +15,8 @@ export type RestoreJourneyId =
   'first_run_restore' | 'empty_device_restore' | 'picker_restore' | 'settings_restore';
 
 export type SetupEntryPolicy = 'blocking' | 'optional';
+export type CreationIntent = OnboardingIntent;
+export type CreationContext = OnboardingContext;
 export type SetupSliceId =
   'device' | 'restore_source' | 'workplace' | 'restore_summary' | 'summary';
 export type SetupSlicePolicy = 'required' | 'when_missing' | 'always_show';
@@ -117,16 +121,39 @@ export interface RestoreSetupDraft extends SetupDraftBase {
   readonly summary?: SetupSummaryOutput;
 }
 
-export interface WorkplaceCreationSetupDraft extends SetupDraftBase {
-  readonly kind: 'workplace_creation';
-  readonly journeyId: 'empty_device_workplace' | 'create_workplace';
-  readonly entryPolicy: 'optional' | 'blocking';
-  readonly workplace?: WorkplaceSetupOutput;
-  readonly summary?: SetupSummaryOutput;
+export interface CashClaritySetupDraft {
+  readonly schemaVersion: 2;
+  readonly kind: 'cash_clarity';
+  readonly journeyId: 'first_run' | 'add_workplace';
+  readonly intent: CreationIntent;
+  readonly context: CreationContext;
+  readonly entryPolicy: SetupEntryPolicy;
+  readonly operationId: WorkplaceId;
+  readonly draft: CashClarityDraft;
+  readonly editableInput: CashClarityEditableInput;
+  readonly step: OnboardingStep;
+  readonly history: readonly OnboardingStep[];
+  readonly repairReturnStep?: OnboardingStep;
+  readonly publication?: {
+    readonly workplaceId: WorkplaceId;
+    readonly status: 'published' | 'already_published';
+  };
+  readonly publicationErrorCode?:
+    | 'invalid_input'
+    | 'missing_spendable_account'
+    | 'ambiguous_existing_publication'
+    | 'incomplete_publication'
+    | 'save_failed';
+  /** Accepted legacy provenance retained as migration metadata. */
+  readonly legacyProvenance?: {
+    readonly name: SetupFactSource;
+    readonly icon: SetupFactSource;
+    readonly currency: SetupFactSource;
+  };
 }
 
 /** Explicit union: adding a slice adds a field here, not a string-keyed output map. */
-export type SetupDraft = RestoreSetupDraft | WorkplaceCreationSetupDraft;
+export type SetupDraft = RestoreSetupDraft | CashClaritySetupDraft;
 
 export type SetupSliceOutput =
   | DeviceSetupOutput

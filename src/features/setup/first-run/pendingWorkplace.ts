@@ -5,17 +5,13 @@ import { storage } from '@/src/utils/storage';
 const PENDING_WORKPLACE_KEY = 'cash_clarity_pending_workplace_id';
 
 export function readPendingCashClarityWorkplaceId(): WorkplaceId | undefined {
-  const value = storage.getString(PENDING_WORKPLACE_KEY);
-  if (typeof value !== 'string' || value.trim() === '') return undefined;
-  return asWorkplaceId(value);
+  // A pre-session bare ID is not publication evidence and must never retarget a new session.
+  return undefined;
 }
 
 export function cashClarityWorkplaceId(): WorkplaceId {
-  const existing = readPendingCashClarityWorkplaceId();
-  if (existing) return existing;
-  const id = asWorkplaceId(generator());
-  storage.set(PENDING_WORKPLACE_KEY, id);
-  return id;
+  // The conversational session owns this ID; there is no parallel ID writer.
+  return asWorkplaceId(generator());
 }
 
 export function clearPendingCashClarityWorkplaceId(): void {

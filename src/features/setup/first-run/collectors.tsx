@@ -2,6 +2,7 @@ import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboard
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { getLocales } from 'expo-localization';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { CollectStep } from './conversationUi';
 import type { CollectedItem } from './CollectedRow';
@@ -43,6 +44,10 @@ export type CollectorSessionHooks = {
   /** Parent session clears this collector's defer flag after valid Continue. */
   readonly onInclude?: () => void;
   readonly locale?: string;
+  readonly validationMessage?: string | null;
+  readonly recovery?: ReactNode;
+  readonly footer?: ReactNode;
+  readonly onValidationBlocked?: (reason: 'amount_invalid' | 'missing_spendable_account' | 'dependency_unresolved') => void;
 };
 
 function useAmountEditor(
@@ -167,6 +172,10 @@ export function MoneyScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  validationMessage,
+  recovery,
+  footer,
+  onValidationBlocked,
   locale = getLocales()[0]?.languageTag ?? 'en-US',
 }: {
   readonly currency: string;
@@ -338,8 +347,12 @@ export function MoneyScene({
       continueDisabled={accounts.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
-        if (!isMoneyReady(accounts) || !accountAmountsValid || !cardPaymentAmountsValid) return;
+        if (!isMoneyReady(accounts) || !accountAmountsValid || !cardPaymentAmountsValid) {
+          onValidationBlocked?.(isMoneyReady(accounts) ? 'amount_invalid' : 'dependency_unresolved');
+          return;
+        }
         if (hasIncludedCardPayment && !hasEligibleSpendable) {
+          onValidationBlocked?.('missing_spendable_account');
           onNeedAccount();
           return;
         }
@@ -358,6 +371,9 @@ export function MoneyScene({
       }
       skipLabel={onDefer ? copy.addLater : copy.skipMoney}
       onBack={onBack}
+      validationMessage={validationMessage}
+      recovery={recovery}
+      footer={footer}
       chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(ACCOUNT_CHIPS)}
       onAddChip={id => {
@@ -398,6 +414,10 @@ export function IncomeScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  validationMessage,
+  recovery,
+  footer,
+  onValidationBlocked,
   locale = getLocales()[0]?.languageTag ?? 'en-US',
 }: {
   readonly currency: string;
@@ -429,8 +449,12 @@ export function IncomeScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
-        if (!amountsValid) return;
+        if (!amountsValid) {
+          onValidationBlocked?.('amount_invalid');
+          return;
+        }
         if (items.length > 0 && !hasSpendable) {
+          onValidationBlocked?.('missing_spendable_account');
           onNeedAccount();
           return;
         }
@@ -452,6 +476,9 @@ export function IncomeScene({
       }
       skipLabel={onDefer ? copy.addLater : copy.skipForNow}
       onBack={onBack}
+      validationMessage={validationMessage}
+      recovery={recovery}
+      footer={footer}
       chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(INCOME_CHIPS)}
       onAddChip={id => {
@@ -543,6 +570,10 @@ export function ProtectScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  validationMessage,
+  recovery,
+  footer,
+  onValidationBlocked,
   locale = getLocales()[0]?.languageTag ?? 'en-US',
 }: {
   readonly currency: string;
@@ -573,8 +604,12 @@ export function ProtectScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
-        if (!amountsValid) return;
+        if (!amountsValid) {
+          onValidationBlocked?.('amount_invalid');
+          return;
+        }
         if (items.length > 0 && !hasSpendable) {
+          onValidationBlocked?.('missing_spendable_account');
           onNeedAccount();
           return;
         }
@@ -596,6 +631,9 @@ export function ProtectScene({
       }
       skipLabel={onDefer ? copy.addLater : copy.skipPayments}
       onBack={onBack}
+      validationMessage={validationMessage}
+      recovery={recovery}
+      footer={footer}
       chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(PAYMENT_CHIPS)}
       onAddChip={id => {
@@ -671,6 +709,10 @@ export function ReserveScene({
   onAmountTextChange,
   onDefer,
   onInclude,
+  validationMessage,
+  recovery,
+  footer,
+  onValidationBlocked,
   locale = getLocales()[0]?.languageTag ?? 'en-US',
 }: {
   readonly currency: string;
@@ -701,8 +743,12 @@ export function ReserveScene({
       continueDisabled={items.length === 0}
       onContinue={() => {
         setValidationAttempted(true);
-        if (!amountsValid) return;
+        if (!amountsValid) {
+          onValidationBlocked?.('amount_invalid');
+          return;
+        }
         if (items.length > 0 && !hasSpendable) {
+          onValidationBlocked?.('missing_spendable_account');
           onNeedAccount();
           return;
         }
@@ -724,6 +770,9 @@ export function ReserveScene({
       }
       skipLabel={onDefer ? copy.addLater : copy.skipBudgets}
       onBack={onBack}
+      validationMessage={validationMessage}
+      recovery={recovery}
+      footer={footer}
       chipLabel={copy.tapTypeToAdd}
       chips={namedAddChips(BUDGET_CHIPS)}
       onAddChip={category => {

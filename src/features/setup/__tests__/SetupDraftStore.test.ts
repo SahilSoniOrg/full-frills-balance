@@ -1,6 +1,6 @@
 import { Icon } from '@/src/types/domainIcons';
-import { asWorkplaceId } from '@/src/types/ids';
-import { parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
+import { asAccountId, asWorkplaceId } from '@/src/types/ids';
+import { discardUnreadableSetupDraft, parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
 import { storage } from '@/src/utils/storage';
 import type { RestoreSetupDraft } from '../setupTypes';
 import { AccountType } from '@/src/types/enums';
@@ -84,6 +84,103 @@ describe('SetupDraftStore', () => {
     };
 
     expect(parseSetupDraft(withWorkplace)).toEqual(withWorkplace);
+  });
+
+  it('migrates accepted legacy creation output without publishing or dropping custom definitions', () => {
+    const legacy = {
+      schemaVersion: 1,
+      kind: 'workplace_creation',
+      journeyId: 'create_workplace',
+      entryPolicy: 'optional',
+      operationId,
+      presentedHistory: ['workplace', 'summary'],
+      acceptedSlices: ['workplace', 'summary'],
+      workplace: {
+        name: { value: 'Family Books', source: 'imported' },
+        icon: { value: Icon.Briefcase, source: 'imported' },
+        baseCurrency: { value: 'CAD', source: 'existing' },
+        selectedAccounts: [{ id: asAccountId('legacy-brokerage'), name: 'Brokerage', type: AccountType.ASSET, icon: Icon.Briefcase }],
+        selectedCategories: [{ id: asAccountId('legacy-custom'), name: 'Custom income', type: AccountType.INCOME, icon: Icon.TrendingUp }],
+        acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
+      },
+      summary: { confirmed: true },
+    };
+
+    const migrated = parseSetupDraft(legacy);
+    expect(migrated).toMatchObject({
+      kind: 'cash_clarity',
+      journeyId: 'add_workplace',
+      intent: 'add_workplace',
+      context: 'workplace_picker',
+      entryPolicy: 'optional',
+      operationId,
+      step: 'clarity',
+      legacyProvenance: { name: 'imported', icon: 'imported', currency: 'existing' },
+      draft: {
+        workplaceName: 'Family Books',
+        workplaceIcon: Icon.Briefcase,
+        currency: 'CAD',
+        preservedStarterAccounts: [{ id: 'legacy-brokerage', name: 'Brokerage' }],
+        preservedStarterCategories: [{ id: 'legacy-custom', name: 'Custom income' }],
+      },
+    });
+    expect(migrated?.kind === 'cash_clarity' && migrated.publication).toBeUndefined();
+  });
+
+  it('maps an empty registered-device creation draft to the blocking conversational entry', () => {
+    const migrated = parseSetupDraft({
+      schemaVersion: 1,
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: [],
+      acceptedSlices: [],
+    });
+    expect(migrated).toMatchObject({
+      kind: 'cash_clarity',
+      journeyId: 'add_workplace',
+      intent: 'add_workplace',
+      context: 'registered_empty_device',
+      entryPolicy: 'blocking',
+      operationId,
+      step: 'currency',
+    });
+  });
+
+  it('replaces valid legacy bytes only after the session migration succeeds', () => {
+    const raw = JSON.stringify({
+      schemaVersion: 1,
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: [],
+      acceptedSlices: [],
+    });
+    mockGetString.mockReturnValue(raw);
+    const migrated = new SetupDraftStore().load();
+    expect(migrated?.kind).toBe('cash_clarity');
+    expect(mockSet).toHaveBeenCalledWith(
+      SETUP_DRAFT_KEY,
+      expect.stringContaining('"schemaVersion":2'),
+    );
+  });
+
+  it('leaves unsupported payloads untouched for explicit recovery', () => {
+    const raw = JSON.stringify({ schemaVersion: 99, kind: 'unknown' });
+    mockGetString.mockReturnValue(raw);
+    expect(new SetupDraftStore().load()).toBeUndefined();
+    expect(mockSet).not.toHaveBeenCalled();
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it('copies unreadable bytes to recovery before clearing the active store', () => {
+    const raw = '{"schemaVersion":99,"kind":"future"';
+    mockGetString.mockReturnValue(raw);
+    discardUnreadableSetupDraft();
+    expect(mockSet).toHaveBeenCalledWith(`${SETUP_DRAFT_KEY}_recovery`, raw);
+    expect(mockRemove).toHaveBeenCalledWith(SETUP_DRAFT_KEY);
   });
 
   it.each([

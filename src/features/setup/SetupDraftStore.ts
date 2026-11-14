@@ -27,7 +27,6 @@ import type {
   Sourced,
   StarterAccountInput,
   WorkplaceCheckpoint,
-  WorkplaceCreationSetupDraft,
   WorkplaceSetupOutput,
 } from './setupTypes';
 import {
@@ -39,9 +38,17 @@ import {
   isWorkplaceId,
   restoreSources,
 } from './setupTypes';
+import {
+  createCreationSession,
+  parseCashClaritySetupDraft,
+  serializeCashClaritySetupDraft,
+} from './first-run/creationSession';
+import { defaultOnboardingCurrency, defaultWorkplaceName } from './first-run/localeDefaults';
+import type { CashClaritySetupDraft } from './setupTypes';
 
 export { SETUP_DRAFT_KEY };
 export const SETUP_DRAFT_SCHEMA_VERSION = 1 as const;
+const SETUP_DRAFT_RECOVERY_KEY = `${SETUP_DRAFT_KEY}_recovery`;
 
 type RecordValue = Record<string, unknown>;
 
@@ -286,11 +293,9 @@ function parseBase(value: RecordValue): SetupDraftBase | undefined {
   };
 }
 
-function acceptedOutputIsPresent(draft: SetupDraft): boolean {
+function acceptedOutputIsPresent(draft: RestoreSetupDraft | LegacyWorkplaceCreationSetupDraft): boolean {
   const accepted = new Set(draft.acceptedSlices);
-  if (draft.kind !== 'workplace_creation') {
-    if (accepted.has('device') && !draft.device) return false;
-  }
+  if (draft.kind === 'restore' && accepted.has('device') && !draft.device) return false;
   if (accepted.has('workplace') && !draft.workplace) return false;
   if (accepted.has('summary') && !draft.summary) return false;
   if (draft.kind === 'restore') {
@@ -411,10 +416,18 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
   return acceptedOutputIsPresent(draft) ? draft : undefined;
 }
 
-function parseWorkplaceCreation(
+interface LegacyWorkplaceCreationSetupDraft extends SetupDraftBase {
+  readonly kind: 'workplace_creation';
+  readonly journeyId: 'empty_device_workplace' | 'create_workplace';
+  readonly entryPolicy: 'optional' | 'blocking';
+  readonly workplace?: WorkplaceSetupOutput;
+  readonly summary?: SetupSummaryOutput;
+}
+
+function parseLegacyWorkplaceCreation(
   value: RecordValue,
   base: SetupDraftBase,
-): WorkplaceCreationSetupDraft | undefined {
+): LegacyWorkplaceCreationSetupDraft | undefined {
   const allowed = [
     'schemaVersion',
     'kind',
@@ -440,7 +453,7 @@ function parseWorkplaceCreation(
   const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
   if ((value.workplace !== undefined && !workplace) || (value.summary !== undefined && !summary))
     return undefined;
-  const draft: WorkplaceCreationSetupDraft = {
+  const draft: LegacyWorkplaceCreationSetupDraft = {
     ...base,
     kind: 'workplace_creation',
     journeyId: value.journeyId,
@@ -449,6 +462,52 @@ function parseWorkplaceCreation(
     ...(summary ? { summary } : {}),
   };
   return acceptedOutputIsPresent(draft) ? draft : undefined;
+}
+
+function migrateLegacyWorkplaceCreation(
+  legacy: LegacyWorkplaceCreationSetupDraft,
+): CashClaritySetupDraft {
+  const intent = 'add_workplace' as const;
+  const context = legacy.journeyId === 'empty_device_workplace'
+    ? 'registered_empty_device' as const
+    : 'workplace_picker' as const;
+  const session = createCreationSession({
+    intent,
+    context,
+    entryPolicy: legacy.entryPolicy,
+    currency: legacy.workplace?.baseCurrency.value ?? defaultOnboardingCurrency(),
+    workplaceName: legacy.workplace?.name.value ?? defaultWorkplaceName(),
+    operationId: legacy.operationId,
+  });
+  const workplace = legacy.workplace;
+  const step = legacy.summary || legacy.acceptedSlices.includes('summary')
+    ? 'clarity'
+    : workplace?.acceptedCheckpoints.includes('categories')
+      ? 'clarity'
+      : workplace?.acceptedCheckpoints.includes('accounts')
+        ? 'next'
+        : workplace?.acceptedCheckpoints.includes('currency')
+          ? 'now'
+          : 'currency';
+  return {
+    ...session,
+    draft: {
+      ...session.draft,
+      ...(workplace ? {
+        workplaceName: workplace.name.value,
+        workplaceIcon: workplace.icon.value,
+        currency: workplace.baseCurrency.value,
+        preservedStarterAccounts: workplace.selectedAccounts,
+        preservedStarterCategories: workplace.selectedCategories,
+      } : {}),
+    },
+    step,
+    legacyProvenance: workplace ? {
+      name: workplace.name.source,
+      icon: workplace.icon.source,
+      currency: workplace.baseCurrency.source,
+    } : undefined,
+  };
 }
 
 /** Drafts saved before the appearance step was removed still carry it; an in-flight restore must stay readable. */
@@ -463,13 +522,19 @@ function withoutRetiredAppearance(value: RecordValue): RecordValue {
   return next;
 }
 
-/** Strict parser for the single device-local Setup draft. Invalid drafts are discarded. */
+/** Strict parser for the single device-local Setup draft. Invalid bytes remain available for recovery. */
 export function parseSetupDraft(raw: unknown): SetupDraft | undefined {
   if (!isRecord(raw)) return undefined;
   const value = withoutRetiredAppearance(raw);
+  const creation = parseCashClaritySetupDraft(value);
+  if (creation) return creation;
   const base = parseBase(value);
+  if (!base) return undefined;
+  if (value.kind === 'workplace_creation') {
+    const legacy = parseLegacyWorkplaceCreation(value, base);
+    return legacy ? migrateLegacyWorkplaceCreation(legacy) : undefined;
+  }
   if (
-    !base ||
     !isSetupJourneyId(value.journeyId) ||
     !hasOnlyKeys(value, [
       'schemaVersion',
@@ -489,7 +554,6 @@ export function parseSetupDraft(raw: unknown): SetupDraft | undefined {
     return undefined;
   }
   if (value.kind === 'restore') return parseRestore(value, base);
-  if (value.kind === 'workplace_creation') return parseWorkplaceCreation(value, base);
   return undefined;
 }
 
@@ -502,7 +566,13 @@ export class SetupDraftStore {
     try {
       const raw = storage.getString(SETUP_DRAFT_KEY);
       if (!raw) return undefined;
-      return parseSetupDraft(JSON.parse(raw));
+      const payload: unknown = JSON.parse(raw);
+      const parsed = parseSetupDraft(payload);
+      if (parsed?.kind === 'cash_clarity' && (!isRecord(payload) || payload.kind !== 'cash_clarity' || payload.schemaVersion !== 2)) {
+        // Replace a legacy creation only after the full old payload converted successfully.
+        this.write(parsed);
+      }
+      return parsed;
     } catch {
       return undefined;
     }
@@ -510,7 +580,25 @@ export class SetupDraftStore {
 
   save(draft: SetupDraft): void {
     if (!isValidSetupDraft(draft)) throw new Error('Cannot persist an invalid Setup draft');
-    storage.set(SETUP_DRAFT_KEY, JSON.stringify(draft));
+    const existing = this.load();
+    const sameSession = existing && existing.kind === draft.kind && existing.operationId === draft.operationId &&
+      (existing.kind === 'restore'
+        ? draft.kind === 'restore' && existing.journeyId === draft.journeyId && existing.entryPolicy === draft.entryPolicy
+        : draft.kind === 'cash_clarity' && existing.intent === draft.intent && existing.context === draft.context && existing.entryPolicy === draft.entryPolicy);
+    if (existing && !sameSession) {
+      throw new Error('Resolve the active Setup draft before switching journeys');
+    }
+    if (!existing && hasUnreadableSetupDraft()) {
+      throw new Error('Preserve or explicitly discard the unreadable Setup payload before continuing');
+    }
+    this.write(draft);
+  }
+
+  private write(draft: SetupDraft): void {
+    storage.set(
+      SETUP_DRAFT_KEY,
+      draft.kind === 'cash_clarity' ? serializeCashClaritySetupDraft(draft) : JSON.stringify(draft),
+    );
     notifySetupDraftChanged();
   }
 
@@ -523,6 +611,7 @@ export class SetupDraftStore {
       }
       forgetAllPreparedRestores();
     }
+    if (!draft) preserveUnreadablePayload();
     storage.remove(SETUP_DRAFT_KEY);
     notifySetupDraftChanged();
   }
@@ -532,8 +621,38 @@ export class SetupDraftStore {
 export function discardUnreadableSetupDraft(): void {
   restorePublicationClaims.clearAll();
   forgetAllPreparedRestores();
+  preserveUnreadablePayload();
   storage.remove(SETUP_DRAFT_KEY);
   notifySetupDraftChanged();
+}
+
+function preserveUnreadablePayload(): void {
+  const raw = storage.getString(SETUP_DRAFT_KEY);
+  if (!raw) return;
+  try {
+    if (parseSetupDraft(JSON.parse(raw)) !== undefined) return;
+  } catch {
+    // Keep malformed JSON as opaque recovery data too.
+  }
+  storage.set(SETUP_DRAFT_RECOVERY_KEY, raw);
+}
+
+export function hasUnreadableSetupDraft(): boolean {
+  const raw = storage.getString(SETUP_DRAFT_KEY);
+  if (!raw) return false;
+  try {
+    return parseSetupDraft(JSON.parse(raw)) === undefined;
+  } catch {
+    return true;
+  }
+}
+
+export function readPreservedSetupRecoveryPayload(): string | undefined {
+  return storage.getString(SETUP_DRAFT_RECOVERY_KEY);
+}
+
+export function clearPreservedSetupRecoveryPayload(): void {
+  storage.remove(SETUP_DRAFT_RECOVERY_KEY);
 }
 
 export const setupDraftStore = new SetupDraftStore();
