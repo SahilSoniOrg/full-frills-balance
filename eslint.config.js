@@ -5,6 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const eslintConfigPrettier = require('eslint-config-prettier');
 const crossFeatureAllowlist = require('./scripts/cross-feature-boundary-allowlist.json');
+const {
+  DOMAIN_FORBIDDEN_ROOTS,
+  DOMAIN_FORBIDDEN_PACKAGE_REGEX,
+} = require('./scripts/lib/domain-boundary-policy.cjs');
 
 // Determine feature directories to enforce boundary rules
 const featuresDir = path.join(__dirname, 'src/features');
@@ -110,6 +114,37 @@ module.exports = defineConfig([
     },
   },
   ...featureRules,
+  {
+    files: ['src/domain/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}'],
+    ignores: [
+      'src/domain/**/__tests__/**',
+      'src/domain/**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          // Immediate feedback for package/alias imports. The architecture checker
+          // resolves relative imports, barrels, platform variants, and dependency chains.
+          patterns: [
+            {
+              group: [
+                'app',
+                'app/**',
+                ...DOMAIN_FORBIDDEN_ROOTS.flatMap(root => [`@/${root}`, `@/${root}/**`]),
+              ],
+              message:
+                'Domain rules must be independent of presentation, persistence, and orchestration.',
+            },
+            {
+              regex: DOMAIN_FORBIDDEN_PACKAGE_REGEX,
+              message: 'Domain rules must be independent of platform and UI packages.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Command ownership: feature hooks must not call repository mutations.
   // Reactive observe/find reads remain allowed via import-only usage patterns.
   {

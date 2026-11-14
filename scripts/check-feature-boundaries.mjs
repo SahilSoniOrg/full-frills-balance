@@ -3,10 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { walkDirectory } from './lib/source-walk.mjs';
+import { analyzeDomainBoundaries } from './lib/domain-boundaries.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const ALLOWLIST_PATH = path.join(__dirname, 'cross-feature-boundary-allowlist.json');
 const SOURCE_FILE_RE = /\.(?:ts|tsx)$/;
 const IMPORT_RE = /(?:from\s*|import\s*\()(['"])([^'"]+)\1/g;
 export const NEUTRAL_ROOTS = [
@@ -15,6 +15,8 @@ export const NEUTRAL_ROOTS = [
   'src/contexts',
   'src/data',
   'src/design-system',
+  'src/domain',
+  'src/navigation',
   'src/hooks',
   'src/services',
   'src/types',
@@ -90,7 +92,9 @@ export function analyzeFeatureBoundaries({
       if (!importedFeature) continue;
       const { targetFeature, isDeep, isRelative } = importedFeature;
       if (sourceKind.type === 'neutral') {
-        violations.push(`${relativePath}: production-neutral module cannot import feature ${specifier}`);
+        violations.push(
+          `${relativePath}: production-neutral module cannot import feature ${specifier}`,
+        );
         continue;
       }
       if (targetFeature === sourceKind.name) continue;
@@ -116,18 +120,20 @@ export function analyzeFeatureBoundaries({
       violations.push(`stale allowlist entry ${edge}; remove it so the dependency cannot return`);
     }
   }
-  return { actualEdges, allowedEdges, violations };
+  const domain = analyzeDomainBoundaries({ rootDir });
+  violations.push(...domain.violations);
+  return { actualEdges, allowedEdges, violations, domainModuleCount: domain.domainModuleCount };
 }
 
 function runCli() {
-  const { actualEdges, violations } = analyzeFeatureBoundaries();
+  const { actualEdges, violations, domainModuleCount } = analyzeFeatureBoundaries();
   if (violations.length > 0) {
-    console.error(`Feature-boundary check FAILED:\n  ${violations.join('\n  ')}`);
+    console.error(`Feature/domain boundary check FAILED:\n  ${violations.join('\n  ')}`);
     process.exitCode = 1;
     return;
   }
   console.log(
-    `Feature-boundary check OK: ${actualEdges.size} explicit public-barrel edges; no deep imports.`,
+    `Feature/domain boundary check OK: ${actualEdges.size} public-barrel edges; ${domainModuleCount} domain modules have no forbidden direct or indirect runtime dependencies.`,
   );
 }
 
