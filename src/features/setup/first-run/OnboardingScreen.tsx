@@ -73,7 +73,6 @@ const startedInRuntime = new Set<string>();
 const viewedInRuntime = new Set<string>();
 const estimateViewedInRuntime = new Set<string>();
 const resultViewedInRuntime = new Set<string>();
-const completedInRuntime = new Set<string>();
 const blockedInRuntime = new Set<string>();
 const openedInRuntime = new Set<string>();
 
@@ -228,8 +227,6 @@ export function OnboardingScreen() {
     const current = sessionRef.current;
     if (!current) return;
     const next = update(current);
-    segmentStartedAt.current = Date.now();
-    acknowledgedDraft.current = null;
     sessionRef.current = next;
     saveSetupDraft(next);
     setSession(next);
@@ -261,7 +258,7 @@ export function OnboardingScreen() {
     }
     const stepKey = `${session.operationId}:${session.step}`;
     if (!viewedInRuntime.has(stepKey)) {
-      trackOnboardingStepViewed({ ...analyticsProps, step: analyticsStep(session.step) });
+      trackOnboardingStepViewed({ ...analyticsProps, step: analyticsStep(session.step), durationMs: Date.now() - segmentStartedAt.current });
       viewedInRuntime.add(stepKey);
     }
     if (prepared?.hasUsableEstimate && !estimateViewedInRuntime.has(session.operationId)) {
@@ -371,8 +368,10 @@ export function OnboardingScreen() {
       setRepairMessage(copy.accountRepairMessage);
       return;
     }
-    const eventKey = `${current.operationId}:${current.step}:${action}`;
-    if (!completedInRuntime.has(eventKey)) {
+    const completionKey = `${current.step}:${action === 'defer' ? 'defer' : current.step === 'clarity' ? 'complete' : 'continue'}`;
+    const shouldTrackCompletion = !current.completedActions.includes(completionKey);
+    if (shouldTrackCompletion) {
+      persistSession(value => ({ ...value, completedActions: [...value.completedActions, completionKey] }));
       const props = {
         flowVersion: FLOW_VERSION,
         intent: current.intent,
@@ -383,7 +382,6 @@ export function OnboardingScreen() {
       } as const;
       if (action === 'defer') trackOnboardingStepDeferred({ ...props, action: 'defer' });
       else trackOnboardingStepCompleted({ ...props, action: current.step === 'clarity' ? 'complete' : 'continue' });
-      completedInRuntime.add(eventKey);
     }
     const repairTarget = current.repairReturnStep;
     const shouldReturnFromRepair = current.step === 'now' && repairTarget !== undefined &&
@@ -484,6 +482,8 @@ export function OnboardingScreen() {
       displayName: entry.intent === 'first_run' ? name ?? '' : preferences.userName ?? '',
     });
     saveSetupDraft(next);
+    acknowledgedDraft.current = null;
+    segmentStartedAt.current = Date.now();
     sessionRef.current = next;
     setSession(next);
     setConflict(null);
@@ -527,6 +527,7 @@ export function OnboardingScreen() {
     });
     segmentStartedAt.current = Date.now();
     acknowledgedDraft.current = null;
+    stepStartedAt.current = { step: next.step, at: Date.now() };
     sessionRef.current = next;
     saveSetupDraft(next);
     setSession(next);
@@ -536,7 +537,9 @@ export function OnboardingScreen() {
   };
 
   const resumeSession = () => {
-    segmentStartedAt.current = Date.now();
+    const now = Date.now();
+    segmentStartedAt.current = now;
+    if (sessionRef.current) stepStartedAt.current = { step: sessionRef.current.step, at: now };
     setResumePrompt(false);
     setResumed(true);
   };
@@ -773,12 +776,22 @@ export function OnboardingScreen() {
     },
   };
 
-  const deferredOmissions = prepared.deferredCollections.map(collection => ({
-    id: collection,
-    label: collection === 'accounts' ? copy.moneyQuestion
-      : collection === 'income' ? copy.incomeSource
-        : collection === 'commitment' ? copy.protectQuestion : copy.reserveQuestion,
-  }));
+  const deferredOmissions = prepared.deferredCollections.map(collection => {
+    const detail = collection === 'accounts'
+      ? session.draft.accounts.map(item => item.name).filter(Boolean).join(', ')
+      : collection === 'income'
+        ? (session.draft.income.kind === 'recurring' ? session.draft.income.items.map(item => item.name).filter(Boolean).join(', ') : '')
+        : collection === 'commitment'
+          ? (session.draft.commitment.kind === 'payment' ? session.draft.commitment.items.map(item => item.name).filter(Boolean).join(', ') : '')
+          : (session.draft.budget.kind === 'set' ? session.draft.budget.items.map(item => item.name).filter(Boolean).join(', ') : '');
+    return {
+      id: collection,
+      label: collection === 'accounts' ? copy.moneyQuestion
+        : collection === 'income' ? copy.incomeSource
+          : collection === 'commitment' ? copy.protectQuestion : copy.reserveQuestion,
+      ...(detail ? { detail } : {}),
+    };
+  });
   const editActions = [
     { id: 'accounts', label: copy.editAccounts, onPress: () => saveTransition('now', [...session.history, 'clarity']) },
     { id: 'income', label: copy.editIncome, onPress: () => saveTransition('next', [...session.history, 'clarity']) },

@@ -123,7 +123,7 @@ function parseEditableInput(value: unknown): CashClarityEditableInput | undefine
 }
 
 export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraft | undefined {
-  if (!record(value) || !onlyKeys(value, ['schemaVersion', 'kind', 'journeyId', 'intent', 'context', 'entryPolicy', 'operationId', 'draft', 'editableInput', 'inputLocale', 'step', 'history', 'repairReturnStep', 'publication', 'publicationErrorCode', 'legacyProvenance']) || value.schemaVersion !== CASH_CLARITY_SETUP_SCHEMA_VERSION || value.kind !== 'cash_clarity') return undefined;
+  if (!record(value) || !onlyKeys(value, ['schemaVersion', 'kind', 'journeyId', 'intent', 'context', 'entryPolicy', 'operationId', 'draft', 'editableInput', 'inputLocale', 'step', 'history', 'completedActions', 'repairReturnStep', 'publication', 'publicationErrorCode', 'legacyProvenance']) || value.schemaVersion !== CASH_CLARITY_SETUP_SCHEMA_VERSION || value.kind !== 'cash_clarity') return undefined;
   if (typeof value.inputLocale !== 'string' || !value.inputLocale.trim()) return undefined;
   try { new Intl.NumberFormat(value.inputLocale); } catch { return undefined; }
   const intent = value.intent;
@@ -141,6 +141,9 @@ export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraf
   if (!input || !validDraft(value.draft, input, value.operationId)) return undefined;
   if (!ONBOARDING_STEPS.includes(value.step as OnboardingStep) || !Array.isArray(value.history) ||
     !value.history.every(step => ONBOARDING_STEPS.includes(step as OnboardingStep))) return undefined;
+  if (!Array.isArray(value.completedActions) || !value.completedActions.every(string) ||
+    new Set(value.completedActions).size !== value.completedActions.length ||
+    value.completedActions.some(key => !/^(welcome|currency|now|next|protect|reserve|clarity):(continue|complete|defer)$/.test(key))) return undefined;
   if (value.repairReturnStep !== undefined && !ONBOARDING_STEPS.includes(value.repairReturnStep as OnboardingStep)) return undefined;
   let publication: CashClaritySetupDraft['publication'];
   if (value.publication !== undefined) {
@@ -170,6 +173,7 @@ export function parseCashClaritySetupDraft(value: unknown): CashClaritySetupDraf
     inputLocale: value.inputLocale,
     step: value.step as OnboardingStep,
     history: value.history as OnboardingStep[],
+    completedActions: value.completedActions,
     ...(value.repairReturnStep ? { repairReturnStep: value.repairReturnStep as OnboardingStep } : {}),
     ...(publication ? { publication } : {}),
     ...(value.publicationErrorCode ? { publicationErrorCode: value.publicationErrorCode as CashClaritySetupDraft['publicationErrorCode'] } : {}),
@@ -256,5 +260,6 @@ export function createCreationSession(options: {
     inputLocale: options.inputLocale ?? getLocales()[0]?.languageTag ?? 'en-US',
     step: options.intent === 'first_run' ? 'welcome' : 'currency',
     history: [],
+    completedActions: [],
   };
 }

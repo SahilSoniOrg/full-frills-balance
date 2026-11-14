@@ -135,6 +135,8 @@ export interface CashClaritySetupDraft {
   readonly inputLocale: string;
   readonly step: OnboardingStep;
   readonly history: readonly OnboardingStep[];
+  /** Completed step/action keys prevent duplicate funnel events after process restart. */
+  readonly completedActions: readonly string[];
   readonly repairReturnStep?: OnboardingStep;
   readonly publication?: {
     readonly workplaceId: WorkplaceId;

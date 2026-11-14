@@ -29,6 +29,7 @@ describe('Cash Clarity creation session persistence', () => {
         accounts: [{ id: 'bank-1', kind: 'bank' as const, name: 'Main', balance: 500 }],
       },
       editableInput: { amountTextById: { 'bank-1': '12x' }, deferredCollections: { income: true } },
+      completedActions: ['currency:continue'],
     };
 
     const serialized = serializeCashClaritySetupDraft(session);
@@ -39,6 +40,7 @@ describe('Cash Clarity creation session persistence', () => {
     expect(restored?.operationId).toBe('stable-operation');
     expect(restored?.editableInput.amountTextById['bank-1']).toBe('12x');
     expect(restored?.editableInput.deferredCollections?.income).toBe(true);
+    expect(restored?.completedActions).toEqual(['currency:continue']);
     expect(restored?.draft.accounts[0].balance).toBe(0);
     expect(prepareCashClarityInput(restored!.draft, restored!.editableInput, 'en-US').issues).toHaveLength(1);
   });

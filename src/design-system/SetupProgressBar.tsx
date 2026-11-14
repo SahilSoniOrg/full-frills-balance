@@ -23,7 +23,7 @@ export function SetupProgressBar({
   return (
     <Box
       accessibilityRole="progressbar"
-      accessibilityLabel={label}
+      accessibilityLabel={label.split(' · ').at(-1) ?? label}
       accessibilityValue={{
         min: 1,
         max: safeTotal,

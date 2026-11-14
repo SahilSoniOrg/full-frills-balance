@@ -4,7 +4,7 @@ import { ONBOARDING_PROGRESS_FLOW } from '../flow';
 describe('onboarding progress model', () => {
   it('derives the visible step label and progress bar values from the flow', () => {
     expect(onboardingStage('now')).toEqual({
-      label: `Step 2 of ${ONBOARDING_PROGRESS_FLOW.length} · Now`,
+      label: `Step 2 of ${ONBOARDING_PROGRESS_FLOW.length} · Accounts`,
       current: 2,
       total: ONBOARDING_PROGRESS_FLOW.length,
     });
