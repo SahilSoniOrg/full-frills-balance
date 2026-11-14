@@ -53,20 +53,8 @@ export type OnboardingStepId =
   | 'monthly_limits'
   | 'result';
 
-export type OnboardingAction =
-  | 'start'
-  | 'resume'
-  | 'restart'
-  | 'view'
-  | 'complete'
-  | 'defer'
-  | 'skip'
-  | 'continue'
-  | 'back'
-  | 'retry'
-  | 'save'
-  | 'open'
-  | 'cancel';
+export type OnboardingCompletionAction = 'continue' | 'complete';
+export type OnboardingDeferralAction = 'defer' | 'skip';
 
 export type OnboardingErrorCode =
   | 'amount_invalid'
@@ -80,20 +68,8 @@ export type OnboardingErrorCode =
   | 'open_failed'
   | 'unknown';
 
-export type OnboardingOutcome =
-  | 'success'
-  | 'failure'
-  | 'retry'
-  | 'cancelled'
-  | 'skipped'
-  | 'viewed'
-  | 'ready'
-  | 'zero'
-  | 'positive'
-  | 'negative'
-  | 'unknown'
-  | 'saved'
-  | 'opened';
+export type OnboardingResultOutcome = 'ready' | 'zero' | 'positive' | 'negative' | 'unknown';
+export type OnboardingSaveOutcome = 'success' | 'failure' | 'saved';
 
 export interface OnboardingFlowAnalytics {
   readonly flowVersion: string;
@@ -160,7 +136,7 @@ export function trackOnboardingStepViewed(
 export function trackOnboardingStepCompleted(
   input: OnboardingFlowAnalytics & {
     readonly step: OnboardingStepId;
-    readonly action: OnboardingAction;
+    readonly action: OnboardingCompletionAction;
     readonly durationMs?: number;
   },
 ): boolean {
@@ -175,7 +151,7 @@ export function trackOnboardingStepCompleted(
 export function trackOnboardingStepDeferred(
   input: OnboardingFlowAnalytics & {
     readonly step: OnboardingStepId;
-    readonly action: OnboardingAction;
+    readonly action: OnboardingDeferralAction;
     readonly durationMs?: number;
   },
 ): boolean {
@@ -202,7 +178,7 @@ export function trackOnboardingValidationBlocked(
 
 export function trackOnboardingResultViewed(
   input: OnboardingFlowAnalytics & {
-    readonly outcome: OnboardingOutcome;
+    readonly outcome: OnboardingResultOutcome;
     readonly durationMs?: number;
   },
 ): boolean {
@@ -215,7 +191,7 @@ export function trackOnboardingResultViewed(
 
 export function trackOnboardingSaveResult(
   input: OnboardingFlowAnalytics & {
-    readonly outcome: OnboardingOutcome;
+    readonly outcome: OnboardingSaveOutcome;
     readonly errorCode?: OnboardingErrorCode;
     readonly durationMs?: number;
   },
@@ -230,7 +206,7 @@ export function trackOnboardingSaveResult(
 
 export function trackOnboardingDashboardOpened(
   input: OnboardingFlowAnalytics & {
-    readonly outcome: OnboardingOutcome;
+    readonly outcome: 'opened';
     readonly durationMs?: number;
   },
 ): boolean {

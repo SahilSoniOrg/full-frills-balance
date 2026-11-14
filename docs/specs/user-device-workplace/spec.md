@@ -1,9 +1,9 @@
 # Spec — User, Device, Workplace, and Setup
 
 **Product:** Full Frills Balance
-**Date:** 2026-09-01
-**Status:** Approved behavior; core implementation exists, targeted cleanup remains
-**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [`docs/plans/setup-simplification-plan.md`](../../plans/setup-simplification-plan.md)
+**Date:** 2026-11-14
+**Status:** Approved contract; onboarding implementation in progress
+**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [onboarding implementation plan](../onboarding-improvement/implementation-plan.md)
 
 This is the canonical behavior and ownership contract. Terms follow `CONTEXT.md`. File paths and component names are intentionally excluded.
 
@@ -37,9 +37,9 @@ Launch runs above books providers.
 
 ```text
 if Device is not registered
-  → Device setup
+  → blocking conversational first-run creation or first-run restore
 else if no Workplaces exist
-  → Workplace setup or Workplace restore
+  → blocking conversational Workplace creation or empty-device restore
 else if Active workplace exists in the discovered set
   → open(Active workplace)
 else if exactly one Workplace exists
@@ -62,7 +62,7 @@ Recovery is not a compatibility layer for any unreleased Setup draft or onboardi
 
 ## 3. Setup model
 
-A Setup journey is an ordered recipe of Setup slices. The Setup Coordinator performs a linear scan from the current position:
+Restore journeys are ordered recipes of Setup slices. The Setup Coordinator performs a linear scan from the current position:
 
 1. ignore slices not included by the recipe;
 2. auto-complete a `when_missing` slice only when all required authoritative facts are present;
@@ -76,7 +76,7 @@ Slice participation policies are:
 - **when missing** — auto-complete from authoritative facts, otherwise present;
 - **always show** — prefill available facts but require explicit confirmation.
 
-Defaults may prefill a field, but never turn a required missing fact into an auto-completed slice.
+Defaults may prefill a field, but never turn a required missing fact into an auto-completed slice. Conversational creation uses the sequence in section 4.0 inside the same Setup ownership boundary. Its editable input is durable before acceptance; only validated included input can reach publication.
 
 ### 3.1 Fact provenance
 
@@ -123,7 +123,7 @@ The four restore journeys are `first_run_restore`, `empty_device_restore`,
 | Journey                                | Entry policy            | Presented order                                                                                                             |
 | -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | First run                              | Blocking                | Welcome → Currency → Accounts → Income → Payments → Monthly limits → Result                                                 |
-| First-run restore                      | Blocking                | Restore source → missing publication facts → Restore summary → Device setup when missing → Appearance setup → Setup summary |
+| First-run restore                      | Blocking                | Restore source → missing publication facts → Restore summary → publication → Device setup when missing → open |
 | Registered Device with zero Workplaces | Blocking                | Currency → Accounts → Income → Payments → Monthly limits → Result, or empty-device restore                                    |
 | Restore from picker                    | Blocking while selected | Restore source → missing publication facts → Restore summary → Open or return to picker                                     |
 | Restore from Settings                  | Optional                | Restore source → missing publication facts → Restore summary → Open or stay                                                 |
@@ -160,9 +160,9 @@ write an active pointer or navigate around that coordinator.
 
 Progress reflects presented top-level slices only. A slice owns any internal progress display. Fixed global labels such as “3 of 6” are prohibited.
 
-Back returns through presentation history. It does not reveal slices that auto-completed without presentation. Auto-completed facts remain visible on Setup summary and may be edited through an explicit Change action.
+Back returns through presentation history. It does not reveal slices that auto-completed without presentation. Auto-completed restore facts remain visible in restore review. Creation facts and deferred entries remain visible on Result with explicit edit actions.
 
-A Change action opens the owning slice directly. Accepting the edit reruns dependent derivations and validation, then returns directly to Setup summary.
+A Change action opens the owning slice directly. Accepting the edit reruns dependent derivations and validation, then returns directly to the owning review surface.
 
 ## 5. Slice contracts
 
@@ -178,7 +178,7 @@ A slice does not choose routes, activate a Workplace, mark a journey complete, o
 
 ### 5.1 Device setup
 
-Device setup requires a non-empty trimmed User display name. Acceptance writes the User name and registers the Device at that checkpoint; it does not create books or choose appearance.
+The Device slice used by first-run restore requires a non-empty trimmed User display name. Its acceptance writes the User name and registers the Device at that checkpoint; it does not create books or choose appearance. Conversational creation instead captures a candidate on Welcome and applies identity only after publication, as specified in section 4.0.
 
 During first-run restore, precedence is:
 
@@ -188,30 +188,19 @@ During first-run restore, precedence is:
 
 No first-run path synthesizes `User`.
 
-Restore remains available from the Device setup surface. Selecting it starts a Restore setup journey. A non-empty typed name is carried forward as a User-entered candidate; a blank value remains missing.
+Restore remains available from Welcome and the registered-empty-device creation entry. Selecting it starts a Restore setup journey. A non-empty typed name is carried forward as a User-entered candidate; a blank value remains missing.
 
-### 5.2 Workplace setup
+### 5.2 Workplace configuration
 
-Workplace setup is one slice with private internal checkpoints:
+Restore collects only publication-critical identity and base-currency facts not authoritatively supplied by the selected source. Missing identity receives a visible suggestion rather than silent completion. Missing or ambiguous base currency must be resolved before publication. Imported accounts and categories remain imported books; restore is not a financial editor.
 
-- identity;
-- base currency;
-- starter asset/liability accounts;
-- starter income/expense categories.
+Conversational creation has no identity step. It generates a distinct default Workplace name/icon and collects currency plus optional accounts, income, payments, and limits. Migrated accepted custom identities and starter definitions retain their values and provenance. A starter definition without an entered balance is metadata, not a zero-balance assertion or a contribution to the estimate.
 
-Default setup derives `{trimmed User display name}'s Personal workplace` and `briefcase`. The derived name follows display-name edits until the Workplace name is edited directly, after which its provenance is User-entered and it remains stable.
+An empty or fully deferred creation input can finish and create an empty Workplace. The Result identifies that no usable estimate exists. Valid zero, positive availability, and shortfall are distinct states. Included planned items require a valid spendable account; unresolved dependencies remain editable or can be explicitly deferred.
 
-Full setup presents identity. Restore presents only publication-critical checkpoints not authoritatively supplied by the source. Missing Workplace identity receives a visible suggestion, not silent completion. Missing or ambiguous base currency must be resolved before publication.
+### 5.3 Appearance
 
-Fresh setup requires at least one starter account, one income category, and one expense category. Imported books retain their imported accounts and categories; Restore setup does not turn into a financial editor.
-
-### 5.3 Appearance setup
-
-Appearance setup owns theme and font selection. It is always shown during first run, including when a backup contains valid appearance.
-
-Imported or existing appearance may prefill the slice. Preview is scoped to Setup and does not mutate User preferences. Discarding Setup removes the preview. The accepted appearance is written by the journey finisher.
-
-Later Workplace creation, picker restore, zero-Workplace restore for an already registered Device, and Settings restore do not repeat Appearance setup.
+Theme and font are User preferences configured through the existing appearance settings. This creation change adds no Appearance step. Retained restore recipes keep their existing appearance behavior; they do not acquire a new appearance checkpoint from creation consolidation.
 
 ### 5.4 Restore source
 
@@ -236,13 +225,13 @@ Actions vary by recipe:
 
 The surface reports intent. Its caller owns the resulting transition.
 
-### 5.6 Setup summary
+### 5.6 Conversational Result
 
-Setup summary displays every accepted or auto-completed fact relevant to the recipe. For first run this includes User name, Workplace identity, base currency, starter account/category counts, theme, and font.
+Result reviews the included effective inputs, forecast window, estimate, and deferred entries. It supplies edit actions for the owning collector without adding another step. Deferred rows remain in the unfinished session across navigation and restart; finishing explicitly continues without saving those entries, with that consequence visible beside the final action.
 
-Fresh Workplace fields are editable through their owning slices. During restore, Workplace name and icon are editable; imported currency, accounts, categories, journals, and other books are read-only until normal app use.
+Continue validates a collection and includes it; defer preserves its editor input and excludes it from calculation/publication. Missing, invalid, and valid-zero amounts are separate states. Result cannot publish invalid included input, unresolved dependencies, or an in-flight edit. While saving, editing and repeated submission are disabled.
 
-Acceptance is disabled while required facts are missing, dependent derivations are stale, Restore summary is unreadable, or a finisher is running.
+A publication error preserves the editable session. A failure to open an already-published Workplace offers Retry opening, never another creation commit. Creation-only Setup summary and starter-selection surfaces are retired after migration and route compatibility are implemented.
 
 ## 6. Workplace restore
 
@@ -267,42 +256,25 @@ Cancelling before publication creates no rows. After publication, Back or app te
 
 ## 7. Finishers and commit semantics
 
-There are three explicit finishers:
+Creation publication and restore finalization have explicit ownership. Each operation is idempotent under its draft's stable operation ID. Database publication is the books commit point; the Setup draft and preferences are outside that transaction.
 
-- first run;
-- Restore setup;
-- later Workplace creation.
+### 7.1 Creation publication
 
-Each finisher is idempotent under the draft's stable operation ID.
+1. Validate all included effective input before any write.
+2. Freeze the submitted payload and atomically publish the Workplace, accounts/categories, opening journals, planned entries, budgets, and completion evidence.
+3. On retry, verify completed publication and perform remaining follow-ups without recreating journals or adjusting balances again. An old partial Workplace row alone is not proof of completion.
+4. For first-run intent only, apply the entered User name and Device registration as idempotent follow-ups. Adding a Workplace never renames or re-registers a Device.
+5. Retain the published outcome in the Setup draft, then emit `workplace_created(id)` to the launch coordinator.
+6. Let the coordinator validate and open that target through its normal transition boundary. A failed transition retains the previous Workplace and a retryable published outcome.
+7. Clear the unfinished Setup draft only after successful finalization. A process exit before cleanup resumes the remaining effects for the same operation.
 
-### 7.1 First-run finisher
+### 7.2 Restore finalization
 
-1. Validate the full accepted draft.
-2. Publish or verify the operation-owned Workplace, system accounts, selected starters, and any future draft journal in one database transaction.
-3. Write accepted User name and appearance.
-4. Persist Device registration and Active workplace.
-5. Clear the Setup draft last.
-6. Emit the terminal outcome.
+Retained restore recipes verify operation-owned publication and its handoff, apply permitted identity edits and recipe-owned Device facts, and report their accepted outcome through the launch coordinator. They retain source ownership and discard behavior. This creation change does not add a new Device/Appearance/summary step to restore.
 
-### 7.2 Restore-setup finisher
+### 7.3 Recovery
 
-1. Verify the published Workplace matches the Restore handoff.
-2. Validate all remaining accepted Setup facts.
-3. Apply allowed Workplace identity edits.
-4. Write accepted User name and appearance when the recipe includes them.
-5. Persist Device registration and Active workplace.
-6. Clear the Setup draft last.
-7. Emit the terminal outcome.
-
-### 7.3 Later-creation finisher
-
-1. Validate the Workplace draft.
-2. Publish or verify the operation-owned Workplace and starter books atomically.
-3. Clear the optional Setup draft.
-4. Emit `workplace_created(id)`.
-5. Let the launch coordinator validate and perform the normal Workplace transition.
-
-Database publication is the books commit point. A failure afterward never reports valid books as uncommitted. The retained draft lets the same finisher verify publication and retry remaining idempotent writes.
+Failure after atomic publication reports that books are saved and offers the appropriate follow-up retry. It never reports valid books as uncommitted or deletes them because preferences or opening failed. Draft cleanup cannot precede recoverable outcome delivery. Optional creation remains optional on normal launch, but resuming it preserves the published target and finalization intent.
 
 ## 8. Cancellation and concurrency
 
@@ -327,37 +299,40 @@ Device inbox behavior remains separate from Setup:
 
 ### Launch and state
 
-1. A valid blocking draft always resumes before normal launch resolution.
+1. A valid blocking draft resumes before normal launch resolution.
 2. An optional creation draft never blocks opening the current Workplace.
-3. Fresh Device setup with no Workplace creates zero database rows.
-4. After Device setup acceptance and app termination, launch resumes Workplace setup.
+3. Welcome and financial collection create no database rows before Result confirmation.
+4. Process termination restores semantic step, editable fields, deferred state, and operation identity without registering a first-run Device prematurely.
 5. No books provider mounts before a validated `open(workplaceId)` result.
-6. No persisted onboarding-complete or onboarding-stage flag is consulted.
+6. No parallel onboarding-complete, numeric-stage, or pending-Workplace flag authorizes entry.
 
-### Fresh setup
+### Creation
 
-7. Workplace, account, category, and journal counts remain zero until Setup summary acceptance.
-8. First-run publication is atomic and retry-safe under one operation ID.
-9. Appearance preview does not change User preferences before acceptance.
-10. Editing a defaulted User name updates the derived Workplace name; editing the Workplace name breaks that derivation.
+7. Every creation entry uses the conversational surface, with the correct blocking/optional context and identity policy.
+8. Publication is atomic and retry-safe, including opening journals, planned entries, and budgets.
+9. Deferred entries survive the unfinished session and are excluded from calculation/publication; finishing without them is explicitly disclosed.
+10. Invalid, missing, and valid-zero amounts remain distinct. Repeated account or payment types are valid separate rows.
+11. Valid accepted legacy creation facts survive migration without inventing a balance or subtype.
+12. A failed open after saving retains the published outcome and retries opening without another commit.
+13. Optional cancellation returns to the originating page and previously committed Workplace.
 
 ### Restore
 
-11. Backup name present → Device setup auto-completes; Restore summary is followed by Appearance.
-12. Backup name absent, typed candidate present → candidate satisfies Device setup.
-13. Both names absent → Device setup is presented after Restore summary.
-14. Missing Workplace identity → identity checkpoint appears before publication.
-15. Missing or ambiguous base currency → currency checkpoint appears before publication.
-16. Published imported identity is preserved unless the User explicitly edits name or icon.
-17. Settings and picker restore do not modify User name, theme, or font.
-18. Crash after publication but before acknowledgement resumes from the persisted operation and published Workplace.
-19. Explicit discard deletes only the current operation-owned inactive Workplace.
-20. Restore summary read failure blocks activation and offers retry or discard.
+14. A backup name can satisfy the first-run restore Device slice; an entered candidate is used only when an imported name is absent.
+15. If neither name exists, Device setup remains required after restore publication.
+16. Missing Workplace identity or ambiguous base currency is resolved before publication.
+17. Imported identity and books are preserved except for explicitly allowed corrections.
+18. Settings and picker restore do not acquire creation-only identity or appearance effects.
+19. Process exit retains restore operation ownership and resumes the existing recovery path.
+20. Explicit discard affects only the current operation-owned inactive restore Workplace.
+21. Restore review failures block continuation and offer the existing retry/discard actions.
+22. Back/discard from an empty-device restore returns to blocking conversational creation, not a retired recipe.
 
-### Extensibility
+### Progress and ownership
 
-21. Adding a Demo journal slice requires a slice module, recipe entry, accepted draft output, and finisher handling; it does not modify Setup Coordinator control flow.
-22. Recipe progress contains no fixed global step count.
+23. Progress counts actual visible steps/checkpoints, with one presentation component and no hardcoded restore total.
+24. Restore recipes and conversation navigation retain separate typed sequencing within one Setup store.
+25. Publication, Device facts, accepted intent, and opening a Workplace remain separate facts owned by their existing boundaries.
 
 ## 11. Non-goals
 
@@ -367,6 +342,6 @@ Device inbox behavior remains separate from Setup:
 - A dependency-injection container or event bus.
 - A universal effect journal or workflow database.
 - Generic schema-driven forms.
-- Migrating any unreleased named-stage or Setup-draft shape.
+- Guessing a migration for arbitrary unknown or corrupt draft schemas; valid supported legacy Setup drafts retain explicit compatibility readers.
 - Editing imported financial data during Restore setup.
 - Device SMS listen or app-lock setup during first run.
