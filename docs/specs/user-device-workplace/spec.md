@@ -91,7 +91,11 @@ At minimum this applies to User display name, Workplace identity and required co
 
 ### 3.2 Draft behavior
 
-There is at most one active Setup draft per Device.
+There is at most one active Setup draft per Device. The same device-scoped draft is
+the only home for both checkpointed Setup facts and an unfinished conversational
+creation session; no second setup store or onboarding-state flag is introduced.
+Blocking vs optional entry context is recorded on that draft, not inferred from a
+route.
 
 The draft contains:
 
@@ -101,13 +105,20 @@ The draft contains:
 - limited fact provenance;
 - presentation history for Back;
 - a reference and fingerprint for an uncommitted Restore source, when present;
-- a Restore handoff after publication, when present.
+- a Restore handoff after publication, when present;
+- for conversational creation, durable unaccepted editor input and deferred-step
+  metadata. This input is session state owned by the single draft, not an accepted
+  checkpoint and not a separate authoritative numeric draft; it survives resume
+  and explicit restart handling as described in section 4.
 
 Parsed accounts, journals, transactions, and other imported books are never serialized into the Setup draft. Before publication, a resumed restore reparses the selected source. After publication, the Workplace row and its books are authoritative.
 
 A corrupt draft is rejected. Rejecting it never deletes published books. Normal launch recovery handles valid Workplaces; an unpublished restore returns to source selection.
 
 ## 4. Journey recipes
+
+The four restore journeys are `first_run_restore`, `empty_device_restore`,
+`picker_restore`, and `settings_restore`; all remain supported.
 
 | Journey                                | Entry policy            | Presented order                                                                                                             |
 | -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -119,6 +130,30 @@ A corrupt draft is rejected. Rejecting it never deletes published books. Normal 
 | Later Workplace creation               | Optional                | Workplace setup → Setup summary                                                                                             |
 
 Workplace replacement is maintenance, not a Setup journey. It may reuse restore parsing and validation but keeps separate confirmation and completion behavior.
+
+### 4.0 Conversational creation surface
+
+The conversational creation surface uses seven steps: Welcome, Currency, Accounts,
+Income, Payments, Monthly limits, and Result. Welcome is uncounted and is omitted
+on registered devices; the remaining six are counted progress steps. Welcome is
+also the only step that may register the Device identity, and only for first-run
+intent; registered-empty-device and add-workplace creation never register or
+rename the Device.
+
+Creation entry context is separate from creation intent. `first_run` and
+`add_workplace` are intents; entry context may be unregistered device, registered
+device with no usable Workplace, Workplace picker, or an existing-Workplace
+entry. `add_workplace` is blocking in the empty-device context and optional in
+picker/existing-Workplace contexts. A route parameter never overrides a blocking
+restore or an incompatible unfinished draft.
+
+Publication and activation follow the repository's publication contract: validate
+the whole included payload first, publish the Workplace and included setup records
+in one database transaction, then perform Device registration/name, Active
+workplace, and other follow-ups as idempotent effects outside that transaction.
+The Setup draft is cleared last. The launch coordinator validates and opens the
+published Workplace through its normal transition path; creation surfaces never
+write an active pointer or navigate around that coordinator.
 
 ### 4.1 Progress, Back, and editing
 
