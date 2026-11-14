@@ -118,9 +118,10 @@ export function prepareCashClarityInput(
   if (!deferred(editableInput, 'accounts')) {
     effectiveAccounts = accountDrafts.map(account => {
       if (account.kind !== 'card') return account;
-      const rawCardPayment = editableInput.amountTextById[cardPaymentInputKey(account.id)];
-      if (rawCardPayment === undefined || rawCardPayment.trim() === '') {
-        return { ...account, cardPaymentAmount: 0 };
+      const rawCardPayment = editableInput.amountTextById[cardPaymentInputKey(account.id)]
+        ?? (account.cardPaymentAmount ? String(account.cardPaymentAmount) : '');
+      if (rawCardPayment.trim() === '') {
+        return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
       }
       const parsed = parseAmountInput(rawCardPayment, locale, precision);
       const message = amountIssueMessage(parsed, false, false);
@@ -139,9 +140,11 @@ export function prepareCashClarityInput(
                 : 'range',
           message,
         });
-        return { ...account, cardPaymentAmount: 0 };
+        return { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
       }
-      return parsed.status === 'valid' ? { ...account, cardPaymentAmount: parsed.value } : account;
+      return parsed.status === 'valid' && parsed.value > 0
+        ? { ...account, cardPaymentAmount: parsed.value }
+        : { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined };
     });
   }
 
@@ -216,7 +219,9 @@ export function prepareCashClarityInput(
   const includeDependents = hasSpendable;
   if (!includeDependents) {
     effectiveAccounts = effectiveAccounts.map(account =>
-      account.kind === 'card' ? { ...account, cardPaymentAmount: 0 } : account,
+      account.kind === 'card'
+        ? { ...account, cardPaymentAmount: undefined, cardPaymentDate: undefined }
+        : account,
     );
   }
 

@@ -181,6 +181,7 @@ export const ONBOARDING_STRINGS = {
   retryOpen: 'Retry opening',
   savedCouldNotOpen: 'Saved, but could not open.',
   clarityUnknown: 'No estimate yet',
+  estimateIncomplete: 'Based on the valid entries included so far.',
   clarityShortfall: 'Shortfall',
   clarityZero: 'Safe to spend is zero',
   editAction: 'Edit',

@@ -51,6 +51,8 @@ export function ClarityScene({
   currency,
   draft,
   projection,
+  hasUsableEstimate,
+  isIncompleteEstimate = false,
   finishing,
   finishError,
   publishedOutcome,
@@ -62,6 +64,8 @@ export function ClarityScene({
   readonly currency: string;
   readonly draft: CashClarityDraft;
   readonly projection: CashClarityProjection;
+  readonly hasUsableEstimate?: boolean;
+  readonly isIncompleteEstimate?: boolean;
   readonly finishing: boolean;
   readonly finishError?: string | null;
   readonly publishedOutcome?: PublishedClarityOutcome;
@@ -82,7 +86,8 @@ export function ClarityScene({
     typeof item === 'string' ? { id: `omission-${index}`, label: item } : item,
   );
   const published = publishedOutcome !== undefined;
-  const resultStatus = !hasAnyInput ? copy.clarityUnknown
+  const estimateAvailable = hasUsableEstimate ?? hasAnyInput;
+  const resultStatus = !estimateAvailable ? copy.clarityUnknown
     : projection.safeToSpend < 0 ? copy.clarityShortfall
     : projection.safeToSpend === 0 ? copy.clarityZero : copy.safeToSpend;
   const groupDots = {
@@ -132,7 +137,7 @@ export function ClarityScene({
                   testID="onboarding-clarity-info-button"
                 />
               </Inline>
-              {hasAnyInput ? (
+              {estimateAvailable ? (
               <MoneyText
                 amount={projection.safeToSpend}
                 currencyCode={currency}
@@ -150,6 +155,9 @@ export function ClarityScene({
               <AppText variant="body" color="secondary" style={styles.proseCopy}>
                 {copy.clarityDefinition}
               </AppText>
+              {isIncompleteEstimate ? (
+                <AppText variant="caption" color="secondary">{copy.estimateIncomplete}</AppText>
+              ) : null}
             </Stack>
           </AppCard>
         </ClarityResultPanel>
@@ -209,7 +217,7 @@ export function ClarityScene({
           />
         ) : null}
 
-        {!hasAnyInput ? (
+        {!estimateAvailable ? (
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityNoCashYet}
           </AppText>

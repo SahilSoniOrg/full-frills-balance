@@ -5,6 +5,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import dayjs, { type Dayjs } from 'dayjs';
 import { parseAmountInput } from './amountValidation';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
+import type { StarterAccountInput } from '../setupTypes';
 
 export type OnboardingStep =
   'welcome' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';
@@ -75,6 +76,9 @@ export interface CashClarityDraft {
   readonly income: IncomeDraft;
   readonly commitment: CommitmentDraft;
   readonly budget: BudgetDraft;
+  /** Accepted legacy metadata with no asserted opening balance; never counted as money. */
+  readonly preservedStarterAccounts?: readonly StarterAccountInput[];
+  readonly preservedStarterCategories?: readonly StarterAccountInput[];
 }
 
 /** Collection-level inclusion metadata; item arrays remain owned by CashClarityDraft. */

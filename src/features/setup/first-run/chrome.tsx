@@ -76,16 +76,21 @@ export function SafeToSpendHeader({
   currency,
   change,
   spokenEcho,
+  hasUsableEstimate = true,
+  isIncompleteEstimate = false,
 }: {
   readonly amount: number;
   readonly currency: string;
   readonly change?: string | null;
   readonly spokenEcho?: string | null;
+  readonly hasUsableEstimate?: boolean;
+  readonly isIncompleteEstimate?: boolean;
 }) {
   const { isKeyboardVisible: compact } = usePageKeyboard();
   const reduceMotion = useReducedMotion();
 
   const amountText = (variant: 'subheading' | 'hero') => (
+    hasUsableEstimate ? (
     <MoneyText
       amount={amount}
       currencyCode={currency}
@@ -94,6 +99,7 @@ export function SafeToSpendHeader({
       fit={variant === 'hero' ? STS_HERO_FIT : STS_COMPACT_FIT}
       testID="onboarding-sts"
     />
+    ) : <AppText variant={variant} testID="onboarding-estimate-unavailable">{copy.clarityUnknown}</AppText>
   );
 
   return (
@@ -125,6 +131,9 @@ export function SafeToSpendHeader({
           )}
         </Stack>
       )}
+      {isIncompleteEstimate ? (
+        <AppText variant="caption" color="secondary">{copy.estimateIncomplete}</AppText>
+      ) : null}
       {spokenEcho ? (
         <Box paddingBottom="xs">
           <AppText
