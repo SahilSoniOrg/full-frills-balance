@@ -111,7 +111,7 @@ function boundedDuration(durationMs?: number): number | undefined {
   return Math.min(durationMs, MAX_DURATION_MS);
 }
 
-function flowProps(input: OnboardingFlowAnalytics): Record<string, unknown> {
+function flowProps(input: OnboardingFlowAnalytics): Record<string, string | boolean> {
   return {
     flow_version: input.flowVersion,
     intent: input.intent,

@@ -122,12 +122,12 @@ The four restore journeys are `first_run_restore`, `empty_device_restore`,
 
 | Journey                                | Entry policy            | Presented order                                                                                                             |
 | -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| First run                              | Blocking                | Device setup → Workplace setup → Appearance setup → Setup summary                                                           |
+| First run                              | Blocking                | Welcome → Currency → Accounts → Income → Payments → Monthly limits → Result                                                 |
 | First-run restore                      | Blocking                | Restore source → missing publication facts → Restore summary → Device setup when missing → Appearance setup → Setup summary |
-| Registered Device with zero Workplaces | Blocking                | Workplace setup → Setup summary, or Restore source → missing publication facts → Restore summary → Activate                 |
+| Registered Device with zero Workplaces | Blocking                | Currency → Accounts → Income → Payments → Monthly limits → Result, or empty-device restore                                    |
 | Restore from picker                    | Blocking while selected | Restore source → missing publication facts → Restore summary → Open or return to picker                                     |
 | Restore from Settings                  | Optional                | Restore source → missing publication facts → Restore summary → Open or stay                                                 |
-| Later Workplace creation               | Optional                | Workplace setup → Setup summary                                                                                             |
+| Later Workplace creation               | Optional                | Currency → Accounts → Income → Payments → Monthly limits → Result                                                            |
 
 Workplace replacement is maintenance, not a Setup journey. It may reuse restore parsing and validation but keeps separate confirmation and completion behavior.
 
@@ -135,10 +135,11 @@ Workplace replacement is maintenance, not a Setup journey. It may reuse restore 
 
 The conversational creation surface uses seven steps: Welcome, Currency, Accounts,
 Income, Payments, Monthly limits, and Result. Welcome is uncounted and is omitted
-on registered devices; the remaining six are counted progress steps. Welcome is
-also the only step that may register the Device identity, and only for first-run
-intent; registered-empty-device and add-workplace creation never register or
-rename the Device.
+on registered devices; the remaining six are counted progress steps. Welcome
+captures a first-run name without registering the Device. First-run creation
+registers and names the Device only after successful books publication, as an
+idempotent follow-up. Registered-empty-device and additional-workplace creation
+never register or rename the Device. Restore keeps its Device slice behavior.
 
 Creation entry context is separate from creation intent. `first_run` and
 `add_workplace` are intents; entry context may be unregistered device, registered
