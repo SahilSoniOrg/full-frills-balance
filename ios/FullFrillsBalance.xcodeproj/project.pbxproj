@@ -7,52 +7,52 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		04F631B4E13E43FEA4A43F28 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95418948DEC04E658E09CC34 /* SwiftUI.framework */; };
+		00F8F0C463BF44EB923DB2AD /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 59A779352C3A4438BA5CCC86 /* FullFrillsBalanceWidget.appex */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		13EB3AB8297480D0C22271F1 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F00F0729996B9FB39B3B49 /* ExpoModulesProvider.swift */; };
-		17C46EEF7A384AB1A5A10415 /* Raleway_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F4B592A06CE2416B9EA67803 /* Raleway_600SemiBold.ttf */; };
-		1906085846214A1AB5CA8111 /* Raleway_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9EC25BB793D8411D80764582 /* Raleway_500Medium.ttf */; };
-		1CD32FD6B3AC4624B0F002D8 /* Raleway_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B2BDDB7261BB432F89875654 /* Raleway_700Bold.ttf */; };
-		35C7AA7A5A898DEE45075F62 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 698AEC152AAD2B654DEA4716 /* PrivacyInfo.xcprivacy */; };
-		3773D39ECA524EDA93260CC6 /* Inter_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0C7F4C6B78DA41328AC7E7E3 /* Inter_700Bold.ttf */; };
-		3A740D1BB2D0414AA45466C4 /* Inter_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 407779AD3DC441E0AC9C5479 /* Inter_400Regular.ttf */; };
+		1771F495F60F436FA3C46347 /* Raleway_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CADF16A6317C4913A9B8779B /* Raleway_500Medium.ttf */; };
+		3989AF61E4594048950B7524 /* Inter_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 507E275FFD6E421F8B366AD8 /* Inter_700Bold.ttf */; };
+		3E1F3C761A6942428A153DF3 /* Raleway_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 211EC2B2592342D6BA369891 /* Raleway_700Bold.ttf */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		3EC4295CDF7144B9849748D4 /* Inter_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EC2D60240727483D8C9F96F7 /* Inter_600SemiBold.ttf */; };
-		65C0ABE28FED4392A39F168E /* InstrumentSans_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5DE74BA7423C40C59CB834FB /* InstrumentSans_400Regular.ttf */; };
-		6FF7ACC38D834817BA67EFA0 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03855B1F5D7F4A6B91F20540 /* WidgetKit.framework */; };
-		818D8F31CA5D4659B28A1A91 /* InstrumentSans_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 328BA2266DC944458B30B593 /* InstrumentSans_600SemiBold.ttf */; };
-		A69FFB7DC2D74F70A1AEDAD4 /* InstrumentSans_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D8CA1E3587AA42BAABA50191 /* InstrumentSans_700Bold.ttf */; };
-		A825E10D307146B49DBB1DC8 /* Inter_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D6BAEA7A232844A383E7F9F4 /* Inter_500Medium.ttf */; };
-		BA8F2F6E7C114A62A0E020CC /* DMSerifDisplay_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4592520EFF5F4167918ACB78 /* DMSerifDisplay_400Regular.ttf */; };
+		463E655A8E00495B97E70636 /* Raleway_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3E8468067DE44C468D0BC7C6 /* Raleway_400Regular.ttf */; };
+		483E3508311A44AF8042379A /* CrimsonText_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E465B272A0104010A64F6248 /* CrimsonText_400Regular.ttf */; };
+		4F0A11B3C6024D1497872EB4 /* InstrumentSans_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2861F0A92637482E915E2E13 /* InstrumentSans_400Regular.ttf */; };
+		4F29D1E0E8134F0882AB27EC /* Inter_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F2CC6CE6BE844F3B803B258D /* Inter_600SemiBold.ttf */; };
+		64702D7358CF4671AD9F8A13 /* Inter_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2B36F14704974834867F7347 /* Inter_500Medium.ttf */; };
+		988BAF7B93B4469FA3559824 /* InstrumentSans_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 588A4568CA7A4908804D94BE /* InstrumentSans_500Medium.ttf */; };
+		9FEBCE682D9943C79EB91435 /* InstrumentSans_700Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 374554567C4A4ECCA2C65B5B /* InstrumentSans_700Bold.ttf */; };
+		A199833CD39941EB8DF02666 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE7435F1F2CE4C1D92915890 /* WidgetKit.framework */; };
+		B156BCBE6EB29AD76E7720B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 22E7D3571DE26DA12A279291 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D8076ABEC7A14D829013A889 /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0CA2B0C85B42A59341569C /* FullFrillsBalanceWidget.swift */; };
-		D9283E597E7B4CF2AAE800D8 /* CrimsonText_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 27040E21CA62446DA97DF971 /* CrimsonText_400Regular.ttf */; };
-		DAC7E2FE648E40C1B3303D6F /* Raleway_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8B3935AF6D7B4DE5A9998633 /* Raleway_400Regular.ttf */; };
-		DD752174E57646559F13E092 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = DC3249C201134EDC86690147 /* FullFrillsBalanceWidget.appex */; };
-		DEC94F2EA79606A8A21628A9 /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 772D62828196F0F8CE6ED2D6 /* libPods-FullFrillsBalance.a */; };
+		C30AF3B0968C415D93225C64 /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C376CF57BD948D2AAB7F997 /* FullFrillsBalanceWidget.swift */; };
+		C5DDD2E047A84AFBA1C462E7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B57474FD4840709D4AECF1 /* SwiftUI.framework */; };
+		C9E11D1C4D8EEBFB24E82BDE /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0DA2BAE180979272F1DE67 /* ExpoModulesProvider.swift */; };
+		CE1C928965344165AFBB6CB6 /* InstrumentSans_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9133E98153DF419CA3C4B2A2 /* InstrumentSans_600SemiBold.ttf */; };
+		D0C5FFC97FE457652212EE56 /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2716E700AEB8B704EABEFD86 /* libPods-FullFrillsBalance.a */; };
+		D38CDA29A8D2481782EC9D1B /* Raleway_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5BE737B824B849EEB98C33B2 /* Raleway_600SemiBold.ttf */; };
+		DE4083E59B624826B499ECA6 /* Inter_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 42BD531BC4D248109A31D7D5 /* Inter_400Regular.ttf */; };
+		EBD0D24886FC494A857FCD9E /* DMSerifDisplay_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DC215A2A69AB45EE8725D55E /* DMSerifDisplay_400Regular.ttf */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		F11748442D0307B40044C1D9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748432D0307B40044C1D9 /* SceneDelegate.swift */; };
-		FDA904E946D14B2CB1F1B84D /* InstrumentSans_500Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8332606D26354DCDA762DF99 /* InstrumentSans_500Medium.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		9938F00BE35D432292D06C5F /* PBXContainerItemProxy */ = {
+		F83713F2F926442D9971AF60 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = B14C5BF678434A6EB1F5863C;
+			remoteGlobalIDString = 72B3351404704027ADD0F8CC;
 			remoteInfo = FullFrillsBalanceWidget;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		405AA0A2EB4742DBA0D8FCF8 /* Copy Files */ = {
+		31C9F35E703542E9AE13BDBB /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				DD752174E57646559F13E092 /* FullFrillsBalanceWidget.appex in Copy Files */,
+				00F8F0C463BF44EB923DB2AD /* FullFrillsBalanceWidget.appex in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -60,39 +60,39 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		03855B1F5D7F4A6B91F20540 /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		0C7F4C6B78DA41328AC7E7E3 /* Inter_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_700Bold.ttf; path = "../node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FullFrillsBalance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FullFrillsBalance/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FullFrillsBalance/Info.plist; sourceTree = "<group>"; };
-		25BE7E6B23DC4954987AA512 /* FullFrillsBalanceWidget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "FullFrillsBalanceWidget-Info.plist"; path = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist"; sourceTree = "<group>"; };
-		27040E21CA62446DA97DF971 /* CrimsonText_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = CrimsonText_400Regular.ttf; path = "../node_modules/@expo-google-fonts/crimson-text/400Regular/CrimsonText_400Regular.ttf"; sourceTree = "<group>"; };
-		328BA2266DC944458B30B593 /* InstrumentSans_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/600SemiBold/InstrumentSans_600SemiBold.ttf"; sourceTree = "<group>"; };
-		407779AD3DC441E0AC9C5479 /* Inter_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_400Regular.ttf; path = "../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf"; sourceTree = "<group>"; };
-		4592520EFF5F4167918ACB78 /* DMSerifDisplay_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = DMSerifDisplay_400Regular.ttf; path = "../node_modules/@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf"; sourceTree = "<group>"; };
-		53F00F0729996B9FB39B3B49 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		5DE74BA7423C40C59CB834FB /* InstrumentSans_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_400Regular.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/400Regular/InstrumentSans_400Regular.ttf"; sourceTree = "<group>"; };
-		698AEC152AAD2B654DEA4716 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = FullFrillsBalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		772D62828196F0F8CE6ED2D6 /* libPods-FullFrillsBalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FullFrillsBalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		8332606D26354DCDA762DF99 /* InstrumentSans_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_500Medium.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/500Medium/InstrumentSans_500Medium.ttf"; sourceTree = "<group>"; };
-		8B3935AF6D7B4DE5A9998633 /* Raleway_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_400Regular.ttf; path = "../node_modules/@expo-google-fonts/raleway/400Regular/Raleway_400Regular.ttf"; sourceTree = "<group>"; };
-		8D0CA2B0C85B42A59341569C /* FullFrillsBalanceWidget.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = FullFrillsBalanceWidget.swift; path = FullFrillsBalanceWidget/FullFrillsBalanceWidget.swift; sourceTree = "<group>"; };
-		8FEBB5478DC3D0A4B3658C90 /* Pods-FullFrillsBalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.debug.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.debug.xcconfig"; sourceTree = "<group>"; };
-		95418948DEC04E658E09CC34 /* SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		9EC25BB793D8411D80764582 /* Raleway_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_500Medium.ttf; path = "../node_modules/@expo-google-fonts/raleway/500Medium/Raleway_500Medium.ttf"; sourceTree = "<group>"; };
+		211EC2B2592342D6BA369891 /* Raleway_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_700Bold.ttf; path = "../node_modules/@expo-google-fonts/raleway/700Bold/Raleway_700Bold.ttf"; sourceTree = "<group>"; };
+		22E7D3571DE26DA12A279291 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = FullFrillsBalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2716E700AEB8B704EABEFD86 /* libPods-FullFrillsBalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FullFrillsBalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2861F0A92637482E915E2E13 /* InstrumentSans_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_400Regular.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/400Regular/InstrumentSans_400Regular.ttf"; sourceTree = "<group>"; };
+		2B36F14704974834867F7347 /* Inter_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_500Medium.ttf; path = "../node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf"; sourceTree = "<group>"; };
+		33B57474FD4840709D4AECF1 /* SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		374554567C4A4ECCA2C65B5B /* InstrumentSans_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_700Bold.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/700Bold/InstrumentSans_700Bold.ttf"; sourceTree = "<group>"; };
+		3E8468067DE44C468D0BC7C6 /* Raleway_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_400Regular.ttf; path = "../node_modules/@expo-google-fonts/raleway/400Regular/Raleway_400Regular.ttf"; sourceTree = "<group>"; };
+		42BD531BC4D248109A31D7D5 /* Inter_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_400Regular.ttf; path = "../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf"; sourceTree = "<group>"; };
+		4E0DA2BAE180979272F1DE67 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		507E275FFD6E421F8B366AD8 /* Inter_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_700Bold.ttf; path = "../node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"; sourceTree = "<group>"; };
+		588A4568CA7A4908804D94BE /* InstrumentSans_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_500Medium.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/500Medium/InstrumentSans_500Medium.ttf"; sourceTree = "<group>"; };
+		59A779352C3A4438BA5CCC86 /* FullFrillsBalanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = FullFrillsBalanceWidget.appex; path = FullFrillsBalanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BE737B824B849EEB98C33B2 /* Raleway_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/raleway/600SemiBold/Raleway_600SemiBold.ttf"; sourceTree = "<group>"; };
+		5C376CF57BD948D2AAB7F997 /* FullFrillsBalanceWidget.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = FullFrillsBalanceWidget.swift; path = FullFrillsBalanceWidget/FullFrillsBalanceWidget.swift; sourceTree = "<group>"; };
+		61BA5C7056F874955F1E9545 /* Pods-FullFrillsBalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.debug.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.debug.xcconfig"; sourceTree = "<group>"; };
+		62B0A726F1B583818FCD0297 /* Pods-FullFrillsBalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.release.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.release.xcconfig"; sourceTree = "<group>"; };
+		731D01E1746248EBA097B33F /* FullFrillsBalanceWidget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "FullFrillsBalanceWidget-Info.plist"; path = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist"; sourceTree = "<group>"; };
+		9133E98153DF419CA3C4B2A2 /* InstrumentSans_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/600SemiBold/InstrumentSans_600SemiBold.ttf"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = FullFrillsBalance/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B2BDDB7261BB432F89875654 /* Raleway_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_700Bold.ttf; path = "../node_modules/@expo-google-fonts/raleway/700Bold/Raleway_700Bold.ttf"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D6BAEA7A232844A383E7F9F4 /* Inter_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_500Medium.ttf; path = "../node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf"; sourceTree = "<group>"; };
-		D8CA1E3587AA42BAABA50191 /* InstrumentSans_700Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = InstrumentSans_700Bold.ttf; path = "../node_modules/@expo-google-fonts/instrument-sans/700Bold/InstrumentSans_700Bold.ttf"; sourceTree = "<group>"; };
-		DC3249C201134EDC86690147 /* FullFrillsBalanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = FullFrillsBalanceWidget.appex; path = FullFrillsBalanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		E05376FFACC2D90D10503466 /* Pods-FullFrillsBalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.release.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.release.xcconfig"; sourceTree = "<group>"; };
-		EC2D60240727483D8C9F96F7 /* Inter_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf"; sourceTree = "<group>"; };
+		CADF16A6317C4913A9B8779B /* Raleway_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_500Medium.ttf; path = "../node_modules/@expo-google-fonts/raleway/500Medium/Raleway_500Medium.ttf"; sourceTree = "<group>"; };
+		CE7435F1F2CE4C1D92915890 /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DC215A2A69AB45EE8725D55E /* DMSerifDisplay_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = DMSerifDisplay_400Regular.ttf; path = "../node_modules/@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf"; sourceTree = "<group>"; };
+		E465B272A0104010A64F6248 /* CrimsonText_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = CrimsonText_400Regular.ttf; path = "../node_modules/@expo-google-fonts/crimson-text/400Regular/CrimsonText_400Regular.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FullFrillsBalance/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748432D0307B40044C1D9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = FullFrillsBalance/SceneDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* FullFrillsBalance-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "FullFrillsBalance-Bridging-Header.h"; path = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h"; sourceTree = "<group>"; };
-		F4B592A06CE2416B9EA67803 /* Raleway_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/raleway/600SemiBold/Raleway_600SemiBold.ttf"; sourceTree = "<group>"; };
+		F2CC6CE6BE844F3B803B258D /* Inter_600SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Inter_600SemiBold.ttf; path = "../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,16 +100,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DEC94F2EA79606A8A21628A9 /* libPods-FullFrillsBalance.a in Frameworks */,
+				D0C5FFC97FE457652212EE56 /* libPods-FullFrillsBalance.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		23855D2730DC40AF981478D5 /* Frameworks */ = {
+		7A35261D67224D2BBB77A9F9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				04F631B4E13E43FEA4A43F28 /* SwiftUI.framework in Frameworks */,
-				6FF7ACC38D834817BA67EFA0 /* WidgetKit.framework in Frameworks */,
+				C5DDD2E047A84AFBA1C462E7 /* SwiftUI.framework in Frameworks */,
+				A199833CD39941EB8DF02666 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,49 +126,35 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				698AEC152AAD2B654DEA4716 /* PrivacyInfo.xcprivacy */,
+				22E7D3571DE26DA12A279291 /* PrivacyInfo.xcprivacy */,
 			);
 			name = FullFrillsBalance;
 			sourceTree = "<group>";
 		};
-		27A84FA483DD4E7FA97CD5D4 /* Resources */ = {
+		1F8D7ADF4B3661BDB54333D1 /* FullFrillsBalance */ = {
 			isa = PBXGroup;
 			children = (
-				4592520EFF5F4167918ACB78 /* DMSerifDisplay_400Regular.ttf */,
-				5DE74BA7423C40C59CB834FB /* InstrumentSans_400Regular.ttf */,
-				8332606D26354DCDA762DF99 /* InstrumentSans_500Medium.ttf */,
-				328BA2266DC944458B30B593 /* InstrumentSans_600SemiBold.ttf */,
-				D8CA1E3587AA42BAABA50191 /* InstrumentSans_700Bold.ttf */,
-				8B3935AF6D7B4DE5A9998633 /* Raleway_400Regular.ttf */,
-				9EC25BB793D8411D80764582 /* Raleway_500Medium.ttf */,
-				F4B592A06CE2416B9EA67803 /* Raleway_600SemiBold.ttf */,
-				B2BDDB7261BB432F89875654 /* Raleway_700Bold.ttf */,
-				407779AD3DC441E0AC9C5479 /* Inter_400Regular.ttf */,
-				D6BAEA7A232844A383E7F9F4 /* Inter_500Medium.ttf */,
-				EC2D60240727483D8C9F96F7 /* Inter_600SemiBold.ttf */,
-				0C7F4C6B78DA41328AC7E7E3 /* Inter_700Bold.ttf */,
-				27040E21CA62446DA97DF971 /* CrimsonText_400Regular.ttf */,
+				4E0DA2BAE180979272F1DE67 /* ExpoModulesProvider.swift */,
 			);
-			name = Resources;
-			path = "";
+			name = FullFrillsBalance;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				95418948DEC04E658E09CC34 /* SwiftUI.framework */,
-				03855B1F5D7F4A6B91F20540 /* WidgetKit.framework */,
-				772D62828196F0F8CE6ED2D6 /* libPods-FullFrillsBalance.a */,
+				33B57474FD4840709D4AECF1 /* SwiftUI.framework */,
+				CE7435F1F2CE4C1D92915890 /* WidgetKit.framework */,
+				2716E700AEB8B704EABEFD86 /* libPods-FullFrillsBalance.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4DF5D85EBD6D4A483F6E591A /* Pods */ = {
+		70C067FC99549F2E72425448 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				8FEBB5478DC3D0A4B3658C90 /* Pods-FullFrillsBalance.debug.xcconfig */,
-				E05376FFACC2D90D10503466 /* Pods-FullFrillsBalance.release.xcconfig */,
+				61BA5C7056F874955F1E9545 /* Pods-FullFrillsBalance.debug.xcconfig */,
+				62B0A726F1B583818FCD0297 /* Pods-FullFrillsBalance.release.xcconfig */,
 			);
 			name = Pods;
 			path = Pods;
@@ -188,10 +174,10 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				CB288B4FA3864E8AA73E815A /* FullFrillsBalanceWidget */,
-				27A84FA483DD4E7FA97CD5D4 /* Resources */,
-				4DF5D85EBD6D4A483F6E591A /* Pods */,
-				A2A05507B18034C9BCF664D0 /* ExpoModulesProviders */,
+				F09B083C6ACC4795BF223771 /* FullFrillsBalanceWidget */,
+				E88BD31371694E09894B1D61 /* Resources */,
+				70C067FC99549F2E72425448 /* Pods */,
+				E0BB41FB5C128630137F681B /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -202,17 +188,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */,
-				DC3249C201134EDC86690147 /* FullFrillsBalanceWidget.appex */,
+				59A779352C3A4438BA5CCC86 /* FullFrillsBalanceWidget.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		A2A05507B18034C9BCF664D0 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				DF0CB2A624363AB8D15CBFCE /* FullFrillsBalance */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -224,22 +202,44 @@
 			path = FullFrillsBalance/Supporting;
 			sourceTree = "<group>";
 		};
-		CB288B4FA3864E8AA73E815A /* FullFrillsBalanceWidget */ = {
+		E0BB41FB5C128630137F681B /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				8D0CA2B0C85B42A59341569C /* FullFrillsBalanceWidget.swift */,
-				25BE7E6B23DC4954987AA512 /* FullFrillsBalanceWidget-Info.plist */,
+				1F8D7ADF4B3661BDB54333D1 /* FullFrillsBalance */,
 			);
-			name = FullFrillsBalanceWidget;
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		E88BD31371694E09894B1D61 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DC215A2A69AB45EE8725D55E /* DMSerifDisplay_400Regular.ttf */,
+				2861F0A92637482E915E2E13 /* InstrumentSans_400Regular.ttf */,
+				588A4568CA7A4908804D94BE /* InstrumentSans_500Medium.ttf */,
+				9133E98153DF419CA3C4B2A2 /* InstrumentSans_600SemiBold.ttf */,
+				374554567C4A4ECCA2C65B5B /* InstrumentSans_700Bold.ttf */,
+				3E8468067DE44C468D0BC7C6 /* Raleway_400Regular.ttf */,
+				CADF16A6317C4913A9B8779B /* Raleway_500Medium.ttf */,
+				5BE737B824B849EEB98C33B2 /* Raleway_600SemiBold.ttf */,
+				211EC2B2592342D6BA369891 /* Raleway_700Bold.ttf */,
+				42BD531BC4D248109A31D7D5 /* Inter_400Regular.ttf */,
+				2B36F14704974834867F7347 /* Inter_500Medium.ttf */,
+				F2CC6CE6BE844F3B803B258D /* Inter_600SemiBold.ttf */,
+				507E275FFD6E421F8B366AD8 /* Inter_700Bold.ttf */,
+				E465B272A0104010A64F6248 /* CrimsonText_400Regular.ttf */,
+			);
+			name = Resources;
 			path = "";
 			sourceTree = "<group>";
 		};
-		DF0CB2A624363AB8D15CBFCE /* FullFrillsBalance */ = {
+		F09B083C6ACC4795BF223771 /* FullFrillsBalanceWidget */ = {
 			isa = PBXGroup;
 			children = (
-				53F00F0729996B9FB39B3B49 /* ExpoModulesProvider.swift */,
+				5C376CF57BD948D2AAB7F997 /* FullFrillsBalanceWidget.swift */,
+				731D01E1746248EBA097B33F /* FullFrillsBalanceWidget-Info.plist */,
 			);
-			name = FullFrillsBalance;
+			name = FullFrillsBalanceWidget;
+			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -250,34 +250,34 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "FullFrillsBalance" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				3F06E1D9F1CB8F9055550323 /* [Expo] Configure project */,
+				BB19C7DE9017104DDE87BAFE /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				21379F364D7540D8AE9A8BD4 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
-				21EDFE790DE24259B78F4547 /* Upload Debug Symbols to Sentry */,
-				405AA0A2EB4742DBA0D8FCF8 /* Copy Files */,
-				92C38C2C1F3F9CD8CA4DB8E6 /* [CP] Embed Pods Frameworks */,
+				9B869BFC1B8347479D0EA585 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
+				568EAF292BEE41E897631082 /* Upload Debug Symbols to Sentry */,
+				31C9F35E703542E9AE13BDBB /* Copy Files */,
+				E511F1F82145AE7BE7393162 /* [CP] Embed Pods Frameworks */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				560E55633B0F4363A73546E4 /* PBXTargetDependency */,
+				9D94D8A82D934106A07403E9 /* PBXTargetDependency */,
 			);
 			name = FullFrillsBalance;
 			productName = FullFrillsBalance;
 			productReference = 13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B14C5BF678434A6EB1F5863C /* FullFrillsBalanceWidget */ = {
+		72B3351404704027ADD0F8CC /* FullFrillsBalanceWidget */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6ABC45D4158B4544A6E8AAA6 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */;
+			buildConfigurationList = 101DF17C153F4837A3DF5849 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */;
 			buildPhases = (
-				B80B0034A8064535B254210B /* Sources */,
-				23855D2730DC40AF981478D5 /* Frameworks */,
-				2B9448937D8C43F882CBF83D /* Resources */,
+				546516EC34E84CA79CAEB12C /* Sources */,
+				7A35261D67224D2BBB77A9F9 /* Frameworks */,
+				6CA636571CC44F49973A298B /* Resources */,
 			);
 			buildRules = (
 			);
@@ -285,7 +285,7 @@
 			);
 			name = FullFrillsBalanceWidget;
 			productName = FullFrillsBalanceWidget;
-			productReference = DC3249C201134EDC86690147 /* FullFrillsBalanceWidget.appex */;
+			productReference = 59A779352C3A4438BA5CCC86 /* FullFrillsBalanceWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -315,7 +315,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* FullFrillsBalance */,
-				B14C5BF678434A6EB1F5863C /* FullFrillsBalanceWidget */,
+				72B3351404704027ADD0F8CC /* FullFrillsBalanceWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -328,25 +328,25 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				BA8F2F6E7C114A62A0E020CC /* DMSerifDisplay_400Regular.ttf in Resources */,
-				65C0ABE28FED4392A39F168E /* InstrumentSans_400Regular.ttf in Resources */,
-				FDA904E946D14B2CB1F1B84D /* InstrumentSans_500Medium.ttf in Resources */,
-				818D8F31CA5D4659B28A1A91 /* InstrumentSans_600SemiBold.ttf in Resources */,
-				A69FFB7DC2D74F70A1AEDAD4 /* InstrumentSans_700Bold.ttf in Resources */,
-				DAC7E2FE648E40C1B3303D6F /* Raleway_400Regular.ttf in Resources */,
-				1906085846214A1AB5CA8111 /* Raleway_500Medium.ttf in Resources */,
-				17C46EEF7A384AB1A5A10415 /* Raleway_600SemiBold.ttf in Resources */,
-				1CD32FD6B3AC4624B0F002D8 /* Raleway_700Bold.ttf in Resources */,
-				3A740D1BB2D0414AA45466C4 /* Inter_400Regular.ttf in Resources */,
-				A825E10D307146B49DBB1DC8 /* Inter_500Medium.ttf in Resources */,
-				3EC4295CDF7144B9849748D4 /* Inter_600SemiBold.ttf in Resources */,
-				3773D39ECA524EDA93260CC6 /* Inter_700Bold.ttf in Resources */,
-				D9283E597E7B4CF2AAE800D8 /* CrimsonText_400Regular.ttf in Resources */,
-				35C7AA7A5A898DEE45075F62 /* PrivacyInfo.xcprivacy in Resources */,
+				EBD0D24886FC494A857FCD9E /* DMSerifDisplay_400Regular.ttf in Resources */,
+				4F0A11B3C6024D1497872EB4 /* InstrumentSans_400Regular.ttf in Resources */,
+				988BAF7B93B4469FA3559824 /* InstrumentSans_500Medium.ttf in Resources */,
+				CE1C928965344165AFBB6CB6 /* InstrumentSans_600SemiBold.ttf in Resources */,
+				9FEBCE682D9943C79EB91435 /* InstrumentSans_700Bold.ttf in Resources */,
+				463E655A8E00495B97E70636 /* Raleway_400Regular.ttf in Resources */,
+				1771F495F60F436FA3C46347 /* Raleway_500Medium.ttf in Resources */,
+				D38CDA29A8D2481782EC9D1B /* Raleway_600SemiBold.ttf in Resources */,
+				3E1F3C761A6942428A153DF3 /* Raleway_700Bold.ttf in Resources */,
+				DE4083E59B624826B499ECA6 /* Inter_400Regular.ttf in Resources */,
+				64702D7358CF4671AD9F8A13 /* Inter_500Medium.ttf in Resources */,
+				4F29D1E0E8134F0882AB27EC /* Inter_600SemiBold.ttf in Resources */,
+				3989AF61E4594048950B7524 /* Inter_700Bold.ttf in Resources */,
+				483E3508311A44AF8042379A /* CrimsonText_400Regular.ttf in Resources */,
+				B156BCBE6EB29AD76E7720B2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		2B9448937D8C43F882CBF83D /* Resources */ = {
+		6CA636571CC44F49973A298B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -395,24 +395,8 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		21379F364D7540D8AE9A8BD4 /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+		568EAF292BEE41E897631082 /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo Dev Launcher] Strip Local Network Keys for Release";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Strip dev-launcher-specific local network permission keys from release builds.\n# This only removes _expo._tcp Bonjour services and the dev-launcher usage description.\n# Other Bonjour services and custom descriptions are preserved for production use.\n#\n# Detect debug builds via the DEBUG compile condition rather than the configuration name,\n# so custom debug configurations (e.g. \"Dev\", \"Staging\") that define DEBUG keep the keys.\ncase \" $SWIFT_ACTIVE_COMPILATION_CONDITIONS \" in\n  *\" DEBUG \"*) IS_DEBUG_BUILD=1 ;;\n  *) IS_DEBUG_BUILD=0 ;;\nesac\n\nif [ \"$IS_DEBUG_BUILD\" != \"1\" ]; then\n  PLIST_PATH=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n  if [ -f \"$PLIST_PATH\" ]; then\n    # Check if NSBonjourServices exists\n    if /usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" >/dev/null 2>&1; then\n      # Get the count of services\n      COUNT=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n\n      # Remove _expo._tcp\n      for ((i=COUNT-1; i>=0; i--)); do\n        SERVICE=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n        if echo \"$SERVICE\" | grep -q \"_expo._tcp\"; then\n          /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || true\n        fi\n      done\n\n      # If the array is now empty, remove it entirely\n      REMAINING=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n      if [ \"$REMAINING\" -eq \"0\" ]; then\n        /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null || true\n      fi\n    fi\n\n    # Only delete the description if it matches the dev-launcher default text\n    DESC=$(/usr/libexec/PlistBuddy -c \"Print :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n    if echo \"$DESC\" | grep -q \"Expo Dev Launcher\"; then\n      /usr/libexec/PlistBuddy -c \"Delete :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || true\n    fi\n  fi\nfi\n";
-		};
-		21EDFE790DE24259B78F4547 /* Upload Debug Symbols to Sentry */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -424,30 +408,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"`${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`\"";
-		};
-		3F06E1D9F1CB8F9055550323 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/FullFrillsBalance/FullFrillsBalance.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-FullFrillsBalance/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -529,7 +490,46 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		92C38C2C1F3F9CD8CA4DB8E6 /* [CP] Embed Pods Frameworks */ = {
+		9B869BFC1B8347479D0EA585 /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo Dev Launcher] Strip Local Network Keys for Release";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Strip dev-launcher-specific local network permission keys from release builds.\n# This only removes _expo._tcp Bonjour services and the dev-launcher usage description.\n# Other Bonjour services and custom descriptions are preserved for production use.\n#\n# Detect debug builds via the DEBUG compile condition rather than the configuration name,\n# so custom debug configurations (e.g. \"Dev\", \"Staging\") that define DEBUG keep the keys.\ncase \" $SWIFT_ACTIVE_COMPILATION_CONDITIONS \" in\n  *\" DEBUG \"*) IS_DEBUG_BUILD=1 ;;\n  *) IS_DEBUG_BUILD=0 ;;\nesac\n\nif [ \"$IS_DEBUG_BUILD\" != \"1\" ]; then\n  PLIST_PATH=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n  if [ -f \"$PLIST_PATH\" ]; then\n    # Check if NSBonjourServices exists\n    if /usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" >/dev/null 2>&1; then\n      # Get the count of services\n      COUNT=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n\n      # Remove _expo._tcp\n      for ((i=COUNT-1; i>=0; i--)); do\n        SERVICE=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n        if echo \"$SERVICE\" | grep -q \"_expo._tcp\"; then\n          /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || true\n        fi\n      done\n\n      # If the array is now empty, remove it entirely\n      REMAINING=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n      if [ \"$REMAINING\" -eq \"0\" ]; then\n        /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null || true\n      fi\n    fi\n\n    # Only delete the description if it matches the dev-launcher default text\n    DESC=$(/usr/libexec/PlistBuddy -c \"Print :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n    if echo \"$DESC\" | grep -q \"Expo Dev Launcher\"; then\n      /usr/libexec/PlistBuddy -c \"Delete :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || true\n    fi\n  fi\nfi\n";
+			alwaysOutOfDate = 1;
+		};
+		BB19C7DE9017104DDE87BAFE /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/FullFrillsBalance/FullFrillsBalance.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-FullFrillsBalance/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-FullFrillsBalance/expo-configure-project.sh\"\n";
+		};
+		E511F1F82145AE7BE7393162 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -558,61 +558,32 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				F11748442D0307B40044C1D9 /* SceneDelegate.swift in Sources */,
-				13EB3AB8297480D0C22271F1 /* ExpoModulesProvider.swift in Sources */,
+				C9E11D1C4D8EEBFB24E82BDE /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B80B0034A8064535B254210B /* Sources */ = {
+		546516EC34E84CA79CAEB12C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D8076ABEC7A14D829013A889 /* FullFrillsBalanceWidget.swift in Sources */,
+				C30AF3B0968C415D93225C64 /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		560E55633B0F4363A73546E4 /* PBXTargetDependency */ = {
+		9D94D8A82D934106A07403E9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B14C5BF678434A6EB1F5863C /* FullFrillsBalanceWidget */;
-			targetProxy = 9938F00BE35D432292D06C5F /* PBXContainerItemProxy */;
+			target = 72B3351404704027ADD0F8CC /* FullFrillsBalanceWidget */;
+			targetProxy = F83713F2F926442D9971AF60 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		0F44F7EE879E435D9310EB7F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = FullFrillsBalanceWidget/FullFrillsBalanceWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance.widget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8FEBB5478DC3D0A4B3658C90 /* Pods-FullFrillsBalance.debug.xcconfig */;
+			baseConfigurationReference = 61BA5C7056F874955F1E9545 /* Pods-FullFrillsBalance.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -638,7 +609,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -649,7 +620,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E05376FFACC2D90D10503466 /* Pods-FullFrillsBalance.release.xcconfig */;
+			baseConfigurationReference = 62B0A726F1B583818FCD0297 /* Pods-FullFrillsBalance.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -670,13 +641,42 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		509884AC3AF84C38A989573E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FullFrillsBalanceWidget/FullFrillsBalanceWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -812,7 +812,7 @@
 			};
 			name = Release;
 		};
-		C5944340E0D24EEB97C4FBB4 /* Release */ = {
+		DD1CBC3F0DE441F897B4D8B3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -820,7 +820,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -840,20 +840,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		101DF17C153F4837A3DF5849 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				509884AC3AF84C38A989573E /* Debug */,
+				DD1CBC3F0DE441F897B4D8B3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "FullFrillsBalance" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
 				13B07F951A680F5B00A75B9A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		6ABC45D4158B4544A6E8AAA6 /* Build configuration list for PBXNativeTarget "FullFrillsBalanceWidget" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				0F44F7EE879E435D9310EB7F /* Debug */,
-				C5944340E0D24EEB97C4FBB4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
