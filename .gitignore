@@ -75,6 +75,7 @@ artifacts/
 # Local agent artifacts (not product source)
 .gstack/
 .scratch/
+.claude/worktrees/
 
 .commandcode
 output
