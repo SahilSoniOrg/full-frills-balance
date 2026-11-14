@@ -42,16 +42,18 @@ export type ClarityEditAction = {
   readonly onPress: () => void;
 };
 
+export type PublishedClarityOutcome = {
+  readonly retryOpen: () => void;
+  readonly error?: string | null;
+};
+
 export function ClarityScene({
   currency,
   draft,
   projection,
   finishing,
   finishError,
-  openError,
-  savedButNotOpened,
-  onRetryOpen,
-  retryOpenLabel,
+  publishedOutcome,
   omissions,
   editActions,
   onEnter,
@@ -62,10 +64,7 @@ export function ClarityScene({
   readonly projection: CashClarityProjection;
   readonly finishing: boolean;
   readonly finishError?: string | null;
-  readonly openError?: string | null;
-  readonly savedButNotOpened?: boolean;
-  readonly onRetryOpen?: () => void;
-  readonly retryOpenLabel?: string;
+  readonly publishedOutcome?: PublishedClarityOutcome;
   readonly omissions?:
     | readonly (string | ClarityOmission)[]
     | null;
@@ -82,7 +81,7 @@ export function ClarityScene({
   const normalizedOmissions = (omissions ?? []).map((item, index) =>
     typeof item === 'string' ? { id: `omission-${index}`, label: item } : item,
   );
-  const published = savedButNotOpened || Boolean(openError);
+  const published = publishedOutcome !== undefined;
   const resultStatus = !hasAnyInput ? copy.clarityUnknown
     : projection.safeToSpend < 0 ? copy.clarityShortfall
     : projection.safeToSpend === 0 ? copy.clarityZero : copy.safeToSpend;
@@ -95,15 +94,15 @@ export function ClarityScene({
 
   return (
     <ConversationStep
-      primaryLabel={finishing ? copy.finishing : published ? (retryOpenLabel ?? copy.retryOpen)
+      primaryLabel={finishing ? copy.finishing : published ? copy.retryOpen
         : normalizedOmissions.length > 0 ? copy.finishWithoutDeferred : copy.enterDashboard}
       primaryTestID="onboarding-finish-button"
-      onPrimary={published ? onRetryOpen : onEnter}
+      onPrimary={published ? publishedOutcome.retryOpen : onEnter}
       primaryLoading={finishing}
-      primaryDisabled={finishing || (published && !onRetryOpen)}
+      primaryDisabled={finishing}
       onBack={onBack}
       backDisabled={published || finishing}
-      validationMessage={openError ?? (published ? copy.savedCouldNotOpen : finishError)}
+      validationMessage={published ? publishedOutcome.error ?? copy.savedCouldNotOpen : finishError}
       footer={normalizedOmissions.length > 0 && !published ? (
         <AppText variant="caption" color="secondary">{copy.willNotBeSaved}</AppText>
       ) : null}

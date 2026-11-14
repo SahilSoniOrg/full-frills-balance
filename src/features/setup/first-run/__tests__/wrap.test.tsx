@@ -138,7 +138,7 @@ describe('ClarityScene progressive explanation', () => {
   it('retries opening a saved workplace without committing again', () => {
     const onEnter = jest.fn();
     const onRetryOpen = jest.fn();
-    render(<ClarityScene {...emptyResult} savedButNotOpened onEnter={onEnter} onRetryOpen={onRetryOpen} />);
+    render(<ClarityScene {...emptyResult} onEnter={onEnter} publishedOutcome={{ retryOpen: onRetryOpen }} />);
     fireEvent.press(screen.getByTestId('result-primary'));
     expect(onRetryOpen).toHaveBeenCalledTimes(1);
     expect(onEnter).not.toHaveBeenCalled();
