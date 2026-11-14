@@ -60,13 +60,41 @@ describe('resolveLaunch', () => {
     ).toEqual({ kind: 'setup', journeyId: 'first_run' });
   });
 
-  it('keeps launch on Setup when the stored draft is unreadable', () => {
+  it('keeps launch on Setup when an unreadable draft is the only thing on the device', () => {
+    expect(
+      resolveLaunchGate({
+        setupDraft: { unreadable: true },
+        deviceClaimed: false,
+        workplaceIds: [],
+      }),
+    ).toEqual({ kind: 'setup', journeyId: 'first_run', unreadable: true });
+  });
+
+  it('uses add-workplace recovery for a registered device with no books', () => {
+    expect(
+      resolveLaunchGate({
+        setupDraft: { unreadable: true },
+        deviceClaimed: true,
+        workplaceIds: [],
+      }),
+    ).toEqual({ kind: 'setup', journeyId: 'add_workplace', unreadable: true });
+  });
+
+  it('does not let an unreadable draft hide workplaces that already exist', () => {
     expect(
       resolveLaunchGate({
         setupDraft: { unreadable: true },
         deviceClaimed: true,
         workplaceIds: [wp1],
       }),
-    ).toEqual({ kind: 'setup', journeyId: 'first_run', unreadable: true });
+    ).toEqual({ kind: 'open', workplaceId: wp1, persistAsActive: true });
+    expect(
+      resolveLaunchGate({
+        setupDraft: { unreadable: true },
+        deviceClaimed: true,
+        activeWorkplaceId: wp1,
+        workplaceIds: [],
+      }),
+    ).toEqual({ kind: 'open', workplaceId: wp1, persistAsActive: false });
   });
 });

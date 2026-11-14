@@ -231,8 +231,7 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
 }
 
 function hasBlockingSetupDraft(draft?: LaunchSetupDraft): boolean {
-  if (!draft) return false;
-  if ('unreadable' in draft) return draft.unreadable === true;
+  if (!draft || draft.unreadable) return false;
   return draft.entryPolicy === 'blocking';
 }
 

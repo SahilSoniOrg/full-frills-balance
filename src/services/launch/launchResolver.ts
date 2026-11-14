@@ -37,12 +37,23 @@ export interface LaunchResolverInput {
  */
 export function resolveLaunchGate(input: LaunchResolverInput): LaunchResolution {
   const { deviceClaimed, activeWorkplaceId, workplaceIds } = input;
+  const unreadable = input.setupDraft?.unreadable === true;
+  const canOpenExistingWorkplace =
+    workplaceIds.length > 0 || (activeWorkplaceId !== undefined && workplaceIds.length === 0);
 
-  if (input.setupDraft && 'unreadable' in input.setupDraft && input.setupDraft.unreadable) {
-    return { kind: 'setup', journeyId: 'first_run', unreadable: true };
+  // A corrupt draft is kept for an explicit restart. It must not hide books
+  // that are already on the device, and it must not look like a new first run
+  // once the device is registered.
+  if (unreadable && !canOpenExistingWorkplace) {
+    return {
+      kind: 'setup',
+      journeyId: deviceClaimed ? 'add_workplace' : 'first_run',
+      unreadable: true,
+    };
   }
 
   if (
+    !unreadable &&
     input.setupDraft &&
     input.setupDraft.entryPolicy === 'blocking' &&
     input.setupDraft.journeyId.trim()
