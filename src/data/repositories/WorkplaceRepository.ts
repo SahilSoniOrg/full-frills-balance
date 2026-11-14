@@ -9,6 +9,9 @@ import { generator } from '@/src/data/database/idGenerator';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
 import { accountWriteRepository } from './account/AccountWriteRepository';
+import type { AccountPersistenceInput } from './account/types';
+import type { AccountingWriteSession } from './AccountingWriteSession';
+import { stageModelWrite } from './AccountingWriteSession';
 import {
   getBalanceCorrectionAccountInput,
   getOpeningBalancesAccountInput,
@@ -95,6 +98,42 @@ export class WorkplaceRepository {
         this.prepareCreatedAuditLog(workplace, setupCorrelationId),
       );
     });
+    return workplace;
+  }
+
+  /** Stage a complete setup Workplace and its account definitions in a caller-owned writer. */
+  async createSetupInSession(
+    session: AccountingWriteSession,
+    data: {
+      id: WorkplaceId;
+      name: string;
+      icon: string;
+      defaultCurrencyCode: string;
+      accounts: readonly AccountPersistenceInput[];
+    },
+  ): Promise<Workplace> {
+    const workplace = this.prepareCreate(data);
+    stageModelWrite(session, [
+      workplace,
+      this.prepareCreatedAuditLog(workplace, data.id),
+    ]);
+
+    const opening = getOpeningBalancesAccountInput(data.defaultCurrencyCode, data.id);
+    const correction = getBalanceCorrectionAccountInput(data.defaultCurrencyCode, data.id);
+    await accountWriteRepository.createInSession(session, {
+      ...opening,
+      id: `${data.id}:system:opening-balances` as AccountId,
+    });
+    await accountWriteRepository.createInSession(session, {
+      ...correction,
+      id: `${data.id}:system:balance-corrections` as AccountId,
+    });
+
+    for (const account of data.accounts) {
+      await accountWriteRepository.createInSession(session, account, {
+        audit: { correlationId: data.id },
+      });
+    }
     return workplace;
   }
 

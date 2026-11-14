@@ -264,6 +264,62 @@ export class BudgetRepository {
     });
   }
 
+  /** Stage a budget with a caller-supplied stable identity in an existing writer. */
+  async createInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    id: BudgetId,
+    data: BudgetInput,
+    accountIds: AccountId[],
+    correlationId?: string,
+  ): Promise<Budget> {
+    const budget = this.budgets.prepareCreate(record => {
+      record._raw.id = id;
+      record.workplaceId = workplaceId;
+      record.name = data.name;
+      record.amount = data.amount;
+      record.currencyCode = data.currencyCode;
+      record.startMonth = data.startMonth;
+      record.intervalType = data.intervalType || 'MONTHLY';
+      record.intervalN = data.intervalN || 1;
+      record.startDate = data.startDate;
+      record.recurrenceDay = data.recurrenceDay;
+      record.recurrenceMonth = data.recurrenceMonth;
+      record.active = data.active ?? true;
+      if (data.assetAccountIds) record.assetAccountIds = data.assetAccountIds.join(',');
+      record.createdAt = new Date();
+      record.updatedAt = new Date();
+    });
+    const scopes = accountIds.map(accountId =>
+      this.budgetScopes.prepareCreate(scope => {
+        scope._raw.id = `${id}:scope:${accountId}`;
+        scope.workplaceId = workplaceId;
+        scope.budget.set(budget);
+        scope.accountId = accountId;
+        scope.createdAt = new Date();
+        scope.updatedAt = new Date();
+      }),
+    );
+    stageModelWrite(session, () => [
+      budget,
+      ...scopes,
+      auditRepository.prepareLog(
+        {
+          entityType: 'budget',
+          entityId: budget.id,
+          eventType: 'budget.created',
+          source: 'system',
+          correlationId,
+          action: AuditAction.CREATE,
+          changes: { after: auditBudgetState(budget, accountIds) },
+          undoable: false,
+        },
+        workplaceId,
+      ),
+    ]);
+    return budget;
+  }
+
   async update(
     workplaceId: WorkplaceId,
     budget: Budget,

@@ -208,9 +208,14 @@ export async function preparePutOperations(
       : undefined;
 
   const now = new Date();
+  const createJournalId = 'createJournalId' in input ? input.createJournalId : undefined;
+  if (existing && createJournalId) {
+    throw new Error('A journal cannot be updated with a new journal ID.');
+  }
   const journal =
     existing ??
     journalTables.journals.prepareCreate(record => {
+      if (createJournalId) record._raw.id = createJournalId;
       record.workplaceId = workplaceId;
       record.journalDate = journalDate;
       record.description = put.description;

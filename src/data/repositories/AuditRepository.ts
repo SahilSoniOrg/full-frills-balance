@@ -10,6 +10,7 @@ import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 
 export interface AuditEntry<T = unknown> {
+  id?: string;
   entityType: AuditEntityType;
   entityId: string;
   action: AuditAction;
@@ -49,6 +50,7 @@ export class AuditRepository {
 
   prepareLog<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): AuditLog {
     return this.auditLogs.prepareCreate((record: AuditLog) => {
+      if (entry.id) record._raw.id = entry.id;
       this.applyEntryToRecord(record, entry);
       record.workplaceId = workplaceId;
     });

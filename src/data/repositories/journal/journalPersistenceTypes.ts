@@ -10,6 +10,8 @@ import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 
 export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
+  /** Stable ID for a new journal staged by a publication operation. */
+  createJournalId?: JournalId;
   displayType?: JournalDisplayType;
   confirmCaptureKey?: string;
 }

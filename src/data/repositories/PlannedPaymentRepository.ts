@@ -192,6 +192,40 @@ export class PlannedPaymentRepository {
     return result;
   }
 
+  /** Stage a planned payment with a caller-supplied stable identity in an existing writer. */
+  async createInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    id: PlannedPaymentId,
+    data: PlannedPaymentPersistenceInput,
+    correlationId?: string,
+  ): Promise<PlannedPayment> {
+    const created = this.plannedPayments.prepareCreate(pp => {
+      pp._raw.id = id;
+      Object.assign(pp, data);
+      pp.createdAt = new Date();
+      pp.updatedAt = new Date();
+      pp.workplaceId = workplaceId;
+    });
+    stageModelWrite(session, () => [
+      created,
+      auditRepository.prepareLog(
+        {
+          entityType: 'planned_payment',
+          entityId: created.id,
+          eventType: 'planned_payment.created',
+          source: 'system',
+          correlationId,
+          action: AuditAction.CREATE,
+          changes: { after: plannedPaymentAuditSnapshot(created) },
+          undoable: false,
+        },
+        workplaceId,
+      ),
+    ]);
+    return created;
+  }
+
   async updateSchedule(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,

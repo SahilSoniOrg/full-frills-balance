@@ -1,426 +1,209 @@
-import { finishDeviceSetup } from '../../setupFinishers';
-import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
-import { commitCashClarity } from '../commitCashClarity';
-import { preferences } from '@/src/services/preferences';
-import { draftAccountId, starterCategoryId } from '../mapToWorkplaceOutput';
-import dayjs from 'dayjs';
-import { calculateNextOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { projectCashClarityDraft } from '../projectCashClarityDraft';
-import {
-  cashClarityAccount as account,
-  cashClarityCommitDraft as draft,
-  cashClaritySalaryIncome as salaryIncome,
-  cashClarityWorkplaceId as WORKPLACE_ID,
-} from './cashClarityTestFixtures';
+import { asWorkplaceId } from '@/src/types/ids';
+import { publishCashClarity } from '../commitCashClarity';
+import { cashClarityDraft, cashClaritySalaryIncome } from './cashClarityTestFixtures';
 
-const mockFindAll = jest.fn();
-const mockUpsertPayment = jest.fn();
-const mockFinishWorkplaceSetup = jest.fn();
-const mockUpsertBudget = jest.fn();
-const mockUpdateAccount = jest.fn();
-const mockAdjustBalance = jest.fn();
-const mockClearPending = jest.fn();
-const mockGetWorkplace = jest.fn();
-const mockDeleteWorkplace = jest.fn();
-jest.mock('@/src/services/accounts/accountQueries', () => ({
-  accountQueries: { findAll: (...args: unknown[]) => mockFindAll(...args) },
+const mockRunSession = jest.fn();
+const mockStageModelWrite = jest.fn();
+const mockAuditFind = jest.fn();
+const mockCreateSetup = jest.fn();
+const mockFindWorkplace = jest.fn();
+const mockGetPrecision = jest.fn();
+const mockPutJournal = jest.fn();
+const mockAfterCommit = jest.fn();
+const mockCreatePayment = jest.fn();
+const mockCreateBudget = jest.fn();
+const mockFetch = jest.fn();
+
+jest.mock('@/src/data/repositories/AccountingWriteSession', () => ({
+  runAccountingWriteSession: (...args: unknown[]) => mockRunSession(...args),
+  stageModelWrite: (...args: unknown[]) => mockStageModelWrite(...args),
 }));
-
-jest.mock('@/src/services/accounts/accountHierarchyCommands', () => ({
-  updateAccount: (...args: unknown[]) => mockUpdateAccount(...args),
+jest.mock('@/src/data/repositories/AuditRepository', () => ({
+  auditRepository: { find: (...args: unknown[]) => mockAuditFind(...args), prepareLog: jest.fn() },
 }));
-
-jest.mock('@/src/data/database/idGenerator', () => ({
-  generator: () => 'workplace-op',
-}));
-
-jest.mock('@/src/services/accounts/accountAdjustCommands', () => ({
-  adjustAccountBalance: (...args: unknown[]) => mockAdjustBalance(...args),
-}));
-
-jest.mock('@/src/services/accounts/accountSystemAccounts', () => ({
-  getOpeningBalancesAccountId: jest.fn(async () => 'opening'),
-  isSystemAccount: () => false,
-}));
-
-jest.mock('@/src/services/budget/budgetWriteService', () => ({
-  budgetWriteService: { upsertByName: (...args: unknown[]) => mockUpsertBudget(...args) },
-}));
-
-jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
-  upsertPlannedPaymentByName: (...args: unknown[]) => mockUpsertPayment(...args),
-}));
-
-const mockTrack = jest.fn();
-const mockTrackConversion = jest.fn();
-jest.mock('@/src/services/analytics', () => ({
-  analytics: {
-    track: (...args: unknown[]) => mockTrack(...args),
-    trackConversion: (...args: unknown[]) => mockTrackConversion(...args),
+jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
+  workplaceRepository: {
+    createSetupInSession: (...args: unknown[]) => mockCreateSetup(...args),
+    find: (...args: unknown[]) => mockFindWorkplace(...args),
   },
 }));
-
-jest.mock('@/src/services/preferences', () => ({
-  preferences: {
-    device: {
-      deviceRegistered: false,
-      setActiveWorkplaceId: jest.fn(),
-    },
-  },
-}));
-
 jest.mock('@/src/services/WorkplaceService', () => ({
-  workplaceService: {
-    getWorkplace: (...args: unknown[]) => mockGetWorkplace(...args),
-    deleteWorkplace: (...args: unknown[]) => mockDeleteWorkplace(...args),
+  workplaceService: { getAllWorkplaces: jest.fn(async () => []) },
+}));
+jest.mock('@/src/data/repositories/BudgetRepository', () => ({
+  budgetRepository: { createInSession: (...args: unknown[]) => mockCreateBudget(...args) },
+}));
+jest.mock('@/src/data/repositories/PlannedPaymentRepository', () => ({
+  plannedPaymentRepository: { createInSession: (...args: unknown[]) => mockCreatePayment(...args) },
+}));
+jest.mock('@/src/services/currency-read-service', () => ({
+  currencyReadService: { getPrecision: (...args: unknown[]) => mockGetPrecision(...args) },
+}));
+jest.mock('@/src/services/journal/JournalPersistenceService', () => ({
+  journalPersistenceService: {
+    putInSession: (...args: unknown[]) => mockPutJournal(...args),
+    afterAtomicWriteCommit: (...args: unknown[]) => mockAfterCommit(...args),
+  },
+}));
+jest.mock('@/src/services/preferences', () => ({
+  preferences: { device: { deviceRegistered: false, setActiveWorkplaceId: jest.fn() } },
+}));
+jest.mock('@/src/services/analytics', () => ({
+  analytics: { track: jest.fn(), trackConversion: jest.fn() },
+}));
+jest.mock('../setupFinishers', () => ({ finishDeviceSetup: jest.fn() }));
+jest.mock('../../SetupDraftStore', () => ({ clearSetupDraft: jest.fn() }));
+jest.mock('../pendingWorkplace', () => ({ clearPendingCashClarityWorkplaceId: jest.fn() }));
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    get: (...args: unknown[]) => ({ query: (...queryArgs: unknown[]) => ({ fetch: (...fetchArgs: unknown[]) => mockFetch(...args, ...queryArgs, ...fetchArgs) }) }),
   },
 }));
 
-jest.mock('../../SetupDraftStore', () => ({ clearSetupDraft: jest.fn() }));
-
-jest.mock('../../setupFinishers', () => ({
-  finishDeviceSetup: jest.fn(),
-  finishWorkplaceSetup: (...args: unknown[]) => mockFinishWorkplaceSetup(...args),
-}));
-
-jest.mock('../pendingWorkplace', () => ({
-  cashClarityWorkplaceId: () => 'workplace-op',
-  clearPendingCashClarityWorkplaceId: () => mockClearPending(),
-}));
-
-describe('commitCashClarity', () => {
+describe('publishCashClarity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (preferences.device as unknown as { deviceRegistered: boolean }).deviceRegistered = false;
-    mockFinishWorkplaceSetup.mockResolvedValue('workplace-op');
-    mockGetWorkplace.mockResolvedValue(undefined);
+    mockAuditFind.mockResolvedValue(undefined);
+    mockFindWorkplace.mockResolvedValue(undefined);
+    mockGetPrecision.mockResolvedValue(2);
+    mockRunSession.mockImplementation((work: (session: object) => Promise<unknown>) => work({}));
+    mockPutJournal.mockResolvedValue({ journal: { id: 'opening' }, status: 'POSTED' });
+    mockCreatePayment.mockResolvedValue(undefined);
+    mockCreateBudget.mockResolvedValue(undefined);
   });
 
-  it('creates every-two-weeks income as weekly with interval 2', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
-    ]);
+  it('rejects malformed money before opening the database writer', async () => {
+    const invalid = cashClarityDraft({
+      accounts: [{ id: 'bank', kind: 'bank', name: 'Bank', balance: Number.NaN }],
+    });
 
-    await commitCashClarity(
-      draft({
-        income: {
-          kind: 'recurring',
-          items: [salaryIncome],
-        },
-      }),
-    );
-
-    expect(mockFinishWorkplaceSetup).toHaveBeenCalledWith('workplace-op', expect.any(Object));
-    expect(finishDeviceSetup).toHaveBeenCalled();
-    expect(mockClearPending).toHaveBeenCalled();
-    expect(mockUpsertPayment).toHaveBeenCalledWith(
-      'workplace-op',
-      expect.objectContaining({
-        name: 'Salary',
-        intervalType: PlannedPaymentInterval.WEEKLY,
-        intervalN: 2,
-        startDate: dayjs(salaryIncome.nextDate).startOf('day').valueOf(),
-        recurrenceDay: 5,
-        fromAccountId: starterCategoryId(WORKPLACE_ID, 'Salary'),
-        toAccountId: draftAccountId(WORKPLACE_ID, 'main'),
-      }),
-    );
+    await expect(publishCashClarity(invalid)).rejects.toMatchObject({ code: 'invalid_input' });
+    expect(mockRunSession).not.toHaveBeenCalled();
+    expect(mockCreateSetup).not.toHaveBeenCalled();
   });
 
-  it('saves and previews one Wednesday fortnightly draft while retaining yearly month rules', async () => {
-    const onboardingDraft = draft({
-      income: {
-        kind: 'recurring',
-        items: [
-          {
-            ...salaryIncome,
-            nextDate: Date.parse('2026-09-30T12:00:00Z'),
-          },
-          {
-            id: 'freelance',
-            name: 'Freelance',
-            source: 'freelance',
-            amount: 2000,
-            interval: PlannedPaymentInterval.YEARLY,
-            intervalN: 1,
-            nextDate: Date.parse('2028-02-29T12:00:00Z'),
-          },
-        ],
+  it('rejects planned money without an eligible spendable account before writes', async () => {
+    const invalid = cashClarityDraft({
+      accounts: [{ id: 'reserve', kind: 'savings', name: 'Reserve', balance: 100, spendable: false }],
+      income: { kind: 'recurring', items: [cashClaritySalaryIncome] },
+    });
+
+    await expect(publishCashClarity(invalid)).rejects.toMatchObject({
+      code: 'missing_spendable_account',
+    });
+    expect(mockRunSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed dates before opening the database writer', async () => {
+    const invalid = cashClarityDraft({
+      commitment: {
+        kind: 'payment',
+        items: [{ id: 'rent-row', name: 'Rent', type: 'rent', amount: 100, dueDate: Number.NaN }],
       },
     });
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
-      account(starterCategoryId(WORKPLACE_ID, 'Freelance'), 'Freelance', AccountType.INCOME),
-    ]);
 
-    await commitCashClarity(onboardingDraft);
-
-    const weeklySaved = mockUpsertPayment.mock.calls
-      .map(([, input]) => input)
-      .find(input => input.name === 'Salary');
-    const yearlySaved = mockUpsertPayment.mock.calls
-      .map(([, input]) => input)
-      .find(input => input.name === 'Freelance');
-    expect(weeklySaved).toEqual(
-      expect.objectContaining({
-        intervalType: PlannedPaymentInterval.WEEKLY,
-        intervalN: 2,
-        recurrenceDay: 3,
-      }),
-    );
-    expect(yearlySaved).toEqual(
-      expect.objectContaining({
-        intervalType: PlannedPaymentInterval.YEARLY,
-        recurrenceMonth: 2,
-        recurrenceDay: 29,
-      }),
-    );
-    expect(
-      dayjs(
-        calculateNextOccurrence(yearlySaved.startDate, {
-          intervalType: yearlySaved.intervalType,
-          intervalN: yearlySaved.intervalN,
-          recurrenceMonth: yearlySaved.recurrenceMonth,
-          recurrenceDay: yearlySaved.recurrenceDay,
-        }),
-      ).format('YYYY-MM-DD'),
-    ).toBe('2029-02-28');
-
-    const preview = projectCashClarityDraft(onboardingDraft, dayjs('2026-09-14T10:00:00'));
-    const previewPayday = preview.chart.find(point =>
-      point.events.some(event => event.name === 'Salary'),
-    );
-    expect(dayjs(previewPayday?.x).format('YYYY-MM-DD')).toBe('2026-09-30');
+    await expect(publishCashClarity(invalid)).rejects.toMatchObject({ code: 'invalid_input' });
+    expect(mockRunSession).not.toHaveBeenCalled();
   });
 
-  it('rethrows the same workplace id and upserts changed income on retry', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
-    ]);
-    const first = draft({
-      income: { kind: 'recurring', items: [salaryIncome] },
-    });
-    await commitCashClarity(first);
-    await commitCashClarity({
-      ...first,
-      income: { kind: 'recurring', items: [{ ...salaryIncome, amount: 45000 }] },
+  it('stages account, opening journal, plans, budgets, and receipt through one session', async () => {
+    const draft = cashClarityDraft({
+      income: { kind: 'recurring', items: [cashClaritySalaryIncome] },
+      commitment: {
+        kind: 'payment',
+        items: [{ id: 'rent-row', name: 'Rent', type: 'rent', amount: 1500, dueDate: Date.parse('2026-10-01') }],
+      },
+      budget: {
+        kind: 'set',
+        items: [{ id: 'food-limit', name: 'Food', amount: 6000, category: 'Food' }],
+      },
     });
 
-    expect(mockFinishWorkplaceSetup).toHaveBeenNthCalledWith(1, 'workplace-op', expect.any(Object));
-    expect(mockFinishWorkplaceSetup).toHaveBeenNthCalledWith(2, 'workplace-op', expect.any(Object));
-    expect(mockUpsertPayment).toHaveBeenNthCalledWith(
-      1,
-      'workplace-op',
-      expect.objectContaining({ name: 'Salary', amount: 40000 }),
+    const result = await publishCashClarity(draft);
+
+    expect(result).toEqual({ workplaceId: draft.operationId, status: 'published' });
+    expect(mockRunSession).toHaveBeenCalledTimes(1);
+    expect(mockCreateSetup).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: draft.operationId, accounts: expect.any(Array) }),
     );
-    expect(mockUpsertPayment).toHaveBeenNthCalledWith(
-      2,
-      'workplace-op',
-      expect.objectContaining({ name: 'Salary', amount: 45000 }),
+    expect(mockPutJournal).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ createJournalId: `cash-clarity:${draft.operationId}:journal:main` }),
+      draft.operationId,
+      expect.objectContaining({ eventType: 'journal.opening_balance_created' }),
     );
+    expect(mockCreatePayment).toHaveBeenCalledTimes(2);
+    expect(mockCreatePayment.mock.calls.map((call: unknown[]) => call[2])).toEqual([
+      `cash-clarity:${draft.operationId}:planned-payment:income:pay`,
+      `cash-clarity:${draft.operationId}:planned-payment:payment:rent-row`,
+    ]);
+    expect(mockCreateBudget).toHaveBeenCalledWith(
+      expect.anything(),
+      draft.operationId,
+      `cash-clarity:${draft.operationId}:budget:food-limit`,
+      expect.objectContaining({ amount: 6000 }),
+      expect.any(Array),
+      draft.operationId,
+    );
+    expect(mockStageModelWrite).toHaveBeenCalledTimes(1);
+    expect(mockAfterCommit).toHaveBeenCalledTimes(1);
   });
 
-  it('serializes concurrent finalization attempts', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-    ]);
-    let releaseFirst: (() => void) | undefined;
-    const firstFinished = new Promise<void>(resolve => {
-      releaseFirst = resolve;
+  it('preserves an old partial Workplace instead of treating it as complete or deleting it', async () => {
+    mockFindWorkplace.mockResolvedValue({ id: asWorkplaceId('workplace-op') });
+
+    await expect(publishCashClarity(cashClarityDraft())).rejects.toMatchObject({
+      code: 'ambiguous_existing_publication',
     });
-    mockFinishWorkplaceSetup
-      .mockImplementationOnce(async () => {
-        await firstFinished;
-        return WORKPLACE_ID;
-      })
-      .mockResolvedValue(WORKPLACE_ID);
-
-    const first = commitCashClarity(draft());
-    const second = commitCashClarity(draft());
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-    expect(mockFinishWorkplaceSetup).toHaveBeenCalledTimes(1);
-
-    releaseFirst?.();
-    await Promise.all([first, second]);
-    expect(mockFinishWorkplaceSetup).toHaveBeenCalledTimes(2);
+    expect(mockCreateSetup).not.toHaveBeenCalled();
+    expect(mockStageModelWrite).not.toHaveBeenCalled();
   });
 
-  it('does not register the device if a later write fails', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
-    ]);
-    mockUpsertPayment.mockRejectedValueOnce(new Error('write failed'));
-
-    await expect(
-      commitCashClarity(
-        draft({
-          income: { kind: 'recurring', items: [salaryIncome] },
-        }),
-      ),
-    ).rejects.toThrow('write failed');
-    expect(finishDeviceSetup).not.toHaveBeenCalled();
-    expect(mockDeleteWorkplace).toHaveBeenCalledWith('workplace-op');
-    expect(mockClearPending).not.toHaveBeenCalled();
-  });
-
-  it('throws when salary exists without a spendable pay-from account', async () => {
-    mockFindAll.mockResolvedValue([account('card-1', 'Credit Card', AccountType.LIABILITY)]);
-
-    await expect(
-      commitCashClarity(
-        draft({
-          accounts: [{ id: 'card', kind: 'card', name: 'Credit Card', balance: 0 }],
-          income: {
-            kind: 'recurring',
-            items: [
-              {
-                id: 'pay',
-                name: 'Salary',
-                source: 'salary',
-                amount: 40000,
-                interval: PlannedPaymentInterval.MONTHLY,
-                intervalN: 1,
-                nextDate: Date.parse('2026-09-25'),
-              },
-            ],
-          },
-        }),
-      ),
-    ).rejects.toThrow('Could not save a spendable account for planned money.');
-    expect(mockUpsertPayment).not.toHaveBeenCalled();
-  });
-
-  it('throws when a named account is missing from the new workplace', async () => {
-    mockFindAll.mockResolvedValue([account('other-1', 'Wallet', AccountType.ASSET)]);
-
-    await expect(commitCashClarity(draft())).rejects.toThrow('Could not save Bank.');
-  });
-
-  it('does not register the device if the workplace fails to create', async () => {
-    mockFinishWorkplaceSetup.mockRejectedValueOnce(new Error('no workplace'));
-    await expect(commitCashClarity(draft())).rejects.toThrow('no workplace');
-    expect(finishDeviceSetup).not.toHaveBeenCalled();
-  });
-
-  it('registers the entered display name on the device', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-    ]);
-    await commitCashClarity(draft({ displayName: 'Sahil' }));
-    expect(finishDeviceSetup).toHaveBeenCalledWith({
-      displayName: { value: 'Sahil', source: 'user_entered' },
+  it('returns a verified completed operation without staging books again', async () => {
+    const draft = cashClarityDraft();
+    const accountIds = [
+      `${draft.operationId}:system:opening-balances`,
+      `${draft.operationId}:system:balance-corrections`,
+      `${draft.operationId}:onboarding-account:main`,
+      `${draft.operationId}:onboarding-category:groceries`,
+      `${draft.operationId}:onboarding-category:food & drink`,
+      `${draft.operationId}:onboarding-category:salary`,
+    ];
+    const manifest = {
+      operationId: draft.operationId,
+      accountIds,
+      journalIds: [`cash-clarity:${draft.operationId}:journal:main`],
+      plannedPaymentIds: [],
+      budgetIds: [],
+      budgetScopeIds: [],
+    };
+    mockAuditFind.mockResolvedValue({
+      id: `cash-clarity-publication:${draft.operationId}`,
+      eventType: 'workplace.setup_published',
+      entityId: draft.operationId,
+      parsedChanges: { after: manifest },
     });
-  });
+    mockFindWorkplace.mockResolvedValue({ id: draft.operationId });
+    mockFetch.mockImplementation((table: string) => {
+      const counts: Record<string, number> = {
+        accounts: accountIds.length,
+        journals: 1,
+        planned_payments: 0,
+        budgets: 0,
+        budget_scopes: 0,
+      };
+      return Promise.resolve(Array.from({ length: counts[table] ?? 0 }));
+    });
 
-  it('records onboarding completion once for a new device', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-    ]);
-    await commitCashClarity(draft({ displayName: 'Sahil' }));
-
-    expect(mockTrack).toHaveBeenCalledWith('onboarding_complete');
-    expect(mockTrackConversion).toHaveBeenCalledWith('onboarding_completed');
-  });
-
-  it('does not re-record onboarding for an already registered device', async () => {
-    (preferences.device as unknown as { deviceRegistered: boolean }).deviceRegistered = true;
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-    ]);
-    await commitCashClarity(draft({ displayName: 'Sahil' }));
-
-    expect(mockTrack).not.toHaveBeenCalledWith('onboarding_complete');
-    expect(mockTrackConversion).not.toHaveBeenCalled();
-  });
-
-  it('does not create a workplace without a name', async () => {
-    await expect(commitCashClarity(draft({ displayName: '  ' }))).rejects.toThrow(
-      'Could not save your name.',
-    );
-    expect(mockFinishWorkplaceSetup).not.toHaveBeenCalled();
-    expect(finishDeviceSetup).not.toHaveBeenCalled();
-  });
-
-  it('throws when freelance income has no Freelance category', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
-    ]);
-
-    await expect(
-      commitCashClarity(
-        draft({
-          income: {
-            kind: 'recurring',
-            items: [
-              {
-                id: 'pay',
-                name: 'Freelance',
-                source: 'freelance',
-                amount: 40000,
-                interval: PlannedPaymentInterval.MONTHLY,
-                intervalN: 1,
-                nextDate: Date.parse('2026-09-25'),
-              },
-            ],
-          },
-        }),
-      ),
-    ).rejects.toThrow('Could not save Freelance.');
-    expect(mockUpsertPayment).not.toHaveBeenCalled();
-    expect(finishDeviceSetup).not.toHaveBeenCalled();
-  });
-
-  it('throws when recurring income has no spendable account at all', async () => {
-    mockFindAll.mockResolvedValue([]);
-
-    await expect(
-      commitCashClarity(
-        draft({
-          accounts: [],
-          income: {
-            kind: 'recurring',
-            items: [
-              {
-                id: 'pay',
-                name: 'Salary',
-                source: 'salary',
-                amount: 40000,
-                interval: PlannedPaymentInterval.MONTHLY,
-                intervalN: 1,
-                nextDate: Date.parse('2026-09-25'),
-              },
-            ],
-          },
-        }),
-      ),
-    ).rejects.toThrow('Could not save a spendable account for planned money.');
-  });
-
-  it('resolves a custom budget category by its stable category key', async () => {
-    mockFindAll.mockResolvedValue([
-      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
-      account(starterCategoryId(WORKPLACE_ID, 'Dining'), 'Dining', AccountType.EXPENSE),
-    ]);
-
-    await commitCashClarity(
-      draft({
-        budget: {
-          kind: 'set',
-          items: [{ id: 'dining-budget', name: 'Food budget', category: 'Dining', amount: 8000 }],
-        },
-      }),
-    );
-
-    expect(mockUpsertBudget).toHaveBeenCalledWith(
-      'workplace-op',
-      expect.objectContaining({ name: 'Food budget' }),
-      [starterCategoryId(WORKPLACE_ID, 'Dining')],
-    );
+    await expect(publishCashClarity(draft)).resolves.toEqual({
+      workplaceId: draft.operationId,
+      status: 'already_published',
+    });
+    expect(mockCreateSetup).not.toHaveBeenCalled();
+    expect(mockPutJournal).not.toHaveBeenCalled();
+    expect(mockCreatePayment).not.toHaveBeenCalled();
+    expect(mockCreateBudget).not.toHaveBeenCalled();
+    expect(mockStageModelWrite).not.toHaveBeenCalled();
   });
 });

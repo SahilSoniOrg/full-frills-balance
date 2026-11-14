@@ -74,6 +74,7 @@ export const AUDIT_DOMAIN_EVENT_TYPES = [
   'transaction_inbox_record.status_changed',
   'transaction_inbox_record.imported',
   'workplace.created',
+  'workplace.setup_published',
   'workplace.updated',
   'workplace.restored',
   'workplace.currency_migrated',
