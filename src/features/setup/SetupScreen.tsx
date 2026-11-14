@@ -3,7 +3,6 @@ import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import {
@@ -21,7 +20,7 @@ import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
 import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
-import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
+import { getSetupRecipe } from './setupRecipes';
 
 import { RestoreJournalRecovery } from './RestoreJournalRecovery';
 import {
@@ -38,30 +37,19 @@ import {
   applySetupOutcome,
   createJourneyCoordinator,
   resolveSetupJourney,
-  restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
   shouldExitCompletedFirstRunRestore,
 } from './setupRuntime';
 import {
-  isRestoreJourneyId,
   restoreSources,
+  type RestoreJourneyId,
   type RestoreSetupDraft,
   type RestoreSummaryIntent,
-  type SetupJourneyId,
   type SetupSliceId,
-  type WorkplaceCheckpoint,
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
 import { useSetupJourneyViewState } from './hooks/useSetupJourneyViewState';
-
-function restoreSwitchForJourney(
-  journeyId: SetupJourneyId,
-  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
-  workplaceOpen: boolean,
-): (() => void) | undefined {
-  return undefined;
-}
 
 function restoreChangesSummary(changeCount: number, workplaceCount: number): string {
   const changes = `${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`;
@@ -75,13 +63,12 @@ function SetupJourneyScreen({
   candidateName,
   onSwitchJourney,
 }: {
-  journeyId: SetupJourneyId;
+  journeyId: RestoreJourneyId;
   readonly candidateName: string;
-  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void;
+  onSwitchJourney: (journeyId: RestoreJourneyId, name?: string) => void;
 }) {
   const recipe = getSetupRecipe(journeyId);
   const coordinator = useMemo(() => createJourneyCoordinator(journeyId), [journeyId]);
-  const workplaceOpen = useOptionalWorkplace() !== undefined;
 
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
   const [submittingSlice, setSubmittingSlice] = useState<SetupSliceId>();
@@ -102,12 +89,12 @@ function SetupJourneyScreen({
       ? action.sliceId
       : recipe.entries.find(entry => entry.kind === 'slice')?.sliceId;
   const resolving = action.kind === 'auto_accept' || action.kind === 'run_effect';
-  const bulkRestoreCount = draft.kind === 'restore' ? restoreSources(draft).length : 0;
+  const bulkRestoreCount = restoreSources(draft).length;
 
   const showResolutionFailure = (error: unknown) => {
     const message = error instanceof Error ? error.message : 'Could not continue Setup.';
     setResolutionError(message);
-    if (draft.kind !== 'restore' || !(error instanceof PostedJournalImportError)) {
+    if (!(error instanceof PostedJournalImportError)) {
       setRestoreJournalFailure(undefined);
       return;
     }
@@ -148,7 +135,7 @@ function SetupJourneyScreen({
         setShowRestoreFxRepairCompletion(true);
         return;
       }
-      applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
+      applySetupOutcome(await coordinator.finish(), recipe);
     }
   };
 
@@ -188,30 +175,10 @@ function SetupJourneyScreen({
     }
   };
 
-  const finish = async () => {
-    setSubmittingSlice('summary');
-    setResolutionError(undefined);
-    try {
-      if (coordinator.next().kind !== 'finish') {
-        await coordinator.accept('summary', { confirmed: true });
-      }
-      if (restoreFxRepairReportRef.current.length > 0) {
-        setShowRestoreFxRepairCompletion(true);
-        return;
-      }
-      applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
-    } catch (error) {
-      showResolutionFailure(error);
-      toast.error(resolutionToastMessage(error, 'Could not finish Setup.'));
-    } finally {
-      setSubmittingSlice(undefined);
-    }
-  };
-
   const discardRestore = async () => {
     setSubmittingSlice('restore_summary');
     try {
-      await abandonRestoreJourney(coordinator.getDraft(), recipe, onSwitchJourney);
+      await abandonRestoreJourney(coordinator.getDraft(), recipe);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not discard restore.');
     } finally {
@@ -270,7 +237,7 @@ function SetupJourneyScreen({
       failure: NonNullable<typeof restoreJournalFailure>,
     ) => Promise<readonly string[]>,
   ) => {
-    if (draft.kind !== 'restore' || !restoreJournalFailure) return;
+    if (!restoreJournalFailure) return;
     const restoreDraft = draft;
     const failure = restoreJournalFailure;
     setSubmittingSlice('restore_source');
@@ -317,7 +284,7 @@ function SetupJourneyScreen({
   const continueAfterRestoreChanges = async () => {
     setSubmittingSlice('restore_summary');
     try {
-      applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
+      applySetupOutcome(await coordinator.finish(), recipe);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not finish restore.');
     } finally {
@@ -326,15 +293,12 @@ function SetupJourneyScreen({
   };
 
   const {
-    workplaceTargetStep,
-    setWorkplaceTargetStep,
     workplaceStep,
     setWorkplaceStep,
     displayName,
     workplaceInitial,
     displayProgress,
   } = useSetupJourneyViewState({
-    journeyId,
     candidateName,
     recipe,
     draft,
@@ -342,15 +306,8 @@ function SetupJourneyScreen({
     slice,
   });
 
-  const goTo = (target: SetupSliceId, targetStep?: WorkplaceCheckpoint) => {
-    setWorkplaceTargetStep(targetStep);
-    if (targetStep) setWorkplaceStep(targetStep);
-    if (coordinator.getDraft().acceptedSlices.includes(target)) coordinator.edit(target);
-  };
-
   const goBack = () => {
     if (
-      draft.kind === 'restore' &&
       restoreLeaveNeedsConfirm(draft) &&
       slice === 'restore_summary'
     ) {
@@ -359,12 +316,8 @@ function SetupJourneyScreen({
     }
     const result = coordinator.back();
     if (result.kind !== 'at_start') return;
-    if (draft.kind === 'restore') {
-      if (restoreLeaveNeedsConfirm(draft)) confirmAbandonRestore();
-      else void discardRestore();
-      return;
-    }
-    if (recipe.atStart === 'back') AppNavigation.back();
+    if (restoreLeaveNeedsConfirm(draft)) confirmAbandonRestore();
+    else void discardRestore();
   };
 
   const renderSlice = () => {
@@ -391,34 +344,24 @@ function SetupJourneyScreen({
           />
         );
       case 'workplace': {
-        const isEditingFromSummary =
-          draft.activeSlice === 'workplace' && draft.acceptedSlices.includes('summary');
         return (
           <WorkplaceSetupSlice
             initial={workplaceInitial}
-            initialStep={workplaceTargetStep}
-            resumeStep={workplaceTargetStep ?? workplaceStep}
+            resumeStep={workplaceStep}
             identityMode={recipe.workplaceIdentity}
             isCompleting={submittingSlice === 'workplace'}
             onCheckpointChange={setWorkplaceStep}
             onContinue={output => {
-              setWorkplaceTargetStep(undefined);
               void advance('workplace', output);
             }}
             onBack={() => {
-              setWorkplaceTargetStep(undefined);
-              if (isEditingFromSummary) {
-                goTo('summary');
-              } else {
-                goBack();
-              }
+              goBack();
             }}
-            onRestore={restoreSwitchForJourney(journeyId, onSwitchJourney, workplaceOpen)}
           />
         );
       }
       case 'restore_summary':
-        return draft.kind === 'restore' && recipe.restoreSummary ? (
+        return recipe.restoreSummary ? (
           <RestoreSummarySlice
             draft={draft}
             actions={recipe.restoreSummary}
@@ -439,7 +382,7 @@ function SetupJourneyScreen({
       stepName={slice === 'workplace'
         ? workplaceStep === 'currency' ? copy.progressCurrency : copy.progressIdentity
         : slice === 'restore_source' ? copy.progressRestoreSource
-        : slice === 'restore_summary' || slice === 'summary' ? copy.progressReview
+        : slice === 'restore_summary' ? copy.progressReview
         : slice === 'device' ? copy.progressDevice : copy.progressSetup}
       keyboardAvoiding
       backAction={
@@ -553,7 +496,7 @@ function SetupScreen() {
     readSetupDraftSnapshot,
     readSetupDraftSnapshot,
   );
-  const [journeyOverride, setJourneyOverride] = useState<SetupJourneyId>();
+  const [journeyOverride, setJourneyOverride] = useState<RestoreJourneyId>();
   const [candidateName, setCandidateName] = useState('');
   if (snapshot && !loadSetupDraft()) {
     return <UnreadableSetupDraft />;

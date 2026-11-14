@@ -2,25 +2,10 @@ import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
-import type { RestoreSetupDraft, WorkplaceCreationSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '../setupTypes';
 import { visibleSetupProgress } from '../visibleSetupProgress';
 
 const operationId = asWorkplaceId('setup-operation');
-
-function workplaceCreation(
-  overrides: Partial<WorkplaceCreationSetupDraft> = {},
-): WorkplaceCreationSetupDraft {
-  return {
-    schemaVersion: 1,
-    kind: 'workplace_creation',
-    journeyId: 'empty_device_workplace',
-    entryPolicy: 'blocking',
-    operationId,
-    presentedHistory: [],
-    acceptedSlices: [],
-    ...overrides,
-  };
-}
 
 function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft {
   return {
@@ -37,49 +22,54 @@ function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft 
 }
 
 describe('visibleSetupProgress', () => {
-  it('counts workplace screens instead of the workplace slice', () => {
-    const draft = workplaceCreation();
+  it('counts imported identity and currency checkpoints dynamically', () => {
+    const draft = restore({
+      acceptedSlices: ['restore_source'],
+      presentedHistory: ['restore_source', 'workplace'],
+      restore: {
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: {
+              workplace: { name: 'Books', icon: Icon.Briefcase },
+            },
+          },
+        ],
+      },
+    });
+
     expect(
       visibleSetupProgress({
-        recipe: getSetupRecipe('empty_device_workplace'),
+        recipe: getSetupRecipe('first_run_restore'),
         draft,
+        definitions: { getAutoOutput: getRestoreAutoOutput },
         currentSlice: 'workplace',
         workplaceCheckpoint: 'currency',
       }),
-    ).toEqual({ current: 1, total: 4, completed: 0 });
+    ).toEqual({ current: 2, total: 3, completed: 1 });
   });
 
-  it('keeps edit-from-summary on the accounts screen in the same denominator', () => {
-    const draft = workplaceCreation({
-      acceptedSlices: ['workplace', 'summary'],
-      presentedHistory: ['workplace', 'summary'],
-      activeSlice: 'workplace',
-    });
-    expect(
-      visibleSetupProgress({
-        recipe: getSetupRecipe('empty_device_workplace'),
-        draft,
-        currentSlice: 'workplace',
-        workplaceCheckpoint: 'accounts',
-      }),
-    ).toEqual({ current: 2, total: 4, completed: 1 });
-  });
-
-  it('does not inflate restore progress with starter book screens', () => {
+  it('omits imported workplace and device facts from the visible restore denominator', () => {
     const draft = restore({
-      acceptedSlices: ['restore_source', 'workplace'],
+      acceptedSlices: ['restore_source'],
       presentedHistory: ['restore_source'],
       restore: {
         sources: [
           {
             source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
             facts: {
-              workplace: { name: 'Books', icon: Icon.Briefcase, defaultCurrencyCode: 'usd' },
+              workplace: {
+                name: 'Books',
+                icon: Icon.Briefcase,
+                defaultCurrencyCode: 'usd',
+              },
+              user: { name: 'Sahil' },
             },
           },
         ],
       },
     });
+
     expect(
       visibleSetupProgress({
         recipe: getSetupRecipe('first_run_restore'),

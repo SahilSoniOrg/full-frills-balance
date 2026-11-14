@@ -1,5 +1,4 @@
-import { getSetupRecipe } from '../setupRecipes';
-import type { SetupJourneyId } from '../setupTypes';
+import { getSetupRecipe, SETUP_RECIPES } from '../setupRecipes';
 
 describe('Setup recipes', () => {
   it.each([
@@ -11,7 +10,7 @@ describe('Setup recipes', () => {
     ['picker_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],
     ['settings_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],
   ] as const)('%s contains the canonical linear order', (journeyId, expected) => {
-    const recipe = getSetupRecipe(journeyId as SetupJourneyId);
+    const recipe = getSetupRecipe(journeyId);
     expect(
       recipe.entries.map(entry => (entry.kind === 'slice' ? entry.sliceId : entry.effectId)),
     ).toEqual(expected);
@@ -22,24 +21,26 @@ describe('Setup recipes', () => {
     expect(getSetupRecipe('settings_restore').entryPolicy).toBe('optional');
   });
 
-  it('keeps workplace identity policy in the journey recipe', () => {
-    expect(getSetupRecipe('empty_device_workplace').workplaceIdentity).toBe('automatic');
-    expect(getSetupRecipe('create_workplace').workplaceIdentity).toBe('editable');
+  it('keeps restore workplace identity editable', () => {
     expect(getSetupRecipe('first_run_restore').workplaceIdentity).toBe('editable');
+    expect(getSetupRecipe('empty_device_restore').workplaceIdentity).toBe('editable');
   });
 
-  it('owns draft kind, leave, and discard metadata', () => {
-    expect(getSetupRecipe('create_workplace')).toMatchObject({
-      draftKind: 'workplace_creation',
-      entryPolicy: 'optional',
-      atStart: 'back',
-    });
+  it('contains only the four restore recipes and owns their return metadata', () => {
+    expect(Object.keys(SETUP_RECIPES)).toEqual([
+      'first_run_restore',
+      'empty_device_restore',
+      'picker_restore',
+      'settings_restore',
+    ]);
     expect(getSetupRecipe('first_run_restore')).toMatchObject({
-      draftKind: 'restore',
       atStart: 'first_run',
       discardTo: 'first_run',
     });
-    expect(getSetupRecipe('empty_device_workplace').draftKind).toBe('workplace_creation');
+    expect(getSetupRecipe('empty_device_restore')).toMatchObject({
+      atStart: 'add_workplace',
+      discardTo: 'add_workplace',
+    });
     expect(getSetupRecipe('first_run_restore').restoreSummary).toEqual({
       primary: { intent: 'continue', label: 'Restore and continue' },
     });

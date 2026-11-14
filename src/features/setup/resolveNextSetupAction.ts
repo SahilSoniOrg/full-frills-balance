@@ -1,8 +1,8 @@
 import type {
-  SetupDraft,
   SetupEffectId,
   SetupProgress,
   SetupSliceId,
+  RestoreSetupDraft,
   SetupSliceOutput,
   SetupAutoAcceptAction,
   SetupSliceOutputById,
@@ -19,16 +19,15 @@ export interface SetupResolutionDefinitions {
   /** Return an authoritative output only when the slice is complete without presentation. */
   readonly getAutoOutput?: (
     sliceId: SetupSliceId,
-    draft: SetupDraft,
+    draft: RestoreSetupDraft,
   ) => SetupSliceOutput | undefined;
 }
 
-function isAccepted(draft: SetupDraft, sliceId: SetupSliceId): boolean {
+function isAccepted(draft: RestoreSetupDraft, sliceId: SetupSliceId): boolean {
   return draft.acceptedSlices.includes(sliceId);
 }
 
-function isRestorePublicationComplete(draft: SetupDraft): boolean {
-  if (draft.kind !== 'restore') return false;
+function isRestorePublicationComplete(draft: RestoreSetupDraft): boolean {
   const sources = draft.restore.sources ?? [];
   const handoffs = draft.restore.handoffs ?? [];
   return (
@@ -38,7 +37,7 @@ function isRestorePublicationComplete(draft: SetupDraft): boolean {
   );
 }
 
-function isEffectComplete(draft: SetupDraft, entry: SetupRecipeEntry): boolean {
+function isEffectComplete(draft: RestoreSetupDraft, entry: SetupRecipeEntry): boolean {
   return entry.kind === 'effect' && entry.effectId === 'publish_restore'
     ? isRestorePublicationComplete(draft)
     : false;
@@ -46,7 +45,7 @@ function isEffectComplete(draft: SetupDraft, entry: SetupRecipeEntry): boolean {
 
 function hasAutoOutput(
   entry: Extract<SetupRecipeEntry, { readonly kind: 'slice' }>,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   definitions: SetupResolutionDefinitions,
 ): boolean {
   return (
@@ -61,7 +60,7 @@ function hasAutoOutput(
  */
 export function visibleSetupSliceIds(
   recipe: SetupRecipe,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   definitions: SetupResolutionDefinitions,
   currentSlice: SetupSliceId,
 ): SetupSliceId[] {
@@ -85,7 +84,7 @@ export function visibleSetupSliceIds(
 
 function progressFor(
   recipe: SetupRecipe,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   definitions: SetupResolutionDefinitions,
   currentSlice: SetupSliceId,
 ): SetupProgress {
@@ -100,7 +99,7 @@ function progressFor(
 
 function presentAction(
   recipe: SetupRecipe,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   definitions: SetupResolutionDefinitions,
   sliceId: SetupSliceId,
 ): NextSetupAction {
@@ -121,7 +120,7 @@ function autoAcceptAction<K extends SetupSliceId>(
 /** Resolve one observable action. It performs no persistence, navigation, or other effects. */
 export function resolveNextSetupAction(
   recipe: SetupRecipe,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   definitions: SetupResolutionDefinitions = {},
 ): NextSetupAction {
   if (draft.activeSlice) {

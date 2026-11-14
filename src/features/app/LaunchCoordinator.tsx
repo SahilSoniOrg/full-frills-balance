@@ -16,6 +16,7 @@ import {
   shouldRedirectSetupToEntry,
   shouldRenderSetupGateChildren,
 } from '@/src/features/setup';
+import type { RestoreJourneyId } from '@/src/features/setup';
 import { useTheme } from '@/src/hooks/use-theme';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
@@ -25,12 +26,24 @@ import {
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { preferences } from '@/src/services/preferences';
-import { isRestoreJourneyId } from '@/src/features/setup/setupTypes';
-import { CreationLaunchProvider } from './CreationLaunchContext';
-import type { WorkplaceId } from '@/src/types/ids';
+import {
+  CreationLaunchProvider,
+  CreationOpeningCoordinatorProvider,
+  type CreationLaunchEntry,
+  type CreationLaunchEntryContext,
+  type CreationOpeningCoordinatorValue,
+  type CreationOpeningTarget,
+  useCreationOpeningCoordinator,
+} from '@/src/contexts/CreationLaunchContext';
+import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 import { logger } from '@/src/utils/logger';
-import { Redirect, usePathname, useRouter } from 'expo-router';
+import {
+  AppNavigation,
+  firstRunCreationHref,
+  workplaceCreationHref,
+} from '@/src/utils/navigation';
+import { Redirect, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, {
   createContext,
   useContext,
@@ -46,6 +59,7 @@ import { useWidgetWorkplaceIntent } from './hooks/useWidgetWorkplaceIntent';
 import type { LaunchCoordinatorState, LaunchSetupDraft } from './LaunchCoordinator.types';
 export type { LaunchCoordinatorState, LaunchSetupDraft } from './LaunchCoordinator.types';
 export {
+  normalizeCreationRoute,
   setupEntryPath,
   shouldRedirectSetupToEntry,
   shouldShowCashClarity,
@@ -68,6 +82,63 @@ export function shouldRenderGateChildren(
   return kind === 'setup'
     ? shouldRenderSetupGateChildren(pathname, journeyId)
     : SETUP_GATE_ROUTES.has(pathname);
+}
+
+function creationLaunchEntry(
+  state: LaunchCoordinatorState,
+  requestedContext?: string,
+): CreationLaunchEntry | undefined {
+  if (state.kind === 'setup') {
+    if (state.journeyId === 'first_run') {
+      return {
+        intent: 'first_run',
+        context: 'unregistered_device',
+        entryPolicy: 'blocking',
+      };
+    }
+    if (state.journeyId === 'add_workplace') {
+      return {
+        intent: 'add_workplace',
+        context: 'registered_empty_device',
+        entryPolicy: 'blocking',
+      };
+    }
+    return undefined;
+  }
+
+  if (state.kind === 'picker') {
+    return {
+      intent: 'add_workplace',
+      context: 'workplace_picker',
+      entryPolicy: 'optional',
+    };
+  }
+
+  if (state.kind === 'open') {
+    const context = creationLaunchContext(requestedContext) ?? 'existing_workplace_entry';
+    return {
+      intent: context === 'unregistered_device' ? 'first_run' : 'add_workplace',
+      context,
+      entryPolicy:
+        context === 'unregistered_device' || context === 'registered_empty_device'
+          ? 'blocking'
+          : 'optional',
+    };
+  }
+
+  return undefined;
+}
+
+function creationLaunchContext(value?: string): CreationLaunchEntryContext | undefined {
+  switch (value) {
+    case 'unregistered_device':
+    case 'registered_empty_device':
+    case 'workplace_picker':
+    case 'existing_workplace_entry':
+      return value;
+    default:
+      return undefined;
+  }
 }
 
 export function shouldRedirectToPrivacyNotice(
@@ -163,6 +234,24 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
   return result;
 }
 
+function hasBlockingSetupDraft(draft?: LaunchSetupDraft): boolean {
+  if (!draft) return false;
+  if ('unreadable' in draft) return draft.unreadable;
+  return draft.entryPolicy === 'blocking';
+}
+
+function restoreJourneyId(value: string): RestoreJourneyId | undefined {
+  switch (value) {
+    case 'first_run_restore':
+    case 'empty_device_restore':
+    case 'picker_restore':
+    case 'settings_restore':
+      return value;
+    default:
+      return undefined;
+  }
+}
+
 export function LaunchCoordinatorProvider({
   children,
   setupDraft,
@@ -195,26 +284,47 @@ export function LaunchCoordinatorProvider({
     id: WorkplaceId;
     workplace: PlainWorkplace | null;
   } | null>(null);
-  const [creationOpeningTarget, setCreationOpeningTarget] = useState<WorkplaceId | null>(null);
+  const [creationOpeningTarget, setCreationOpeningTarget] = useState<CreationOpeningTarget | null>(
+    null,
+  );
+  const creationOpeningCoordinator = useMemo<CreationOpeningCoordinatorValue>(
+    () => ({
+      target: creationOpeningTarget,
+      request: id => setCreationOpeningTarget({ id }),
+      markValidated: (id, workplace) => {
+        setCreationOpeningTarget(current =>
+          current?.id === id ? { id, validatedWorkplace: workplace } : current,
+        );
+      },
+      markCommitted: id => {
+        setCreationOpeningTarget(current =>
+          current?.id === id && current.validatedWorkplace
+            ? { ...current, committed: true }
+            : current,
+        );
+      },
+      clear: id => setCreationOpeningTarget(current => (current?.id === id ? null : current)),
+    }),
+    [creationOpeningTarget],
+  );
   const resolution = useMemo(() => {
     const retry = () => {
       setFailedPointerRepairId(null);
       setRetryToken(token => token + 1);
     };
+    if (
+      creationOpeningTarget?.validatedWorkplace &&
+      activeWorkplaceId === creationOpeningTarget.id
+    ) {
+      return {
+        kind: 'open' as const,
+        workplaceId: creationOpeningTarget.id,
+        persistAsActive: false,
+        workplace: creationOpeningTarget.validatedWorkplace,
+      };
+    }
     if (discovery.error) return { kind: 'error' as const, error: discovery.error, retry };
     if (!isInitialized || discovery.loading) return { kind: 'loading' as const, retry };
-    if (creationOpeningTarget) {
-      const workplace =
-        discovery.workplaces.find(item => item.id === creationOpeningTarget) ??
-        (probedWorkplace?.id === creationOpeningTarget ? probedWorkplace.workplace ?? undefined : undefined);
-      if (!workplace) {
-        if (probedWorkplace?.id !== creationOpeningTarget) {
-          // trigger probe below via effect; stay loading
-        }
-        return { kind: 'loading' as const, retry };
-      }
-      return { kind: 'open' as const, workplaceId: creationOpeningTarget, persistAsActive: false, workplace };
-    }
     const next = resolveLaunchGate({
       setupDraft,
       deviceClaimed,
@@ -249,6 +359,27 @@ export function LaunchCoordinatorProvider({
   ]);
 
   useEffect(() => {
+    if (
+      !creationOpeningTarget?.committed ||
+      activeWorkplaceId !== creationOpeningTarget.id ||
+      setupDraft?.entryPolicy === 'blocking' ||
+      (!discovery.workplaces.some(workplace => workplace.id === creationOpeningTarget.id) &&
+        !(probedWorkplace?.id === creationOpeningTarget.id && probedWorkplace.workplace))
+    ) {
+      return;
+    }
+    setCreationOpeningTarget(current =>
+      current?.id === creationOpeningTarget.id ? null : current,
+    );
+  }, [
+    activeWorkplaceId,
+    creationOpeningTarget,
+    discovery.workplaces,
+    probedWorkplace,
+    setupDraft,
+  ]);
+
+  useEffect(() => {
     if (!isInitialized || discovery.loading || discovery.error || !activeWorkplaceId) return;
     if (discovery.workplaces.some(workplace => workplace.id === activeWorkplaceId)) return;
     if (probedWorkplace?.id === activeWorkplaceId) return;
@@ -269,21 +400,6 @@ export function LaunchCoordinatorProvider({
     probedWorkplace,
   ]);
 
-  // Probe a transiently opening created workplace so its provider can commit.
-  useEffect(() => {
-    if (!isInitialized || !creationOpeningTarget) return;
-    if (probedWorkplace?.id === creationOpeningTarget) return;
-    if (discovery.workplaces.some(workplace => workplace.id === creationOpeningTarget)) return;
-    let cancelled = false;
-    void workplaceService.findPlainWorkplace(creationOpeningTarget).then(workplace => {
-      if (cancelled) return;
-      setProbedWorkplace({ id: creationOpeningTarget, workplace });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [creationOpeningTarget, discovery.workplaces, isInitialized, probedWorkplace]);
-
   const state = useMemo<LaunchCoordinatorState>(() => {
     if (
       resolution.kind === 'open' &&
@@ -292,8 +408,11 @@ export function LaunchCoordinatorProvider({
     ) {
       return { kind: 'loading', retry: () => setRetryToken(token => token + 1) };
     }
+    if (resolution.kind === 'setup' && hasBlockingSetupDraft(setupDraft)) {
+      return { ...resolution, hasBlockingDraft: true };
+    }
     return resolution;
-  }, [failedPointerRepairId, resolution]);
+  }, [failedPointerRepairId, resolution, setupDraft]);
 
   useEffect(() => {
     if (resolution.kind === 'open' && resolution.persistAsActive) {
@@ -316,13 +435,16 @@ export function LaunchCoordinatorProvider({
 
   useEffect(() => {
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
-    if (!isRestoreJourneyId(resolution.journeyId)) return;
+    const journeyId = restoreJourneyId(resolution.journeyId);
+    if (!journeyId) return;
     if (loadSetupDraft()) return;
-    saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
+    saveSetupDraft(createSetupDraft(journeyId, asWorkplaceId(generator())));
   }, [resolution]);
 
   return (
-    <LaunchCoordinatorContext.Provider value={state}>{children}</LaunchCoordinatorContext.Provider>
+    <CreationOpeningCoordinatorProvider value={creationOpeningCoordinator}>
+      <LaunchCoordinatorContext.Provider value={state}>{children}</LaunchCoordinatorContext.Provider>
+    </CreationOpeningCoordinatorProvider>
   );
 }
 
@@ -338,6 +460,19 @@ export function LaunchCoordinatorContent({
   const { isRestartRequired } = useAppRestart();
   const router = useRouter();
   const pathname = usePathname();
+  const routeParams = useLocalSearchParams<{
+    journey?: string | string[];
+    context?: string | string[];
+    origin?: string | string[];
+  }>();
+  const routeJourney = Array.isArray(routeParams.journey)
+    ? routeParams.journey[0]
+    : routeParams.journey;
+  const routeContext = Array.isArray(routeParams.context)
+    ? routeParams.context[0]
+    : routeParams.context;
+  const routeOrigin = Array.isArray(routeParams.origin) ? routeParams.origin[0] : routeParams.origin;
+  const creationEntry = creationLaunchEntry(state, routeContext);
   const {
     deleteWorkplace,
     isTransitioning,
@@ -348,21 +483,28 @@ export function LaunchCoordinatorContent({
     transitionToWorkplace,
     transitionToWorkplaceStrict,
   } = useWorkplaceTransitions(state);
+  const creationOpening = useCreationOpeningCoordinator();
   const openCreatedWorkplace = React.useCallback(async (id: WorkplaceId) => {
     if (!id || typeof id !== 'string' || !id.trim()) {
       throw new Error('A created workplace id is required.');
     }
-    setCreationOpeningTarget(id);
+    creationOpening.request(id);
     try {
       await transitionToWorkplaceStrict(
         id,
         state.kind === 'open' ? state.workplaceId : undefined,
-        { rejectOnError: true },
+        {
+          rejectOnError: true,
+          onTargetValidated: workplace => creationOpening.markValidated(id, workplace),
+          onTransitionCommitted: () => router.replace('/(tabs)'),
+        },
       );
-    } finally {
-      setCreationOpeningTarget(null);
+      creationOpening.markCommitted(id);
+    } catch (error) {
+      creationOpening.clear(id);
+      throw error;
     }
-  }, [state, transitionToWorkplaceStrict]);
+  }, [creationOpening, router, state, transitionToWorkplaceStrict]);
 
   const isPrivacyPolicyAcknowledged = useSyncExternalStore(
     subscribeToPrivacyPolicyAcknowledgement,
@@ -387,8 +529,26 @@ export function LaunchCoordinatorContent({
     privacyRedirectInFlight.current = false;
 
     if (state.kind === 'setup') {
-      if (shouldRedirectSetupToEntry(state.journeyId, pathname)) {
-        // Keep first-run off the legacy wizard and books-only deep links.
+      if (state.unreadable) return;
+      if (state.journeyId === 'first_run' || state.journeyId === 'add_workplace') {
+        if (!state.hasBlockingDraft && restoreJourneyId(routeJourney ?? '')) return;
+        const context =
+          state.journeyId === 'first_run' ? 'unregistered_device' : 'registered_empty_device';
+        const entryHref =
+          state.journeyId === 'first_run'
+            ? firstRunCreationHref(routeOrigin ?? pathname)
+            : workplaceCreationHref({
+                context: 'registered_empty_device',
+                origin: routeOrigin ?? pathname,
+              });
+        if (
+          pathname !== '/onboarding' ||
+          routeJourney !== state.journeyId ||
+          routeContext !== context
+        ) {
+          router.replace(entryHref);
+        }
+      } else if (shouldRedirectSetupToEntry(state.journeyId, pathname)) {
         router.replace(setupEntryPath());
       }
       return;
@@ -403,7 +563,16 @@ export function LaunchCoordinatorContent({
       // A books deep link has no unambiguous Workplace while the picker is open.
       router.replace('/');
     }
-  }, [isPrivacyPolicyAcknowledged, isWidgetWorkplaceSwitchPending, pathname, router, state]);
+  }, [
+    isPrivacyPolicyAcknowledged,
+    isWidgetWorkplaceSwitchPending,
+    pathname,
+    routeContext,
+    routeJourney,
+    routeOrigin,
+    router,
+    state,
+  ]);
 
   if (isRestartRequired) return <RestartRequiredScreen />;
 
@@ -422,7 +591,7 @@ export function LaunchCoordinatorContent({
           isSwitchingWorkplace={isTransitioning}
           workplaceSwitchError={transitionError}
         >
-          <CreationLaunchProvider value={{ openCreatedWorkplace }}>
+          <CreationLaunchProvider value={{ openCreatedWorkplace, entry: creationEntry }}>
             {children}
           </CreationLaunchProvider>
         </WorkplaceProvider>
@@ -445,6 +614,16 @@ export function LaunchCoordinatorContent({
     return <LoadingView loading text={AppConfig.strings.common.loading} />;
   }
   if (gateChildren && state.kind === 'setup' && !SETUP_GATE_ROUTES.has(pathname)) {
+    if (state.journeyId === 'first_run') {
+      return <Redirect href={firstRunCreationHref('launch_gate')} />;
+    }
+    if (state.journeyId === 'add_workplace') {
+      return (
+        <Redirect
+          href={workplaceCreationHref({ context: 'registered_empty_device', origin: 'launch_gate' })}
+        />
+      );
+    }
     return <Redirect href={setupEntryPath()} />;
   }
   if (
@@ -456,7 +635,7 @@ export function LaunchCoordinatorContent({
     )
   ) {
     return (
-      <CreationLaunchProvider value={{ openCreatedWorkplace }}>
+      <CreationLaunchProvider value={{ openCreatedWorkplace, entry: creationEntry }}>
         {gateChildren}
       </CreationLaunchProvider>
     );
@@ -469,11 +648,21 @@ export function LaunchCoordinatorContent({
         isTransitioning={isTransitioning}
         onSelect={id => void transitionToWorkplace(id)}
         onCreate={() =>
-          router.replace({ pathname: '/onboarding', params: { journey: 'add_workplace' } })
+          AppNavigation.toAddWorkplace({ context: 'workplace_picker', origin: '/' })
         }
         onImport={() =>
           router.replace({ pathname: '/onboarding', params: { journey: 'picker_restore' } })
         }
+      />
+    );
+  }
+  if (state.kind === 'setup' && state.journeyId === 'first_run') {
+    return <Redirect href={firstRunCreationHref('launch_gate')} />;
+  }
+  if (state.kind === 'setup' && state.journeyId === 'add_workplace') {
+    return (
+      <Redirect
+        href={workplaceCreationHref({ context: 'registered_empty_device', origin: 'launch_gate' })}
       />
     );
   }

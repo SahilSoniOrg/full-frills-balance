@@ -12,16 +12,14 @@ import type {
   RestoreSourceOutput,
   SetupSliceAcceptance,
   SetupSliceOutputById,
-  SetupDraft,
-  SetupOutcome,
   SetupSliceId,
   SetupSliceOutput,
 } from './setupTypes';
-import { isRestoreJourneyId, sameRestoreSources } from './setupTypes';
+import { sameRestoreSources } from './setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
 import { generator } from '@/src/data/database/idGenerator';
-import type { WorkplaceId } from '@/src/types/ids';
+import { asWorkplaceId } from '@/src/types/ids';
 
 type SliceAcceptance = SetupSliceAcceptance;
 type RestoreProgress = (message: string, progress?: number) => void;
@@ -30,20 +28,27 @@ const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
   'workplace',
   'restore_summary',
   'device',
-  'summary',
 ];
+
+type RestoreSetupOutcome =
+  | {
+      readonly kind: 'restore_accepted';
+      readonly workplaceId: RestoreSetupDraft['operationId'];
+      readonly next: 'open' | 'stay' | 'picker';
+    }
+  | { readonly kind: 'journey_discarded' };
 
 export interface SetupCoordinatorOptions {
   readonly journeyId: RestoreJourneyId;
-  readonly operationId: SetupDraft['operationId'];
+  readonly operationId: RestoreSetupDraft['operationId'];
   readonly recipe?: SetupRecipe;
-  readonly draft?: SetupDraft;
+  readonly draft?: RestoreSetupDraft;
   readonly draftStore?: Pick<SetupDraftStore, 'save' | 'clear'>;
   readonly resolution?: SetupResolutionDefinitions;
   readonly validate?: (
     sliceId: SetupSliceId,
     output: SetupSliceOutput,
-    draft: SetupDraft,
+    draft: RestoreSetupDraft,
   ) => void | Promise<void>;
   readonly effects?: {
     readonly publishRestore?: (
@@ -53,7 +58,7 @@ export interface SetupCoordinatorOptions {
     readonly discardRestorePublication?: (draft: RestoreSetupDraft) => Promise<void>;
     readonly commitDevice?: (output: DeviceSetupOutput) => void;
   };
-  readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
+  readonly finish: (draft: RestoreSetupDraft) => Promise<RestoreSetupOutcome>;
 }
 
 export type { SetupSliceOutputById } from './setupTypes';
@@ -62,7 +67,7 @@ export type BackResult =
   { readonly kind: 'at_start' } | { readonly kind: 'present'; readonly sliceId: SetupSliceId };
 
 export interface SetupCoordinator {
-  readonly getDraft: () => SetupDraft;
+  readonly getDraft: () => RestoreSetupDraft;
   readonly next: () => NextSetupAction;
   /** Persist one or more authoritative auto-completions, stopping at presentation. */
   readonly advanceAutoAccepted: () => Promise<NextSetupAction>;
@@ -76,14 +81,14 @@ export interface SetupCoordinator {
   readonly edit: (sliceId: SetupSliceId) => void;
   /** Execute the one restore publication boundary, if the resolver requests it. */
   readonly runPendingEffect: (onProgress?: RestoreProgress) => Promise<NextSetupAction>;
-  readonly finish: () => Promise<SetupOutcome>;
+  readonly finish: () => Promise<RestoreSetupOutcome>;
 }
 
 export function createSetupDraft(
   journeyId: RestoreJourneyId,
-  operationId: SetupDraft['operationId'],
-  entryPolicyOverride?: SetupDraft['entryPolicy'],
-): SetupDraft {
+  operationId: RestoreSetupDraft['operationId'],
+  entryPolicyOverride?: RestoreSetupDraft['entryPolicy'],
+): RestoreSetupDraft {
   const recipe = getSetupRecipe(journeyId);
   const base = {
     schemaVersion: 1 as const,
@@ -92,9 +97,6 @@ export function createSetupDraft(
     acceptedSlices: [] as const,
     entryPolicy: entryPolicyOverride ?? recipe.entryPolicy,
   };
-  if (!isRestoreJourneyId(journeyId)) {
-    throw new Error(`Restore cannot use journey ${journeyId}`);
-  }
   return { ...base, kind: 'restore', journeyId, restore: {} };
 }
 
@@ -103,15 +105,13 @@ export function startFirstRunRestoreFromDeviceName(
   name: string,
   store: Pick<SetupDraftStore, 'save'> = setupDraftStore,
 ): void {
-  const seeded = createSetupDraft('first_run_restore', generator() as WorkplaceId);
+  const seeded = createSetupDraft('first_run_restore', asWorkplaceId(generator()));
   const trimmed = name.trim();
   store.save(
-    trimmed && seeded.kind === 'restore'
+    trimmed
       ? {
           ...seeded,
-          restore: {
-            deviceCandidate: { value: trimmed, source: 'user_entered' },
-          },
+          restore: { deviceCandidate: { value: trimmed, source: 'user_entered' } },
         }
       : seeded,
   );
@@ -151,32 +151,24 @@ function applyRestoreSource(
     },
     workplace: undefined,
     device: undefined,
-    summary: undefined,
   };
 }
 
-function applyOutput(draft: SetupDraft, acceptance: SliceAcceptance): SetupDraft {
+function applyOutput(draft: RestoreSetupDraft, acceptance: SliceAcceptance): RestoreSetupDraft {
   const acceptedSlices = appendUnique(draft.acceptedSlices, acceptance.sliceId);
   switch (acceptance.sliceId) {
     case 'device':
-      if (draft.kind === 'workplace_creation') {
-        throw new Error('Device slice is not in this Setup journey');
-      }
       return { ...draft, acceptedSlices, device: acceptance.output };
     case 'workplace':
       return { ...draft, acceptedSlices, workplace: acceptance.output };
     case 'restore_source':
-      if (draft.kind !== 'restore') throw new Error('Restore source is not in this Setup journey');
       return applyRestoreSource(draft, acceptance.output);
     case 'restore_summary':
-      if (draft.kind !== 'restore') throw new Error('Restore summary is not in this Setup journey');
       return {
         ...draft,
         acceptedSlices,
         restore: { ...draft.restore, summary: acceptance.output },
       };
-    case 'summary':
-      return { ...draft, acceptedSlices, summary: acceptance.output };
   }
 }
 
@@ -192,9 +184,9 @@ function commitDevice(
 export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupCoordinator {
   const recipe = options.recipe ?? getSetupRecipe(options.journeyId);
   const store = options.draftStore ?? setupDraftStore;
-  let draft = options.draft ?? createSetupDraft(options.journeyId, options.operationId);
+  let draft: RestoreSetupDraft = options.draft ?? createSetupDraft(options.journeyId, options.operationId);
 
-  const persist = (next: SetupDraft): void => {
+  const persist = (next: RestoreSetupDraft): void => {
     store.save(next);
     draft = next;
   };
@@ -214,7 +206,6 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     await options.validate?.(sliceId, output, draft);
     if (
       sliceId === 'restore_source' &&
-      draft.kind === 'restore' &&
       (draft.restore.handoffs?.length ?? 0) > 0 &&
       !sameRestoreSources(draft.restore.sources, output as readonly RestoreSourceOutput[])
     ) {
@@ -286,7 +277,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
   const runPendingEffect = async (onProgress?: RestoreProgress): Promise<NextSetupAction> => {
     const action = await advanceAutoAccepted();
     if (action.kind !== 'run_effect' || action.effectId !== 'publish_restore') return action;
-    if (draft.kind !== 'restore' || !options.effects?.publishRestore) {
+    if (!options.effects?.publishRestore) {
       throw new Error('Restore publication effect is not configured');
     }
     const handoffs = await options.effects.publishRestore(draft, onProgress);
@@ -300,7 +291,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     return advanceAutoAccepted();
   };
 
-  const finish = async (): Promise<SetupOutcome> => {
+  const finish = async (): Promise<RestoreSetupOutcome> => {
     const action = next();
     if (action.kind !== 'finish')
       throw new Error(`Cannot finish while Setup action is ${action.kind}`);

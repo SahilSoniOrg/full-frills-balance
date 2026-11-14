@@ -1,6 +1,5 @@
 import {
   type RestoreSummaryIntent,
-  type SetupDraft,
   type SetupEffectId,
   type SetupEntryPolicy,
   type RestoreJourneyId,
@@ -33,7 +32,6 @@ export interface RestoreSummaryActions {
 
 export interface SetupRecipe {
   readonly journeyId: RestoreJourneyId;
-  readonly draftKind: SetupDraft['kind'];
   /** Whether the workplace identity step is seeded and hidden for this journey. */
   readonly workplaceIdentity: 'automatic' | 'editable';
   readonly entryPolicy: SetupEntryPolicy;
@@ -63,7 +61,6 @@ const restoreCore: readonly SetupRecipeEntry[] = [
 
 const firstRunRestore: SetupRecipe = {
   journeyId: 'first_run_restore',
-  draftKind: 'restore',
   workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'first_run',
@@ -74,7 +71,6 @@ const firstRunRestore: SetupRecipe = {
 
 const emptyDeviceRestore: SetupRecipe = {
   journeyId: 'empty_device_restore',
-  draftKind: 'restore',
   workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'add_workplace',
@@ -85,7 +81,6 @@ const emptyDeviceRestore: SetupRecipe = {
 
 const pickerRestore: SetupRecipe = {
   journeyId: 'picker_restore',
-  draftKind: 'restore',
   workplaceIdentity: 'editable',
   entryPolicy: 'blocking',
   atStart: 'dashboard',
@@ -99,7 +94,6 @@ const pickerRestore: SetupRecipe = {
 
 const settingsRestore: SetupRecipe = {
   journeyId: 'settings_restore',
-  draftKind: 'restore',
   workplaceIdentity: 'editable',
   entryPolicy: 'optional',
   atStart: 'back',

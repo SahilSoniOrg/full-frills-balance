@@ -227,6 +227,45 @@ describe('journal-entry navigation', () => {
   });
 });
 
+describe('workplace creation navigation', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('pushes optional creation with explicit origin context', () => {
+    AppNavigation.toAddWorkplace({
+      context: 'existing_workplace_entry',
+      origin: '/settings/workplaces',
+    });
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/onboarding',
+      params: {
+        journey: 'add_workplace',
+        context: 'existing_workplace_entry',
+        origin: '/settings/workplaces',
+      },
+    });
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('replaces only the empty-device restore discard destination', () => {
+    AppNavigation.toAddWorkplace({
+      context: 'registered_empty_device',
+      origin: '/onboarding?journey=empty_device_restore',
+      navigation: 'replace',
+    });
+
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/onboarding',
+      params: {
+        journey: 'add_workplace',
+        context: 'registered_empty_device',
+        origin: '/onboarding?journey=empty_device_restore',
+      },
+    });
+    expect(router.push).not.toHaveBeenCalled();
+  });
+});
+
 describe('account form navigation', () => {
   beforeEach(() => {
     jest.clearAllMocks();

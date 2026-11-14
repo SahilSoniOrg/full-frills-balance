@@ -6,25 +6,9 @@ import { resolveNextSetupAction } from '../resolveNextSetupAction';
 import type {
   RestoreSetupDraft,
   SetupSliceOutput,
-  WorkplaceCreationSetupDraft,
 } from '../setupTypes';
 
 const operationId = asWorkplaceId('setup-operation');
-
-function workplaceCreation(
-  overrides: Partial<WorkplaceCreationSetupDraft> = {},
-): WorkplaceCreationSetupDraft {
-  return {
-    schemaVersion: 1,
-    kind: 'workplace_creation',
-    journeyId: 'empty_device_workplace',
-    entryPolicy: 'blocking',
-    operationId,
-    presentedHistory: [],
-    acceptedSlices: [],
-    ...overrides,
-  };
-}
 
 function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft {
   return {
@@ -41,25 +25,25 @@ function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft 
 }
 
 describe('resolveNextSetupAction', () => {
-  it('presents the first required slice and reports recipe progress', () => {
+  it('presents the first restore slice and reports recipe progress', () => {
     expect(
-      resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), workplaceCreation()),
+      resolveNextSetupAction(getSetupRecipe('empty_device_restore'), restore()),
     ).toEqual({
       kind: 'present',
-      sliceId: 'workplace',
+      sliceId: 'restore_source',
       progress: { current: 1, total: 2, completed: 0 },
     });
   });
 
-  it('advances past accepted slices', () => {
-    const draft = workplaceCreation({
-      acceptedSlices: ['workplace'],
-      presentedHistory: ['workplace'],
+  it('advances past an accepted restore source', () => {
+    const draft = restore({
+      acceptedSlices: ['restore_source'],
+      presentedHistory: ['restore_source'],
     });
-    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), draft)).toMatchObject({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_restore'), draft)).toMatchObject({
       kind: 'present',
-      sliceId: 'summary',
-      progress: { current: 2, total: 2, completed: 1 },
+      sliceId: 'workplace',
+      progress: { current: 2, total: 3, completed: 1 },
     });
   });
 
@@ -149,12 +133,32 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
-  it('finishes once every slice is accepted', () => {
-    const complete = workplaceCreation({
-      acceptedSlices: ['workplace', 'summary'],
-      presentedHistory: ['workplace', 'summary'],
+  it('finishes after restore publication is complete', () => {
+    const complete = restore({
+      journeyId: 'empty_device_restore',
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      presentedHistory: ['restore_source', 'workplace', 'restore_summary'],
+      restore: {
+        sources: [
+          {
+            source: { uri: 'file:///backup.json', name: 'backup.json', fingerprint: 'abc' },
+            facts: { workplace: {} },
+          },
+        ],
+        summary: { intent: 'open' },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: operationId,
+            fingerprint: 'abc',
+            facts: { workplace: {} },
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
+      },
     });
-    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), complete)).toEqual({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_restore'), complete)).toEqual({
       kind: 'finish',
     });
   });
@@ -247,12 +251,12 @@ describe('resolveNextSetupAction', () => {
   });
 
   it('reopens an explicitly active slice without changing accepted outputs', () => {
-    const draft = workplaceCreation({
-      acceptedSlices: ['workplace', 'summary'],
-      presentedHistory: ['workplace', 'summary'],
+    const draft = restore({
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      presentedHistory: ['restore_source', 'workplace', 'restore_summary'],
       activeSlice: 'workplace',
     });
-    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), draft)).toMatchObject({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_restore'), draft)).toMatchObject({
       kind: 'present',
       sliceId: 'workplace',
     });

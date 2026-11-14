@@ -20,9 +20,11 @@ export { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 export { WorkplaceCurrencyStep } from './components/workplace-setup/WorkplaceCurrencyStep';
 export {
   SETUP_GATE_ROUTES,
+  normalizeCreationRoute,
   setupEntryPath,
   shouldRedirectSetupToEntry,
   shouldRenderSetupGateChildren,
   shouldShowCashClarity,
 } from './setupRouting';
 export type * from './setupTypes';
+export { isRestoreJourneyId } from './setupTypes';

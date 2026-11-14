@@ -1,5 +1,6 @@
 import { Href, router } from 'expo-router';
 import { CommonActions, type NavigationAction } from 'expo-router/react-navigation';
+import type { CreationLaunchEntryContext } from '@/src/contexts/CreationLaunchContext';
 import { preferences } from '@/src/services/preferences';
 import type { TransactionIntentSeed } from '@/src/types/journalEntryRoute';
 import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
@@ -32,6 +33,35 @@ export type AccountRemovalNavigation = {
     | undefined;
   dispatch: (action: NavigationAction) => void;
 };
+
+export type WorkplaceCreationEntryContext = CreationLaunchEntryContext;
+
+export interface WorkplaceCreationEntry {
+  readonly context: WorkplaceCreationEntryContext;
+  /** Existing route name/path retained for draft resume and cancel fallback. */
+  readonly origin: string;
+  /** Only empty-device restore discard replaces; normal optional entry pushes. */
+  readonly navigation?: 'push' | 'replace';
+}
+
+export function workplaceCreationHref({ context, origin }: WorkplaceCreationEntry): Href {
+  return {
+    pathname: '/onboarding',
+    params: { journey: 'add_workplace', context, origin },
+  };
+}
+
+export function firstRunCreationHref(origin: string, name?: string): Href {
+  return {
+    pathname: '/onboarding',
+    params: {
+      journey: 'first_run',
+      context: 'unregistered_device',
+      origin,
+      ...(name ? { name } : {}),
+    },
+  };
+}
 
 function isRemovedAccountRoute(
   route: { name: string; params?: object },
@@ -99,19 +129,13 @@ export const AppNavigation = {
     router.replace(`/(tabs)/${routeName}` as Href);
   },
 
-  toWorkplaceCreation: () => {
-    AppNavigation.toAddWorkplace();
+  toWorkplaceCreation: (entry: WorkplaceCreationEntry) => {
+    AppNavigation.toAddWorkplace(entry);
   },
 
-  toAddWorkplace: (context?: string, origin?: string) => {
-    router.replace({
-      pathname: '/onboarding',
-      params: {
-        journey: 'add_workplace',
-        ...(context ? { context } : {}),
-        ...(origin ? { origin } : {}),
-      },
-    });
+  toAddWorkplace: ({ context, origin, navigation = 'push' }: WorkplaceCreationEntry) => {
+    const navigate = navigation === 'replace' ? router.replace : router.push;
+    navigate(workplaceCreationHref({ context, origin }));
   },
 
   toAccountMatchers: (accountId: AccountId, workplaceId?: string) => {
@@ -139,10 +163,7 @@ export const AppNavigation = {
   },
 
   toFirstRun: (name?: string) => {
-    router.replace({
-      pathname: '/onboarding',
-      params: { journey: 'first_run', ...(name ? { name } : {}) },
-    });
+    router.replace(firstRunCreationHref('/onboarding?journey=first_run_restore', name));
   },
 
   /**

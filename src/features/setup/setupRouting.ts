@@ -16,21 +16,31 @@ export function normalizeCreationJourney(value: unknown): 'first_run' | 'add_wor
   return undefined;
 }
 
+/** Route-boundary compatibility for links emitted by the retired setup wizard. */
+export function normalizeCreationRoute(params: {
+  journey?: unknown;
+  mode?: unknown;
+}): 'first_run' | 'add_workplace' | undefined {
+  if (params.mode === 'full') return 'add_workplace';
+  return normalizeCreationJourney(params.journey);
+}
+
 export function shouldShowCashClarity(
   journeyId: string | undefined,
   routeJourney?: string,
+  routeMode?: string,
+  hasBlockingDraft = false,
 ): boolean {
-  const effectiveRoute = normalizeCreationJourney(routeJourney) ?? routeJourney;
-  if (routeJourney !== undefined && !CREATION_JOURNEYS.has(effectiveRoute ?? '')) return false;
-  const effectiveJourney = normalizeCreationJourney(journeyId) ?? journeyId;
-  return (
-    (effectiveJourney !== undefined && CREATION_JOURNEYS.has(effectiveJourney)) ||
-    (effectiveRoute !== undefined && CREATION_JOURNEYS.has(effectiveRoute))
-  );
+  // A persisted blocker owns the route even when an old link carries another intent.
+  if (hasBlockingDraft) return journeyId !== undefined && CREATION_JOURNEYS.has(journeyId);
+  if (routeJourney !== undefined || routeMode !== undefined) {
+    return normalizeCreationRoute({ journey: routeJourney, mode: routeMode }) !== undefined;
+  }
+  return journeyId !== undefined && CREATION_JOURNEYS.has(journeyId);
 }
 
 export function shouldRenderSetupGateChildren(pathname: string, journeyId?: string): boolean {
-  if (isCreationJourney(normalizeCreationJourney(journeyId) ?? journeyId)) {
+  if (isCreationJourney(journeyId)) {
     return pathname === '/onboarding' || pathname === '/privacy-notice';
   }
   return SETUP_GATE_ROUTES.has(pathname);
@@ -38,7 +48,6 @@ export function shouldRenderSetupGateChildren(pathname: string, journeyId?: stri
 
 export function shouldRedirectSetupToEntry(journeyId: string, pathname: string): boolean {
   if (pathname === '/privacy-notice') return false;
-  const creation = normalizeCreationJourney(journeyId) ?? journeyId;
-  if (isCreationJourney(creation)) return pathname !== '/onboarding';
+  if (isCreationJourney(journeyId)) return pathname !== '/onboarding';
   return !SETUP_GATE_ROUTES.has(pathname);
 }

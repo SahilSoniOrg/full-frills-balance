@@ -2,7 +2,7 @@ import { isValidIconName } from '@/src/types/domainIcons';
 import {
   primaryRestoreSource,
   type DeviceSetupOutput,
-  type SetupDraft,
+  type RestoreSetupDraft,
   type SetupSliceId,
   type SetupSliceOutput,
   type WorkplaceSetupOutput,
@@ -11,9 +11,8 @@ import {
 
 export function getRestoreAutoOutput(
   sliceId: SetupSliceId,
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
 ): SetupSliceOutput | undefined {
-  if (draft.kind !== 'restore') return undefined;
   const facts = primaryRestoreSource(draft)?.facts;
   if (!facts) return undefined;
   if (sliceId === 'workplace') return workplaceFromFacts(facts.workplace);
@@ -24,8 +23,9 @@ export function getRestoreAutoOutput(
 }
 
 /** Prefill imported identity/currency even when the slice still must be presented. */
-export function getRestoreWorkplacePrefill(draft: SetupDraft): WorkplaceSetupPrefill | undefined {
-  if (draft.kind !== 'restore') return undefined;
+export function getRestoreWorkplacePrefill(
+  draft: RestoreSetupDraft,
+): WorkplaceSetupPrefill | undefined {
   const workplace = primaryRestoreSource(draft)?.facts.workplace;
   if (!workplace) return undefined;
   const prefill = workplacePrefill(workplace);

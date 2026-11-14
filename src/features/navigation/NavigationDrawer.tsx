@@ -23,7 +23,7 @@ import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import type { WorkplaceId } from '@/src/types/ids';
 import { getReadableColor } from '@/src/utils/color-math';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useRouter } from 'expo-router';
+import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Drawer } from 'react-native-drawer-layout';
 import {
@@ -50,6 +50,20 @@ export interface NavigationDrawerProps {
 
 const copy = AppConfig.strings.navigation;
 const settingsCopy = AppConfig.strings.settings;
+
+function currentRouteHref(pathname: string, params: Record<string, unknown>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string') query.append(key, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string') query.append(key, item);
+      }
+    }
+  }
+  const search = query.toString();
+  return search ? `${pathname}?${search}` : pathname;
+}
 
 const NAV_SECTIONS: {
   label: string;
@@ -159,6 +173,9 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
     primaryNav.drawerSwipePermission === true;
   const error = workplace.workplaceSwitchError;
   const router = useRouter();
+  const pathname = usePathname();
+  const globalParams = useGlobalSearchParams();
+  const origin = currentRouteHref(pathname, globalParams);
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -423,7 +440,14 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
                       subtitle={settingsCopy.workplacePicker.createSubtitle}
                       chevron={false}
                       disabled={isSwitching}
-                      onPress={() => runNavigationAction(AppNavigation.toAddWorkplace)}
+                      onPress={() =>
+                        runNavigationAction(() =>
+                          AppNavigation.toAddWorkplace({
+                            context: 'existing_workplace_entry',
+                            origin,
+                          }),
+                        )
+                      }
                       testID="navigation-drawer-create-workplace"
                     />
                     <ListRow

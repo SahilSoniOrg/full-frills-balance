@@ -7,7 +7,8 @@ import {
   abandonRestoreJourney,
   applySetupOutcome,
   createJourneyCoordinator,
-  restoreJourneyForWorkplaceCreation,
+  resolveOptionalJourney,
+  resolveSetupJourney,
   restoreLeaveNeedsConfirm,
   shouldExitCompletedFirstRunRestore,
 } from '../setupRuntime';
@@ -20,6 +21,7 @@ jest.mock('@/src/utils/navigation', () => ({
     returnToSettings: jest.fn(),
     toFirstRun: jest.fn(),
     back: jest.fn(),
+    toAddWorkplace: jest.fn(),
   },
 }));
 jest.mock('../setupFinishers', () => ({
@@ -44,12 +46,15 @@ describe('completed first-run restore', () => {
   });
 });
 
-function restoreDraft(handoff: boolean): RestoreSetupDraft {
+function restoreDraft(
+  handoff: boolean,
+  journeyId: RestoreSetupDraft['journeyId'] = 'first_run_restore',
+): RestoreSetupDraft {
   return {
     schemaVersion: 1,
     kind: 'restore',
-    journeyId: 'first_run_restore',
-    entryPolicy: 'blocking',
+    journeyId,
+    entryPolicy: journeyId === 'settings_restore' ? 'optional' : 'blocking',
     operationId,
     presentedHistory: ['restore_source'],
     acceptedSlices: ['restore_source'],
@@ -89,6 +94,7 @@ describe('abandon restore', () => {
     jest.mocked(AppNavigation.returnToSettings).mockClear();
     (AppNavigation.toDashboard as jest.Mock).mockReset();
     (AppNavigation.toFirstRun as jest.Mock).mockReset();
+    (AppNavigation.toAddWorkplace as jest.Mock).mockReset();
     (AppNavigation.back as jest.Mock).mockReset();
   });
 
@@ -98,25 +104,22 @@ describe('abandon restore', () => {
   });
 
   it('deletes published books, clears the draft, then follows discardTo', async () => {
-    const onSwitchJourney = jest.fn();
     await abandonRestoreJourney(
       restoreDraft(true),
       getSetupRecipe('first_run_restore'),
-      onSwitchJourney,
     );
     expect(discard).toHaveBeenCalledTimes(1);
     expect(clear).toHaveBeenCalledTimes(1);
     expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
-    expect(onSwitchJourney).not.toHaveBeenCalled();
   });
 
   it('returns picker restore to the dashboard after abandon', async () => {
-    await abandonRestoreJourney(restoreDraft(false), getSetupRecipe('picker_restore'), jest.fn());
+    await abandonRestoreJourney(restoreDraft(false, 'picker_restore'), getSetupRecipe('picker_restore'));
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
   });
 
   it('dismisses Settings/drawer restore back to Settings after abandon', async () => {
-    await abandonRestoreJourney(restoreDraft(false), getSetupRecipe('settings_restore'), jest.fn());
+    await abandonRestoreJourney(restoreDraft(false, 'settings_restore'), getSetupRecipe('settings_restore'));
     expect(AppNavigation.returnToSettings).toHaveBeenCalledTimes(1);
     expect(AppNavigation.back).not.toHaveBeenCalled();
     expect(AppNavigation.toSettings).not.toHaveBeenCalled();
@@ -126,34 +129,43 @@ describe('abandon restore', () => {
     applySetupOutcome(
       { kind: 'restore_accepted', workplaceId: operationId, next: 'stay' },
       getSetupRecipe('settings_restore'),
-      jest.fn(),
     );
     expect(AppNavigation.returnToSettings).toHaveBeenCalledTimes(1);
     expect(AppNavigation.toSettings).not.toHaveBeenCalled();
   });
 
   it('returns first-run restore to onboarding with the entered name', () => {
-    const onSwitchJourney = jest.fn();
     applySetupOutcome(
       { kind: 'journey_discarded' },
       getSetupRecipe('first_run_restore'),
-      onSwitchJourney,
       'Sahil',
     );
     expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
-    expect(onSwitchJourney).not.toHaveBeenCalled();
   });
 });
 
-describe('restore from create workplace', () => {
-  it('stays on the optional settings restore while a workplace is open', () => {
-    expect(restoreJourneyForWorkplaceCreation(true)).toBe('settings_restore');
-    expect(getSetupRecipe('settings_restore').entryPolicy).toBe('optional');
+describe('restore routing', () => {
+  it('keeps legacy creation aliases out of the restore coordinator', () => {
+    expect(resolveOptionalJourney({ journey: 'create_workplace' })).toBeUndefined();
+    expect(resolveOptionalJourney({ journey: 'empty_device_workplace' })).toBeUndefined();
+    expect(resolveOptionalJourney({ mode: 'full' })).toBeUndefined();
   });
 
-  it('uses the blocking picker restore when no workplace is open', () => {
-    expect(restoreJourneyForWorkplaceCreation(false)).toBe('picker_restore');
-    expect(getSetupRecipe('picker_restore').entryPolicy).toBe('blocking');
+  it('keeps an existing blocking restore ahead of a creation route parameter', () => {
+    (loadSetupDraft as jest.Mock).mockReturnValue(restoreDraft(false));
+    expect(resolveSetupJourney({ journey: 'add_workplace', mode: 'full' })).toBe('first_run_restore');
+  });
+
+  it('replaces empty-device restore with the typed blocking creation entry on discard', async () => {
+    await abandonRestoreJourney(
+      restoreDraft(false, 'empty_device_restore'),
+      getSetupRecipe('empty_device_restore'),
+    );
+    expect(AppNavigation.toAddWorkplace).toHaveBeenCalledWith({
+      context: 'registered_empty_device',
+      origin: '/onboarding?journey=empty_device_restore',
+      navigation: 'replace',
+    });
   });
 });
 

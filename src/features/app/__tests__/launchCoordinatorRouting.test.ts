@@ -4,6 +4,7 @@ import {
   shouldRedirectToPrivacyNotice,
   shouldRenderGateChildren,
   shouldShowCashClarity,
+  normalizeCreationRoute,
 } from '../LaunchCoordinator';
 
 jest.mock('@shopify/flash-list', () => ({ FlashList: () => null }));
@@ -35,6 +36,21 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldShowCashClarity('first_run', 'first_run')).toBe(true);
     expect(shouldShowCashClarity('first_run', 'first_run_restore')).toBe(false);
     expect(shouldShowCashClarity('add_workplace')).toBe(true);
+  });
+
+  it('normalizes legacy creation aliases and mode=full at the route boundary', () => {
+    expect(normalizeCreationRoute({ journey: 'create_workplace' })).toBe('add_workplace');
+    expect(normalizeCreationRoute({ journey: 'empty_device_workplace' })).toBe('add_workplace');
+    expect(normalizeCreationRoute({ mode: 'full' })).toBe('add_workplace');
+    expect(shouldShowCashClarity(undefined, 'create_workplace')).toBe(true);
+    expect(shouldShowCashClarity(undefined, undefined, 'full')).toBe(true);
+  });
+
+  it('keeps a blocking restore ahead of a conflicting creation route parameter', () => {
+    expect(shouldShowCashClarity('first_run_restore', 'add_workplace', undefined, true)).toBe(false);
+    expect(shouldShowCashClarity('empty_device_restore', undefined, 'full', true)).toBe(false);
+    expect(shouldShowCashClarity('add_workplace', 'empty_device_restore')).toBe(false);
+    expect(shouldShowCashClarity('add_workplace', 'empty_device_restore', undefined, false)).toBe(false);
   });
 
   it('keeps first-run off import-selection and the retired v2 URL', () => {

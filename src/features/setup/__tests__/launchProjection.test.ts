@@ -4,33 +4,35 @@ import { readBlockingSetupProjection } from '../readBlockingSetupProjection';
 import { subscribeToSetupDraft } from '@/src/services/setup/launchProjection';
 
 describe('Setup launch projection', () => {
-  it('notifies launch when a blocking draft is cleared', () => {
+  it('projects a blocking restore draft and notifies launch when it is cleared', () => {
     const onChange = jest.fn();
     const unsubscribe = subscribeToSetupDraft(onChange);
     saveSetupDraft({
       schemaVersion: 1,
-      kind: 'workplace_creation',
-      journeyId: 'empty_device_workplace',
+      kind: 'restore',
+      journeyId: 'empty_device_restore',
       entryPolicy: 'blocking',
       operationId: asWorkplaceId('operation'),
       presentedHistory: [],
       acceptedSlices: [],
+      restore: {},
     });
 
     expect(
       readBlockingSetupProjection(
         JSON.stringify({
           schemaVersion: 1,
-          kind: 'workplace_creation',
-          journeyId: 'empty_device_workplace',
+          kind: 'restore',
+          journeyId: 'empty_device_restore',
           entryPolicy: 'blocking',
           operationId: 'operation',
           presentedHistory: [],
           acceptedSlices: [],
+          restore: {},
         }),
       ),
     ).toEqual({
-      journeyId: 'empty_device_workplace',
+      journeyId: 'empty_device_restore',
       entryPolicy: 'blocking',
     });
     clearSetupDraft();

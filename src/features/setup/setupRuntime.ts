@@ -1,7 +1,7 @@
 import { AppNavigation } from '@/src/utils/navigation';
-import { normalizeCreationJourney } from './setupRouting';
 import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
 import { generator } from '@/src/data/database/idGenerator';
+import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
@@ -15,25 +15,32 @@ import { discardRestorePublication, finishDeviceSetup, finishSetup } from './set
 import { getSetupRecipe } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import {
-  isSetupJourneyId,
   restoreSources,
-  type SetupDraft,
-  type SetupJourneyId,
-  type SetupOutcome,
+  type RestoreJourneyId,
+  type RestoreSetupDraft,
 } from './setupTypes';
-import type { WorkplaceId } from '@/src/types/ids';
+
+type RestoreSetupOutcome =
+  | {
+      readonly kind: 'restore_accepted';
+      readonly workplaceId: WorkplaceId;
+      readonly next: 'open' | 'stay' | 'picker';
+    }
+  | { readonly kind: 'journey_discarded' };
 
 export function resolveOptionalJourney(params: {
   mode?: string;
   journey?: string;
-}): SetupJourneyId | undefined {
-  if (params.mode === 'full') return 'add_workplace' as SetupJourneyId;
-  if (params.journey) {
-    const normalized = normalizeCreationJourney(params.journey);
-    if (normalized) return normalized as SetupJourneyId;
-    if (isSetupJourneyId(params.journey)) return params.journey;
+}): RestoreJourneyId | undefined {
+  switch (params.journey) {
+    case 'first_run_restore':
+    case 'empty_device_restore':
+    case 'picker_restore':
+    case 'settings_restore':
+      return params.journey;
+    default:
+      return undefined;
   }
-  return undefined;
 }
 
 /** A completed first-run restore can briefly remain on its old route. */
@@ -45,37 +52,25 @@ export function shouldExitCompletedFirstRunRestore(
   return journey === 'first_run_restore' && !hasDraft && deviceRegistered;
 }
 
-/**
- * Create-workplace is optional, so books screens stay mounted behind it.
- * Restore has to stay optional too, or those screens render without a Workplace.
- */
-export function restoreJourneyForWorkplaceCreation(
-  workplaceOpen: boolean,
-): 'settings_restore' | 'picker_restore' {
-  return workplaceOpen ? 'settings_restore' : 'picker_restore';
-}
-
 export function resolveSetupJourney(
   params: { mode?: string; journey?: string },
-  override?: SetupJourneyId,
-): SetupJourneyId | undefined {
+  override?: RestoreJourneyId,
+): RestoreJourneyId | undefined {
   if (override) return override;
   const draft = loadSetupDraft();
-  if (draft?.entryPolicy === 'blocking' && isSetupJourneyId(draft.journeyId)) {
+  if (draft?.kind === 'restore' && draft.entryPolicy === 'blocking') {
     return draft.journeyId;
   }
-  return (
-    resolveOptionalJourney(params) ??
-    (draft && isSetupJourneyId(draft.journeyId) ? draft.journeyId : undefined) ??
-    (preferences.device.deviceRegistered && !preferences.device.activeWorkplaceId
-      ? 'add_workplace'
-      : undefined)
-  );
+  if (draft?.kind === 'restore') return draft.journeyId;
+  return resolveOptionalJourney(params);
 }
 
-export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordinator {
+export function createJourneyCoordinator(journeyId: RestoreJourneyId): SetupCoordinator {
   const existing = loadSetupDraft();
-  const draft = existing?.journeyId === journeyId ? existing : createSeededDraft(journeyId);
+  const draft =
+    existing?.kind === 'restore' && existing.journeyId === journeyId
+      ? existing
+      : createSeededDraft(journeyId);
   return createSetupCoordinator({
     journeyId,
     operationId: draft.operationId,
@@ -144,46 +139,36 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
   });
 }
 
-function createSeededDraft(journeyId: SetupJourneyId): SetupDraft {
-  return createSetupDraft(journeyId, generator() as WorkplaceId);
+function createSeededDraft(journeyId: RestoreJourneyId): RestoreSetupDraft {
+  return createSetupDraft(journeyId, asWorkplaceId(generator()));
 }
 
-async function finishJourney(draft: SetupDraft): Promise<SetupOutcome> {
-  if (draft.kind === 'restore') {
-    const intent = draft.restore.summary?.intent ?? 'continue';
-    const isBulkRestore = restoreSources(draft).length > 1;
-    const workplaceId = await finishSetup(draft, {
-      activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
-    });
-    if (!workplaceId) throw new Error('Restore publication is incomplete');
-    if (isBulkRestore) preferences.device.setActiveWorkplaceId(undefined);
-    return {
-      kind: 'restore_accepted',
-      workplaceId,
-      next: isBulkRestore
-        ? 'picker'
-        : intent === 'stay'
-          ? 'stay'
-          : intent === 'return_to_picker'
-            ? 'picker'
-            : 'open',
-    };
-  }
-  const workplaceId = await finishSetup(draft);
-  if (!workplaceId) throw new Error('Workplace publication failed');
-  return { kind: 'workplace_created', workplaceId };
+async function finishJourney(draft: RestoreSetupDraft): Promise<RestoreSetupOutcome> {
+  const intent = draft.restore.summary?.intent ?? 'continue';
+  const isBulkRestore = restoreSources(draft).length > 1;
+  const workplaceId = await finishSetup(draft, {
+    activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
+  });
+  if (!workplaceId) throw new Error('Restore publication is incomplete');
+  if (isBulkRestore) preferences.device.setActiveWorkplaceId(undefined);
+  return {
+    kind: 'restore_accepted',
+    workplaceId,
+    next: isBulkRestore
+      ? 'picker'
+      : intent === 'stay'
+        ? 'stay'
+        : intent === 'return_to_picker'
+          ? 'picker'
+          : 'open',
+  };
 }
 
 export function applySetupOutcome(
-  outcome: SetupOutcome,
+  outcome: RestoreSetupOutcome,
   recipe: ReturnType<typeof getSetupRecipe>,
-  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
   candidateName?: string,
 ): void {
-  if (outcome.kind === 'workplace_created') {
-    AppNavigation.toDashboard();
-    return;
-  }
   if (outcome.kind === 'restore_accepted') {
     if (outcome.next === 'stay') AppNavigation.returnToSettings();
     else AppNavigation.toDashboard();
@@ -193,23 +178,27 @@ export function applySetupOutcome(
   if (recipe.discardTo === 'first_run') AppNavigation.toFirstRun(candidateName);
   else if (recipe.discardTo === 'back') AppNavigation.back();
   else if (recipe.discardTo === 'picker') AppNavigation.toDashboard();
-  else if (recipe.discardTo === 'add_workplace') AppNavigation.toAddWorkplace();
+  else if (recipe.discardTo === 'add_workplace') {
+    AppNavigation.toAddWorkplace({
+      context: 'registered_empty_device',
+      origin: '/onboarding?journey=empty_device_restore',
+      navigation: 'replace',
+    });
+  }
   else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
   else AppNavigation.returnToSettings();
 }
 
-export function restoreLeaveNeedsConfirm(draft: SetupDraft): boolean {
-  return draft.kind === 'restore' && (draft.restore.handoffs?.length ?? 0) > 0;
+export function restoreLeaveNeedsConfirm(draft: RestoreSetupDraft): boolean {
+  return (draft.restore.handoffs?.length ?? 0) > 0;
 }
 
 /** Delete unpublished restore books, drop the draft, then follow discardTo. */
 export async function abandonRestoreJourney(
-  draft: SetupDraft,
+  draft: RestoreSetupDraft,
   recipe: ReturnType<typeof getSetupRecipe>,
-  onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
 ): Promise<void> {
-  if (draft.kind === 'restore') await discardRestorePublication(draft);
+  await discardRestorePublication(draft);
   clearSetupDraft();
-  const candidateName = draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined;
-  applySetupOutcome({ kind: 'journey_discarded' }, recipe, onSwitchJourney, candidateName);
+  applySetupOutcome({ kind: 'journey_discarded' }, recipe, draft.restore.deviceCandidate?.value);
 }

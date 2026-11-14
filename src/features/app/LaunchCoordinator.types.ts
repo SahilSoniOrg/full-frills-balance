@@ -4,7 +4,7 @@ import type { PlainWorkplace } from '@/src/types/plainDtos';
 export type LaunchCoordinatorState =
   | { kind: 'loading'; retry: () => void }
   | { kind: 'error'; error: Error; retry: () => void }
-  | Extract<LaunchResolution, { kind: 'setup' }>
+  | (Extract<LaunchResolution, { kind: 'setup' }> & { hasBlockingDraft?: boolean })
   | (Extract<LaunchResolution, { kind: 'picker' }> & { workplaces: PlainWorkplace[] })
   | (Extract<LaunchResolution, { kind: 'open' }> & { workplace: PlainWorkplace });
 
