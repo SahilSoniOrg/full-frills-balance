@@ -1,0 +1,24 @@
+New release 🚀
+
+SMS capture works differently. The old auto-post rules are gone, replaced by a switch you turn on for each workplace, and it only picks up messages that arrive after you turn it on. A captured message can also settle a planned payment instead of adding a second entry.
+
+---
+
+Also in this update:
+
+* Planned payments: A message that matches a scheduled payment settles it, even with scheduled posting off. Near matches wait in the inbox.
+* Names: Activity is now Transactions, notification settings are Spending reminders, and the SMS screen is Transaction review.
+* Gmail: Built, but Google approval is still pending, so it stays off for now.
+* Web: The app runs in a browser at fullfrillsapp.sahilsoni.in. It keeps its own data and doesn't sync with your phone yet.
+* Merchant names: UPI and statement messages keep the full name instead of cutting it short.
+* Setup: First-time setup now saves your progress, so you can stop and resume.
+
+---
+
+Big difference you'll notice:
+
+* A captured message posts as Uncategorized and waits for you to pick a category. Anything the app can't read stays in the inbox.
+
+---
+
+Under the hood, SMS and email share one capture path, and restored backups start with capture off.
