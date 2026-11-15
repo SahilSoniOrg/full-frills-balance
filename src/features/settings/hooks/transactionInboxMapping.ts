@@ -13,7 +13,9 @@ export async function enrichTransactionInboxRecords(
   const journalIds = new Set<JournalId>();
   for (const record of records) {
     if (record.linkedJournalId) journalIds.add(record.linkedJournalId);
-    if (record.duplicateJournalId) journalIds.add(record.duplicateJournalId);
+    if (record.duplicateJournalId && record.duplicateJournalId !== record.linkedJournalId) {
+      journalIds.add(record.duplicateJournalId);
+    }
   }
   const journals = await journalQueryRepository.findWithDeletedByIds(
     workplaceId,
@@ -34,12 +36,15 @@ export async function enrichTransactionInboxRecords(
       typeof metadata.captureReviewReason === 'string'
         ? metadata.captureReviewReason.trim()
         : undefined;
-    const duplicateJournalRecord = record.duplicateJournalId
-      ? journalMap.get(record.duplicateJournalId)
-      : undefined;
+    const duplicateJournalRecord =
+      record.duplicateJournalId && record.duplicateJournalId !== record.linkedJournalId
+        ? journalMap.get(record.duplicateJournalId)
+        : undefined;
     const duplicateJournal = duplicateJournalRecord?.deletedAt ? undefined : duplicateJournalRecord;
     const duplicateCandidate: TransactionDuplicateCandidate | undefined =
-      record.duplicateJournalId && duplicateJournal
+      record.duplicateJournalId &&
+      record.duplicateJournalId !== record.linkedJournalId &&
+      duplicateJournal
         ? {
             journalId: record.duplicateJournalId,
             journalDate: duplicateJournal?.journalDate || record.inputDate,

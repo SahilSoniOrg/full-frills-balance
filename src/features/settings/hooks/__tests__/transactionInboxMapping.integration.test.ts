@@ -80,6 +80,32 @@ describe('transactionInboxMapping integration', () => {
     });
   });
 
+  it('hides a duplicate candidate when it is the same journal already linked to the SMS', async () => {
+    const journal = await seedExpenseJournal({
+      cashId,
+      expenseId,
+      amount: 250,
+      description: 'UPI Payment',
+      journalDate: Date.now(),
+    });
+    const record = await seedInboxRecord({
+      deviceSourceId: 'same-journal-mapping-1',
+      linkedJournalId: journal.id,
+      duplicateJournalId: journal.id,
+      duplicateConfidence: AppConfig.input.sms.duplicateDetection.referenceMatchScore,
+      processingStatus: InboxProcessingStatus.IMPORTED,
+      parsedAmount: 250,
+      metadataJson: JSON.stringify({
+        duplicateReasons: ['Matching reference number (121554846690)'],
+      }),
+    });
+
+    const [item] = await enrichTransactionInboxRecords(workplaceId, [record]);
+
+    expect(item.linkedJournal?.journalId).toBe(journal.id);
+    expect(item.duplicateCandidate).toBeUndefined();
+  });
+
   it('builds duplicateCandidate from persisted inbox fields', async () => {
     const { record, journalId } = await seedDuplicateInboxRecord();
 

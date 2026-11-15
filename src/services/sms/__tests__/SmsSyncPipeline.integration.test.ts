@@ -911,6 +911,7 @@ describe('SmsSyncPipeline integration', () => {
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
       const repeated = await fetchInboxByDeviceId(message.id);
       expect(repeated?.linkedJournalId).toBe(journal.id);
+      expect(repeated?.duplicateJournalId).toBeFalsy();
       expect(repeated?.rawBody).toBe(message.body);
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
     });

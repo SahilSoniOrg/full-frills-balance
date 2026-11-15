@@ -26,6 +26,7 @@ import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src
 import { runAccountingWriteSession } from './AccountingWriteSession';
 import { generator } from '@/src/data/database/idGenerator';
 import { sanitizeSmsMetadataJson } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import {
   applyInboxWriteData,
   inboxSnapshotFromRecord,
@@ -51,6 +52,26 @@ function isProcessedStatus(status: InboxProcessingStatus): boolean {
     status === InboxProcessingStatus.AUTO_POSTED ||
     status === InboxProcessingStatus.DISMISSED
   );
+}
+
+function withoutDuplicateReasons(metadataJson: string | null | undefined): string | undefined {
+  const metadata = parseJSONRecord(metadataJson);
+  if (!('duplicateReasons' in metadata)) return metadataJson ?? undefined;
+  delete metadata.duplicateReasons;
+  return Object.keys(metadata).length ? JSON.stringify(metadata) : undefined;
+}
+
+function clearDuplicateIfAlreadyLinked(
+  data: TransactionInboxRecordWriteData,
+): TransactionInboxRecordWriteData {
+  if (!data.linkedJournalId || data.duplicateJournalId !== data.linkedJournalId) return data;
+
+  return {
+    ...data,
+    duplicateJournalId: undefined,
+    duplicateConfidence: undefined,
+    metadataJson: withoutDuplicateReasons(data.metadataJson),
+  };
 }
 
 export class TransactionInboxRepository {
@@ -511,9 +532,14 @@ export class TransactionInboxRepository {
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Model {
     return record.prepareUpdate(entry => {
+      const duplicateJournalId = entry.duplicateJournalId;
       entry.linkedJournalId = journalId;
       entry.processingStatus = disposition;
       entry.processedAt = Date.now();
+      if (duplicateJournalId !== journalId) return;
+      entry.duplicateJournalId = undefined;
+      entry.duplicateConfidence = undefined;
+      entry.metadataJson = withoutDuplicateReasons(entry.metadataJson);
     });
   }
 
@@ -541,12 +567,13 @@ export class TransactionInboxRepository {
       throw new Error('Inbox record does not belong to the specified workplace');
     }
 
+    const writeData = clearDuplicateIfAlreadyLinked(data);
     const safeData: TransactionInboxRecordWriteData = {
-      ...data,
-      processedAt: isProcessedStatus(data.processingStatus)
-        ? (data.processedAt ?? Date.now())
+      ...writeData,
+      processedAt: isProcessedStatus(writeData.processingStatus)
+        ? (writeData.processedAt ?? Date.now())
         : undefined,
-      metadataJson: sanitizeSmsMetadataJson(data.metadataJson, data.channel === 'sms'),
+      metadataJson: sanitizeSmsMetadataJson(writeData.metadataJson, writeData.channel === 'sms'),
     };
 
     if (existingRecord) {
@@ -587,7 +614,7 @@ export class TransactionInboxRepository {
           AuditAction.CREATE,
           'transaction_inbox_record.created',
           undefined,
-          inboxAuditState(data),
+          inboxAuditState(safeData),
           safeData.workplaceId,
           'system',
           auditContext?.correlationId,
@@ -630,22 +657,26 @@ export class TransactionInboxRepository {
     auditContext?: InboxAuditContext,
     options: DeviceSmsWriteOptions = { origin: 'manual', queueReview: false },
   ): Promise<void> {
+    const writeData = clearDuplicateIfAlreadyLinked(data);
     const device = await deviceSmsInboxRepository.stageUpsert(
       session,
-      { ...data, deviceInboxId: data.deviceInboxId ?? _existingRecord?.id ?? generator() },
+      {
+        ...writeData,
+        deviceInboxId: writeData.deviceInboxId ?? _existingRecord?.id ?? generator(),
+      },
       options,
     );
     const copies = await this.copiesForSourceIds([device.deviceSourceId]);
-    const existing = copies.find(copy => copy.workplaceId === data.workplaceId) ?? null;
-    if (isProcessedStatus(data.processingStatus) || existing) {
+    const existing = copies.find(copy => copy.workplaceId === writeData.workplaceId) ?? null;
+    if (isProcessedStatus(writeData.processingStatus) || existing) {
       let writes = this.stagedCopies.get(session);
       if (!writes) {
         writes = new Map();
         this.stagedCopies.set(session, writes);
       }
-      const key = `${data.workplaceId}:${device.id}`;
+      const key = `${writeData.workplaceId}:${device.id}`;
       const safeData = {
-        ...data,
+        ...writeData,
         // Source content belongs to the Device record. Preserve pre-existing
         // legacy copies, but do not duplicate new captures into workplaces.
         senderAddress: existing?.senderAddress,
@@ -654,9 +685,9 @@ export class TransactionInboxRepository {
         deviceInboxId: device.id,
         inputDate: device.inputDate,
         processingStatus:
-          existing?.linkedJournalId && existing.linkedJournalId === data.linkedJournalId
+          existing?.linkedJournalId && existing.linkedJournalId === writeData.linkedJournalId
             ? existing.processingStatus
-            : data.processingStatus,
+            : writeData.processingStatus,
       };
       const staged = writes.get(key);
       if (staged) staged.data = safeData;

@@ -178,6 +178,88 @@ describe('TransactionInboxRepository integration', () => {
     });
   });
 
+  it('clears a self-duplicate when an email is linked to that journal', async () => {
+    const journalId = 'journal-email-self' as JournalId;
+    const record = await database.write(() =>
+      database.collections
+        .get<TransactionInboxRecord>('transaction_inbox_records')
+        .create(entry => {
+          entry.workplaceId = workplaceId;
+          entry.channel = 'email';
+          entry.deviceSourceId = 'email-self-dup';
+          entry.senderAddress = 'bank@example.com';
+          entry.inputDate = 1_700_000_000_000;
+          entry.inputFingerprint = 'email-self-dup';
+          entry.parseStatus = InboxParseStatus.PARSED;
+          entry.direction = TransactionDirection.DEBIT;
+          entry.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
+          entry.duplicateJournalId = journalId;
+          entry.duplicateConfidence = 1;
+          entry.metadataJson = JSON.stringify({
+            emailSubject: 'Debit alert',
+            gmailMessageId: 'msg-1',
+            duplicateReasons: ['A similar transaction was already recorded'],
+          });
+          entry.firstSeenAt = 1_700_000_000_000;
+          entry.lastScannedAt = 1_700_000_000_000;
+        }),
+    );
+
+    await repository.persistLink(workplaceId, record.id, journalId, InboxProcessingStatus.IMPORTED);
+
+    const linked = await repository.find(workplaceId, record.id);
+    expect(linked?.linkedJournalId).toBe(journalId);
+    expect(linked?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+    expect(linked?.duplicateJournalId).toBeFalsy();
+    expect(linked?.duplicateConfidence).toBeFalsy();
+    expect(JSON.parse(linked!.metadataJson!)).toEqual({
+      emailSubject: 'Debit alert',
+      gmailMessageId: 'msg-1',
+    });
+  });
+
+  it('keeps an email duplicate when the link points at a different journal', async () => {
+    const duplicateJournalId = 'journal-email-other' as JournalId;
+    const record = await database.write(() =>
+      database.collections
+        .get<TransactionInboxRecord>('transaction_inbox_records')
+        .create(entry => {
+          entry.workplaceId = workplaceId;
+          entry.channel = 'email';
+          entry.deviceSourceId = 'email-other-dup';
+          entry.senderAddress = 'bank@example.com';
+          entry.inputDate = 1_700_000_000_000;
+          entry.inputFingerprint = 'email-other-dup';
+          entry.parseStatus = InboxParseStatus.PARSED;
+          entry.direction = TransactionDirection.DEBIT;
+          entry.processingStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
+          entry.duplicateJournalId = duplicateJournalId;
+          entry.duplicateConfidence = 1;
+          entry.metadataJson = JSON.stringify({
+            emailSubject: 'Debit alert',
+            duplicateReasons: ['A similar transaction was already recorded'],
+          });
+          entry.firstSeenAt = 1_700_000_000_000;
+          entry.lastScannedAt = 1_700_000_000_000;
+        }),
+    );
+
+    await repository.persistLink(
+      workplaceId,
+      record.id,
+      'journal-email-new' as JournalId,
+      InboxProcessingStatus.IMPORTED,
+    );
+
+    const linked = await repository.find(workplaceId, record.id);
+    expect(linked?.linkedJournalId).toBe('journal-email-new');
+    expect(linked?.duplicateJournalId).toBe(duplicateJournalId);
+    expect(linked?.duplicateConfidence).toBe(1);
+    expect(JSON.parse(linked!.metadataJson!).duplicateReasons).toEqual([
+      'A similar transaction was already recorded',
+    ]);
+  });
+
   it('rejects preparing a row from another workplace', async () => {
     const payload = {
       workplaceId,
