@@ -3,8 +3,8 @@
 **Double-entry personal finance on your device — offline-first, no cloud account, accounting that actually balances.**
 
 [![CI](https://github.com/SahilSoniOrg/full-frills-balance/actions/workflows/ci.yml/badge.svg)](https://github.com/SahilSoniOrg/full-frills-balance/actions/workflows/ci.yml)
-[![Expo SDK 57](https://img.shields.io/badge/Expo-SDK%2057-000020?style=flat&logo=expo&logoColor=white)](https://expo.dev/)
-[![React Native 0.86](https://img.shields.io/badge/React%20Native-0.86-61DAFB?style=flat&logo=react&logoColor=white)](https://reactnative.dev/)
+[![Expo SDK 58](https://img.shields.io/badge/Expo-SDK%2058-000020?style=flat&logo=expo&logoColor=white)](https://expo.dev/)
+[![React Native 0.88](https://img.shields.io/badge/React%20Native-0.88-61DAFB?style=flat&logo=react&logoColor=white)](https://reactnative.dev/)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![WatermelonDB](https://img.shields.io/badge/WatermelonDB-SQLite-6C5CE7?style=flat)](https://watermelondb.dev/)
 
@@ -63,7 +63,7 @@ The projection runs a day-by-day cash-flow simulation, merges overlapping obliga
 
 | Layer | Choice |
 |-------|--------|
-| App | **Expo SDK 57**, **React Native 0.86**, **React 19**, **TypeScript 6** (strict) |
+| App | **Expo SDK 58**, **React Native 0.88**, **React 19**, **TypeScript 6** (strict) |
 | Navigation | Expo Router (file-based) |
 | Data | **WatermelonDB 0.28** → SQLite (native) / LokiJS (web & tests) |
 | UI | FlashList, Reanimated, Gesture Handler, design tokens |
@@ -110,8 +110,10 @@ bun run verify       # architecture + typecheck + test:ci + lint (CI gate)
 Component gallery (dev client): [`/_design-preview`](app/_design-preview.tsx).
 
 ```text
-app/ (Expo Router)  →  src/features/*  →  src/services/*  →  repositories  →  WatermelonDB / SQLite
+app/ (Expo Router)  →  src/features/* (public barrels)  →  src/services/*  →  src/data/repositories  →  WatermelonDB / SQLite
 ```
+
+Shortcuts that exist today: feature hooks may read through repositories where a read contract requires it, and services import `src/data` directly. Mutations go through domain commands or write services. See [REPOSITORY_MAP.md](docs/architecture/REPOSITORY_MAP.md).
 
 Four main tabs: **Dashboard · Accounts · Plans · Transactions**.
 
