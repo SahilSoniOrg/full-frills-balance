@@ -23,11 +23,13 @@ export interface CaptureReviewItem {
   journalDate: number;
   totalAmount: number;
   currencyCode: string;
+  financialAccountName?: string;
   reviewState: 'needs_categorization' | 'confirmed' | 'defaulted';
   suggestedCategoryName?: string;
   suggestedDefault?: CaptureCategoryDefault;
   suggestedDefaultAccountName?: string;
   merchantKey?: string;
+  merchantName?: string;
   keepOpen?: boolean;
   descriptionDefaultKey?: string;
   savedDescriptionDefault?: string;
@@ -210,7 +212,8 @@ export class JournalCaptureQueries {
       .sort((left, right) => right.journalDate - left.journalDate)
       .map(journal => {
         const key = keyFor(journal);
-        const merchantKey = captures.get(journal.id)?.merchant?.trim().toLowerCase() || undefined;
+        const merchantName = captures.get(journal.id)?.merchant?.trim() || undefined;
+        const merchantKey = merchantName?.toLowerCase();
         const descriptionDefaultKey = captureDescriptionKey(
           merchantKey,
           journal.totalAmount,
@@ -293,6 +296,7 @@ export class JournalCaptureQueries {
           journalDate: journal.journalDate,
           totalAmount: journal.totalAmount,
           currencyCode: journal.currencyCode,
+          ...(financialAccount ? { financialAccountName: financialAccount.name } : {}),
           reviewState:
             capture?.reviewState === 'confirmed' || capture?.reviewState === 'defaulted'
               ? capture.reviewState
@@ -302,6 +306,7 @@ export class JournalCaptureQueries {
           financialAccount &&
           accountIndex.isFinancialLeaf(financialAccount.id, journal.currencyCode) &&
           merchantKey &&
+          merchantKey.length <= 200 &&
           capture &&
           capture.economicKind !== 'transfer' &&
           financialByJournal.get(journal.id)?.size === 1
@@ -323,6 +328,7 @@ export class JournalCaptureQueries {
               }
             : {}),
           ...(merchantKey ? { merchantKey } : {}),
+          ...(merchantName ? { merchantName } : {}),
           ...(descriptionDefaultKey ? { descriptionDefaultKey } : {}),
           ...(recurring ? { recurring: true } : {}),
           ...(canConfirmCurrent

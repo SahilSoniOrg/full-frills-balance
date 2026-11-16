@@ -3,6 +3,7 @@ import {
   countCaptureReviewItems,
   listCaptureCategoryDefaults,
   listCaptureDescriptionDefaults,
+  listOpenCaptureMerchants,
   subscribeToCaptureChanges,
 } from '@/src/services/transaction-intelligence/captureReviewService';
 import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
@@ -28,6 +29,7 @@ export type CaptureListsState = {
     defaulted: CaptureReviewItem[];
     categoryDefaults: CategoryDefaults;
     descriptionDefaults: DescriptionDefaults;
+    openCaptureMerchants: string[];
     categoryCandidates: CaptureItems['categoryCandidates'];
     descriptionCandidates: CaptureItems['descriptionCandidates'];
     historicalCategorySuggestions: CaptureItems['historicalCategorySuggestions'];
@@ -186,6 +188,7 @@ async function load(workplaceId: WorkplaceId, options: CaptureLoadOptions): Prom
               ? categoryDefaults.value
               : (previousLists?.categoryDefaults ?? []),
           descriptionDefaults: listCaptureDescriptionDefaults(workplaceId),
+          openCaptureMerchants: listOpenCaptureMerchants(workplaceId),
           categoryCandidates:
             items.status === 'fulfilled' && items.value
               ? items.value.categoryCandidates

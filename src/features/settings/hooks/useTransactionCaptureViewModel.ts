@@ -16,6 +16,7 @@ export function useTransactionCaptureViewModel(options: CaptureLoadOptions = {})
 
   return {
     workplaceId: workspace.workplaceId,
+    changeRevision: workspace.changeRevision,
     hasSnapshot: !!settings.data,
     enabled: settings.data?.enabled ?? false,
     enabledAt: settings.data?.enabledAt,
@@ -25,6 +26,7 @@ export function useTransactionCaptureViewModel(options: CaptureLoadOptions = {})
     defaulted: currentLists?.defaulted ?? [],
     categoryDefaults: currentLists?.categoryDefaults ?? [],
     descriptionDefaults: currentLists?.descriptionDefaults ?? [],
+    openCaptureMerchants: currentLists?.openCaptureMerchants ?? [],
     categoryCandidates: currentLists?.categoryCandidates ?? [],
     descriptionCandidates: currentLists?.descriptionCandidates ?? [],
     historicalCategorySuggestions: currentLists?.historicalCategorySuggestions ?? [],

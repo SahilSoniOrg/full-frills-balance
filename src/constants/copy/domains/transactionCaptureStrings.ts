@@ -39,6 +39,11 @@ export const transactionCaptureStrings = {
   suggestionsSavedCardDescription:
     'Manage rules for future matches. Pause a merchant or remove a rule.',
   suggestionsHiddenInPrivateMode: 'Suggestions are hidden while Privacy Mode is on.',
+  matchingSearchPlaceholder: 'Search merchant, description, category, or account',
+  savedDefaultsSearchPlaceholder: 'Search saved rules, merchants, categories, or accounts',
+  matchingSearchNoResults: 'No matching suggestions. Try another search.',
+  clearSearch: 'Clear search',
+  matchingMutationBusy: 'Updating matching suggestions…',
   suggestionsEmptyTitle: 'No suggestions to review',
   suggestionsEmptyDescription:
     'When useful patterns appear in confirmed entries or linked SMS history, they will show up here.',
@@ -53,6 +58,9 @@ export const transactionCaptureStrings = {
   defaultedHint:
     'These entries used a saved category. Confirm the ones that look right to inform future suggestions.',
   defaultedReview: 'Category needs review',
+  openTransaction: 'Open transaction',
+  confirmationUnavailable:
+    'These allocations cannot be safely confirmed here. Open the transaction to review them.',
   reviewTransaction: 'Review transaction',
   viewExample: 'View example',
   rememberCategory: 'Use this category for future matches',
@@ -64,9 +72,15 @@ export const transactionCaptureStrings = {
     currency: string,
     kind: string,
   ) =>
-    `Future ${currency} ${kind} entries for ${merchant} on ${account} will use ${category}. This does not change existing entries. You can remove the default or keep the merchant open.`,
+    `Future ${currency} ${kind} entries for ${merchant} on ${account} will use ${category}. The rule matches this merchant, account, currency, and type; other spellings remain separate. Existing entries do not change.`,
   rememberCategoryAction: 'Use this category',
   categoryChanged: 'The suggested category or account changed. Review the entry again.',
+  existingCategoryDefaultHint:
+    'A different category is already saved for this match. Remove it in Saved defaults before saving this suggestion.',
+  conflictedCategoryDefaultHint:
+    'This match has conflicting saved categories. Resolve the conflict in Saved defaults before saving this suggestion.',
+  categoryDefaultConflictError:
+    'The saved category changed. Remove or resolve the existing default in Saved defaults before saving this suggestion.',
   categoryDefaultsHeader: 'Category defaults',
   categoryDefaultsHint:
     'Each saved merchant name has its own future-match default. Pausing a name sends its future entries to review.',
@@ -77,6 +91,19 @@ export const transactionCaptureStrings = {
   categoryCandidatesHeader: 'Category suggestions',
   categoryCandidatesHint:
     'Save a confirmed category for future matches with the same merchant, account, currency, and transaction type. Existing entries stay unchanged.',
+  confirmedCaptureEvidence: 'Confirmed captured transaction',
+  unavailableAccount: 'Unavailable account',
+  unavailableCategory: 'Unavailable category',
+  categorySuggestionUnavailable:
+    'This category suggestion is no longer available. Refresh and review it again.',
+  categoryScope: (
+    merchant: string,
+    account: string,
+    currency: string,
+    kind: string,
+    category: string,
+  ) =>
+    `Evidence suggests ${category}. A saved default applies to future ${currency} ${kind} entries for ${merchant} on ${account}. Matching ignores case; other spellings are separate. Existing entries stay unchanged.`,
   historicalCategoryHeader: 'Suggestions from SMS history',
   historicalPagesHeader: 'SMS history',
   historicalCategoryPageDescription: 'Review repeated categories from past SMS-linked entries.',
@@ -92,6 +119,10 @@ export const transactionCaptureStrings = {
   historicalSortAlphabetical: 'A–Z',
   historicalSortRepeats: 'Most repeats',
   historicalOpenEntries: 'Open matching entries',
+  historicalOpenNEntries: (count: number) =>
+    count === 1 ? 'Open 1 entry' : `Open ${count} entries`,
+  historicalOpenFilteredEntries: (count: number, category: string) =>
+    count === 1 ? `Open 1 ${category} entry` : `Open ${count} ${category} entries`,
   historicalLatestEntry: (date: string) => `Latest entry ${date}`,
   historicalCategoryDetails: (
     journalCount: number,
@@ -101,9 +132,57 @@ export const transactionCaptureStrings = {
     kind: string,
   ) =>
     `${journalCount === 1 ? '1 past entry' : `${journalCount} past entries`} · ${sourceCount === 1 ? '1 SMS' : `${sourceCount} SMS`} · ${account} · ${currency} ${kind}`,
+  historicalCategoryBreakdownSummary: (breakdown: string) =>
+    `Different past categories · ${breakdown}`,
+  historicalVerdictSuggested: 'Suggested default',
+  historicalVerdictNone: 'No default suggested',
+  historicalVerdictMixedTitle: (categoryCount: number, journalCount: number) =>
+    `${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'} in ${journalCount} ${journalCount === 1 ? 'entry' : 'entries'}`,
+  historicalCategoryScope: (
+    merchant: string,
+    account: string,
+    currency: string,
+    kind: string,
+    _category: string,
+    journalCount: number,
+  ) =>
+    `All ${journalCount} ${journalCount === 1 ? 'entry agrees' : 'entries agree'}. Applies to future ${currency} ${kind} matches for ${merchant} on ${account}. Past entries stay unchanged.`,
+  historicalMixedScope: (_merchant: string) =>
+    'Past entries disagree, so you choose each time, or keep this merchant in review.',
+  historicalFilterViewOnly: 'Filtering is a view only. It never creates a default.',
+  historicalAlwaysReviewHint: (merchant: string) =>
+    `Always review pauses matching for ${merchant} on every account.`,
+  historicalAlwaysReviewAllAccounts: 'Always review · all accounts',
+  historicalTapBarHint: 'Tap a bar to see that day’s entries',
+  historicalAllEntries: (count: number) => (count === 1 ? 'All 1 entry' : `All ${count} entries`),
+  historicalFilteredEntries: (count: number, category: string) =>
+    count === 1 ? `1 ${category} entry` : `${count} ${category} entries`,
+  historicalShowAll: (count: number) => `Show all ${count}`,
+  historicalEvidenceEntries: (journalCount: number, sourceCount: number) =>
+    `${journalCount} ${journalCount === 1 ? 'distinct past entry' : 'distinct past entries'} · ${sourceCount} ${sourceCount === 1 ? 'linked SMS message' : 'linked SMS messages'}`,
+  historicalEvidenceLoading: 'Loading matching entries…',
+  historicalEvidenceError: 'Could not load these entries. Retry or open the full matching list.',
+  historicalEvidenceStale:
+    'These entries changed or are no longer available. Refresh the suggestions to review current evidence.',
+  refreshSuggestions: 'Refresh suggestions',
+  historicalEntryOpen: 'Open this transaction',
+  historicalTapeDescription: (shown: number, overflow: number) =>
+    `${shown} newest entries. Each shows its linked SMS count.${overflow ? ` ${overflow} earlier entries are not shown here.` : ''}`,
+  historicalEarlierCount: (count: number) => `+${count} earlier`,
+  smsSingular: 'SMS',
+  smsPlural: 'SMS',
   historicalCategoryAction: (category: string) => `Use ${category} for future matches`,
   historicalCategoryCompactAction: 'Save default',
   historicalKeepReviewAction: 'Always review',
+  pausedMerchantsHeader: 'Always review merchants',
+  paused: 'Paused',
+  conflicted: 'Needs choice',
+  unavailable: 'Unavailable',
+  merchantReviewTitle: (merchant: string) => `Always review ${merchant}?`,
+  merchantReviewMessage: (merchant: string) =>
+    `Category and name matching will pause for ${merchant} across all accounts. Saved defaults are paused, not deleted. Matching ignores case; other spellings remain separate.`,
+  merchantReviewPaused:
+    'Category and name matching are paused for this merchant across all accounts.',
   historicalMixedHeader: 'Different past categories',
   historicalMixedHint: (count: number) =>
     `${count} merchant groups have different categories in past transactions. No default is suggested; keep these merchants in review and choose a category each time.`,
@@ -139,8 +218,14 @@ export const transactionCaptureStrings = {
   forgetCategory: 'Remove category default',
   descriptionDefaultsHeader: 'Name defaults',
   unknownMerchant: 'Unknown merchant',
-  descriptionDefaultDetails: (merchant: string, paused: boolean) =>
-    `${merchant}${paused ? ' · Paused' : ''}`,
+  descriptionDefaultDetails: (
+    merchant: string,
+    amount: string | undefined,
+    currency: string | undefined,
+    kind: string,
+    paused: boolean,
+  ) =>
+    `${merchant} · ${amount == null ? 'unknown amount' : `exact ${amount}`}${currency ? ` ${currency}` : ''} · ${kind}${paused ? ' · Paused' : ''}`,
   recurringHint: 'This amount has occurred here before. Add a name, or keep this merchant open.',
   keepMerchantOpen: 'Always review this merchant’s transactions',
   allowMerchantSuggestions: 'Resume automatic matching for this merchant',
@@ -148,7 +233,18 @@ export const transactionCaptureStrings = {
   forgetName: 'Stop using this name automatically',
   rememberNameTitle: 'Use this name again?',
   rememberNameMessage:
-    'Future entries with this merchant, amount, currency, and transaction type will use this name. You can keep the merchant open to pause automatic naming.',
+    'Future entries for this merchant at this exact amount, currency, and transaction type will use this name. Other merchant spellings are separate. Existing entries stay unchanged. You can always review the merchant across accounts to pause matching.',
+  nameScope: (
+    merchant: string,
+    amount: string | undefined,
+    currency: string,
+    kind: string,
+    name: string,
+  ) =>
+    `This name applies to future ${currency} ${kind} entries for ${merchant}${amount == null ? ' at the matching amount' : ` at exactly ${amount}`}. Other amounts and merchant spellings are separate. Existing entries stay unchanged. Proposed name: ${name}.`,
+  unknownAmount: 'unknown amount',
+  unknownCurrency: 'unknown currency',
+  unknownType: 'transaction type',
   rememberNameAction: 'Use this name',
   showMore: 'Show more entries',
   sourcesHeader: 'Message sources',

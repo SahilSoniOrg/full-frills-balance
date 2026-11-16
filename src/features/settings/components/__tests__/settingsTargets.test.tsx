@@ -34,6 +34,7 @@ jest.mock('@/src/features/accounts', () => ({ CurrencySelector: () => null }));
 const fn = () => jest.fn();
 const emptyCaptureViewModel: TransactionCaptureViewModel = {
   workplaceId: asWorkplaceId('wp'),
+  changeRevision: 0,
   hasSnapshot: false,
   enabled: false,
   enabledAt: undefined,
@@ -43,6 +44,7 @@ const emptyCaptureViewModel: TransactionCaptureViewModel = {
   defaulted: [],
   categoryDefaults: [],
   descriptionDefaults: [],
+  openCaptureMerchants: [],
   categoryCandidates: [],
   descriptionCandidates: [],
   historicalCategorySuggestions: [],

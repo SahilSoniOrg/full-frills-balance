@@ -7,7 +7,10 @@ import { preferences } from '@/src/services/preferences';
 import { workplaceWriteCoordinator } from '@/src/services/preferences/WorkplaceWriteCoordinator';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import { journalHistoricalCaptureQueries } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
+import {
+  journalHistoricalCaptureQueries,
+  type HistoricalCategoryPattern,
+} from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import {
   categoryDefaultKey,
   type CaptureCategoryDefault,
@@ -15,6 +18,13 @@ import {
 import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
 
 export type { CaptureReviewItem };
+
+export class CategoryDefaultConflictError extends Error {
+  constructor() {
+    super('Remove the existing category default before saving this suggestion.');
+    this.name = 'CategoryDefaultConflictError';
+  }
+}
 
 /** Lightweight overview count; it deliberately avoids loading transaction lines. */
 export function countCaptureReviewItems(workplaceId: WorkplaceId): Promise<number> {
@@ -79,6 +89,56 @@ export function subscribeToCaptureChanges(onChange: () => void): () => void {
   return journalCaptureQueries.subscribeToChanges(onChange);
 }
 
+/** Load evidence using the current Uncategorized configuration. */
+export async function listHistoricalPatternEvidenceEntries(
+  workplaceId: WorkplaceId,
+  pattern: HistoricalCategoryPattern,
+  offset: number,
+  limit: number,
+) {
+  const role = `${pattern.kind}:${pattern.currencyCode}`;
+  const mappings =
+    preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+      ?.uncategorizedAccountIds ?? {};
+  const roleAtStart = mappings[role];
+  const entries = await journalHistoricalCaptureQueries.listPatternEvidenceEntries(
+    workplaceId,
+    pattern,
+    offset,
+    limit,
+    mappings,
+  );
+  const current =
+    preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+      ?.uncategorizedAccountIds;
+  return roleAtStart === current?.[role] ? entries : [];
+}
+
+/** Load one timeline window under the current workplace capture configuration. */
+export async function listHistoricalPatternEvidenceWindow(
+  workplaceId: WorkplaceId,
+  pattern: HistoricalCategoryPattern,
+  start: number,
+  end: number,
+) {
+  const role = `${pattern.kind}:${pattern.currencyCode}`;
+  const mappings =
+    preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+      ?.uncategorizedAccountIds ?? {};
+  const roleAtStart = mappings[role];
+  const entries = await journalHistoricalCaptureQueries.listPatternEvidenceWindow(
+    workplaceId,
+    pattern,
+    start,
+    end,
+    mappings,
+  );
+  const current =
+    preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+      ?.uncategorizedAccountIds;
+  return roleAtStart === current?.[role] ? entries : [];
+}
+
 export async function listCaptureItems(
   workplaceId: WorkplaceId,
   options: { includeHistorical?: boolean } = {},
@@ -119,7 +179,11 @@ export async function listCaptureItems(
     preferences.workplace.getSnapshot(workplaceId).openCaptureMerchants ?? [],
   );
   const historicalPatterns = options.includeHistorical
-    ? await journalHistoricalCaptureQueries.listCategoryPatterns(workplaceId)
+    ? await journalHistoricalCaptureQueries.listCategoryPatterns(
+        workplaceId,
+        preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture
+          ?.uncategorizedAccountIds,
+      )
     : [];
   const visibleHistoricalPatterns = historicalPatterns.filter(pattern => {
     const merchantOpen = openMerchants.has(pattern.merchant.trim().toLowerCase());
@@ -165,14 +229,17 @@ export async function saveHistoricalCaptureCategoryDefault(
 ): Promise<void> {
   await ensureHistoricalSmsBackfill(workplaceId);
   await workplaceWriteCoordinator.run(workplaceId, async () => {
-    const pattern = (await journalHistoricalCaptureQueries.listCategoryPatterns(workplaceId)).find(
-      value => value.key === patternKey && value.categories.length === 1,
-    );
+    const config = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
+    const pattern = (
+      await journalHistoricalCaptureQueries.listCategoryPatterns(
+        workplaceId,
+        config?.uncategorizedAccountIds,
+      )
+    ).find(value => value.key === patternKey && value.categories.length === 1);
     if (!pattern || pattern.categories[0].accountId !== approvedCategoryAccountId)
       throw new Error('The historical category suggestion changed. Review it again.');
     const categoryAccountId = pattern.categories[0].accountId;
     const accounts = await accountQueryRepository.findAll(workplaceId);
-    const config = preferences.workplace.getSnapshot(workplaceId).automaticTransactionCapture;
     const accountIndex = createCaptureAccountIndex(accounts, config?.uncategorizedAccountIds);
     const uncategorizedId =
       config?.uncategorizedAccountIds[`${pattern.kind}:${pattern.currencyCode}`];
@@ -196,6 +263,14 @@ export async function saveHistoricalCaptureCategoryDefault(
     };
     const current = preferences.workplace.getSnapshot(workplaceId).captureCategoryDefaults ?? [];
     const key = categoryDefaultKey(choice);
+    const existing = current.find(value => categoryDefaultKey(value) === key);
+    if (
+      existing &&
+      (existing.categoryAccountId !== categoryAccountId ||
+        existing.conflictingCategoryAccountIds?.length)
+    ) {
+      throw new CategoryDefaultConflictError();
+    }
     preferences.workplace.update(workplaceId, {
       captureCategoryDefaults: [
         ...current.filter(value => categoryDefaultKey(value) !== key),
@@ -231,15 +306,28 @@ export function listCaptureDescriptionDefaults(workplaceId: WorkplaceId) {
     const amount = Array.isArray(parts) && typeof parts[1] === 'number' ? parts[1] : undefined;
     const currencyCode =
       Array.isArray(parts) && typeof parts[2] === 'string' ? parts[2] : undefined;
+    const kind =
+      Array.isArray(parts) &&
+      (parts[3] === 'expense' || parts[3] === 'income' || parts[3] === 'transfer')
+        ? parts[3]
+        : undefined;
     return {
       key,
       description,
       merchant,
       amount,
       currencyCode,
+      kind,
       paused: !!merchant && open.has(merchant),
     };
   });
+}
+
+/** Workplace-scoped merchant-wide review pauses, including merchants without a saved rule. */
+export function listOpenCaptureMerchants(workplaceId: WorkplaceId): string[] {
+  return [
+    ...new Set(preferences.workplace.getSnapshot(workplaceId).openCaptureMerchants ?? []),
+  ].sort((left, right) => left.localeCompare(right));
 }
 
 export async function listCaptureCategoryDefaults(workplaceId: WorkplaceId) {
@@ -283,6 +371,9 @@ export async function saveCaptureCategoryDefault(
   choice: CaptureCategoryDefault,
 ): Promise<void> {
   await workplaceWriteCoordinator.run(workplaceId, async () => {
+    if (choice.merchant.length > 200) {
+      throw new Error('This merchant name is too long to save as a category default.');
+    }
     const item = (await captureItems(workplaceId)).find(row => row.journalId === journalId);
     if (
       !item?.suggestedDefault ||
@@ -299,6 +390,14 @@ export async function saveCaptureCategoryDefault(
       throw new Error('Uncategorized cannot be saved as a category default.');
     const current = snapshot.captureCategoryDefaults ?? [];
     const key = categoryDefaultKey(choice);
+    const existing = current.find(value => categoryDefaultKey(value) === key);
+    if (
+      existing &&
+      (existing.categoryAccountId !== choice.categoryAccountId ||
+        existing.conflictingCategoryAccountIds?.length)
+    ) {
+      throw new CategoryDefaultConflictError();
+    }
     preferences.workplace.update(workplaceId, {
       captureCategoryDefaults: [
         ...current.filter(value => categoryDefaultKey(value) !== key),

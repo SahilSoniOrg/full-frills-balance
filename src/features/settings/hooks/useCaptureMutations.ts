@@ -1,6 +1,7 @@
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useCaptureMutationRunner } from '@/src/features/settings/hooks/useCaptureMutationRunner';
 import {
+  CategoryDefaultConflictError,
   confirmCaptureCategories,
   removeCaptureCategoryDefault,
   resolveCaptureCategoryDefaultConflict,
@@ -73,25 +74,39 @@ export function useCaptureMutations(
     );
   }, [options.loading, options.settingsError, mutations]);
 
+  const onSetMerchantOpen = useCallback(
+    (merchant: string, open: boolean) => {
+      const operation = async (currentWorkplaceId: WorkplaceId) => {
+        await setCaptureMerchantOpen(currentWorkplaceId, merchant, open);
+        analytics.trackFeatureUsage('transaction_capture', 'merchant_open_toggled', {
+          enabled: open,
+        });
+      };
+      if (open) {
+        mutations.confirmAndRun(
+          {
+            title: strings.merchantReviewTitle(merchant),
+            message: strings.merchantReviewMessage(merchant),
+            confirmText: strings.historicalKeepReviewAction,
+            cancelText: strings.cancel,
+          },
+          operation,
+        );
+      } else {
+        void mutations.run(operation);
+      }
+    },
+    [mutations],
+  );
+
   return useMemo(
     () => ({
       busy: mutations.busy,
       onToggleEnabled,
       onConfigureAccounts,
-      onSetMerchantOpen: (merchant: string, open: boolean) =>
-        mutations.run(async currentWorkplaceId => {
-          await setCaptureMerchantOpen(currentWorkplaceId, merchant, open);
-          analytics.trackFeatureUsage('transaction_capture', 'merchant_open_toggled', {
-            enabled: open,
-          });
-        }),
+      onSetMerchantOpen,
       onSetHistoricalMerchantsOpen: (pattern: HistoricalCategoryPattern, open: boolean) =>
-        mutations.run(async currentWorkplaceId => {
-          await setCaptureMerchantOpen(currentWorkplaceId, pattern.merchant, open);
-          analytics.trackFeatureUsage('transaction_capture', 'merchant_open_toggled', {
-            enabled: open,
-          });
-        }),
+        onSetMerchantOpen(pattern.merchant, open),
       onConfirmCategories: (item: CaptureReviewItem) => {
         if (!item.confirmCategoryKey) return;
         void mutations.run(
@@ -128,7 +143,12 @@ export function useCaptureMutations(
               kind: choice.kind,
             });
           },
-          { errorMessage: () => strings.categoryChanged },
+          {
+            errorMessage: cause =>
+              cause instanceof CategoryDefaultConflictError
+                ? strings.categoryDefaultConflictError
+                : strings.categoryChanged,
+          },
         );
       },
       onRememberHistoricalCategory: (pattern: HistoricalCategoryPattern) => {
@@ -159,7 +179,12 @@ export function useCaptureMutations(
               kind: pattern.kind,
             });
           },
-          { errorMessage: () => strings.categoryChanged },
+          {
+            errorMessage: cause =>
+              cause instanceof CategoryDefaultConflictError
+                ? strings.categoryDefaultConflictError
+                : strings.categoryChanged,
+          },
         );
       },
       onForgetCategory: (key: string) =>
@@ -194,6 +219,6 @@ export function useCaptureMutations(
         );
       },
     }),
-    [mutations, onConfigureAccounts, onToggleEnabled],
+    [mutations, onConfigureAccounts, onSetMerchantOpen, onToggleEnabled],
   );
 }

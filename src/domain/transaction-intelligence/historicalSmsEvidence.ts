@@ -52,7 +52,12 @@ function readSource(value: unknown): HistoricalSmsSourceEvidence | null {
     sourceId: value.sourceId,
     occurredAt: value.occurredAt,
     ...(typeof value.merchant === 'string' && value.merchant.trim()
-      ? { merchant: value.merchant.trim().slice(0, 200) }
+      ? {
+          // Preserve the length boundary, including trailing spaces, so callers
+          // can reject a name that may already have been truncated.
+          merchant:
+            value.merchant.length >= 200 ? value.merchant.slice(0, 200) : value.merchant.trim(),
+        }
       : {}),
     ...(typeof value.amount === 'number' ? { amount: value.amount } : {}),
     ...(typeof value.currencyCode === 'string' ? { currencyCode: value.currencyCode } : {}),

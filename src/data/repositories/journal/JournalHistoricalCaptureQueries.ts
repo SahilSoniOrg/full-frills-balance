@@ -20,31 +20,65 @@ import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '@/src/data/repositories/fetchSequentiallyInChunks';
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import { parseJSONRecord } from '@/src/utils/serialization';
-import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
+import {
+  createCaptureAccountIndex,
+  type CaptureAccountIndex,
+} from '@/src/domain/transaction-intelligence/captureAccountEligibility';
 
 export interface HistoricalCategoryPattern {
   key: string;
   merchant: string;
   journalIds: JournalId[];
+  categoryByJournalId: Record<string, AccountId>;
   financialAccountId: AccountId;
   financialAccountName: string;
   kind: 'expense' | 'income';
   currencyCode: string;
   latestJournalDate: number;
+  earliestJournalDate?: number;
   journalCount: number;
   sourceCount: number;
+  /** Newest journal evidence marks for the compact review tape. One mark is one journal. */
+  evidenceMarks: HistoricalEvidenceMark[];
   categories: {
     accountId: AccountId;
     name: string;
     journalCount: number;
+    color?: string;
+    icon?: string;
   }[];
 }
+
+export interface HistoricalEvidenceMark {
+  journalId: JournalId;
+  journalDate: number;
+  categoryName: string;
+  sourceCount: number;
+}
+
+export interface HistoricalEvidenceEntry extends HistoricalEvidenceMark {
+  description?: string;
+  categoryAccount?: {
+    id: AccountId;
+    name: string;
+    accountType: AccountType;
+    icon?: string;
+    color?: string;
+  };
+  totalAmount: number;
+  currencyCode: string;
+}
+
+const HISTORICAL_EVIDENCE_MARK_LIMIT = 12;
 
 const MIN_HISTORICAL_PATTERN_JOURNALS = 2;
 
 function displayMerchant(value?: string | null): string | undefined {
+  if (value && value.length >= 200) return undefined;
   const merchant = value?.trim();
-  return merchant ? merchant.slice(0, 200) : undefined;
+  // Stored SMS evidence is capped at 200 characters. A value at the limit may
+  // already be truncated, so it cannot safely identify a future-match rule.
+  return merchant || undefined;
 }
 
 function sourceEvidenceFromInbox(record: TransactionInboxRecord): HistoricalSmsSourceEvidence {
@@ -93,6 +127,62 @@ function isJsonObject(value: string | undefined): boolean {
 
 function accountTypeIsFinancial(type?: AccountType): boolean {
   return type === AccountType.ASSET || type === AccountType.LIABILITY;
+}
+
+function classifyHistoricalJournal(
+  journal: Journal,
+  sources: HistoricalSmsSourceEvidence[],
+  lines: Transaction[],
+  accounts: CaptureAccountIndex,
+) {
+  if (sources.length === 0) return undefined;
+  const merchants = sources.map(source => displayMerchant(source.merchant));
+  if (merchants.some(merchant => !merchant)) return undefined;
+  const merchant = merchants[0]!;
+  const merchantIdentity = merchant.toLowerCase();
+  if (merchantIdentity.length > 200) return undefined;
+  if (merchants.some(value => value!.toLowerCase() !== merchantIdentity)) return undefined;
+  if (
+    sources.some(
+      source =>
+        source.amount === undefined ||
+        Math.abs(source.amount - journal.totalAmount) > 0.000001 ||
+        source.currencyCode !== journal.currencyCode,
+    )
+  )
+    return undefined;
+  if (lines.length !== 2) return undefined;
+  const financial = lines.filter(line =>
+    accountTypeIsFinancial(accounts.byId.get(line.accountId)?.accountType),
+  );
+  const categories = lines.filter(line => {
+    const type = accounts.byId.get(line.accountId)?.accountType;
+    return type === AccountType.EXPENSE || type === AccountType.INCOME;
+  });
+  if (financial.length !== 1 || categories.length !== 1) return undefined;
+  const financialAccount = accounts.byId.get(financial[0].accountId);
+  const categoryAccount = accounts.byId.get(categories[0].accountId);
+  if (!financialAccount || !categoryAccount) return undefined;
+  const kind: 'expense' | 'income' | undefined =
+    categoryAccount.accountType === AccountType.EXPENSE
+      ? 'expense'
+      : categoryAccount.accountType === AccountType.INCOME
+        ? 'income'
+        : undefined;
+  if (
+    !kind ||
+    !accounts.isFinancialLeaf(financialAccount.id, journal.currencyCode) ||
+    accounts.isUncategorizedRole(categoryAccount.id, kind, journal.currencyCode) ||
+    !accounts.isCategoryLeaf(categoryAccount.id, kind, journal.currencyCode)
+  )
+    return undefined;
+  return {
+    merchant,
+    financialAccount,
+    categoryAccount,
+    kind,
+    key: JSON.stringify([merchantIdentity, financialAccount.id, kind, journal.currencyCode]),
+  };
 }
 
 /** Adds source facts to existing SMS-linked journals without labeling old categories confirmed. */
@@ -297,7 +387,10 @@ export class JournalHistoricalCaptureQueries {
     });
   }
 
-  async listCategoryPatterns(workplaceId: WorkplaceId): Promise<HistoricalCategoryPattern[]> {
+  async listCategoryPatterns(
+    workplaceId: WorkplaceId,
+    uncategorizedAccountIds: Readonly<Record<string, AccountId>> = {},
+  ): Promise<HistoricalCategoryPattern[]> {
     const sourcesByJournal = new Map<JournalId, HistoricalSmsSourceEvidence[]>();
     const METADATA_BATCH_SIZE = 200;
     for (let offset = 0; ; offset += METADATA_BATCH_SIZE) {
@@ -326,8 +419,8 @@ export class JournalHistoricalCaptureQueries {
       .get<Account>('accounts')
       .query(Q.where('workplace_id', workplaceId), Q.where('deleted_at', Q.eq(null)))
       .fetch();
-    const accountIndex = createCaptureAccountIndex(accounts);
-    const accountById = accountIndex.byId;
+    const accountIndex = createCaptureAccountIndex(accounts, uncategorizedAccountIds);
+    const accountById = new Map(accounts.map(account => [account.id, account]));
     const groups = new Map<
       string,
       {
@@ -337,9 +430,13 @@ export class JournalHistoricalCaptureQueries {
         kind: 'expense' | 'income';
         currencyCode: string;
         latestJournalDate: number;
-        journals: Map<JournalId, number>;
+        earliestJournalDate: number;
+        journals: Map<JournalId, HistoricalEvidenceMark>;
         sourceIds: Set<string>;
-        categories: Map<AccountId, { name: string; journals: Set<JournalId> }>;
+        categories: Map<
+          AccountId,
+          { name: string; color?: string; icon?: string; journals: Set<JournalId> }
+        >;
       }
     >();
 
@@ -376,75 +473,47 @@ export class JournalHistoricalCaptureQueries {
 
       for (const journal of journals) {
         const sources = sourcesByJournal.get(journal.id) ?? [];
-        if (sources.length === 0) continue;
-        const merchants = sources.map(source => displayMerchant(source.merchant));
-        if (merchants.some(merchant => !merchant)) continue;
-        const uniqueMerchants = new Set(merchants as string[]);
-        if (uniqueMerchants.size !== 1) continue;
-        if (
-          sources.some(
-            source =>
-              source.amount === undefined ||
-              Math.abs(source.amount - journal.totalAmount) > 0.000001 ||
-              source.currencyCode !== journal.currencyCode,
-          )
-        )
-          continue;
-        const lines = transactionsByJournal.get(journal.id) ?? [];
-        if (lines.length !== 2) continue;
-        const financial = lines.filter(line =>
-          accountTypeIsFinancial(accountById.get(line.accountId)?.accountType),
+        const match = classifyHistoricalJournal(
+          journal,
+          sources,
+          transactionsByJournal.get(journal.id) ?? [],
+          accountIndex,
         );
-        const categories = lines.filter(line => {
-          const type = accountById.get(line.accountId)?.accountType;
-          return type === AccountType.EXPENSE || type === AccountType.INCOME;
-        });
-        if (financial.length !== 1 || categories.length !== 1) continue;
-        const financialAccount = accountById.get(financial[0].accountId);
-        const categoryAccount = accountById.get(categories[0].accountId);
-        if (!financialAccount || !categoryAccount) continue;
-        const kind =
-          categoryAccount.accountType === AccountType.EXPENSE
-            ? 'expense'
-            : categoryAccount.accountType === AccountType.INCOME
-              ? 'income'
-              : undefined;
-        if (!kind) continue;
-        if (
-          !accountIndex.isFinancialLeaf(financialAccount.id, journal.currencyCode) ||
-          !accountIndex.isCategoryLeaf(categoryAccount.id, kind, journal.currencyCode)
-        )
-          continue;
-        const merchantIdentity = [...uniqueMerchants][0];
-        const key = JSON.stringify([
-          merchantIdentity,
-          financialAccount.id,
-          kind,
-          journal.currencyCode,
-        ]);
+        if (!match) continue;
+        const { key, merchant, financialAccount, categoryAccount, kind } = match;
         let group = groups.get(key);
         if (!group) {
           group = {
-            merchant: merchantIdentity,
+            merchant,
             financialAccountId: financialAccount.id,
             financialAccountName: financialAccount.name,
             kind,
             currencyCode: journal.currencyCode,
             latestJournalDate: journal.journalDate,
+            earliestJournalDate: journal.journalDate,
             journals: new Map(),
             sourceIds: new Set(),
             categories: new Map(),
           };
           groups.set(key, group);
         }
-        group.journals.set(journal.id, journal.journalDate);
+        if (merchant < group.merchant) group.merchant = merchant;
+        group.journals.set(journal.id, {
+          journalId: journal.id,
+          journalDate: journal.journalDate,
+          categoryName: categoryAccount.name,
+          sourceCount: sources.length,
+        });
         group.latestJournalDate = Math.max(group.latestJournalDate, journal.journalDate);
+        group.earliestJournalDate = Math.min(group.earliestJournalDate, journal.journalDate);
         for (const source of sources) {
           if (group.sourceIds.has(source.sourceId)) continue;
           group.sourceIds.add(source.sourceId);
         }
         const category = group.categories.get(categoryAccount.id) ?? {
           name: categoryAccount.name,
+          color: accountById.get(categoryAccount.id)?.color,
+          icon: accountById.get(categoryAccount.id)?.icon,
           journals: new Set<JournalId>(),
         };
         category.journals.add(journal.id);
@@ -457,20 +526,38 @@ export class JournalHistoricalCaptureQueries {
         .map(([key, group]) => ({
           key,
           merchant: group.merchant,
+          categoryByJournalId: Object.fromEntries(
+            [...group.categories.entries()].flatMap(([accountId, value]) =>
+              [...value.journals].map(journalId => [journalId, accountId]),
+            ),
+          ),
           journalIds: [...group.journals.entries()]
-            .sort((left, right) => right[1] - left[1])
+            .sort(
+              (left, right) =>
+                right[1].journalDate - left[1].journalDate || left[0].localeCompare(right[0]),
+            )
             .map(([journalId]) => journalId),
           financialAccountId: group.financialAccountId,
           financialAccountName: group.financialAccountName,
           kind: group.kind,
           currencyCode: group.currencyCode,
           latestJournalDate: group.latestJournalDate,
+          earliestJournalDate: group.earliestJournalDate,
           journalCount: group.journals.size,
           sourceCount: group.sourceIds.size,
+          evidenceMarks: [...group.journals.values()]
+            .sort(
+              (left, right) =>
+                right.journalDate - left.journalDate ||
+                left.journalId.localeCompare(right.journalId),
+            )
+            .slice(0, HISTORICAL_EVIDENCE_MARK_LIMIT),
           categories: [...group.categories.entries()].map(([accountId, value]) => ({
             accountId,
             name: value.name,
             journalCount: value.journals.size,
+            color: value.color,
+            icon: value.icon,
           })),
         }))
         // A pattern needs repeat transactions, not just repeated SMS evidence for one journal.
@@ -482,6 +569,142 @@ export class JournalHistoricalCaptureQueries {
             left.merchant.localeCompare(right.merchant),
         )
     );
+  }
+
+  /** Read one calendar window for an expanded pattern, revalidating the same eligibility as the list. */
+  async listPatternEvidenceWindow(
+    workplaceId: WorkplaceId,
+    pattern: HistoricalCategoryPattern,
+    start: number,
+    end: number,
+    uncategorizedAccountIds: Readonly<Record<string, AccountId>> = {},
+  ): Promise<HistoricalEvidenceEntry[]> {
+    const ids: JournalId[] = [];
+    for (let offset = 0; offset < pattern.journalIds.length; offset += 100) {
+      const chunk = pattern.journalIds.slice(offset, offset + 100);
+      const journals = await database.collections
+        .get<Journal>('journals')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('id', Q.oneOf(chunk)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('status', JournalStatus.POSTED),
+          Q.where('journal_date', Q.gte(start)),
+          Q.where('journal_date', Q.lt(end)),
+        )
+        .fetch();
+      ids.push(...journals.map(journal => journal.id));
+    }
+    const entries: HistoricalEvidenceEntry[] = [];
+    const windowPattern = { ...pattern, journalIds: ids };
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      entries.push(
+        ...(await this.listPatternEvidenceEntries(
+          workplaceId,
+          windowPattern,
+          offset,
+          100,
+          uncategorizedAccountIds,
+        )),
+      );
+    }
+    return entries.sort(
+      (a, b) => b.journalDate - a.journalDate || a.journalId.localeCompare(b.journalId),
+    );
+  }
+
+  /** Fetch a bounded page of current entries for one already-grouped historical pattern. */
+  async listPatternEvidenceEntries(
+    workplaceId: WorkplaceId,
+    pattern: Pick<HistoricalCategoryPattern, 'key' | 'journalIds' | 'categoryByJournalId'>,
+    offset: number,
+    limit: number,
+    uncategorizedAccountIds: Readonly<Record<string, AccountId>> = {},
+  ): Promise<HistoricalEvidenceEntry[]> {
+    const ids = pattern.journalIds.slice(Math.max(0, offset), Math.max(0, offset) + limit);
+    if (ids.length === 0) return [];
+
+    const [journals, metadataRows, transactions, accounts] = await Promise.all([
+      database.collections
+        .get<Journal>('journals')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('id', Q.oneOf(ids)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('status', JournalStatus.POSTED),
+        )
+        .fetch(),
+      this.metadata
+        .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(ids)))
+        .fetch(),
+      database.collections
+        .get<Transaction>('transactions')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('journal_id', Q.oneOf(ids)),
+          Q.where('deleted_at', Q.eq(null)),
+        )
+        .fetch(),
+      database.collections
+        .get<Account>('accounts')
+        .query(Q.where('workplace_id', workplaceId), Q.where('deleted_at', Q.eq(null)))
+        .fetch(),
+    ]);
+
+    const accountIndex = createCaptureAccountIndex(accounts, uncategorizedAccountIds);
+    const accountById = new Map(accounts.map(account => [account.id, account]));
+    const journalById = new Map(journals.map(journal => [journal.id, journal]));
+    const sourcesByJournal = new Map<JournalId, HistoricalSmsSourceEvidence[]>();
+    for (const row of metadataRows) {
+      const sources = readHistoricalSmsEvidence(row.metadataJson)?.sources ?? [];
+      if (sources.length === 0) continue;
+      sourcesByJournal.set(
+        row.journalId,
+        mergeHistoricalSmsSources(sourcesByJournal.get(row.journalId) ?? [], sources),
+      );
+    }
+    const linesByJournal = new Map<JournalId, Transaction[]>();
+    for (const line of transactions) {
+      const lines = linesByJournal.get(line.journalId) ?? [];
+      lines.push(line);
+      linesByJournal.set(line.journalId, lines);
+    }
+
+    const entries: HistoricalEvidenceEntry[] = [];
+    for (const journalId of ids) {
+      const journal = journalById.get(journalId);
+      const sources = sourcesByJournal.get(journalId) ?? [];
+      if (!journal) continue;
+      const match = classifyHistoricalJournal(
+        journal,
+        sources,
+        linesByJournal.get(journalId) ?? [],
+        accountIndex,
+      );
+      if (
+        !match ||
+        match.key !== pattern.key ||
+        pattern.categoryByJournalId[journalId] !== match.categoryAccount.id
+      )
+        continue;
+      entries.push({
+        journalId,
+        journalDate: journal.journalDate,
+        description: journal.description,
+        categoryName: match.categoryAccount.name,
+        categoryAccount: {
+          id: match.categoryAccount.id,
+          name: match.categoryAccount.name,
+          accountType: match.categoryAccount.accountType,
+          icon: accountById.get(match.categoryAccount.id)?.icon,
+          color: accountById.get(match.categoryAccount.id)?.color,
+        },
+        sourceCount: sources.length,
+        totalAmount: journal.totalAmount,
+        currencyCode: journal.currencyCode,
+      });
+    }
+    return entries;
   }
 }
 
