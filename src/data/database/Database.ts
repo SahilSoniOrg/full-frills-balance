@@ -1,4 +1,4 @@
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { Database as WatermelonDB } from '@nozbe/watermelondb';
 import { setGenerator } from '@nozbe/watermelondb/utils/common/randomId';
 

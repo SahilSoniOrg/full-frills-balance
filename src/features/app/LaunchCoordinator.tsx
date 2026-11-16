@@ -4,7 +4,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import {

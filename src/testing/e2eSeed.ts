@@ -16,7 +16,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { loadSetupDraft, saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
 import { restoreSources } from '@/src/features/setup/setupTypes';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';

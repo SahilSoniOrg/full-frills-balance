@@ -5,7 +5,7 @@ import { validateImportedData } from '@/src/services/import/validateImportedData
 import { conditionsKeyFor } from '@/src/services/sms/recognition/accountMatcherDefinition';
 
 // Mock ID generator
-jest.mock('@/src/data/database/idGenerator', () => ({
+jest.mock('@/src/utils/idGenerator', () => ({
   generator: () => 'mock-id-' + Math.random(),
 }));
 

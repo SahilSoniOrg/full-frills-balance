@@ -1,4 +1,4 @@
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';

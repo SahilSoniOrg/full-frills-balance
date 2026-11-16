@@ -27,7 +27,7 @@ import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { toJournalStatus, toTransactionType } from '@/src/data/repositories/importValueParsers';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import type { PostedJournalImportIssue } from '@/src/domain/accounting/PostedJournalImportError';
-import { generator as generateId } from '@/src/data/database/idGenerator';
+import { generator as generateId } from '@/src/utils/idGenerator';
 
 export class ImportRepository {
   private async prepareImportData(

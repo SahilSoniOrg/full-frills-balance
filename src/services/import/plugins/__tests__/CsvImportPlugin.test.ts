@@ -7,7 +7,7 @@ import {
 import { ImportFileContext } from '@/src/services/import/types';
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-jest.mock('@/src/data/database/idGenerator', () => {
+jest.mock('@/src/utils/idGenerator', () => {
   let counter = 0;
   return {
     generator: () => `mock-csv-id-${++counter}`,

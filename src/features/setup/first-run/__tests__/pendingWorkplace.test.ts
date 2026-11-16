@@ -5,7 +5,7 @@ import {
   readPendingCashClarityWorkplaceId,
 } from '../pendingWorkplace';
 
-jest.mock('@/src/data/database/idGenerator', () => ({
+jest.mock('@/src/utils/idGenerator', () => ({
   generator: () => 'fresh-workplace',
 }));
 

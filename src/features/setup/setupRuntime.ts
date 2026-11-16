@@ -1,6 +1,6 @@
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { publishRestore, restorePublicationClaims } from '@/src/services/import/restore';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {

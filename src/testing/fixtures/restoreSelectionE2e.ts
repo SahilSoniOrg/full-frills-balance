@@ -1,5 +1,5 @@
 import { Icon } from '@/src/types/domainIcons';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
 import type { RestoreSourceOutput } from '@/src/features/setup/setupTypes';
 import type { PreparedRestore } from '@/src/services/import/restore';

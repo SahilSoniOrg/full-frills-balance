@@ -17,7 +17,7 @@ jest.mock('@/src/services/files/files', () => ({
   },
 }));
 
-jest.mock('@/src/data/database/idGenerator', () => {
+jest.mock('@/src/utils/idGenerator', () => {
   let n = 0;
   return {
     generator: () => `mock-cashew-id-${++n}`,

@@ -16,7 +16,7 @@ import {
 import { AccountArchiveChanges } from '@/src/domain/accounts/accountArchive';
 import { AuditAction } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 
 export type PreparedArchiveMutation = {
   plan: ArchiveMutationPlan;

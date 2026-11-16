@@ -8,7 +8,7 @@ import {
   serializeCashClaritySetupDraft,
 } from '../creationSession';
 
-jest.mock('@/src/data/database/idGenerator', () => ({ generator: () => 'generated-session-id' }));
+jest.mock('@/src/utils/idGenerator', () => ({ generator: () => 'generated-session-id' }));
 
 describe('Cash Clarity creation session persistence', () => {
   it('keeps raw text authoritative and reconstructs only a transient numeric placeholder', () => {

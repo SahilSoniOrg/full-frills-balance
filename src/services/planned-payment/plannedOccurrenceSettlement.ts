@@ -48,7 +48,7 @@ import {
   type MovementOccurrence,
 } from '@/src/domain/planned-payment/sharedMovementMatcher';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { logger } from '@/src/services/observability/logger';
 
 export type PlannedOccurrenceAction =

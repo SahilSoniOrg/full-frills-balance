@@ -10,7 +10,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { analytics } from '@/src/services/analytics';
 import { preferences, preferencesMigration } from '@/src/services/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplaceDataTables';
 import { countAccountsVsCategories } from '@/src/domain/accounts/accountClassification';
 import { logger } from '@/src/services/observability/logger';

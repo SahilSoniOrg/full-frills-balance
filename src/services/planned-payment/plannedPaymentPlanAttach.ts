@@ -2,7 +2,7 @@ import {
   runAccountingWriteSession,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import {
   journalPersistenceRepository,
   type PlanAttachInput,

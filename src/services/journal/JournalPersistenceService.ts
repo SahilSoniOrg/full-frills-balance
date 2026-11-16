@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';

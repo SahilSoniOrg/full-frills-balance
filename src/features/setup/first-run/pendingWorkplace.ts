@@ -1,4 +1,4 @@
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { asWorkplaceId, type WorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/data/storage/storage';
 

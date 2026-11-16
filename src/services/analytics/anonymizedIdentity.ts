@@ -1,5 +1,5 @@
 import { readAppVariant, type AppVariant } from './appVariant';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 

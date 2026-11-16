@@ -1,5 +1,5 @@
 import { Icon } from '@/src/types/domainIcons';
-import { generator as generateId } from '@/src/data/database/idGenerator';
+import { generator as generateId } from '@/src/utils/idGenerator';
 import {
   AccountType,
   TransactionType,

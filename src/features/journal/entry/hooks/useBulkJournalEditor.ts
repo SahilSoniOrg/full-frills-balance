@@ -1,7 +1,7 @@
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import dayjs from 'dayjs';
-import { generator as generateId } from '@/src/data/database/idGenerator';
+import { generator as generateId } from '@/src/utils/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';

@@ -18,7 +18,7 @@ import type {
 import { sameRestoreSources } from './setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
 import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { asWorkplaceId } from '@/src/types/ids';
 
 type SliceAcceptance = SetupSliceAcceptance;

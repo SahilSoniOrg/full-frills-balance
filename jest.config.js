@@ -21,7 +21,7 @@ module.exports = {
     '^lucide-react-native/icons/(.*)$':
       '<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1.js',
     '^@/src/data/database/adapter$': '<rootDir>/src/data/database/adapter.ts',
-    idGenerator$: '<rootDir>/src/data/database/idGenerator.ts',
+    idGenerator$: '<rootDir>/src/utils/idGenerator.ts',
     '^@/src/(.*)$': '<rootDir>/src/$1',
   },
   setupFiles: ['<rootDir>/jest.platform-mock.js'],

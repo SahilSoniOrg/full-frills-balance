@@ -6,7 +6,7 @@ import { validateImportedData } from '@/src/services/import/validateImportedData
 import { Icon } from '@/src/types/domainIcons';
 
 // Mock ID generator
-jest.mock('@/src/data/database/idGenerator', () => ({
+jest.mock('@/src/utils/idGenerator', () => ({
   generator: () => 'mock-id-' + Math.random(),
 }));
 

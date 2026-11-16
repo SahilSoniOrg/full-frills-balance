@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import {
   getDefaultSubtypeForType,
   isAccountSubtype,

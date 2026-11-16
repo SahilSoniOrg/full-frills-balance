@@ -4,7 +4,7 @@ import { TransactionType, AccountType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
-import { generator as generateId } from '@/src/data/database/idGenerator';
+import { generator as generateId } from '@/src/utils/idGenerator';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';

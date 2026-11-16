@@ -1,7 +1,7 @@
 /** Exchange rates: API integration and repository-backed cache. */
 
 import { AppConfig } from '@/src/constants/app-config';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import type { WorkplaceId } from '@/src/types/ids';
 import {

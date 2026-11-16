@@ -5,7 +5,7 @@ import { catchError, of } from 'rxjs';
 import { AccountType, AuditAction } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
 import { Q } from '@nozbe/watermelondb';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
 import { accountWriteRepository } from './account/AccountWriteRepository';

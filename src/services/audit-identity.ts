@@ -1,4 +1,4 @@
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import { storage } from '@/src/data/storage/storage';
 import { logger } from '@/src/services/observability/logger';
 

@@ -1,4 +1,4 @@
-import { generator as generateId } from '@/src/data/database/idGenerator';
+import { generator as generateId } from '@/src/utils/idGenerator';
 import { toAccountType, toTransactionType } from '@/src/data/repositories/importValueParsers';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {

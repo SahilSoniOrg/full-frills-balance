@@ -1,6 +1,6 @@
 import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import type {
   CanonicalAccount,
   CanonicalJournal,

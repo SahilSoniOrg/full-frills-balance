@@ -12,7 +12,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
 import type { AccountId } from '@/src/types/ids';
 
-jest.mock('@/src/data/database/idGenerator', () => {
+jest.mock('@/src/utils/idGenerator', () => {
   let counter = 0;
   return {
     generator: () => `id-${++counter}`,

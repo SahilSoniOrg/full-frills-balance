@@ -9,7 +9,7 @@ import { prepareRestore, type PreparedRestore } from '@/src/services/import/rest
 import type { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 import { restoreSources, type RestoreSetupDraft, type RestoreSourceOutput } from './setupTypes';
 import * as DocumentPicker from 'expo-document-picker';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { CanonicalJournal, CanonicalTransaction } from '@/src/types/importContracts';

@@ -10,7 +10,7 @@ import {
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { generator } from '@/src/data/database/idGenerator';
+import { generator } from '@/src/utils/idGenerator';
 
 /**
  * Toggles planned-payment ACTIVE ↔ PAUSED.
