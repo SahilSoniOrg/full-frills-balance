@@ -31,6 +31,21 @@ function base64url(buf) {
     .replace(/=+$/, '');
 }
 
+async function fetchWithRetry(url, options, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60000);
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.warn(`Attempt ${i + 1} failed: ${err.message}, retrying...`);
+      await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+    }
+  }
+}
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
@@ -47,7 +62,7 @@ async function getAccessToken() {
   const signature = sign.sign(serviceAccount.private_key);
   const jwt = signingInput + '.' + base64url(signature);
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+  const res = await fetchWithRetry('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -65,7 +80,7 @@ async function main() {
   const auth = { Authorization: `Bearer ${token}` };
 
   // 1. Create an edit
-  const editRes = await fetch(
+  const editRes = await fetchWithRetry(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/edits`,
     { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: '{}' },
   );
@@ -75,7 +90,7 @@ async function main() {
 
   // 2. Upload the mapping file
   const mapping = fs.readFileSync(mappingFile);
-  const uploadRes = await fetch(
+  const uploadRes = await fetchWithRetry(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/edits/${editId}/apks/${versionCode}/deobfuscationFiles/proguard?uploadType=media`,
     {
       method: 'POST',
@@ -87,7 +102,7 @@ async function main() {
   console.log('Mapping uploaded:', await uploadRes.json());
 
   // 3. Commit the edit
-  const commitRes = await fetch(
+  const commitRes = await fetchWithRetry(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/edits/${editId}:commit`,
     { method: 'POST', headers: auth },
   );

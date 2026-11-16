@@ -42,4 +42,8 @@ if (!keyPath) {
 process.env.VERSION_CODE = versionCode;
 process.env.MAPPING_FILE = mappingFile;
 process.env.PACKAGE_NAME = process.env.PACKAGE_NAME || 'in.sahilsoni.fullfrillsbalance';
-execFileSync(process.execPath, ['scripts/upload-mapping.js'], { stdio: 'inherit' });
+try {
+  execFileSync(process.execPath, ['scripts/upload-mapping.js'], { stdio: 'inherit' });
+} catch (err) {
+  console.warn('upload-mapping-on-success: upload failed, but build succeeded:', err.message);
+}
