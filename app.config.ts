@@ -189,7 +189,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         android: {
           enableMinifyInReleaseBuilds: true,
-          shrinkResources: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+          extraProguardRules: `-keep class com.swmansion.reanimated.** { *; }
+-keep class com.facebook.react.turbomodule.** { *; }
+-keep,allowobfuscation,allowshrinking class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class com.facebook.jni.** { *; }
+-keep class expo.modules.** { *; }
+-keepclassmembers class * { @expo.modules.core.interfaces.ExpoMethod *; }
+-keep class io.sentry.** { *; }
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-keep class com.nozbe.watermelondb.** { *; }
+-keep class com.nozbe.watermelondb.jsi.** { *; }`,
           packagingOptions: {
             pickFirst: ['**/libc++_shared.so'],
             jniLibs: {

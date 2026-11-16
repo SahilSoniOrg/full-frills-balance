@@ -34,6 +34,9 @@
       "android": {
         "gradleCommand": ":app:bundleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
       },
+      "buildArtifactPaths": [
+        "android/app/build/outputs/mapping/release/mapping.txt"
+      ],
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_E2E": "0",
