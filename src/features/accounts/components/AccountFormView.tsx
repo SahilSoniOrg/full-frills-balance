@@ -227,6 +227,8 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               currencySymbol={currencySymbol}
               showCurrencyPrefix={false}
               precision={vm.currencyPrecision}
+              // A negative balance is a real state: an overpaid card or an overdrawn account.
+              allowNegative
               containerStyle={styles.amountInput}
               testID="hero-amount-input"
             />

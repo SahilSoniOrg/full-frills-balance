@@ -48,6 +48,8 @@ interface CalculatorAmountInputProps {
   onBlur?: TextInputProps['onBlur'];
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
   onCalculatorDone?: () => void;
+  /** Accepts a negative amount, e.g. an overpaid credit card balance. */
+  allowNegative?: boolean;
   /** Lets a parent focus the field, e.g. when Save is tapped without an amount. */
   inputRef?: RefObject<TextInput | null>;
 }
@@ -198,6 +200,7 @@ function AmountField({
   onBlur,
   onSubmitEditing,
   onCalculatorDone,
+  allowNegative = false,
   inputRef: externalInputRef,
 }: CalculatorAmountInputProps) {
   const { theme, fonts } = useTheme();
@@ -245,12 +248,12 @@ function AmountField({
 
   const handleAmountChange = useCallback(
     (text: string) => {
-      if (hasNegativeAmountSign(text.replace(/,/g, '.'))) return;
-      const sanitized = sanitizeDecimalInput(text, precision);
+      if (!allowNegative && hasNegativeAmountSign(text.replace(/,/g, '.'))) return;
+      const sanitized = sanitizeDecimalInput(text, precision, { allowNegative });
       if (sanitized == null) return;
       onChangeText(sanitized);
     },
-    [onChangeText, precision],
+    [allowNegative, onChangeText, precision],
   );
 
   const normalizeAmount = useCallback(() => {
@@ -400,6 +403,7 @@ function AmountField({
           visible={calculatorVisible}
           currencySymbol={currencySymbol}
           precision={precision}
+          allowNegative={allowNegative}
           onClose={() => setCalculatorVisible(false)}
           onDismiss={finishCalculatorHandoff}
           onDone={amount => {

@@ -4,6 +4,7 @@
 
 import {
   headlineCurrency,
+  sanitizeDecimalInput,
   amountsAreEqual,
   getEpsilon,
   Money,
@@ -139,5 +140,25 @@ describe('headlineCurrency', () => {
   });
   it('keeps the workplace currency when there is nothing to total', () => {
     expect(headlineCurrency([], 'USD')).toBe('USD');
+  });
+});
+
+describe('sanitizeDecimalInput', () => {
+  it('drops a minus sign by default', () => {
+    expect(sanitizeDecimalInput('-50', 2)).toBe('50');
+  });
+
+  it('keeps one leading minus when negative amounts are allowed', () => {
+    expect(sanitizeDecimalInput('-50', 2, { allowNegative: true })).toBe('-50');
+    expect(sanitizeDecimalInput('−50.5', 2, { allowNegative: true })).toBe('-50.5');
+  });
+
+  it('keeps a lone minus so the user can type the digits after it', () => {
+    expect(sanitizeDecimalInput('-', 2, { allowNegative: true })).toBe('-');
+  });
+
+  it('still rejects too many decimal places and stray separators', () => {
+    expect(sanitizeDecimalInput('-1.234', 2, { allowNegative: true })).toBeNull();
+    expect(sanitizeDecimalInput('-1.2.3', 2, { allowNegative: true })).toBeNull();
   });
 });

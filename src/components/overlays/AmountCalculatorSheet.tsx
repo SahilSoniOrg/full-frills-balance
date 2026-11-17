@@ -26,6 +26,8 @@ interface AmountCalculatorSheetProps {
   visible: boolean;
   currencySymbol: string;
   precision: number;
+  /** Accepts a negative result, e.g. an overpaid credit card balance. */
+  allowNegative?: boolean;
   onClose: () => void;
   onDone: (amount: string) => void;
   onDismiss?: () => void;
@@ -100,6 +102,7 @@ export function AmountCalculatorSheet({
   visible,
   currencySymbol,
   precision,
+  allowNegative = false,
   onClose,
   onDone,
   onDismiss,
@@ -116,8 +119,8 @@ export function AmountCalculatorSheet({
   }, [visible]);
 
   const evaluation = useMemo(
-    () => evaluateCalculatorExpression(expression, precision),
-    [expression, precision],
+    () => evaluateCalculatorExpression(expression, precision, { allowNegative }),
+    [expression, precision, allowNegative],
   );
   const hasUserInput = expression.length > 0;
   const resultDisplay =

@@ -20,11 +20,17 @@ export const formatRoundedAmount = (amount: number, precision: number): string =
 };
 
 /** Comma→dot, digits and one decimal point, capped at `precision`. Null if rejected. */
-export function sanitizeDecimalInput(text: string, precision: number): string | null {
-  const sanitized = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+export function sanitizeDecimalInput(
+  text: string,
+  precision: number,
+  options: { allowNegative?: boolean } = {},
+): string | null {
+  const normalized = text.replace(/,/g, '.');
+  const negative = options.allowNegative === true && /[-−﹣－]/.test(normalized);
+  const sanitized = normalized.replace(/[^0-9.]/g, '');
   const parts = sanitized.split('.');
   if (parts.length > 2 || (parts[1] && parts[1].length > precision)) return null;
-  return sanitized;
+  return negative ? `-${sanitized}` : sanitized;
 }
 
 /**
