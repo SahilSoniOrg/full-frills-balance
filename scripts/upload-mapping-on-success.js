@@ -4,6 +4,7 @@
 // code to already exist in Play Console).
 
 const fs = require('fs');
+const path = require('path');
 
 if (process.env.EAS_BUILD_PLATFORM !== 'android') {
   process.exit(0);
@@ -15,10 +16,11 @@ if (!fs.existsSync(mappingFile)) {
   process.exit(0);
 }
 
-// Copy mapping.txt to project root for later upload
+const projectRoot = process.env.EAS_PROJECT_ROOT || process.cwd();
+const dest = path.join(projectRoot, 'mapping.txt');
 try {
-  fs.copyFileSync(mappingFile, 'mapping.txt');
-  console.log('eas-build-on-success: copied mapping.txt to project root.');
+  fs.copyFileSync(mappingFile, dest);
+  console.log('eas-build-on-success: copied mapping.txt to', dest);
 } catch (err) {
   console.warn('eas-build-on-success: failed to copy mapping.txt:', err.message);
 }
