@@ -3,8 +3,7 @@ import { AccountId, JournalId, asAccountId, asTransactionId } from '@/src/types/
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
 
 import {
-  journalDisplayTypeChrome,
-  ledgerLineChrome,
+  flowChrome,
   mapJournalToEntryCardProps,
 } from '@/src/services/journal/journalTimelinePresentation';
 import { journalsToTimelineRows } from '@/src/services/journal/journalTimelineRows';
@@ -14,16 +13,19 @@ import {
 } from '@/src/services/journal/__tests__/journalTimelinePresentation.test.helpers';
 
 describe('journalTimelinePresentation', () => {
-  it('journalDisplayTypeChrome maps expense to down arrow', () => {
-    const chrome = journalDisplayTypeChrome(JournalDisplayType.EXPENSE);
-    expect(chrome.typeIcon).toBe('arrowDown');
-    expect(chrome.amountPrefix).toBe('− ');
-  });
-
-  it('ledgerLineChrome maps increase to up arrow', () => {
-    const chrome = ledgerLineChrome(true);
-    expect(chrome.typeIcon).toBe('arrowUp');
-    expect(chrome.amountPrefix).toBe('+ ');
+  it('flowChrome maps the cash-flow sign to arrows and prefixes', () => {
+    expect(flowChrome(1, JournalDisplayType.EXPENSE)).toEqual({
+      typeIcon: 'arrowUp',
+      amountPrefix: '+ ',
+    });
+    expect(flowChrome(-1, JournalDisplayType.INCOME)).toEqual({
+      typeIcon: 'arrowDown',
+      amountPrefix: '− ',
+    });
+    expect(flowChrome(0, JournalDisplayType.TRANSFER)).toEqual({
+      typeIcon: 'swapHorizontal',
+      amountPrefix: '',
+    });
   });
 
   it('mapJournalToEntryCardProps builds source and destination account groups', () => {
@@ -400,7 +402,10 @@ describe('mapJournalToEntryCardProps account flow', () => {
       ...timelineJournal(
         [
           timelineAccount('dollar', 'SOURCE', 100, 'USD', 80),
-          timelineAccount('rupee', 'DESTINATION', 8000, 'INR'),
+          {
+            ...timelineAccount('rupee', 'DESTINATION', 8000, 'INR'),
+            accountType: AccountType.ASSET,
+          },
         ],
         'INR',
       ),
@@ -514,5 +519,132 @@ describe('journalsToTimelineRows expandAccountIds', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].listId).toBe('j1');
     expect(rows[0].selectionId).toBe('j1');
+  });
+});
+
+describe('cash-flow sign across journal rows', () => {
+  type Leg = EnrichedJournal['accounts'][number];
+  const leg = (id: string, accountType: AccountType, role: Leg['role'], amount: number): Leg => ({
+    id: asAccountId(id),
+    transactionId: asTransactionId(`posting-${id}`),
+    name: id,
+    accountType,
+    role,
+    amount,
+    currencyCode: 'USD',
+  });
+  const journal = (
+    displayType: JournalDisplayType,
+    accounts: Leg[],
+    totalAmount: number,
+  ): EnrichedJournal => ({
+    id: 'journal' as JournalId,
+    journalDate: 1_700_000_000_000,
+    currencyCode: 'USD',
+    status: 'POSTED',
+    totalAmount,
+    transactionCount: accounts.length,
+    displayType,
+    accounts,
+  });
+  const bank = (role: Leg['role'], amount: number) => leg('bank', AccountType.ASSET, role, amount);
+  const shopping = (role: Leg['role'], amount: number) =>
+    leg('shopping', AccountType.EXPENSE, role, amount);
+  const viewed = (j: EnrichedJournal, accountId: string) =>
+    mapJournalToEntryCardProps(j, { accountId: asAccountId(accountId) }).presentation.amountPrefix;
+
+  it('shows a purchase as spending from the journal and from every leg', () => {
+    const purchase = journal(
+      JournalDisplayType.EXPENSE,
+      [bank('SOURCE', 100), shopping('DESTINATION', 100)],
+      100,
+    );
+    expect(mapJournalToEntryCardProps(purchase).presentation.amountPrefix).toBe('− ');
+    expect(viewed(purchase, 'bank')).toBe('− ');
+    expect(viewed(purchase, 'shopping')).toBe('− ');
+  });
+
+  it('shows a refund as income, not spending', () => {
+    const refund = journal(
+      JournalDisplayType.EXPENSE,
+      [shopping('SOURCE', 100), bank('DESTINATION', 100)],
+      100,
+    );
+    const card = mapJournalToEntryCardProps(refund);
+    expect(card.presentation.amountPrefix).toBe('+ ');
+    expect(card.presentation.typeIcon).toBe('arrowUp');
+    expect(viewed(refund, 'bank')).toBe('+ ');
+    expect(viewed(refund, 'shopping')).toBe('+ ');
+  });
+
+  it('shows salary as income from the journal and from the income account', () => {
+    const salary = journal(
+      JournalDisplayType.INCOME,
+      [leg('salary', AccountType.INCOME, 'SOURCE', 100), bank('DESTINATION', 100)],
+      100,
+    );
+    expect(mapJournalToEntryCardProps(salary).presentation.amountPrefix).toBe('+ ');
+    expect(viewed(salary, 'salary')).toBe('+ ');
+    expect(viewed(salary, 'bank')).toBe('+ ');
+  });
+
+  it('keeps balance-sheet-only movements unsigned at journal level', () => {
+    const transfer = journal(
+      JournalDisplayType.TRANSFER,
+      [bank('SOURCE', 100), leg('savings', AccountType.ASSET, 'DESTINATION', 100)],
+      100,
+    );
+    expect(mapJournalToEntryCardProps(transfer).presentation.amountPrefix).toBe('');
+    expect(viewed(transfer, 'bank')).toBe('− ');
+    expect(viewed(transfer, 'savings')).toBe('+ ');
+  });
+
+  it('signs a debt payoff by the change in the liability balance', () => {
+    const payoff = journal(
+      JournalDisplayType.TRANSFER,
+      [bank('SOURCE', 100), leg('card', AccountType.LIABILITY, 'DESTINATION', 100)],
+      100,
+    );
+    expect(mapJournalToEntryCardProps(payoff).presentation.amountPrefix).toBe('');
+    expect(viewed(payoff, 'card')).toBe('− ');
+  });
+
+  it('signs a mixed journal by its income and expense net', () => {
+    const mixed = journal(
+      JournalDisplayType.MIXED,
+      [
+        leg('salary', AccountType.INCOME, 'SOURCE', 1000),
+        bank('DESTINATION', 900),
+        shopping('DESTINATION', 100),
+      ],
+      1000,
+    );
+    const card = mapJournalToEntryCardProps(mixed);
+    expect(card.presentation.amountPrefix).toBe('+ ');
+    expect(card.presentation.typeIcon).toBe('arrowUp');
+  });
+
+  it('falls back to the stored type for journal-only rows with no legs', () => {
+    const journalOnly = journal(JournalDisplayType.EXPENSE, [], 100);
+    expect(mapJournalToEntryCardProps(journalOnly).presentation.amountPrefix).toBe('− ');
+    expect(
+      mapJournalToEntryCardProps(journal(JournalDisplayType.INCOME, [], 100)).presentation
+        .amountPrefix,
+    ).toBe('+ ');
+  });
+
+  it('leaves a journal unsigned when its income and expense cancel out', () => {
+    const offset = journal(
+      JournalDisplayType.MIXED,
+      [
+        leg('salary', AccountType.INCOME, 'SOURCE', 100),
+        shopping('DESTINATION', 100),
+        bank('DESTINATION', 0),
+      ],
+      100,
+    );
+    const card = mapJournalToEntryCardProps(offset);
+    expect(card.presentation.amountPrefix).toBe('');
+    expect(card.presentation.typeIcon).toBe('document');
   });
 });

@@ -1,10 +1,13 @@
 import { AppConfig } from '@/src/constants';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { mapJournalToEntryCardProps } from '@/src/services/journal/journalTimelinePresentation';
+import {
+  journalFlowSignOf,
+  mapJournalToEntryCardProps,
+  postingFlowSignOf,
+} from '@/src/services/journal/journalTimelinePresentation';
 import type { GroupingOptions } from '@/src/hooks/useJournalListGrouping';
 import { amountInBaseCurrency, buildDayNetStats } from '@/src/services/ledger/buildDayNetStats';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
-import { JournalDisplayType } from '@/src/types/enums';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { logger } from '@/src/services/observability/logger';
 
@@ -21,7 +24,8 @@ function warnIfMissingFxRate(
 
 /**
  * Signed journal amount in workplace base currency for day-net headers.
- * Income +, expense −, transfer 0.
+ * Uses the same cash-flow sign as the journal row: income +, spending −,
+ * refunds +, balance-sheet-only journals 0.
  */
 function getJournalSignedBaseAmount(
   journal: EnrichedJournal,
@@ -35,14 +39,12 @@ function getJournalSignedBaseAmount(
     exchangeRateMap,
   );
   warnIfMissingFxRate(amount, journal.currencyCode, baseCurrency, exchangeRateMap);
-  if (journal.displayType === JournalDisplayType.INCOME) return amount;
-  if (journal.displayType === JournalDisplayType.EXPENSE) return -amount;
-  return 0;
+  return journalFlowSignOf(journal) * amount;
 }
 
 /**
- * Signed amount from a viewer account leg for day-net headers.
- * DESTINATION = +, SOURCE = −.
+ * Signed amount from a viewer account leg for day-net headers, using the
+ * same cash-flow sign as the viewed row.
  */
 export function getJournalViewerSignedAmount(
   journal: EnrichedJournal,
@@ -55,9 +57,8 @@ export function getJournalViewerSignedAmount(
   const legCurrency = viewerAccount?.currencyCode || journal.currencyCode;
   const amount = amountInBaseCurrency(legAmount, legCurrency, baseCurrency, exchangeRateMap);
   warnIfMissingFxRate(amount, legCurrency, baseCurrency, exchangeRateMap);
-  if (viewerAccount?.role === 'DESTINATION') return amount;
-  if (viewerAccount?.role === 'SOURCE') return -amount;
-  return 0;
+  if (!viewerAccount) return 0;
+  return postingFlowSignOf(viewerAccount) * amount;
 }
 
 export function buildTimelineGroupingOptions(

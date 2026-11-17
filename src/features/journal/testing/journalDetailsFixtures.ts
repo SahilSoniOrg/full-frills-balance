@@ -60,7 +60,7 @@ export function journalDetailsFixture(
       statusLabel: 'Posted',
       statusVariant: 'income',
       amount: 52,
-      amountPrefix: '-',
+      amountPrefix: '− ',
       amountColor: 'expense',
       currencyCode: 'INR',
       dateLine: 'Expense · Mon, Oct 5 · 08:39',

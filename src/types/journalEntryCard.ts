@@ -37,6 +37,8 @@ export interface JournalEntryCardProps {
     showTypeBadge: boolean;
     typeIcon: IconName;
     typeColor: string;
+    /** Colour for the amount: income for +, expense for −, text when unsigned. */
+    amountColorKey?: 'income' | 'expense' | 'text';
     amountPrefix?: string;
   };
   accountFlow: JournalEntryAccountFlow;

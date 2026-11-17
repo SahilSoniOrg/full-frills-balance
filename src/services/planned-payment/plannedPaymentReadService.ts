@@ -1,4 +1,5 @@
 import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
+import { obligationDirection } from '@/src/domain/accounting/presentationPolicy';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
@@ -103,17 +104,7 @@ export function classifyPlannedPaymentDirection(
   fromType: AccountType | undefined,
   toType: AccountType | undefined,
 ): PlannedPaymentObligation['flowDirection'] {
-  if (!fromType || !toType) return 'unknown';
-  const isBalanceSheet = (type: AccountType) =>
-    type === AccountType.ASSET || type === AccountType.LIABILITY;
-  const isIncomeStatement = (type: AccountType) =>
-    type === AccountType.INCOME || type === AccountType.EXPENSE;
-  if (isBalanceSheet(fromType) && toType === AccountType.EXPENSE) return 'outflow';
-  if (isIncomeStatement(fromType) && isBalanceSheet(toType)) return 'inflow';
-  if (fromType === toType && isBalanceSheet(fromType)) return 'transfer';
-  if (fromType === AccountType.ASSET && toType === AccountType.LIABILITY) return 'outflow';
-  if (fromType === AccountType.LIABILITY && toType === AccountType.ASSET) return 'inflow';
-  return 'unknown';
+  return obligationDirection(fromType, toType);
 }
 
 export function projectPlannedPaymentObligations(

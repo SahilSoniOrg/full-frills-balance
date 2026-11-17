@@ -1,51 +1,11 @@
 import { AccountType, JournalDisplayType, SemanticType } from '@/src/types/enums';
+import { SEMANTIC_MATRIX } from '@/src/domain/accounting/presentationPolicy';
 import {
   deriveJournalDisplayType,
   getSourceAndDestTypes,
   type DisplayTypeLine,
 } from '@/src/domain/accounting/journalDisplayType';
 
-const SEMANTIC_MATRIX: Record<AccountType, Record<AccountType, SemanticType>> = {
-  [AccountType.ASSET]: {
-    [AccountType.ASSET]: SemanticType.TRANSFER,
-    [AccountType.LIABILITY]: SemanticType.DEBT_PAYMENT,
-    [AccountType.EQUITY]: SemanticType.OWNER_WITHDRAWAL,
-    [AccountType.INCOME]: SemanticType.INCOME_REVERSAL,
-    [AccountType.EXPENSE]: SemanticType.PURCHASE,
-  },
-
-  [AccountType.LIABILITY]: {
-    [AccountType.ASSET]: SemanticType.BORROWING,
-    [AccountType.LIABILITY]: SemanticType.LIABILITY_TRANSFER,
-    [AccountType.EQUITY]: SemanticType.DEBT_CONVERSION,
-    [AccountType.INCOME]: SemanticType.LIABILITY_ADJUSTMENT,
-    [AccountType.EXPENSE]: SemanticType.PURCHASE,
-  },
-
-  [AccountType.EQUITY]: {
-    [AccountType.ASSET]: SemanticType.BALANCE_ADJUSTMENT,
-    [AccountType.LIABILITY]: SemanticType.LIABILITY_FUNDING,
-    [AccountType.EQUITY]: SemanticType.EQUITY_TRANSFER,
-    [AccountType.INCOME]: SemanticType.EQUITY_INCOME_ADJUSTMENT,
-    [AccountType.EXPENSE]: SemanticType.OWNER_SPENDING,
-  },
-
-  [AccountType.INCOME]: {
-    [AccountType.ASSET]: SemanticType.INCOME_RECEIVED,
-    [AccountType.LIABILITY]: SemanticType.DEBT_PAYDOWN,
-    [AccountType.EQUITY]: SemanticType.SAVINGS_ALLOCATION,
-    [AccountType.INCOME]: SemanticType.INCOME_RECLASSIFICATION,
-    [AccountType.EXPENSE]: SemanticType.TAX_OR_FEE,
-  },
-
-  [AccountType.EXPENSE]: {
-    [AccountType.ASSET]: SemanticType.REFUND,
-    [AccountType.LIABILITY]: SemanticType.CREDIT_REFUND,
-    [AccountType.EQUITY]: SemanticType.EXPENSE_CAPITALIZATION,
-    [AccountType.INCOME]: SemanticType.EXPENSE_REVERSAL,
-    [AccountType.EXPENSE]: SemanticType.EXPENSE_RECLASSIFICATION,
-  },
-};
 export const SEMANTIC_TYPE_LABELS: Record<SemanticType, string> = {
   // Asset sourced
   [SemanticType.TRANSFER]: 'Transfer',

@@ -1,8 +1,17 @@
-import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { AppConfig } from '@/src/constants';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType, SemanticType } from '@/src/types/enums';
+import {
+  flowIconKey,
+  journalFlowSign,
+  legSign,
+  signColorKey,
+  signPrefix,
+  transactionTypeForRole,
+  type FlowSign,
+} from '@/src/domain/accounting/presentationPolicy';
 import { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 import {
   convertJournalCurrencyAmount,
@@ -31,41 +40,69 @@ const ROUTINE_DISPLAY_TYPES = new Set<JournalDisplayType>([
   JournalDisplayType.TRANSFER,
 ]);
 
-export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
-  typeIcon: JournalTimelineIconKey;
-  amountPrefix: string;
-} {
-  let typeIcon: JournalTimelineIconKey = Icon.Document;
-  let amountPrefix = '';
+const ICON_BY_FLOW_KEY: Record<ReturnType<typeof flowIconKey>, JournalTimelineIconKey> = {
+  up: Icon.ArrowUp,
+  down: Icon.ArrowDown,
+  swap: Icon.SwapHorizontal,
+  document: Icon.Document,
+};
 
-  if (displayType === JournalDisplayType.INCOME) {
-    typeIcon = Icon.ArrowUp;
-    amountPrefix = '+ ';
-  } else if (displayType === JournalDisplayType.EXPENSE) {
-    typeIcon = Icon.ArrowDown;
-    amountPrefix = '− ';
-  } else if (displayType === JournalDisplayType.TRANSFER) {
-    typeIcon = Icon.SwapHorizontal;
-  }
-
-  return { typeIcon, amountPrefix };
+/**
+ * Icon and prefix for a FLOW row. Balance-sheet-only rows get a neutral icon
+ * and no prefix.
+ */
+export function flowChrome(
+  sign: FlowSign,
+  displayType: JournalDisplayType,
+): { typeIcon: JournalTimelineIconKey; amountPrefix: string } {
+  return {
+    typeIcon: ICON_BY_FLOW_KEY[flowIconKey(sign, displayType)],
+    amountPrefix: signPrefix(sign),
+  };
 }
 
-export function ledgerLineChrome(isIncrease: boolean): {
-  typeIcon: JournalTimelineIconKey;
-  amountPrefix: string;
-} {
-  return {
-    typeIcon: isIncrease ? Icon.ArrowUp : Icon.ArrowDown,
-    amountPrefix: isIncrease ? '+ ' : '− ',
-  };
+/** LEG sign of one posting leg, from its account type and its debit or credit role. */
+export function postingFlowSignOf(account: EnrichedJournal['accounts'][number]): FlowSign {
+  const transactionType = transactionTypeForRole(account.role);
+  return transactionType ? legSign(account.accountType, transactionType) : 0;
+}
+
+/**
+ * Fallback FLOW sign when no posting legs are loaded (journal-only rows). The
+ * stored type is then the only signal.
+ */
+export function displayTypeFlowSign(displayType: JournalDisplayType | undefined): FlowSign {
+  if (displayType === JournalDisplayType.INCOME) return 1;
+  if (displayType === JournalDisplayType.EXPENSE) return -1;
+  return 0;
+}
+
+/**
+ * FLOW sign of a whole journal, from its income and expense legs. A leg without
+ * a usable journal-currency amount uses the journal total instead.
+ */
+export function journalFlowSignOf(journal: EnrichedJournal): FlowSign {
+  if (journal.accounts.length === 0) return displayTypeFlowSign(journal.displayType);
+  const lines = journal.accounts.flatMap(account => {
+    const transactionType = transactionTypeForRole(account.role);
+    if (!transactionType) return [];
+    return [
+      {
+        accountType: account.accountType,
+        transactionType,
+        amount: legJournalAmount(journal, account) ?? journal.totalAmount,
+      },
+    ];
+  });
+  return journalFlowSign(lines);
 }
 
 function toCardPresentation(
   displayType: JournalDisplayType,
   semanticLabel: string | undefined,
   semanticType: SemanticType | undefined,
-  chrome: ReturnType<typeof journalDisplayTypeChrome>,
+  sign: FlowSign,
+  chrome: ReturnType<typeof flowChrome>,
 ): JournalEntryCardProps['presentation'] {
   const presentation = journalPresenter.getPresentation(displayType, semanticLabel, semanticType);
   const hasSemanticType = semanticType != null && semanticType !== SemanticType.UNKNOWN;
@@ -75,6 +112,7 @@ function toCardPresentation(
       ? !ROUTINE_SEMANTIC_TYPES.has(semanticType)
       : !ROUTINE_DISPLAY_TYPES.has(displayType),
     typeColor: presentation.colorKey,
+    amountColorKey: signColorKey(sign),
     typeIcon: chrome.typeIcon,
     amountPrefix: chrome.amountPrefix,
   };
@@ -103,33 +141,40 @@ export function accountEntryLeg(
   };
 }
 
+/** A leg's amount in the journal currency, when its rate is known. */
+function legJournalAmount(
+  journal: EnrichedJournal,
+  account: EnrichedJournal['accounts'][number],
+): number | undefined {
+  const journalPrecision = getCurrencyPrecision(journal.currencyCode);
+  const currencyCode = account.currencyCode?.trim().toUpperCase();
+  const amount =
+    account.amount != null && Number.isFinite(account.amount) && account.amount >= 0
+      ? account.amount
+      : undefined;
+  const rate = currencyCode
+    ? resolveJournalFxRate({
+        accountCurrency: currencyCode,
+        journalCurrency: journal.currencyCode,
+        importedRate: account.exchangeRate,
+      }).rate
+    : undefined;
+  return amount != null && rate != null && currencyCode
+    ? convertJournalCurrencyAmount({
+        nativeAmount: amount,
+        nativePrecision: getCurrencyPrecision(currencyCode),
+        exchangeRate: rate,
+        journalPrecision,
+      }).journalAmount
+    : undefined;
+}
+
 function buildAccountFlow(
   journal: EnrichedJournal,
   viewerAccount?: EnrichedJournal['accounts'][number],
 ): JournalEntryAccountFlow {
-  const journalPrecision = getCurrencyPrecision(journal.currencyCode);
   const legs = journal.accounts.map((account, index) => {
-    const currencyCode = account.currencyCode?.trim().toUpperCase();
-    const amount =
-      account.amount != null && Number.isFinite(account.amount) && account.amount >= 0
-        ? account.amount
-        : undefined;
-    const rate = currencyCode
-      ? resolveJournalFxRate({
-          accountCurrency: currencyCode,
-          journalCurrency: journal.currencyCode,
-          importedRate: account.exchangeRate,
-        }).rate
-      : undefined;
-    const journalAmount =
-      amount != null && rate != null && currencyCode
-        ? convertJournalCurrencyAmount({
-            nativeAmount: amount,
-            nativePrecision: getCurrencyPrecision(currencyCode),
-            exchangeRate: rate,
-            journalPrecision,
-          }).journalAmount
-        : undefined;
+    const journalAmount = legJournalAmount(journal, account);
     const leg = accountEntryLeg(
       account,
       account.role,
@@ -191,9 +236,10 @@ export function mapJournalToEntryCardProps(
           (!viewer.transactionId || account.transactionId === viewer.transactionId),
       )
     : undefined;
-  const chrome = viewerAccount
-    ? ledgerLineChrome(viewerAccount.role === 'DESTINATION')
-    : journalDisplayTypeChrome(displayType);
+  // The same cash-flow sign for every view: the viewed leg in account views,
+  // the journal's income and expense net otherwise.
+  const sign = viewerAccount ? postingFlowSignOf(viewerAccount) : journalFlowSignOf(journal);
+  const chrome = flowChrome(sign, displayType);
 
   return {
     title: journal.description || defaultTitle,
@@ -204,6 +250,7 @@ export function mapJournalToEntryCardProps(
       displayType,
       journal.semanticLabel,
       journal.semanticType,
+      sign,
       chrome,
     ),
     accountFlow: buildAccountFlow(journal, viewerAccount),

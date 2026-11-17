@@ -1,6 +1,12 @@
 import { AppConfig, type ColorKey } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import {
+  balanceIncreaseTransaction,
+  legSign,
+  signPrefix,
+  type FlowSign,
+} from '@/src/domain/accounting/presentationPolicy';
+import {
   describePeriodRange,
   type DateRange,
   type PeriodRangeFacts,
@@ -8,7 +14,7 @@ import {
 import type { ComponentVariant } from '@/src/design-system/variants';
 import dayjs from 'dayjs';
 
-type Sign = '+' | '−';
+type Sign = ReturnType<typeof signPrefix>;
 
 export interface AccountPeriodPresentationMetrics {
   totalIncrease: number;
@@ -102,8 +108,14 @@ export function previousComparableRange(
   };
 }
 
-const signOf = (value: number): Sign | undefined => (value > 0 ? '+' : value < 0 ? '−' : undefined);
-const minusOnly = (value: number): Sign | undefined => (value < 0 ? '−' : undefined);
+/** Sign for a net balance change of this account, by the LEG rule. */
+function accountNetSign(accountType: AccountType, net: number): Sign | undefined {
+  const direction = net > 0 ? 1 : net < 0 ? -1 : 0;
+  const sign = (direction *
+    legSign(accountType, balanceIncreaseTransaction(accountType))) as FlowSign;
+  const prefix = signPrefix(sign);
+  return prefix ? (prefix as Sign) : undefined;
+}
 
 export function presentAccountPeriod({
   accountType,
@@ -117,6 +129,7 @@ export function presentAccountPeriod({
   /** Net change over the comparable earlier period, e.g. last month up to the same day. */
   previous?: { label: string; netChange: number } | null;
 }): AccountPeriodPresentation {
+  const accountSign = (value: number) => accountNetSign(accountType, value);
   const increase = metrics.totalIncrease;
   const decrease = metrics.totalDecrease;
   const net = increase - decrease;
@@ -138,7 +151,7 @@ export function presentAccountPeriod({
     return {
       heroLabel: 'Net change',
       heroAmount: Math.abs(net),
-      heroSign: signOf(net),
+      heroSign: accountSign(net),
       badge:
         net > 0
           ? { label: 'Balance grew', variant: 'warning' }
@@ -157,7 +170,7 @@ export function presentAccountPeriod({
         { label: 'Charged', amount: increase, tone: 'expense' },
         { label: 'Paid', amount: decrease, tone: 'income' },
       ],
-      comparison: comparison(signOf),
+      comparison: comparison(accountSign),
       isEmpty,
     };
   }
@@ -166,6 +179,7 @@ export function presentAccountPeriod({
     return {
       heroLabel: net < 0 ? 'Refunded' : 'Spent',
       heroAmount: Math.abs(net),
+      heroSign: accountSign(net),
       badge: null,
       bar: null,
       stats: [
@@ -177,7 +191,7 @@ export function presentAccountPeriod({
           : []),
         ...perDay(),
       ],
-      comparison: comparison(minusOnly),
+      comparison: comparison(accountSign),
       isEmpty,
     };
   }
@@ -186,7 +200,7 @@ export function presentAccountPeriod({
     return {
       heroLabel: 'Earned',
       heroAmount: Math.abs(net),
-      heroSign: minusOnly(net),
+      heroSign: accountSign(net),
       badge: null,
       bar: null,
       stats: [
@@ -198,7 +212,7 @@ export function presentAccountPeriod({
           : []),
         ...perDay(),
       ],
-      comparison: comparison(minusOnly),
+      comparison: comparison(accountSign),
       isEmpty,
     };
   }
@@ -206,7 +220,7 @@ export function presentAccountPeriod({
   return {
     heroLabel: 'Net change',
     heroAmount: Math.abs(net),
-    heroSign: signOf(net),
+    heroSign: accountSign(net),
     badge:
       net < 0
         ? { label: 'Drawing down', variant: 'warning' }
@@ -218,7 +232,7 @@ export function presentAccountPeriod({
       { label: 'In', amount: increase, tone: 'income' },
       { label: 'Out', amount: decrease, tone: 'expense' },
     ],
-    comparison: comparison(signOf),
+    comparison: comparison(accountSign),
     isEmpty,
   };
 }

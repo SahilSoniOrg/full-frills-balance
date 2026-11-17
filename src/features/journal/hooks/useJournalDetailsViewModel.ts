@@ -1,4 +1,6 @@
 import { AppConfig } from '@/src/constants';
+import { journalFlowSign } from '@/src/domain/accounting/presentationPolicy';
+import { displayTypeFlowSign } from '@/src/services/journal/journalTimelinePresentation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   evaluateJournalBalance,
@@ -207,6 +209,23 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     [transactions, balanceEvaluation, journal?.currencyCode, status],
   );
 
+  const flowSign = useMemo(() => {
+    const lines = transactions.flatMap(item => {
+      if (!item.accountType) return [];
+      const journalValue = balanceEvaluation?.lineValues.find(
+        line => line.id === item.id,
+      )?.journalAmount;
+      return [
+        {
+          accountType: item.accountType,
+          transactionType: item.transactionType,
+          amount: journalValue ?? item.amount,
+        },
+      ];
+    });
+    return lines.length > 0 ? journalFlowSign(lines) : displayTypeFlowSign(journal?.displayType);
+  }, [transactions, balanceEvaluation, journal?.displayType]);
+
   const details = useMemo((): JournalDetailsSections | null => {
     if (!journal) return null;
     const strings = AppConfig.strings.journalDetails;
@@ -218,6 +237,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
       journalId: journal.id,
       summary: buildJournalSummary(journal, {
         evaluation: balanceEvaluation,
+        flowSign,
         entryCount: transactions.length,
         today,
         hourCycle: resolvedHourCycle,
@@ -269,6 +289,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     journalId,
     status,
     balanceEvaluation,
+    flowSign,
     transactions.length,
     today,
     resolvedHourCycle,

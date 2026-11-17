@@ -5,7 +5,11 @@ import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments
 import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { journalDisplayTypeChrome } from '@/src/services/journal/journalTimelinePresentation';
+import {
+  obligationSign,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 import { JournalDisplayType } from '@/src/types/enums';
 import { getNow } from '@/src/utils/dateFormatting';
 import { useCallback, useMemo, useState } from 'react';
@@ -95,7 +99,11 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
           {sortedItems.map(item => {
             const displayType = resolveDisplayType(String(item.displayType));
             const presentation = journalPresenter.getPresentation(displayType);
-            const chrome = journalDisplayTypeChrome(displayType);
+            // Upcoming money uses the OBLIGATION direction, from SOURCE to DESTINATION.
+            const sign = obligationSign(
+              item.accounts.find(a => a.role === 'SOURCE')?.accountType,
+              item.accounts.find(a => a.role === 'DESTINATION')?.accountType,
+            );
 
             const dateObj = new Date(item.occurrenceDate);
             const dateStr = dateObj.toLocaleDateString(undefined, {
@@ -153,11 +161,11 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
                 <MoneyText
                   amount={item.amount}
                   currencyCode={item.currencyCode}
-                  prefix={chrome.amountPrefix || undefined}
+                  prefix={signPrefix(sign) || undefined}
                   formatStyle="compact"
                   variant="body"
                   weight="medium"
-                  style={{ color: typeColor || theme.text }}
+                  style={{ color: theme[signColorKey(sign)] }}
                 />
               </PressScaleTouchable>
             );
