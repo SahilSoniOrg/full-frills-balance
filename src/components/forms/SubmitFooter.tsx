@@ -107,13 +107,17 @@ export const SubmitFooter = ({
       {above}
 
       <View style={styles.buttonRow}>
+        {/* Never disable the wrapper: on web that marks the enabled button inside it as disabled too. */}
         <Pressable
           style={styles.submitButtonWrapper}
-          disabled={!disabled}
-          onPress={() => {
-            setAttempted(true);
-            onDisabledPress?.();
-          }}
+          onPress={
+            disabled
+              ? () => {
+                  setAttempted(true);
+                  onDisabledPress?.();
+                }
+              : undefined
+          }
           accessible={false}
         >
           {pulse ? (

@@ -25,4 +25,23 @@ describe('SubmitFooter', () => {
     expect(screen.getByText('Choose a category')).toBeTruthy();
     expect(screen.getByTestId('submit-footer-button').props.accessibilityState.disabled).toBe(true);
   });
+
+  it('leaves an enabled button enabled, wrapper included', () => {
+    const onPress = jest.fn();
+    const screen = render(
+      <ThemeOverride mode="light" themeId={ThemeIds.DEEP_SPACE}>
+        <SubmitFooter
+          onPress={onPress}
+          label="Save budget"
+          disabled={false}
+          requirementHint="Choose a category"
+        />
+      </ThemeOverride>,
+    );
+
+    expect(screen.getByTestId('submit-footer-button')).toBeEnabled();
+    fireEvent.press(screen.getByTestId('submit-footer-button'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Choose a category')).toBeNull();
+  });
 });
