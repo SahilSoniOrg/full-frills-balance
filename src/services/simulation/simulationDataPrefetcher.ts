@@ -119,7 +119,8 @@ export async function fetchStatementValues(
           ),
         ]);
 
-        const rawBal = Math.abs(latestBalances.get(lb.account.id) || 0);
+        // Signed: a negative card balance is a credit, not a debt. The generator floors what is owed.
+        const rawBal = latestBalances.get(lb.account.id) || 0;
         const statementBal = convert(rawBal, lb.account.currencyCode || toCurrency);
         balances.set(lb.account.id, statementBal);
 

@@ -446,7 +446,8 @@ export function observeSafeToSpendInputSnapshot(
           );
 
           const liabilityAccountBalances = mapped.liquidLiabilities.map(l => {
-            const balance = Math.abs(balancesMapByAccountId.get(l.id) || 0);
+            // Signed: a negative balance is a credit the generator applies to future bills.
+            const balance = balancesMapByAccountId.get(l.id) || 0;
             return { account: l, balance };
           });
 

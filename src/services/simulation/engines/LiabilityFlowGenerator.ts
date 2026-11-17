@@ -147,6 +147,10 @@ export class LiabilityFlowGenerator {
     const obligations: Obligation[] = [];
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
     const statementDay = metadata?.statementDay;
+    // A negative balance is a credit on the account: nothing is owed on it, and it
+    // offsets future charges before they become bills.
+    const owedNow = Math.max(0, currentBalance);
+    let creditAvailable = Math.max(0, -currentBalance);
 
     const isMinMode = metadata?.minPaymentOnly === true;
     const paymentModeLabel = isMinMode ? ' (Min)' : '';
@@ -185,7 +189,7 @@ export class LiabilityFlowGenerator {
         if (metadata?.minPaymentOnly) {
           const absoluteMin = metadata?.minimumPaymentAmount || 0;
           const percentMin = metadata?.minimumPaymentPercent
-            ? (currentBalance * metadata.minimumPaymentPercent) / 100
+            ? (owedNow * metadata.minimumPaymentPercent) / 100
             : 0;
           const calculatedMin = Math.max(absoluteMin, percentMin);
 
@@ -193,16 +197,16 @@ export class LiabilityFlowGenerator {
           amountDueAtD1 = Math.max(0, calculatedMin - settledSinceStatement);
         }
 
-        amountDueAtD1 = Math.min(currentBalance, amountDueAtD1);
+        amountDueAtD1 = Math.min(owedNow, amountDueAtD1);
         firstCycle.amount = amountDueAtD1;
 
         // 2. Remaining current balance goes to next cycle
         if (cycles.length > 1) {
-          cycles[1].amount = Math.max(0, currentBalance - amountDueAtD1);
+          cycles[1].amount = Math.max(0, owedNow - amountDueAtD1);
         }
       } else {
         // All current balance belongs to the first (not yet generated) bill
-        firstCycle.amount = currentBalance;
+        firstCycle.amount = owedNow;
       }
 
       // 3. Distribute spending flows into relevant statement cycles
@@ -218,6 +222,13 @@ export class LiabilityFlowGenerator {
         if (cycle) {
           cycle.amount += f.amount;
         }
+      }
+
+      // 3b. The credit on the card pays down bills in order, before they are emitted
+      for (const c of cycles) {
+        const offset = Math.min(creditAvailable, c.amount);
+        c.amount -= offset;
+        creditAvailable -= offset;
       }
 
       // 4. Emit obligations
@@ -250,10 +261,11 @@ export class LiabilityFlowGenerator {
       }
     } else {
       // Non-CC liability, or CC without statement cycle.
-      let remainingBalance = currentBalance;
+      let remainingBalance = owedNow;
       for (const f of spendingFlows) {
         remainingBalance += f.amount;
       }
+      remainingBalance = Math.max(0, remainingBalance - creditAvailable);
 
       const rawEmiAmount =
         metadata?.emiAmount ??

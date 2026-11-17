@@ -402,3 +402,67 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
     });
   });
 });
+
+describe('LiabilityFlowGenerator - overpaid credit cards', () => {
+  const startOfToday = dayjs('2026-04-01').startOf('day');
+  const context = {
+    simulationStartMs: startOfToday.valueOf(),
+    simulationEndMs: startOfToday.add(60, 'day').valueOf(),
+    simulationDays: 60,
+    convert: (amount: number) => amount,
+    resultCurrency: 'USD',
+    liquidAccountIds: new Set(['cash']),
+    liabilityAccountIds: new Set(['cc-1']),
+  } as any;
+  const cc = mockAcc('cc-1', AccountSubtype.CREDIT_CARD, 'Visa');
+  const metadata = { statementDay: 1, dueDay: 15 };
+  const spend = (amount: number, dayOffset: number) =>
+    ({ kind: 'OUTFLOW', accountId: 'cc-1', amount, dayOffset }) as any;
+  const owed = (obligations: Obligation[]) =>
+    obligations.reduce((total, obligation) => total + obligation.amount, 0);
+
+  it('owes nothing on a card that is overpaid, not a payment for the credit', () => {
+    const obligations = generateObligations(
+      cc,
+      -500,
+      metadata,
+      -500,
+      0,
+      startOfToday,
+      60,
+      [],
+      context,
+    );
+    expect(obligations).toEqual([]);
+  });
+
+  it('lets the credit on the card cover spending before it becomes a bill', () => {
+    const obligations = generateObligations(
+      cc,
+      -500,
+      metadata,
+      -500,
+      0,
+      startOfToday,
+      60,
+      [spend(300, 5)],
+      context,
+    );
+    expect(owed(obligations)).toBe(0);
+  });
+
+  it('reduces a bill by the credit and keeps the rest', () => {
+    const obligations = generateObligations(
+      cc,
+      -500,
+      metadata,
+      -500,
+      0,
+      startOfToday,
+      60,
+      [spend(800, 5)],
+      context,
+    );
+    expect(owed(obligations)).toBe(300);
+  });
+});
