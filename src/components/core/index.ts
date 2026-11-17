@@ -47,6 +47,8 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { InlineSearchField } from './InlineSearchField';
 export type { InlineSearchFieldProps } from './InlineSearchField';
 export { SearchField } from './SearchField';
+export { DisclosureToggle } from './DisclosureToggle';
+export type { DisclosureToggleProps } from './DisclosureToggle';
 export type { SearchFieldProps } from './SearchField';
 export { FloatingActionButton } from './FloatingActionButton';
 export { IconButton } from './IconButton';

@@ -1,6 +1,12 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import type { AccountMatcherSnapshot, AccountMatcherProposal } from '@/src/types/accountMatcher';
-import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
+import {
+  AppIcon,
+  AppText,
+  DisclosureToggle,
+  Icon,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -238,22 +244,12 @@ export function AccountMatchersSectionView({
 
       {discovery.suppressedProposals.length ? (
         <View>
-          <PressScaleTouchable
-            style={styles.disclosure}
-            onPress={() => setShowDismissed(value => !value)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showDismissed }}
+          <DisclosureToggle
+            label={copy.showDismissed(discovery.suppressedProposals.length)}
+            expanded={showDismissed}
+            onToggle={() => setShowDismissed(value => !value)}
             testID="account-matcher-suppressed-title"
-          >
-            <AppText variant="bodySmall" color="secondary" style={styles.flex}>
-              {copy.showDismissed(discovery.suppressedProposals.length)}
-            </AppText>
-            <AppIcon
-              name={showDismissed ? Icon.ChevronUp : Icon.ChevronDown}
-              size={Size.iconXs}
-              color={theme.textSecondary}
-            />
-          </PressScaleTouchable>
+          />
           {showDismissed
             ? discovery.suppressedProposals.map((proposal, index) => (
                 <AccountMatcherSuppressedRow

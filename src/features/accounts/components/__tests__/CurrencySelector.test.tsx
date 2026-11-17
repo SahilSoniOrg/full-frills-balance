@@ -15,6 +15,7 @@ jest.mock('@/src/components/core', () => {
     AppText: ({ children, style, ...props }: any) =>
       React.createElement(Text, { ...props, style }, children),
     AppInput: ({ style, ...props }: any) => React.createElement(TextInput, { ...props, style }),
+    SearchField: (props: any) => React.createElement(TextInput, props),
     AppIcon: ({ name, style, ...props }: any) =>
       React.createElement(View, { ...props, style, 'data-icon': name }),
     AppCard: ({ children, style, ...props }: any) =>

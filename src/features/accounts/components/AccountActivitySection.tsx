@@ -1,4 +1,3 @@
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
@@ -8,8 +7,8 @@ import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
-import { AppIcon, AppText, Badge, Icon } from '@/src/components/core';
-import { Size, Spacing } from '@/src/constants';
+import { AppText, Badge, DisclosureToggle } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import {
@@ -198,26 +197,14 @@ export function AccountActivitySection({
 
         {showChart && chartData.length > 0 ? (
           <View>
-            <PressScaleTouchable
-              onPress={() => setChartExpanded(expanded => !expanded)}
-              accessibilityRole="button"
+            <DisclosureToggle
+              label={chartTitle}
+              meta={chartExpanded ? 'Hide chart' : 'Show chart'}
+              expanded={chartExpanded}
+              onToggle={() => setChartExpanded(expanded => !expanded)}
               accessibilityLabel={`${chartExpanded ? 'Hide' : 'Show'} ${chartTitle.toLowerCase()} chart`}
-              accessibilityState={{ expanded: chartExpanded }}
               testID="account-trend-toggle"
-              style={styles.chartToggle}
-            >
-              <AppText variant="bodySmall" weight="medium" style={styles.trendTitle}>
-                {chartTitle}
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                {chartExpanded ? 'Hide chart' : 'Show chart'}
-              </AppText>
-              <AppIcon
-                name={chartExpanded ? Icon.ChevronUp : Icon.ChevronDown}
-                size={Size.iconXs}
-                color={theme.textSecondary}
-              />
-            </PressScaleTouchable>
+            />
             {chartExpanded ? (
               <View testID="account-trend-chart">
                 {rollingAverageData.length > 0 ? (
@@ -385,16 +372,6 @@ const styles = StyleSheet.create({
   },
   stackedStat: {
     width: '100%',
-  },
-  chartToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    minHeight: Size.touchTarget,
-  },
-  trendTitle: {
-    flex: 1,
-    minWidth: 0,
   },
   chartWrap: {
     marginTop: Spacing.sm,

@@ -1,6 +1,6 @@
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { AppIcon, AppText, Icon, ListRow, PressScaleTouchable } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { AppText, DisclosureToggle, ListRow } from '@/src/components/core';
+import { Shape, Spacing } from '@/src/constants/design-tokens';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountMatcherPreviewMessage } from '@/src/types/accountMatcher';
@@ -106,27 +106,13 @@ export function MatcherEvidenceDisclosure({
   const [expanded, setExpanded] = useState(false);
   return (
     <View style={[styles.evidence, { borderTopColor: theme.border }]}>
-      <PressScaleTouchable
-        onPress={() => setExpanded(value => !value)}
-        pressScale="subtle"
-        style={styles.evidenceToggle}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        accessibilityLabel={`${title}, ${count}`}
+      <DisclosureToggle
+        label={title}
+        meta={count}
+        expanded={expanded}
+        onToggle={() => setExpanded(value => !value)}
         testID={`${testID}-toggle`}
-      >
-        <AppText variant="bodySmall" weight="medium" style={styles.choiceText}>
-          {title}
-        </AppText>
-        <AppText variant="bodySmall" color="secondary" tabular>
-          {count}
-        </AppText>
-        <AppIcon
-          name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={Size.iconXs}
-          color="textSecondary"
-        />
-      </PressScaleTouchable>
+      />
       {expanded ? (
         <View style={styles.evidenceBody} testID={testID}>
           {children}
@@ -145,12 +131,5 @@ const styles = StyleSheet.create({
   example: { borderRadius: Shape.radius.md, padding: Spacing.lg, gap: Spacing.xs },
   messageBody: { marginTop: Spacing.sm },
   evidence: { borderTopWidth: StyleSheet.hairlineWidth },
-  evidenceToggle: {
-    minHeight: Size.touchTargetLg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
   evidenceBody: { gap: Spacing.md, paddingBottom: Spacing.lg },
 });
