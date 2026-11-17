@@ -47,3 +47,4 @@ try {
 } catch (err) {
   console.warn('upload-mapping-on-success: upload failed, but build succeeded:', err.message);
 }
+process.exit(0);
