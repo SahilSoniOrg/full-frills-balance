@@ -36,11 +36,12 @@ export const smokeScenarios: readonly {
     async run(driver) {
       await driver.launch('picker-ready');
       await driver.tapId('workplace-picker-create');
-      await driver.visibleId('workplace-name-input');
+      // Create starts the setup journey, which opens on its first step, not the name field.
+      await driver.visibleId('onboarding-screen');
       await driver.launch('picker-ready');
       await driver.tapId('workplace-picker-import');
       await driver.visibleId('restore-source-slice');
-      await driver.visibleText('Choose a backup format to replace the data on this device.');
+      await driver.visibleText('Choose a file to restore into a new Workplace.');
     },
   },
 ];
