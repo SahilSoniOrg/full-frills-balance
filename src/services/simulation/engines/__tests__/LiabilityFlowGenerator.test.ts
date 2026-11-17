@@ -436,7 +436,7 @@ describe('LiabilityFlowGenerator - overpaid credit cards', () => {
     expect(obligations).toEqual([]);
   });
 
-  it('lets the credit on the card cover spending before it becomes a bill', () => {
+  it('bills spending on an overpaid card in full, because the overpayment is cleared', () => {
     const obligations = generateObligations(
       cc,
       -500,
@@ -448,10 +448,10 @@ describe('LiabilityFlowGenerator - overpaid credit cards', () => {
       [spend(300, 5)],
       context,
     );
-    expect(owed(obligations)).toBe(0);
+    expect(owed(obligations)).toBe(300);
   });
 
-  it('reduces a bill by the credit and keeps the rest', () => {
+  it('bills a larger spend on an overpaid card in full, so the overpayment does not reduce it', () => {
     const obligations = generateObligations(
       cc,
       -500,
@@ -463,6 +463,6 @@ describe('LiabilityFlowGenerator - overpaid credit cards', () => {
       [spend(800, 5)],
       context,
     );
-    expect(owed(obligations)).toBe(300);
+    expect(owed(obligations)).toBe(800);
   });
 });

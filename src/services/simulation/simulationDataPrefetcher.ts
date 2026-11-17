@@ -119,8 +119,8 @@ export async function fetchStatementValues(
           ),
         ]);
 
-        // Signed: a negative card balance is a credit, not a debt. The generator floors what is owed.
-        const rawBal = latestBalances.get(lb.account.id) || 0;
+        // An overpaid card (negative balance) owes nothing.
+        const rawBal = Math.max(0, latestBalances.get(lb.account.id) || 0);
         const statementBal = convert(rawBal, lb.account.currencyCode || toCurrency);
         balances.set(lb.account.id, statementBal);
 
