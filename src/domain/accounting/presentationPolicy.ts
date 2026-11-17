@@ -224,6 +224,29 @@ export function flowIconKey(
   return displayType === JournalDisplayType.TRANSFER ? 'swap' : 'document';
 }
 
+/**
+ * Status states and the colour each one shows. A status colour names a state,
+ * such as a shortfall or an overdue bill. It is not the sign of an amount, so
+ * amounts never pick success or error themselves.
+ */
+export const STATUS_TONE = {
+  shortfall: 'error',
+  overdrawn: 'error',
+  overBudget: 'error',
+  overdue: 'error',
+  unfavorable: 'error',
+  favorable: 'success',
+  dueSoon: 'warning',
+  unvalued: 'warning',
+} as const;
+
+export type StatusState = keyof typeof STATUS_TONE;
+export type StatusColor = (typeof STATUS_TONE)[StatusState];
+
+export function statusTone(state: StatusState): StatusColor {
+  return STATUS_TONE[state];
+}
+
 export type PresentationIntent =
   'FLOW' | 'LEG' | 'OBLIGATION' | 'BANK_ENTRY' | 'DELTA' | 'UNSIGNED';
 

@@ -22,6 +22,7 @@ import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 import type { BudgetStatus } from '../helpers/budgetCardPresentation';
+import { statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 function statusIcon(status: BudgetStatus) {
   switch (status) {
@@ -142,7 +143,7 @@ export function BudgetCard({
               hug
               align="right"
               containerStyle={{ marginLeft: 'auto' }}
-              color={vm.isOver ? 'error' : 'text'}
+              color={vm.isOver ? statusTone('overBudget') : 'text'}
             >
               {headline}
             </FitText>

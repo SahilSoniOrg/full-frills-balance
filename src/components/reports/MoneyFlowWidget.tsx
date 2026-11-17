@@ -77,7 +77,7 @@ export function MoneyFlowWidget({ sankeyData, currencyCode, chartWidth }: MoneyF
                 label={AppConfig.strings.reports.sankeySurplus}
                 amount={summary.surplus}
                 currencyCode={currencyCode}
-                tone="success"
+                tone="income"
               />
             ) : null}
             {summary.deficit > 0 ? (
@@ -85,7 +85,7 @@ export function MoneyFlowWidget({ sankeyData, currencyCode, chartWidth }: MoneyF
                 label={AppConfig.strings.reports.sankeyDrawdown}
                 amount={summary.deficit}
                 currencyCode={currencyCode}
-                tone="error"
+                tone="expense"
               />
             ) : null}
           </View>
@@ -152,7 +152,7 @@ function SummaryItem({
   label: string;
   amount: number;
   currencyCode: string;
-  tone?: 'success' | 'error';
+  tone?: 'income' | 'expense';
 }) {
   return (
     <View style={styles.summaryItem}>

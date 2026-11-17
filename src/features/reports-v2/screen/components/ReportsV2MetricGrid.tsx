@@ -65,8 +65,7 @@ export function ReportsV2MetricGrid({
       {(section.metrics ?? []).map(item => {
         const explanation = explanationForMetric(section.id, item.id);
         const tone = metricTone(item.value);
-        const color =
-          tone === 'income' ? theme.success : tone === 'expense' ? theme.error : theme.text;
+        const color = tone === 'default' ? theme.text : theme[tone];
         const change = item.comparison?.percentageChange;
         return (
           <AppCard

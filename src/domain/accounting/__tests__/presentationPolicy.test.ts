@@ -15,6 +15,7 @@ import {
   pairFlowSign,
   signColorKey,
   signPrefix,
+  statusTone,
   transactionTypeForRole,
   type FlowSign,
   type ObligationDirection,
@@ -244,5 +245,15 @@ describe('presentation policy', () => {
         rule.intent,
       );
     }
+  });
+
+  describe('statusTone', () => {
+    it('names the colour each status state shows', () => {
+      expect(statusTone('shortfall')).toBe('error');
+      expect(statusTone('overBudget')).toBe('error');
+      expect(statusTone('overdue')).toBe('error');
+      expect(statusTone('favorable')).toBe('success');
+      expect(statusTone('dueSoon')).toBe('warning');
+    });
   });
 });

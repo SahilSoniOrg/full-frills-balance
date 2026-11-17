@@ -17,7 +17,7 @@ import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/types/enums';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signPrefix, statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendLedgerProps {
   labels: SafeToSpendLabels;
@@ -142,7 +142,7 @@ export const SafeToSpendLedger = ({
                       <AppText
                         variant="caption"
                         weight="bold"
-                        color={isShortfall ? 'error' : 'primary'}
+                        color={isShortfall ? statusTone('shortfall') : 'primary'}
                         tabular
                       >
                         {isShortfall ? signPrefix(-1) : ''}

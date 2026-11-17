@@ -14,6 +14,7 @@ import type { PlainBudget } from '@/src/types/plainDtos';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 interface BudgetDetailHeaderProps {
   budget: PlainBudget;
@@ -93,7 +94,7 @@ export function BudgetDetailHeader({
             currencyCode={budget.currencyCode}
             prefix={usage.hasUnvaluedEntries ? '≈' : undefined}
             variant="title"
-            color={usageVm.isOver ? 'error' : 'text'}
+            color={usageVm.isOver ? statusTone('overBudget') : 'text'}
             fit={{
               maxFontSize: Typography.roles.title.fontSize,
               minFontSize: Typography.sizes.xl,

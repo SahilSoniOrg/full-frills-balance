@@ -4,7 +4,7 @@ import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDa
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface IncomeStepBreakdownProps {
   income: SafeToSpendViewModel['income'];
@@ -47,7 +47,7 @@ export const IncomeStepBreakdown = ({
                 <AppIcon
                   name={inc.type === 'PLANNED_PAYMENT' ? Icon.Calendar : Icon.Refresh}
                   size={Size.xxs}
-                  color={theme.success}
+                  color={theme.income}
                 />
                 <AppText variant="caption" color="secondary">
                   Day {inc.dayOffset} •{' '}
@@ -55,7 +55,7 @@ export const IncomeStepBreakdown = ({
                 </AppText>
               </View>
             </View>
-            <AppText variant="caption" weight="bold" color="success" tabular>
+            <AppText variant="caption" weight="bold" color={signColorKey(1)} tabular>
               {formatSts(inc.amount, currencyCode, { prefix: signPrefix(1) })}
             </AppText>
           </PressScaleTouchable>

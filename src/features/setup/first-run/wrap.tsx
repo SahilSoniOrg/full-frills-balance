@@ -16,7 +16,7 @@ import { publishedDraftAccountId } from './mapToWorkplaceOutput';
 import type { CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
 import { useClaritySceneViewModel } from './useClaritySceneViewModel';
-import { signPrefix, type FlowSign } from '@/src/domain/accounting/presentationPolicy';
+import { signPrefix, statusTone, type FlowSign } from '@/src/domain/accounting/presentationPolicy';
 
 function ClarityResultPanel({ children }: { readonly children: ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -171,7 +171,7 @@ export function ClarityScene({
                   currencyCode={currency}
                   formatStyle="sts"
                   variant="hero"
-                  color={projection.safeToSpend < 0 ? 'error' : 'primary'}
+                  color={projection.safeToSpend < 0 ? statusTone('shortfall') : 'primary'}
                   fit={{
                     maxFontSize: Typography.roles.hero.fontSize,
                     minFontSize: Typography.sizes.xxxl + Spacing.xs,
