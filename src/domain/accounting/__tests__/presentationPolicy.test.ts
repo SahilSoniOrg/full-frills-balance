@@ -30,7 +30,7 @@ const { DEBIT, CREDIT } = TransactionType;
 /** LEG spec, `[accountType][transactionType]`. */
 const LEG_SPEC: Record<AccountType, Record<TransactionType, FlowSign>> = {
   [ASSET]: { [DEBIT]: 1, [CREDIT]: -1 },
-  [LIABILITY]: { [DEBIT]: -1, [CREDIT]: 1 },
+  [LIABILITY]: { [DEBIT]: 1, [CREDIT]: -1 },
   [EQUITY]: { [DEBIT]: -1, [CREDIT]: 1 },
   [INCOME]: { [DEBIT]: -1, [CREDIT]: 1 },
   [EXPENSE]: { [DEBIT]: -1, [CREDIT]: 1 },
@@ -86,14 +86,15 @@ const OBLIGATION_SPEC: Record<AccountType, Record<AccountType, ObligationDirecti
 
 describe('presentation policy', () => {
   describe('legSign (5×2)', () => {
-    it('matches the spec, which is the balance direction with expense flipped', () => {
+    it('matches the spec, which is the balance direction with expense and liability flipped', () => {
       for (const accountType of ACCOUNT_TYPES) {
         for (const transactionType of [DEBIT, CREDIT]) {
           expect(legSign(accountType, transactionType)).toBe(
             LEG_SPEC[accountType][transactionType],
           );
           const balance = balanceSign(accountType, transactionType);
-          const expected = accountType === EXPENSE ? (balance === 0 ? 0 : -balance) : balance;
+          const flips = accountType === EXPENSE || accountType === LIABILITY;
+          const expected = flips ? (balance === 0 ? 0 : -balance) : balance;
           expect(legSign(accountType, transactionType)).toBe(expected);
         }
       }

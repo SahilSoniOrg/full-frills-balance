@@ -26,7 +26,9 @@ import { AccountType } from '@/src/types/enums';
 import {
   balanceIncreaseTransaction,
   legSign,
+  signColorKey,
   signPrefix,
+  type FlowSign,
 } from '@/src/domain/accounting/presentationPolicy';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
@@ -256,7 +258,7 @@ export function AccountActivitySection({
                         const flowChange =
                           changeFromStart *
                           legSign(accountType, balanceIncreaseTransaction(accountType));
-                        const isPositive = flowChange >= 0;
+                        const changeSign: FlowSign = flowChange > 0 ? 1 : flowChange < 0 ? -1 : 0;
 
                         return (
                           <View style={{ width: '100%' }}>
@@ -283,12 +285,17 @@ export function AccountActivitySection({
                                 Change
                               </AppText>
                               <MoneyText
-                                amount={changeFromStart}
+                                amount={Math.abs(changeFromStart)}
                                 currencyCode={currencyCode}
-                                prefix={isPositive ? signPrefix(1) : undefined}
+                                prefix={signPrefix(changeSign) || undefined}
                                 variant="body"
                                 weight="bold"
-                                style={{ color: isPositive ? theme.income : theme.expense }}
+                                style={{
+                                  color:
+                                    changeSign === 0
+                                      ? theme.textSecondary
+                                      : theme[signColorKey(changeSign)],
+                                }}
                               />
                             </View>
                             {rollingPoint && (
