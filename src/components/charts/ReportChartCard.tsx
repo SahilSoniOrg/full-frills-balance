@@ -27,7 +27,7 @@ export function ReportChartCard({
       <AppCard
         testID={testID}
         style={[styles.chartCard, { zIndex, overflow: 'visible' }, style]}
-        paddingSize="lg"
+        padding="xl"
       >
         {headerContent && <View style={styles.headerRow}>{headerContent}</View>}
         {children}

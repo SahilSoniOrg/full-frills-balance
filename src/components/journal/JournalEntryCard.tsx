@@ -83,7 +83,7 @@ const JournalEntryCardComponent = ({
     <AppCard
       testID="journal-entry-card"
       elevation="sm"
-      paddingSize="none"
+      padding="none"
       radius="r2"
       accessible={!isPressable}
       accessibilityLabel={!isPressable ? accessibilityLabel : undefined}

@@ -80,7 +80,7 @@ export function SavedCaptureDefaults({
     categoryDefaults.length + descriptionDefaults.length + visiblePausedMerchants.length;
   if (savedCount === 0) {
     return (
-      <AppCard variant="secondary" paddingSize="md">
+      <AppCard variant="secondary" padding="lg">
         <Stack space="sm">
           <AppText variant="body" weight="semibold">
             {strings.savedSuggestionsEmptyTitle}
@@ -108,7 +108,7 @@ export function SavedCaptureDefaults({
         clearAccessibilityLabel={strings.clearSearch}
       />
       {filteredSavedCount === 0 ? (
-        <AppCard variant="secondary" paddingSize="md">
+        <AppCard variant="secondary" padding="lg">
           <AppText variant="bodySmall" color="secondary">
             {strings.matchingSearchNoResults}
           </AppText>

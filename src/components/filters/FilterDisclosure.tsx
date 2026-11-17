@@ -93,7 +93,7 @@ export function FilterDisclosure({
   }, [onToggle, prepareLayoutAnimation]);
 
   return (
-    <AppCard variant="ghost" paddingSize="md">
+    <AppCard variant="ghost" padding="lg">
       <PressScaleTouchable
         onPress={handleToggle}
         accessibilityRole="button"

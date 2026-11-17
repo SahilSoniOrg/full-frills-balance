@@ -158,7 +158,7 @@ export function CollectedRow({
       <AppCard
         variant="outline"
         background="surface"
-        paddingSize="none"
+        padding="none"
         accessibilityActions={[{ name: 'delete', label: removeLabel }]}
         onAccessibilityAction={event => {
           if (event.nativeEvent.actionName === 'delete') item.onRemove();

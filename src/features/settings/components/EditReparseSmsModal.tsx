@@ -184,7 +184,7 @@ function EditReparseModalContent({
         {parsedResult && (
           <AppCard
             style={[styles.parsedCard, { borderColor: theme.border, borderWidth: 1 }]}
-            paddingSize="md"
+            padding="lg"
           >
             <View style={styles.cardHeader}>
               <AppIcon name={Icon.Zap} size={14} color={theme.primary} />

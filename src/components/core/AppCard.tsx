@@ -1,21 +1,11 @@
-import {
-  ColorKey,
-  ElevationKey,
-  OpacityKey,
-  RadiusKey,
-  SpacingKey,
-} from '@/src/constants/design-tokens';
+import { ColorKey, ElevationKey, OpacityKey, RadiusKey } from '@/src/constants/design-tokens';
 import { Box, BoxBaseProps, type SurfaceColor } from '@/src/design-system/Box';
 import { extractBoxProps } from '@/src/design-system/utils';
 import { forwardRef } from 'react';
 import { View, type ViewProps } from 'react-native';
 
-type AppCardPadding = 'none' | 'sm' | 'md' | 'lg';
-
 export type AppCardBaseProps = BoxBaseProps & {
   elevation?: ElevationKey;
-  /** Preset inner padding. An explicit `padding` box prop takes precedence. */
-  paddingSize?: AppCardPadding;
   radius?: RadiusKey;
   variant?: 'default' | 'secondary' | 'outline' | 'ghost';
   background?: SurfaceColor;
@@ -47,19 +37,11 @@ const CARD_VARIANTS: Record<NonNullable<AppCardBaseProps['variant']>, Partial<Bo
   },
 };
 
-const PADDING_MAP: Record<AppCardPadding, SpacingKey | number> = {
-  none: 0,
-  sm: 'md',
-  md: 'lg',
-  lg: 'xl',
-};
-
 export type AppCardProps = AppCardBaseProps;
 
 export const AppCard = forwardRef<View, AppCardProps>((initialProps, ref) => {
   const {
     elevation: elevationProp,
-    paddingSize = 'md',
     radius = 'r2',
     variant = 'default',
     children,
@@ -81,7 +63,7 @@ export const AppCard = forwardRef<View, AppCardProps>((initialProps, ref) => {
     ...remainingBoxProps
   } = boxProps;
 
-  const paddingValue = paddingProp ?? PADDING_MAP[paddingSize];
+  const paddingValue = paddingProp ?? 'lg';
   const variantConfig = CARD_VARIANTS[variant];
   const resolvedElevation: ElevationKey | undefined =
     elevationProp === 'none' ? 'none' : elevationProp || shadowProp || variantConfig.shadow;

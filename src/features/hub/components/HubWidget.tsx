@@ -112,7 +112,7 @@ export const HubWidget = ({
               <AppCard
                 key={insight.id}
                 elevation="sm"
-                paddingSize="none"
+                padding="none"
                 style={[
                   styles.card,
                   {

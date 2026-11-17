@@ -58,7 +58,7 @@ export function RestoreSummarySlice({
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Stack gap="md">
           {ready ? (
-            <AppCard elevation="sm" paddingSize="lg" style={styles.completeCard}>
+            <AppCard elevation="sm" padding="xl" style={styles.completeCard}>
               <View style={[styles.successMark, { backgroundColor: theme.success + '22' }]}>
                 <AppIcon name={Icon.Check} size={Size.iconMd} color={theme.success} />
               </View>
@@ -94,7 +94,7 @@ export function RestoreSummarySlice({
             </AppCard>
           ) : null}
           {ready && skippedItems.length > 0 ? (
-            <AppCard elevation="sm" paddingSize="md">
+            <AppCard elevation="sm" padding="lg">
               <Stack gap="xs">
                 <AppText variant="caption">Skipped items</AppText>
                 {skippedItems.slice(0, 20).map(item => (
@@ -107,7 +107,7 @@ export function RestoreSummarySlice({
             </AppCard>
           ) : null}
           {ready && warnings.length > 0 ? (
-            <AppCard elevation="sm" paddingSize="md">
+            <AppCard elevation="sm" padding="lg">
               <Stack gap="xs">
                 <AppText variant="caption">Warnings</AppText>
                 {warnings.map(warning => (

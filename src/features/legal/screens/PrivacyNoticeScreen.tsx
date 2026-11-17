@@ -110,7 +110,7 @@ export default function PrivacyNoticeScreen() {
             </AppText>
           </Stack>
 
-          <AppCard variant="secondary" paddingSize="lg">
+          <AppCard variant="secondary" padding="xl">
             <Stack space="md">
               <Box flexDirection="row" alignItems="center" gap="md">
                 <Box
@@ -133,7 +133,7 @@ export default function PrivacyNoticeScreen() {
 
           <Stack space="md">
             <AppText variant="subheading">{copy.dataSectionTitle}</AppText>
-            <AppCard variant="default" paddingSize="none">
+            <AppCard variant="default" padding="none">
               <PrivacyRow icon={Icon.Edit} title={copy.manualTitle} body={copy.manualBody} />
               <PrivacyRow icon={Icon.Database} title={copy.localTitle} body={copy.localBody} />
               <PrivacyRow icon={Icon.Share} title={copy.onlineTitle} body={copy.onlineBody} last />
@@ -142,7 +142,7 @@ export default function PrivacyNoticeScreen() {
 
           <Stack space="md">
             <AppText variant="subheading">{copy.googleDataSectionTitle}</AppText>
-            <AppCard variant="default" paddingSize="none">
+            <AppCard variant="default" padding="none">
               <PrivacyRow
                 icon={Icon.ShieldCheck}
                 title={copy.googleProtectionTitle}
@@ -159,7 +159,7 @@ export default function PrivacyNoticeScreen() {
 
           <Stack space="md">
             <AppText variant="subheading">{copy.controlsSectionTitle}</AppText>
-            <AppCard variant="outline" paddingSize="none">
+            <AppCard variant="outline" padding="none">
               <PrivacyRow icon={Icon.Archive} title={copy.backupTitle} body={copy.backupBody} />
               <PrivacyRow
                 icon={Icon.Lock}
@@ -170,7 +170,7 @@ export default function PrivacyNoticeScreen() {
             </AppCard>
           </Stack>
 
-          <AppCard variant="ghost" paddingSize="lg">
+          <AppCard variant="ghost" padding="xl">
             <Stack space="sm">
               <AppText variant="heading">{copy.limitsTitle}</AppText>
               <AppText variant="body" color="secondary">

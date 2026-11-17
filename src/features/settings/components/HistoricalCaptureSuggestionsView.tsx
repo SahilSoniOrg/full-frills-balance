@@ -111,7 +111,7 @@ export function HistoricalCaptureSuggestionsView({
       ) : null}
 
       {privateMode ? (
-        <AppCard variant="secondary" paddingSize="md">
+        <AppCard variant="secondary" padding="lg">
           <AppText variant="bodySmall" color="secondary">
             {strings.suggestionsHiddenInPrivateMode}
           </AppText>
@@ -153,7 +153,7 @@ export function HistoricalCaptureSuggestionsView({
           ) : null}
 
           {patterns.length === 0 ? (
-            <AppCard variant="secondary" paddingSize="md">
+            <AppCard variant="secondary" padding="lg">
               <AppText variant="bodySmall" color="secondary">
                 {search.trim() ? strings.historicalSearchNoResults : strings.historicalPageEmpty}
               </AppText>

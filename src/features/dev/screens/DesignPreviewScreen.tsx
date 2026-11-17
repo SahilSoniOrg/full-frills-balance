@@ -56,7 +56,7 @@ const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
 
 function PreviewSectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <AppCard elevation="sm" paddingSize="lg">
+    <AppCard elevation="sm" padding="xl">
       <Stack space="md">
         <AppText variant="heading">{title}</AppText>
         <Separator />
@@ -149,7 +149,7 @@ export default function DesignPreviewScreen() {
         <Box paddingHorizontal="lg" paddingVertical="xl">
           <Stack space="xl">
             {/* Typography Section */}
-            <AppCard elevation="sm" paddingSize="lg">
+            <AppCard elevation="sm" padding="xl">
               <Stack space="md">
                 <AppText variant="heading">Typography</AppText>
                 <AppSegmentedControl
@@ -239,7 +239,7 @@ export default function DesignPreviewScreen() {
             </AppCard>
 
             {/* Layout Primitives Section */}
-            <AppCard elevation="sm" paddingSize="lg">
+            <AppCard elevation="sm" padding="xl">
               <Stack space="md">
                 <AppText variant="heading">Layout Primitives</AppText>
                 <Separator />
@@ -247,13 +247,13 @@ export default function DesignPreviewScreen() {
                 <AppText variant="subheading">Stack (Vertical, gap: md)</AppText>
                 <Box background="surfaceSecondary" padding="md" borderRadius="md">
                   <Stack space="md">
-                    <AppCard elevation="none" paddingSize="sm">
+                    <AppCard elevation="none" padding="md">
                       <AppText variant="caption">Item 1</AppText>
                     </AppCard>
-                    <AppCard elevation="none" paddingSize="sm">
+                    <AppCard elevation="none" padding="md">
                       <AppText variant="caption">Item 2</AppText>
                     </AppCard>
-                    <AppCard elevation="none" paddingSize="sm">
+                    <AppCard elevation="none" padding="md">
                       <AppText variant="caption">Item 3</AppText>
                     </AppCard>
                   </Stack>
@@ -343,7 +343,7 @@ export default function DesignPreviewScreen() {
             </PreviewSectionCard>
 
             {/* List Rows Section */}
-            <AppCard elevation="sm" paddingSize="lg">
+            <AppCard elevation="sm" padding="xl">
               <Stack space="md">
                 <AppText variant="heading">List Rows</AppText>
                 <Separator />
@@ -423,16 +423,16 @@ export default function DesignPreviewScreen() {
             {/* Cards & surfaces */}
             <PreviewSectionCard title="Cards & Surfaces">
               <Stack space="md">
-                <AppCard variant="default" paddingSize="md">
+                <AppCard variant="default" padding="lg">
                   <AppText variant="body">Default card</AppText>
                 </AppCard>
-                <AppCard variant="secondary" paddingSize="md">
+                <AppCard variant="secondary" padding="lg">
                   <AppText variant="body">Secondary card</AppText>
                 </AppCard>
-                <AppCard variant="outline" paddingSize="md">
+                <AppCard variant="outline" padding="lg">
                   <AppText variant="body">Outline card</AppText>
                 </AppCard>
-                <AppCard variant="ghost" paddingSize="md">
+                <AppCard variant="ghost" padding="lg">
                   <AppText variant="body" color="primary">
                     Ghost card
                   </AppText>
@@ -615,7 +615,7 @@ export default function DesignPreviewScreen() {
             </PreviewSectionCard>
 
             {/* Performance Stress Test Section */}
-            <AppCard elevation="sm" paddingSize="lg">
+            <AppCard elevation="sm" padding="xl">
               <Stack space="md">
                 <AppText variant="heading">Performance Stress Test</AppText>
                 <AppText variant="caption" color="secondary">

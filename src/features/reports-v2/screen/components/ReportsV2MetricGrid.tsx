@@ -71,7 +71,7 @@ export function ReportsV2MetricGrid({
           <AppCard
             key={item.id}
             variant="secondary"
-            paddingSize="sm"
+            padding="md"
             style={[styles.metricCard, { borderTopColor: color }]}
           >
             <View style={styles.metricLabel}>

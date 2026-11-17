@@ -82,7 +82,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
         <View style={styles.container}>
           {!isAndroid && filter === 'pending' ? (
             <View style={styles.platformNoticeWrap}>
-              <AppCard variant="secondary" paddingSize="sm">
+              <AppCard variant="secondary" padding="md">
                 <AppText variant="caption" color="secondary">
                   Note: SMS transaction scanning is only supported on Android devices. Voice input
                   drafts are fully supported.

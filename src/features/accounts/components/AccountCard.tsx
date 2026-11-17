@@ -130,7 +130,7 @@ function AccountCardBase({
         <AppCard
           testID="account-card"
           elevation="sm"
-          paddingSize="none"
+          padding="none"
           radius="r2"
           background={surfaceColor}
           style={styles.cardContainer}

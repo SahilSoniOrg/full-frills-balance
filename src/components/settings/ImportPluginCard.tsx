@@ -22,7 +22,7 @@ export function ImportPluginCard({
   const handleSelect = useCallback(() => onSelect(plugin.id), [onSelect, plugin.id]);
 
   return (
-    <AppCard elevation="sm" paddingSize="md" style={styles.card}>
+    <AppCard elevation="sm" padding="lg" style={styles.card}>
       <View style={styles.headerRow}>
         <View style={[styles.iconPlaceholder, { backgroundColor: theme.surfaceSecondary }]}>
           <AppText variant="heading" style={styles.pluginIcon}>

@@ -63,7 +63,7 @@ export function CaptureWorkspaceView({
       ) : null}
       <FocusTarget targetId="transaction-capture-enabled">
         {Platform.OS === 'web' ? (
-          <AppCard variant="secondary" paddingSize="sm">
+          <AppCard variant="secondary" padding="md">
             <AppText variant="bodySmall" color="secondary">
               {strings.captureUnavailable}
             </AppText>
@@ -115,7 +115,7 @@ export function CaptureWorkspaceView({
             {capture.loading ? strings.loading : strings.checkingSources}
           </AppText>
         ) : (
-          <AppCard variant="secondary" paddingSize="sm">
+          <AppCard variant="secondary" padding="md">
             <AppText variant="bodySmall" color="secondary">
               {gmailSettingsEnabled
                 ? Platform.OS === 'android'

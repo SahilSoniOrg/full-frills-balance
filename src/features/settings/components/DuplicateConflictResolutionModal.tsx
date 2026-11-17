@@ -136,7 +136,7 @@ export function DuplicateConflictResolutionModal({
           {/* Incoming SMS Card */}
           <AppCard
             style={[styles.comparisonCard, { borderColor: theme.border, borderWidth: 1 }]}
-            paddingSize="md"
+            padding="lg"
           >
             <View style={styles.cardHeader}>
               <AppIcon name={Icon.MessageSquare} size={14} color={theme.primary} />
@@ -209,7 +209,7 @@ export function DuplicateConflictResolutionModal({
           {/* Matched Journal Card */}
           <AppCard
             style={[styles.comparisonCard, { borderColor: theme.border, borderWidth: 1 }]}
-            paddingSize="md"
+            padding="lg"
           >
             <View style={styles.cardHeader}>
               <AppIcon name={Icon.Document} size={14} color={theme.textSecondary} />

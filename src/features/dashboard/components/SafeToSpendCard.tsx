@@ -119,7 +119,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     );
 
   return (
-    <AppCard overflow="visible" elevation="none" background="transparent" paddingSize="none">
+    <AppCard overflow="visible" elevation="none" background="transparent" padding="none">
       <SafeToSpendCardLayout
         summary={header}
         breakdown={quality === 'unavailable' ? null : breakdown}

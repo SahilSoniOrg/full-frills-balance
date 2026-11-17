@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native';
 
 export function ReportNoData() {
   return (
-    <AppCard paddingSize="lg" style={styles.card}>
+    <AppCard padding="xl" style={styles.card}>
       <EmptyStateView title={AppConfig.strings.reports.noData} style={styles.empty} />
     </AppCard>
   );

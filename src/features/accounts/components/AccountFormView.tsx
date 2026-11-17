@@ -125,7 +125,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         variant="ghost"
         radius="md"
         borderColor="border"
-        paddingSize="none"
+        padding="none"
         style={styles.selectorSection}
       >
         <View style={styles.selectorGroup}>

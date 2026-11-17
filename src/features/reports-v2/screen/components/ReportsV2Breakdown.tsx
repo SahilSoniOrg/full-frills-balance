@@ -47,7 +47,7 @@ export function ReportsV2Breakdown({
   const budgetUtilization =
     section.id === 'budgets' ? explanationForBudgetUtilization() : undefined;
   return (
-    <AppCard paddingSize="none">
+    <AppCard padding="none">
       <View style={styles.breakdownHeader}>
         <View style={styles.headerCopy}>
           <View style={styles.headingRow}>

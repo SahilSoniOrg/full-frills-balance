@@ -46,7 +46,7 @@ describe('AppCard', () => {
 
   it('renders with custom padding', () => {
     render(
-      <AppCard testID="custom-card" paddingSize="md">
+      <AppCard testID="custom-card" padding="lg">
         <View testID="test-child" />
       </AppCard>,
     );
@@ -57,7 +57,7 @@ describe('AppCard', () => {
 
   it('renders with no padding when specified', () => {
     render(
-      <AppCard paddingSize="none">
+      <AppCard padding="none">
         <View testID="test-child" />
       </AppCard>,
     );

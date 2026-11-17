@@ -76,7 +76,7 @@ export function ModalSurface({
   const sheetBody = (
     <AppCard
       elevation="lg"
-      paddingSize="lg"
+      padding="xl"
       radius="r2"
       style={[
         styles.modalCard,

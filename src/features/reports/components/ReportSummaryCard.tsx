@@ -18,7 +18,7 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
   const canViewNetFlowTransactions = summary.income !== 0 || summary.expense !== 0;
 
   return (
-    <AppCard testID="report-summary" paddingSize="lg" style={styles.card}>
+    <AppCard testID="report-summary" padding="xl" style={styles.card}>
       <AppText variant="heading" weight="semibold">
         {AppConfig.strings.reports.summaryTitle}
       </AppText>

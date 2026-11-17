@@ -47,7 +47,7 @@ export function MetricHeroCard({
   return (
     <AppCard
       elevation="md"
-      paddingSize="lg"
+      padding="xl"
       radius="r1"
       style={[styles.container, { backgroundColor: theme.surface }]}
     >

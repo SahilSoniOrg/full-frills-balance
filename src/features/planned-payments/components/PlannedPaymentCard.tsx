@@ -74,7 +74,7 @@ function PlannedPaymentCardComponent({
 
   return (
     <AppCard
-      paddingSize="none"
+      padding="none"
       overflow="visible"
       elevation="sm"
       background="surface"

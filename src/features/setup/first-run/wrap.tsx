@@ -144,7 +144,7 @@ export function ClarityScene({
     >
       <Stack gap="lg">
         <ClarityResultPanel>
-          <AppCard variant="ghost" paddingSize="lg" testID="onboarding-clarity-result">
+          <AppCard variant="ghost" padding="xl" testID="onboarding-clarity-result">
             <Stack gap="md">
               <Inline align="center" justify="space-between" gap="md">
                 <Stack gap="xs" flex={1}>
@@ -291,7 +291,7 @@ export function ClarityScene({
           {estimateAvailable ? (
             <Stack gap="sm">
               <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
-              <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
+              <AppCard variant="secondary" padding="lg" testID="onboarding-clarity-formula">
                 <ClarityFormula projection={projection} currency={currency} />
               </AppCard>
             </Stack>
@@ -374,7 +374,7 @@ function ClarityBeatCard({
   readonly stsColor: ComponentVariant;
 }) {
   return (
-    <AppCard variant="outline" paddingSize="md" testID={testID}>
+    <AppCard variant="outline" padding="lg" testID={testID}>
       <Stack gap="md">
         <AppText variant="subheading">{title}</AppText>
         <Stack gap="md">

@@ -114,7 +114,7 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
       ) : null}
 
       {privateMode ? (
-        <AppCard variant="secondary" paddingSize="md">
+        <AppCard variant="secondary" padding="lg">
           <AppText variant="bodySmall" color="secondary">
             {strings.suggestionsHiddenInPrivateMode}
           </AppText>
@@ -164,7 +164,7 @@ function ReviewSuggestions({
   return (
     <Stack space="md">
       {reviewCount === 0 ? (
-        <AppCard variant="secondary" paddingSize="md">
+        <AppCard variant="secondary" padding="lg">
           <Stack space="sm">
             <AppText variant="body" weight="semibold">
               {strings.suggestionsEmptyTitle}
@@ -202,7 +202,7 @@ function ReviewSuggestions({
           </Stack>
 
           {visibleTotal === 0 ? (
-            <AppCard variant="secondary" paddingSize="md">
+            <AppCard variant="secondary" padding="lg">
               <AppText variant="bodySmall" color="secondary">
                 {strings.matchingSearchNoResults}
               </AppText>

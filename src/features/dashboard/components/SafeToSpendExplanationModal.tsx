@@ -207,7 +207,7 @@ export const SafeToSpendExplanationModal = ({
       </AppText>
 
       {explanation && (
-        <AppCard paddingSize="lg" elevation="sm" style={styles.card}>
+        <AppCard padding="xl" elevation="sm" style={styles.card}>
           <AppText variant="subheading">{constraint.title}</AppText>
           <AppText variant="caption" color="secondary" style={styles.introText}>
             {constraint.horizon(explanation.horizonDays)}
@@ -273,7 +273,7 @@ export const SafeToSpendExplanationModal = ({
         </AppCard>
       )}
 
-      <AppCard paddingSize="none" elevation="lg" style={styles.card}>
+      <AppCard padding="none" elevation="lg" style={styles.card}>
         <View style={styles.ledgerHeader}>
           <AppText variant="subheading">{info.bucketTitle}</AppText>
         </View>
