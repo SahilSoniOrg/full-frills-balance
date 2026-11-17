@@ -1,4 +1,4 @@
-import { AppText, Icon } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
@@ -28,7 +28,6 @@ function AccountMatcherManagementScreen() {
   const chrome: ScreenNavChrome = {
     kind: 'nav',
     screenTitle: copy.sectionTitle,
-    backIcon: Icon.Back,
     onBack: AppNavigation.back,
   };
 

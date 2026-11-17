@@ -19,7 +19,6 @@ function JournalDetailsScreen() {
       buildDetailNavChrome({
         phase,
         readyTitle: AppConfig.strings.journalDetails.title,
-        missingBackIcon: Icon.Close,
         onBack: vm.onBack,
         headerActions: (
           <DetailHeaderMenuActions

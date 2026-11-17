@@ -1,7 +1,7 @@
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout/Screen';
 import type { ScreenProps } from '@/src/components/layout/Screen';
-import type { ScreenChrome } from '@/src/components/layout/screenChrome';
+import type { NavBackIcon, ScreenChrome } from '@/src/components/layout/screenChrome';
 import type { NavigationBarLeft } from '@/src/components/layout/NavigationBar';
 import { PrimaryNavigationHeader } from '@/src/navigation/PrimaryNavigationHeader';
 import {
@@ -13,6 +13,7 @@ import { useLayoutEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { usePublishTabChrome } from './PersistentTabChrome';
 import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import { useRouteBackIcon } from '@/src/navigation/RoutePresentationContext';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
@@ -24,9 +25,10 @@ type ScreenWithChromeProps = Omit<
 function leftFromChrome(
   chrome: ScreenChrome,
   isPrimaryTabRoot: boolean,
+  routeBackIcon: NavBackIcon,
 ): NavigationBarLeft | undefined {
   if (chrome.kind === 'nav') {
-    return { kind: 'back', onPress: chrome.onBack, icon: chrome.backIcon };
+    return { kind: 'back', onPress: chrome.onBack, icon: chrome.backIcon ?? routeBackIcon };
   }
   if (chrome.kind === 'tab' && isPrimaryTabRoot) {
     return {
@@ -50,6 +52,7 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
   const isActiveLeaf = !leafRoute || pageNavigation?.activeRouteName === leafRoute;
   const isPrimaryTabRoot = !!navigation && chrome.kind === 'tab';
   const reportSelectionMode = navigation?.reportSelectionMode;
+  const routeBackIcon = useRouteBackIcon();
 
   useLayoutEffect(() => {
     if (isPrimaryTabRoot && isFocused && isActiveLeaf) {
@@ -66,7 +69,7 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
       {...rest}
       edges={leafRoute ? edges.filter(edge => edge !== 'top') : edges}
       title={leafRoute ? undefined : chrome.screenTitle}
-      left={leafRoute ? undefined : leftFromChrome(chrome, isPrimaryTabRoot)}
+      left={leafRoute ? undefined : leftFromChrome(chrome, isPrimaryTabRoot, routeBackIcon)}
       headerActions={leafRoute ? undefined : chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
       headerStyle={chrome.headerStyle}

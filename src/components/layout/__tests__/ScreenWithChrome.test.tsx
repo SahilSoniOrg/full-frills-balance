@@ -10,6 +10,7 @@ import {
   primaryTabFromRouteName,
   type PrimaryNavigationContextValue,
 } from '@/src/navigation/primaryNavigation';
+import { RoutePresentationProvider } from '@/src/navigation/RoutePresentationContext';
 
 jest.mock('@/src/components/layout/NavigationBar', () => ({
   NavigationBar: () => null,
@@ -42,7 +43,6 @@ describe('ScreenWithChrome safe-area ownership', () => {
     const chrome: ScreenChrome = {
       screenTitle: 'Details',
       kind: 'nav',
-      backIcon: Icon.Back,
       onBack: jest.fn(),
     };
 
@@ -74,7 +74,6 @@ describe('ScreenWithChrome safe-area ownership', () => {
     const chrome: ScreenChrome = {
       screenTitle: 'Custom',
       kind: 'nav',
-      backIcon: Icon.Back,
       onBack: jest.fn(),
     };
 
@@ -85,6 +84,36 @@ describe('ScreenWithChrome safe-area ownership', () => {
     );
 
     expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top', 'left']);
+  });
+});
+
+describe('ScreenWithChrome back icon', () => {
+  const nav: ScreenChrome = { kind: 'nav', screenTitle: 'Screen', onBack: jest.fn() };
+  const backIcon = () => screen.UNSAFE_getByType(Screen).props.left?.icon;
+
+  it.each([
+    ['composer', Icon.Close],
+    ['detail', Icon.Back],
+  ] as const)('follows the %s route presentation', (presentation, expected) => {
+    render(
+      <RoutePresentationProvider presentation={presentation}>
+        <ScreenWithChrome chrome={nav}>
+          <Text>Content</Text>
+        </ScreenWithChrome>
+      </RoutePresentationProvider>,
+    );
+    expect(backIcon()).toBe(expected);
+  });
+
+  it('lets an in-screen step override the route icon', () => {
+    render(
+      <RoutePresentationProvider presentation="composer">
+        <ScreenWithChrome chrome={{ ...nav, backIcon: Icon.Back }}>
+          <Text>Content</Text>
+        </ScreenWithChrome>
+      </RoutePresentationProvider>,
+    );
+    expect(backIcon()).toBe(Icon.Back);
   });
 });
 

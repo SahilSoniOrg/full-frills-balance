@@ -5,7 +5,6 @@ import { toHeaderIconButtons } from '@/src/features/accounts/helpers/accountMana
 import { useAccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
-import { Icon } from '@/src/types/domainIcons';
 import { useMemo } from 'react';
 
 export default function AccountCreationScreen() {
@@ -67,7 +66,6 @@ export default function AccountCreationScreen() {
     return {
       screenTitle: vm.heroTitle,
       kind: 'nav',
-      backIcon: Icon.Back,
       onBack: guard.onBack,
       headerActions:
         headerActionItems.length > 0 ? (

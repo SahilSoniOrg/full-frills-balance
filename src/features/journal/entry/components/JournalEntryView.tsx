@@ -184,7 +184,6 @@ export function JournalEntryView(props: JournalEntryShell) {
     const statusChrome: ScreenNavChrome = {
       kind: 'nav',
       screenTitle: headerTitle,
-      backIcon: Icon.Close,
       onBack: onClose,
     };
     return (

@@ -1,7 +1,6 @@
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AccountManagementView } from '@/src/features/accounts/components/AccountManagementView';
 import { useAccountManagementViewModel } from '@/src/features/accounts/hooks/useAccountManagementViewModel';
-import { Icon } from '@/src/types/domainIcons';
 
 export function AccountManagementScreen() {
   const vm = useAccountManagementViewModel();
@@ -9,7 +8,6 @@ export function AccountManagementScreen() {
   const chrome: ScreenNavChrome = {
     screenTitle: 'Account Management',
     kind: 'nav',
-    backIcon: Icon.Close,
     onBack: vm.onBack,
   };
 

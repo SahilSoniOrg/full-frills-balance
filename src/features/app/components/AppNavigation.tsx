@@ -2,6 +2,7 @@ import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
+import { RoutePresentationProvider } from '@/src/navigation/RoutePresentationContext';
 import { ROUTE_MANIFEST } from '@/src/navigation/routeManifest';
 import { WorkplaceBoundScreen } from '@/src/navigation/WorkplaceBoundScreen';
 import { Stack } from 'expo-router';
@@ -42,13 +43,17 @@ export function NavigationStack() {
           {...(route.presentation === 'detail'
             ? {
                 layout: ({ children }: { children: ReactNode }) => (
-                  <RemountOnWorkplace>{children}</RemountOnWorkplace>
+                  <RoutePresentationProvider presentation="detail">
+                    <RemountOnWorkplace>{children}</RemountOnWorkplace>
+                  </RoutePresentationProvider>
                 ),
               }
             : route.presentation === 'composer'
               ? {
                   layout: ({ children }: { children: ReactNode }) => (
-                    <WorkplaceBoundScreen>{children}</WorkplaceBoundScreen>
+                    <RoutePresentationProvider presentation="composer">
+                      <WorkplaceBoundScreen>{children}</WorkplaceBoundScreen>
+                    </RoutePresentationProvider>
                   ),
                 }
               : {})}

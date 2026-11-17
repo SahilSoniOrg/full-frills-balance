@@ -8,7 +8,6 @@ import { FocusProvider } from '@/src/components/shared/FocusTarget';
 import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
-import { Icon } from '@/src/types/domainIcons';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useRef } from 'react';
@@ -34,7 +33,7 @@ export function SettingsLayout({
   headerActions,
   fab,
   showBack = true,
-  backIcon = Icon.Back,
+  backIcon,
   scrollable = true,
   children,
   edges,

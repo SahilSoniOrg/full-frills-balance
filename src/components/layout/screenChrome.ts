@@ -46,12 +46,13 @@ export type PlainScreenChrome = ScreenChromeBase & {
   headerActions?: ReactNode;
 };
 
-/** Detail / nav screens: back is always shown; title, back icon, and onBack are required. */
+/** Detail / nav screens: back is always shown; title and onBack are required. */
 export type ScreenNavChrome = ScreenChromeBase & {
   kind: 'nav';
   fab?: ScreenFabChrome;
   screenTitle: string;
-  backIcon: NavBackIcon;
+  /** Defaults from the route's presentation; override only for in-screen steps. */
+  backIcon?: NavBackIcon;
   onBack: () => void;
   headerActions?: ReactNode;
 };

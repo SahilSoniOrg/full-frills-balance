@@ -1,5 +1,4 @@
 import type { ScreenFabChrome, ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Icon } from '@/src/types/domainIcons';
 import type { ReactNode } from 'react';
 
 export type DetailNavChromePhase = 'loading' | 'missing' | 'ready';
@@ -9,7 +8,6 @@ type BuildDetailNavChromeParams = {
   readyTitle: string;
   onBack: () => void;
   loadingTitle?: string;
-  missingBackIcon?: ScreenNavChrome['backIcon'];
   headerActions?: ReactNode;
   fab?: ScreenFabChrome;
 };
@@ -19,17 +17,14 @@ export function buildDetailNavChrome({
   readyTitle,
   onBack,
   loadingTitle = 'Details',
-  missingBackIcon = Icon.Back,
   headerActions,
   fab,
 }: BuildDetailNavChromeParams): ScreenNavChrome {
   const screenTitle = phase === 'ready' ? readyTitle : loadingTitle;
-  const backIcon = phase === 'missing' ? missingBackIcon : Icon.Back;
 
   return {
     kind: 'nav',
     screenTitle,
-    backIcon,
     onBack,
     headerActions: phase === 'ready' ? headerActions : undefined,
     fab: phase === 'ready' ? fab : undefined,

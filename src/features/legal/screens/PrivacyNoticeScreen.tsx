@@ -91,7 +91,6 @@ export default function PrivacyNoticeScreen() {
     : {
         kind: 'nav' as const,
         screenTitle: copy.title,
-        backIcon: Icon.Back,
         onBack: AppNavigation.back,
       };
 

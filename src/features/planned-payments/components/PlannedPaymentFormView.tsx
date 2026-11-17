@@ -55,7 +55,6 @@ export function PlannedPaymentFormView({
     () => ({
       screenTitle: id ? copy.formTitleEdit : copy.formTitleNew,
       kind: 'nav',
-      backIcon: Icon.Back,
       onBack,
     }),
     [id, onBack],

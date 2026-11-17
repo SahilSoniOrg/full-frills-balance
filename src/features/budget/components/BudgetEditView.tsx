@@ -1,13 +1,6 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
-import {
-  AppButton,
-  AppIcon,
-  AppText,
-  Icon,
-  Icon as CoreIcon,
-  LoadingView,
-} from '@/src/components/core';
+import { AppIcon, AppText, Icon, LoadingView } from '@/src/components/core';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
@@ -82,13 +75,7 @@ export function BudgetEditView({
     () => ({
       screenTitle: AppConfig.strings.common.loading,
       kind: 'nav',
-      backIcon: CoreIcon.Back,
       onBack: onCancel,
-      headerActions: (
-        <AppButton variant="ghost" onPress={onCancel}>
-          {AppConfig.strings.common.cancel}
-        </AppButton>
-      ),
     }),
     [onCancel],
   );
@@ -99,7 +86,6 @@ export function BudgetEditView({
         ? AppConfig.strings.budget.formTitleEdit
         : AppConfig.strings.budget.formTitleNew,
       kind: 'nav',
-      backIcon: CoreIcon.Back,
       onBack: onCancel,
     }),
     [budget, onCancel],

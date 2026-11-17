@@ -5,7 +5,6 @@ import { useAccountMatcherEditorViewModel } from '@/src/features/accounts/hooks/
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { asAccountId, EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { Icon } from '@/src/types/domainIcons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -79,7 +78,6 @@ function AccountMatcherEditor({
     () => ({
       screenTitle: matcherId ? copy.editMatcher : copy.newMatcher,
       kind: 'nav',
-      backIcon: Icon.Back,
       onBack: guard.onBack,
     }),
     [guard.onBack, matcherId],
