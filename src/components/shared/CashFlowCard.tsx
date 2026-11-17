@@ -4,6 +4,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { IncompleteFxWarning } from './IncompleteFxWarning';
 import { MetricHeroCard } from './MetricHeroCard';
+import { signColorKey } from '@/src/domain/accounting/presentationPolicy';
 
 interface CashFlowCardProps {
   totalIncome: number;
@@ -35,7 +36,7 @@ export const CashFlowCard = ({
       amount={netCashFlow}
       currencyCode={currencyCode}
       isLoading={isLoading}
-      amountColor={netCashFlow >= 0 ? theme.income : theme.expense}
+      amountColor={theme[signColorKey(netCashFlow > 0 ? 1 : netCashFlow < 0 ? -1 : 0)]}
       amountStyle={styles.netAmount}
       middle={
         <View style={styles.periodToggleContainer}>

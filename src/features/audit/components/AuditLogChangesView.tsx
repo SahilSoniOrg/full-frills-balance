@@ -24,7 +24,7 @@ import { formatDate } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 const FINANCIAL_KEYS = ['amount', 'totalAmount', 'totalDebits', 'totalCredits'] as const;
 const TRANSACTIONS_KEY = 'transactions';
@@ -332,9 +332,10 @@ function BeforeAfterChangesView({
           if (!isNaN(bNum) && !isNaN(aNum)) {
             const diff = aNum - bNum;
             const currency = afterCurrencyCode || beforeCurrencyCode || workplaceCurrency;
-            const color = diff > 0 ? theme.success : diff < 0 ? theme.error : theme.textSecondary;
             // DELTA: the sign follows the number, and the magnitude carries the amount.
-            const diffPrefix = signPrefix(diff > 0 ? 1 : diff < 0 ? -1 : 0);
+            const diffSign = diff > 0 ? 1 : diff < 0 ? -1 : 0;
+            const color = diffSign === 0 ? theme.textSecondary : theme[signColorKey(diffSign)];
+            const diffPrefix = signPrefix(diffSign);
 
             return (
               <View

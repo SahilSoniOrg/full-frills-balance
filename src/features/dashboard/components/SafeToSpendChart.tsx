@@ -14,7 +14,7 @@ import {
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
@@ -347,7 +347,7 @@ export const SafeToSpendChart = ({
                                 <AppText
                                   variant="caption"
                                   weight="bold"
-                                  color={isInflow ? 'success' : 'error'}
+                                  color={signColorKey(isInflow ? 1 : -1)}
                                 >
                                   {formatSts(Math.abs(detail.amount), currencyCode, {
                                     prefix: signPrefix(isInflow ? 1 : -1),

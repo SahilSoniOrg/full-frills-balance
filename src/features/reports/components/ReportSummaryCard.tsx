@@ -1,12 +1,13 @@
 import { AppCard, AppText, ListGroup, ListRow } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
+import type { ComponentVariant } from '@/src/design-system/variants';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface ReportSummaryCardProps {
   summary: ReportSummaryVm;
@@ -31,7 +32,7 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
             label={AppConfig.strings.reports.totalIncome}
             amount={summary.income}
             currencyCode={currencyCode}
-            color="success"
+            color="income"
             onPress={summary.income !== 0 ? summary.onViewIncomeTransactions : undefined}
           />
           <SummaryMetric
@@ -39,7 +40,7 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
             label={AppConfig.strings.reports.totalExpense}
             amount={summary.expense}
             currencyCode={currencyCode}
-            color="error"
+            color="expense"
             onPress={summary.expense !== 0 ? summary.onViewExpenseTransactions : undefined}
           />
           <SummaryMetric
@@ -47,7 +48,7 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
             label={AppConfig.strings.reports.netFlow}
             amount={summary.netFlow}
             currencyCode={currencyCode}
-            color={summary.netFlow >= 0 ? 'success' : 'error'}
+            color={signColorKey(summary.netFlow > 0 ? 1 : summary.netFlow < 0 ? -1 : 0)}
             prefix={getSignPrefix(summary.netFlow)}
             onPress={canViewNetFlowTransactions ? summary.onViewNetFlowTransactions : undefined}
           />
@@ -133,7 +134,7 @@ function SummaryMetric({
   label: string;
   amount: number;
   currencyCode: string;
-  color: 'success' | 'error';
+  color: ComponentVariant;
   prefix?: string;
   onPress?: () => void;
 }) {
