@@ -125,7 +125,7 @@ export function BudgetEditView({
               : 'Create Budget',
         }}
       >
-        <Stack space="lg" paddingHorizontal="lg">
+        <Stack gap="lg" paddingHorizontal="lg">
           <UnderlineNameField
             value={name}
             onChangeText={setName}

@@ -12,7 +12,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { JournalDisplayType } from '@/src/types/enums';
@@ -95,7 +95,7 @@ export function PlannedPaymentHistoryCard({
   const paidAmountWarning = presentation.label === copy.paid && presentation.color === 'warning';
 
   const content = (
-    <Row
+    <Inline
       align="center"
       gap="sm"
       flexWrap="wrap"
@@ -133,7 +133,7 @@ export function PlannedPaymentHistoryCard({
           />
         )}
       </View>
-      <Column flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
+      <Stack flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
         <AppText
           variant="body"
           weight={isPending ? 'medium' : 'semibold'}
@@ -165,7 +165,7 @@ export function PlannedPaymentHistoryCard({
             {subtitle}
           </AppText>
         )}
-      </Column>
+      </Stack>
       {presentation.isSkipped ? (
         <AppText variant="body" color="secondary">
           —
@@ -187,7 +187,7 @@ export function PlannedPaymentHistoryCard({
           }}
         />
       )}
-    </Row>
+    </Inline>
   );
 
   return (

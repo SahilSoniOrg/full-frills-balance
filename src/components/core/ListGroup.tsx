@@ -73,10 +73,10 @@ export function ListGroup<T = ListRowItem>({
   if (rows.length === 0 && !header) return null;
 
   const group = (
-    <Stack space="sm" testID={testID}>
+    <Stack gap="sm" testID={testID}>
       {header || headerAccessory ? (
         <Inline
-          space="sm"
+          gap="sm"
           justifyContent="space-between"
           alignItems="center"
           flexWrap="wrap"

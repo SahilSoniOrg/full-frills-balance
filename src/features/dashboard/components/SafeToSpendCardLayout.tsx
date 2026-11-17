@@ -1,4 +1,4 @@
-import { Column, Row, Separator } from '@/src/design-system';
+import { Stack, Inline, Separator } from '@/src/design-system';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
@@ -33,41 +33,41 @@ export function SafeToSpendCardLayout({
     >
       {useTwoColumns ? (
         <View testID="safe-to-spend-card-layout-wide">
-          <Column gap="md">
-            <Row gap="xl" align="stretch" style={{ minHeight: 0 }}>
+          <Stack gap="md">
+            <Inline gap="xl" align="stretch" style={{ minHeight: 0 }}>
               <View style={{ flex: 2, minWidth: 0 }}>
-                <Column gap="md">
+                <Stack gap="md">
                   {summary}
                   {warning}
                   {breakdown}
-                </Column>
+                </Stack>
               </View>
               <View style={{ flex: 3, minWidth: 0 }}>{chart}</View>
-            </Row>
+            </Inline>
             {metrics}
-          </Column>
+          </Stack>
         </View>
       ) : (
         <View testID="safe-to-spend-card-layout-stacked">
-          <Column gap="sm">
+          <Stack gap="sm">
             {summary}
             {warning}
             {breakdown || metrics ? (
-              <Column gap="xs">
+              <Stack gap="xs">
                 {breakdown}
                 {metrics}
-              </Column>
+              </Stack>
             ) : null}
             {chart ? (
-              <Column gap="sm">
+              <Stack gap="sm">
                 {breakdown ? <Separator /> : null}
                 {chart}
                 <Separator />
-              </Column>
+              </Stack>
             ) : (
               <Separator />
             )}
-          </Column>
+          </Stack>
         </View>
       )}
     </View>

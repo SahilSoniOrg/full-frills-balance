@@ -73,7 +73,7 @@ function AppliedChanges({ changes }: { changes: readonly string[] }) {
   if (changes.length === 0) return null;
   return (
     <Box padding="sm" borderRadius="md" background="surfaceSecondary">
-      <Stack space="xs">
+      <Stack gap="xs">
         <AppText variant="caption" weight="semibold">
           Changes already made during this restore
         </AppText>
@@ -116,7 +116,7 @@ export function RestoreJournalRecovery({
       keyboardShouldPersistTaps="handled"
       testID="restore-journal-recovery-scroll"
     >
-      <Stack space="md">
+      <Stack gap="md">
         {entries.length > 0 ? (
           <JournalBalanceReviewFlow
             entries={entries}

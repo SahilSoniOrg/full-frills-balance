@@ -4,7 +4,7 @@ import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { PrivacyToggleButton } from './PrivacyToggleButton';
 import { ScreenHeaderActions, type ScreenHeaderActionItem } from './ScreenHeaderActions';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Column } from '@/src/design-system';
+import { Stack } from '@/src/design-system';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -59,7 +59,7 @@ export function DetailHeaderMenuActions({
         fixedHeight={false}
         scrollable={false}
       >
-        <Column gap="sm">
+        <Stack gap="sm">
           {actions.map(action => (
             <AppButton
               key={action.label}
@@ -88,7 +88,7 @@ export function DetailHeaderMenuActions({
               </View>
             </AppButton>
           ))}
-        </Column>
+        </Stack>
       </ModalSurface>
     </>
   );

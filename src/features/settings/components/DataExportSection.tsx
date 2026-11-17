@@ -22,7 +22,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         : AppConfig.strings.update.exportScopeSelected;
 
   return (
-    <Stack space="xxl">
+    <Stack gap="xxl">
       <ListGroup variant="plain" header={AppConfig.strings.settings.data.backupRestoreHeader}>
         <ListRow
           focusId="data-export"

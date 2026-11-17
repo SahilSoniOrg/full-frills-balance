@@ -26,7 +26,7 @@ export function SettingsSearchResults({
   const hasQuery = query.trim().length > 0;
 
   return (
-    <Stack space="md">
+    <Stack gap="md">
       <View style={styles.searchField}>
         <AppInput
           value={query}

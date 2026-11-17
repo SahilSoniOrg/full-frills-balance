@@ -2,7 +2,7 @@ import { AppConfig, Typography } from '@/src/constants';
 import { AppCard, AppText, Badge } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { summarizeBudgetList } from '../helpers/budgetListPresentation';
@@ -24,8 +24,8 @@ export function BudgetListSummary({
     : undefined;
   return (
     <AppCard overflow="visible" elevation="sm" padding="md" radius="r3" background="surface">
-      <Column gap="sm">
-        <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
+      <Stack gap="sm">
+        <Inline justify="space-between" align="center" gap="sm" flexWrap="wrap">
           <AppText variant="caption" color="secondary" weight="medium">
             {period && periodRange
               ? strings.period(dayjs(periodRange.startDate).format('MMMM'), period.daysRemaining)
@@ -36,8 +36,8 @@ export function BudgetListSummary({
               {strings.overCount(summary.overCount)}
             </Badge>
           )}
-        </Row>
-        <Row align="baseline" gap="sm" flexWrap="wrap">
+        </Inline>
+        <Inline align="baseline" gap="sm" flexWrap="wrap">
           <MoneyText
             amount={Math.abs(usage.remaining)}
             currencyCode={currencyCode}
@@ -57,7 +57,7 @@ export function BudgetListSummary({
               ? strings.overOfLimit(formatMoney(usage.budgetAmount, currencyCode))
               : strings.leftOfLimit(formatMoney(usage.budgetAmount, currencyCode))}
           </AppText>
-        </Row>
+        </Inline>
         <BudgetProgressBar
           progress={usage.usagePercent * 100}
           statusColor={status.statusColor}
@@ -73,7 +73,7 @@ export function BudgetListSummary({
               : undefined
           }
         />
-        <Row justify="space-between" gap="sm" flexWrap="wrap">
+        <Inline justify="space-between" gap="sm" flexWrap="wrap">
           <AppText variant="caption" color="secondary">
             {strings.spent(formatMoney(usage.spent, currencyCode))}
           </AppText>
@@ -82,7 +82,7 @@ export function BudgetListSummary({
               {markerLabel}
             </AppText>
           )}
-        </Row>
+        </Inline>
         {summary.otherCurrencyCount > 0 && (
           <AppText variant="caption" color="secondary">
             {strings.otherCurrencies(summary.otherCurrencyCount)}
@@ -93,7 +93,7 @@ export function BudgetListSummary({
             {strings.otherCadences(summary.excludedCadenceCount)}
           </AppText>
         )}
-      </Column>
+      </Stack>
     </AppCard>
   );
 }

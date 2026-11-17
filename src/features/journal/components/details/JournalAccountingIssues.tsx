@@ -49,7 +49,7 @@ export function JournalAccountingIssues({ evaluation }: { evaluation?: JournalBa
         />
       ))}
       {messages.length > 0 ? (
-        <Stack space="xs" paddingHorizontal="lg" paddingVertical="md">
+        <Stack gap="xs" paddingHorizontal="lg" paddingVertical="md">
           {messages.map(message => (
             <AppText key={message} variant="caption" color="warning">
               {message}

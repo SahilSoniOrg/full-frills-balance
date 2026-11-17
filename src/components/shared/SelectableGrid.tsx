@@ -112,7 +112,7 @@ const SelectableGridItem = React.memo(function SelectableGridItem({
             <SelectionCheckmark selected={isSelected} size={Size.iconMd} color={accent} />
           </Inline>
 
-          <Stack space="xs">
+          <Stack gap="xs">
             <AppText
               variant="subheading"
               style={{ color: isSelected ? accent : theme.text }}
@@ -183,8 +183,8 @@ export function SelectableGrid({
   );
 
   const listHeader = (
-    <Stack paddingTop="xl" paddingBottom="xxl" space="lg">
-      <Stack align="center" space="xs">
+    <Stack paddingTop="xl" paddingBottom="xxl" gap="lg">
+      <Stack align="center" gap="xs">
         <AppText variant="title" style={styles.headerTitle}>
           {title}
         </AppText>
@@ -263,7 +263,7 @@ export function SelectableGrid({
       {selectableList}
 
       <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
-        <Stack space="xs">
+        <Stack gap="xs">
           {validationMessage ? (
             <AppText
               variant="caption"

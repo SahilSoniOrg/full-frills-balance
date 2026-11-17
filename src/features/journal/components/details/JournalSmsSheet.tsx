@@ -50,7 +50,7 @@ function SmsMessage({ sms, onDetach }: { sms: SmsJournalInfoDisplay; onDetach?: 
     date: strings.date,
   };
   return (
-    <Stack space="md">
+    <Stack gap="md">
       {sms.receivedAt !== undefined ? (
         <AppText variant="caption" color="secondary">
           {strings.received(
@@ -83,7 +83,7 @@ function SmsMessage({ sms, onDetach }: { sms: SmsJournalInfoDisplay; onDetach?: 
         </Box>
       ) : null}
       {!privateMode && ranges.length > 0 ? (
-        <Inline space="sm" flexWrap="wrap">
+        <Inline gap="sm" flexWrap="wrap">
           {[...new Set(ranges.map(range => range.kind))].map(kind => (
             <AppText key={kind} variant="caption" color={tintOf(kind)} contrastOn={theme.surface}>
               {strings.legendMark(legendLabels[kind])}
@@ -200,7 +200,7 @@ export function JournalSmsSheet({
           : undefined
       }
     >
-      <Stack space="xl">
+      <Stack gap="xl">
         {smsInfo.map((sms, index) => (
           <SmsMessage
             key={sms.inboxRecordId ?? index}

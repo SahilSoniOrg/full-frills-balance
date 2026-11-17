@@ -14,7 +14,7 @@ import {
 } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import { Box, Column, Row } from '@/src/design-system';
+import { Box, Stack, Inline } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
 
 import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountFlowLabels';
@@ -143,8 +143,8 @@ function AccountCardBase({
             paddingBottom="sm"
             style={{ position: 'relative', overflow: 'hidden' }}
           >
-            <Column gap="sm">
-              <Row align="center" justify="space-between">
+            <Stack gap="sm">
+              <Inline align="center" justify="space-between">
                 <PressScaleTouchable
                   {...cardPressProps}
                   testID="account-card-open"
@@ -153,7 +153,7 @@ function AccountCardBase({
                   accessibilityState={{ selected: isSelected }}
                   style={styles.cardPressFill}
                 >
-                  <Row gap="sm" align="center" style={{ minWidth: 0 }}>
+                  <Inline gap="sm" align="center" style={{ minWidth: 0 }}>
                     <View
                       style={[
                         styles.categoryIconFrame,
@@ -202,10 +202,10 @@ function AccountCardBase({
                       ) : null}
                     </View>
                     {account.isArchived ? <ArchivedAccountIndicator /> : null}
-                  </Row>
+                  </Inline>
                 </PressScaleTouchable>
 
-                <Row gap="xs" align="center" testID="account-card-header-actions">
+                <Inline gap="xs" align="center" testID="account-card-header-actions">
                   {reconciledDateText && (
                     <View
                       testID="account-card-reconciled-badge"
@@ -248,16 +248,16 @@ function AccountCardBase({
                       accessibilityState={{ expanded: account.isExpanded }}
                     />
                   )}
-                </Row>
-              </Row>
+                </Inline>
+              </Inline>
 
               <PressScaleTouchable {...cardPressProps} accessible={false} focusable={false}>
-                <Row
+                <Inline
                   testID="account-card-amount-row"
                   align="center"
                   style={[styles.amountRow, onActionPress && styles.amountWithActions]}
                 >
-                  <Column align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
+                  <Stack align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
                     <FitText
                       variant="title"
                       fontRole="numeric"
@@ -283,10 +283,10 @@ function AccountCardBase({
                           ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
                         </AppText>
                       )}
-                  </Column>
-                </Row>
+                  </Stack>
+                </Inline>
               </PressScaleTouchable>
-            </Column>
+            </Stack>
             {onActionPress && !isSelectionModeActive ? (
               <View
                 testID="account-card-amount-actions"
@@ -307,13 +307,13 @@ function AccountCardBase({
 
           {account.showMonthlyStats && (
             <PressScaleTouchable {...cardPressProps} accessible={false} focusable={false}>
-              <Row
+              <Inline
                 paddingHorizontal="lg"
                 paddingVertical="sm"
                 align="center"
                 justify="space-between"
               >
-                <Column align="center" flex={1}>
+                <Stack align="center" flex={1}>
                   <AppText
                     variant="caption"
                     weight="medium"
@@ -325,11 +325,11 @@ function AccountCardBase({
                   <AppText variant="bodySmall" weight="semibold">
                     {formatMoney(stats.leftAmount, account.currencyCode)}
                   </AppText>
-                </Column>
+                </Stack>
 
                 <Box width={BorderWidth.thin} height={Size.md} background={dividerColor} />
 
-                <Column align="center" flex={1}>
+                <Stack align="center" flex={1}>
                   <AppText
                     variant="caption"
                     weight="medium"
@@ -341,8 +341,8 @@ function AccountCardBase({
                   <AppText variant="bodySmall" weight="semibold">
                     {formatMoney(stats.rightAmount, account.currencyCode)}
                   </AppText>
-                </Column>
-              </Row>
+                </Stack>
+              </Inline>
             </PressScaleTouchable>
           )}
           {isSelected ? (

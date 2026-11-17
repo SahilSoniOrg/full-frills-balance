@@ -51,7 +51,7 @@ export function WorkplaceEditorModal({
         scrollable
         contentStyle={styles.content}
         footer={
-          <Stack space="sm" style={styles.footer}>
+          <Stack gap="sm" style={styles.footer}>
             <AppButton
               variant="primary"
               onPress={save}
@@ -73,7 +73,7 @@ export function WorkplaceEditorModal({
           autoFocus
           testID="workplace-editor-name-input"
         />
-        <Stack space="xs">
+        <Stack gap="xs">
           <AppText variant="body" weight="medium">
             Icon
           </AppText>
@@ -83,7 +83,7 @@ export function WorkplaceEditorModal({
             accessibilityLabel="Change workplace icon"
             testID="workplace-editor-icon-button"
           >
-            <Stack space="xs" align="center">
+            <Stack gap="xs" align="center">
               <Box
                 background="surfaceSecondary"
                 borderWidth={1}

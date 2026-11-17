@@ -4,7 +4,7 @@ import { AppCard, AppText, Badge } from '@/src/components/core';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
@@ -60,7 +60,7 @@ export function BudgetDetailHeader({
     : undefined;
 
   return (
-    <Column gap="sm">
+    <Stack gap="sm">
       <PeriodStepper
         label={periodLabel}
         period={period}
@@ -72,7 +72,7 @@ export function BudgetDetailHeader({
       />
 
       <AppCard elevation="sm" style={styles.heroCard}>
-        <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+        <Inline align="center" justify="space-between" gap="sm" flexWrap="wrap">
           <AppText variant="body" color="secondary" weight="medium">
             {usageVm.isOver ? strings.overTheLimit : strings.leftToSpend}
           </AppText>
@@ -85,7 +85,7 @@ export function BudgetDetailHeader({
                   : statusText}
             </Badge>
           ) : null}
-        </Row>
+        </Inline>
 
         <View style={styles.amountLine}>
           <MoneyText
@@ -199,7 +199,7 @@ export function BudgetDetailHeader({
           ) : null}
         </View>
       </AppCard>
-    </Column>
+    </Stack>
   );
 }
 

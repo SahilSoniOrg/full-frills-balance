@@ -5,7 +5,7 @@ import { MoneyFlowWidget } from '@/src/components/reports/MoneyFlowWidget';
 import { ReportSummaryCard } from '@/src/features/reports/components/ReportSummaryCard';
 import { Icon } from '@/src/components/core';
 import { DetailDisclosure } from '@/src/components/shared/DetailDisclosure';
-import { Column } from '@/src/design-system';
+import { Stack } from '@/src/design-system';
 
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
@@ -39,7 +39,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
       />
 
       <DetailDisclosure title="Income, expense & money flow" icon={Icon.BarChart}>
-        <Column gap="xl">
+        <Stack gap="xl">
           <IncomeExpenseBalanceWidget
             incomeBarFlex={incomeBarFlex}
             expenseBarFlex={expenseBarFlex}
@@ -52,7 +52,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
             currencyCode={targetCurrency}
             chartWidth={chartWidth}
           />
-        </Column>
+        </Stack>
       </DetailDisclosure>
     </>
   );

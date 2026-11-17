@@ -8,5 +8,3 @@ export * from './SetupProgressBar';
 export * from './Skeleton';
 export * from './Stack';
 export * from './utils';
-export { Inline as Row } from './Inline';
-export { Stack as Column } from './Stack';

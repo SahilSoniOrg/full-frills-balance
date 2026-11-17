@@ -162,10 +162,10 @@ function ReviewSuggestions({
   };
 
   return (
-    <Stack space="md">
+    <Stack gap="md">
       {reviewCount === 0 ? (
         <AppCard variant="secondary" padding="lg">
-          <Stack space="sm">
+          <Stack gap="sm">
             <AppText variant="body" weight="semibold">
               {strings.suggestionsEmptyTitle}
             </AppText>
@@ -176,7 +176,7 @@ function ReviewSuggestions({
         </AppCard>
       ) : (
         <>
-          <Stack space="sm">
+          <Stack gap="sm">
             <CaptureSearchField
               value={search}
               onChangeText={value => resetView(value, sort)}
@@ -468,7 +468,7 @@ function SuggestionGroup({
   const { theme } = useTheme();
   if (count === 0) return null;
   return (
-    <Stack space="sm">
+    <Stack gap="sm">
       <PressScaleTouchable
         onPress={onToggle}
         accessibilityRole="button"

@@ -53,7 +53,7 @@ export function JournalDetailsView({
       scrollViewProps={{ testID: 'journal-details-scroll' }}
     >
       <Box padding="lg" paddingBottom="xxxl">
-        <Stack space="xl">
+        <Stack gap="xl">
           <JournalSummary
             journalId={details.journalId}
             summary={details.summary}

@@ -78,7 +78,7 @@ export function SettingsLayout({
         scrollViewRef={scrollViewRef}
       >
         <Box padding="lg" paddingVertical="md" flex={scrollable ? undefined : 1}>
-          <Stack space="xl" flex={scrollable ? undefined : 1}>
+          <Stack gap="xl" flex={scrollable ? undefined : 1}>
             {children}
             {!hideFooter && <SettingsFooter />}
           </Stack>

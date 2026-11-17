@@ -119,7 +119,7 @@ export function HistoricalCaptureSuggestionsView({
       ) : capture.hasSnapshot ? (
         <>
           {sourcePatterns.length > 0 ? (
-            <Stack space="sm">
+            <Stack gap="sm">
               <AppInput
                 value={search}
                 onChangeText={value => {

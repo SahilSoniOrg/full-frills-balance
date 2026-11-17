@@ -16,7 +16,7 @@ import { BudgetSpendingInsights } from './BudgetSpendingInsights';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
 import { getNow } from '@/src/utils/dateFormatting';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 
 export function BudgetDetailView({
   chrome,
@@ -77,7 +77,7 @@ export function BudgetDetailView({
           isSelectionModeActive={vm.isSelectionModeActive}
           selectionChrome={vm.selectionChrome}
           ListHeaderComponent={
-            <Column gap="md" marginBottom="sm">
+            <Stack gap="md" marginBottom="sm">
               <BudgetDetailHeader
                 budget={budget}
                 usage={usage}
@@ -126,7 +126,7 @@ export function BudgetDetailView({
                 action={<JournalCsvExportButton appearance="label" csvExport={vm.csvExport} />}
               />
               {activityCountLabel || vm.activityCategory ? (
-                <Row align="center" gap="xs">
+                <Inline align="center" gap="xs">
                   {activityCountLabel ? (
                     <AppText variant="caption" color="secondary">
                       {activityCountLabel}
@@ -145,9 +145,9 @@ export function BudgetDetailView({
                       </AppText>
                     </PressScaleTouchable>
                   ) : null}
-                </Row>
+                </Inline>
               ) : null}
-            </Column>
+            </Stack>
           }
           contentContainerStyle={styles.listContent}
         />

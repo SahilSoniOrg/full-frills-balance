@@ -20,7 +20,7 @@ export function JournalPlannedActions({ planned }: { planned: JournalPlannedMode
         move.accountName,
       );
   return (
-    <Stack space="md" padding="md" borderRadius="lg" background={tint} backgroundOpacity="soft">
+    <Stack gap="md" padding="md" borderRadius="lg" background={tint} backgroundOpacity="soft">
       <AppText
         variant="body"
         color={tint}

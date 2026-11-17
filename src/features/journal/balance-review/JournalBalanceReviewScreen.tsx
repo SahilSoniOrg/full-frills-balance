@@ -84,7 +84,7 @@ function JournalBalanceReviewScreen() {
         keyboardShouldPersistTaps="handled"
         testID="balance-review-scroll"
       >
-        <Stack space="md">
+        <Stack gap="md">
           <JournalBalanceReviewFlow
             entries={vm.entries}
             isBusy={vm.isBusy}

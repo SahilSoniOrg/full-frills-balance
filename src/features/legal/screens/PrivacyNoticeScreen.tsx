@@ -102,8 +102,8 @@ export default function PrivacyNoticeScreen() {
       scrollable
     >
       <Box paddingHorizontal="lg" paddingVertical="md">
-        <Stack space="xxl">
-          <Stack space="sm">
+        <Stack gap="xxl">
+          <Stack gap="sm">
             <AppText variant="title">{copy.heroTitle}</AppText>
             <AppText variant="body" color="secondary">
               {copy.subtitle}
@@ -111,7 +111,7 @@ export default function PrivacyNoticeScreen() {
           </Stack>
 
           <AppCard variant="secondary" padding="xl">
-            <Stack space="md">
+            <Stack gap="md">
               <Box flexDirection="row" alignItems="center" gap="md">
                 <Box
                   width={Size.xl}
@@ -131,7 +131,7 @@ export default function PrivacyNoticeScreen() {
             </Stack>
           </AppCard>
 
-          <Stack space="md">
+          <Stack gap="md">
             <AppText variant="subheading">{copy.dataSectionTitle}</AppText>
             <AppCard variant="default" padding="none">
               <PrivacyRow icon={Icon.Edit} title={copy.manualTitle} body={copy.manualBody} />
@@ -140,7 +140,7 @@ export default function PrivacyNoticeScreen() {
             </AppCard>
           </Stack>
 
-          <Stack space="md">
+          <Stack gap="md">
             <AppText variant="subheading">{copy.googleDataSectionTitle}</AppText>
             <AppCard variant="default" padding="none">
               <PrivacyRow
@@ -157,7 +157,7 @@ export default function PrivacyNoticeScreen() {
             </AppCard>
           </Stack>
 
-          <Stack space="md">
+          <Stack gap="md">
             <AppText variant="subheading">{copy.controlsSectionTitle}</AppText>
             <AppCard variant="outline" padding="none">
               <PrivacyRow icon={Icon.Archive} title={copy.backupTitle} body={copy.backupBody} />
@@ -171,7 +171,7 @@ export default function PrivacyNoticeScreen() {
           </Stack>
 
           <AppCard variant="ghost" padding="xl">
-            <Stack space="sm">
+            <Stack gap="sm">
               <AppText variant="heading">{copy.limitsTitle}</AppText>
               <AppText variant="body" color="secondary">
                 {copy.limitsBody}
@@ -179,7 +179,7 @@ export default function PrivacyNoticeScreen() {
             </Stack>
           </AppCard>
 
-          <Stack space="sm">
+          <Stack gap="sm">
             <AppText variant="subheading">{copy.supportSectionTitle}</AppText>
             <AppText variant="body" color="secondary">
               {copy.contactBody} {copy.contactEmail}

@@ -5,7 +5,7 @@ import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/componen
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
-import { Column, Row, Separator } from '@/src/design-system';
+import { Stack, Inline, Separator } from '@/src/design-system';
 import { AppConfig, Size, Typography } from '@/src/constants';
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type {
@@ -110,9 +110,9 @@ export function PlannedPaymentActivityOverview({
     : rows.length;
 
   return (
-    <Column gap="md">
+    <Stack gap="md">
       {!isPaused && !isEnded && upcoming.length > 0 && (
-        <Column gap="sm">
+        <Stack gap="sm">
           <ScreenSectionHeader
             title={copy.comingUp}
             action={
@@ -121,7 +121,7 @@ export function PlannedPaymentActivityOverview({
               </AppText>
             }
           />
-          <Row gap="sm" style={{ flexDirection: largeText ? 'column' : 'row' }}>
+          <Inline gap="sm" style={{ flexDirection: largeText ? 'column' : 'row' }}>
             {upcoming.map(occurrence => {
               const differs = plannedMoneyDiffers(
                 occurrence.amount,
@@ -146,7 +146,7 @@ export function PlannedPaymentActivityOverview({
                         : { flex: 1, minWidth: 0 }
                   }
                 >
-                  <Column gap="xs">
+                  <Stack gap="xs">
                     <AppText variant="body" weight="semibold">
                       {dayjs(occurrence.date).format('MMM D')}
                     </AppText>
@@ -160,7 +160,7 @@ export function PlannedPaymentActivityOverview({
                         variant="caption"
                       />
                     )}
-                  </Column>
+                  </Stack>
                 </AppCard>
               );
               return occurrence.journalId ? (
@@ -178,15 +178,15 @@ export function PlannedPaymentActivityOverview({
                 tile
               );
             })}
-          </Row>
-        </Column>
+          </Inline>
+        </Stack>
       )}
 
-      <Column gap="sm">
+      <Stack gap="sm">
         <ScreenSectionHeader
           title={copy.history}
           action={
-            <Row align="center" gap="xs">
+            <Inline align="center" gap="xs">
               <JournalCsvExportButton appearance="label" csvExport={csvExport} />
               {(rows.length > 3 || totalHistoryCount > 3 || !!hasMore) && (
                 <AppButton
@@ -199,12 +199,12 @@ export function PlannedPaymentActivityOverview({
                   {expanded ? copy.showRecent : copy.seeAll(totalHistoryCount)}
                 </AppButton>
               )}
-            </Row>
+            </Inline>
           }
         />
         {error ? (
           <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
-            <Column gap="sm">
+            <Stack gap="sm">
               <AppText color="warning" accessibilityRole="alert">
                 {error}
               </AppText>
@@ -216,21 +216,21 @@ export function PlannedPaymentActivityOverview({
               >
                 {copy.retryActivity}
               </AppButton>
-            </Column>
+            </Stack>
           </AppCard>
         ) : isLoading || !summary ? (
           <AppText color="secondary">{copy.loadingActivity}</AppText>
         ) : (
           <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
-            <Column>
-              <Row
+            <Stack>
+              <Inline
                 justify="space-between"
                 align="center"
                 gap="md"
                 paddingHorizontal="md"
                 paddingVertical="sm"
               >
-                <Column flex={1} gap="xs">
+                <Stack flex={1} gap="xs">
                   {summary.recordedTotals.map(total => (
                     <MoneyText
                       key={total.currencyCode}
@@ -246,21 +246,21 @@ export function PlannedPaymentActivityOverview({
                       ? ''
                       : ` ${copy.paidSince(dayjs(startDate).format('MMM YYYY'))}`}
                   </AppText>
-                </Column>
-                <Column align="flex-end" gap="xs">
+                </Stack>
+                <Stack align="flex-end" gap="xs">
                   <AppText variant="caption" color="secondary">
                     {copy.skippedCount}
                   </AppText>
                   <AppText variant="body" weight="semibold">
                     {summary.skippedCount}
                   </AppText>
-                </Column>
-              </Row>
+                </Stack>
+              </Inline>
               {(historyLoading || rows.length > 0) && <Separator />}
               {historyLoading ? (
-                <Column paddingHorizontal="md" paddingVertical="md">
+                <Stack paddingHorizontal="md" paddingVertical="md">
                   <AppText color="secondary">{copy.loadingHistory}</AppText>
-                </Column>
+                </Stack>
               ) : visibleRows.length ? (
                 visibleRows.map(journal => (
                   <PlannedPaymentHistoryCard
@@ -291,9 +291,9 @@ export function PlannedPaymentActivityOverview({
                   />
                 ))
               ) : (
-                <Column paddingHorizontal="md" paddingVertical="md">
+                <Stack paddingHorizontal="md" paddingVertical="md">
                   <AppText color="secondary">{copy.noHistory}</AppText>
-                </Column>
+                </Stack>
               )}
               {expanded && hasMore && (
                 <AppButton
@@ -308,10 +308,10 @@ export function PlannedPaymentActivityOverview({
                   {copy.loadEarlier}
                 </AppButton>
               )}
-            </Column>
+            </Stack>
           </AppCard>
         )}
-      </Column>
-    </Column>
+      </Stack>
+    </Stack>
   );
 }

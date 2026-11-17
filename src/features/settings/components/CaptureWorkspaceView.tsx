@@ -130,7 +130,7 @@ export function CaptureWorkspaceView({
       </FocusTarget>
       {capture.enabled && capture.needsAccountSetup ? (
         <AppCard variant="secondary">
-          <Stack space="md">
+          <Stack gap="md">
             <AppText variant="bodySmall" color="secondary">
               {strings.accountSetupHint}
             </AppText>
@@ -217,7 +217,7 @@ function ConnectedSourcesSection({
   const showGmail = Platform.OS !== 'web' && gmailSection !== null;
   if (!showSms && !showGmail) return null;
   return (
-    <Stack space="sm">
+    <Stack gap="sm">
       <Box paddingHorizontal="md">
         <AppText variant="overline" color="secondary" accessibilityRole="header">
           {strings.sourcesHeader}

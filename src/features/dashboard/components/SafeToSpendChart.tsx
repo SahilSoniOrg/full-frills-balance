@@ -328,7 +328,7 @@ export const SafeToSpendChart = ({
                           return (
                             <Inline
                               key={idx}
-                              space="md"
+                              gap="md"
                               justifyContent="space-between"
                               alignItems="center"
                             >

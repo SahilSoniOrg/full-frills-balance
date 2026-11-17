@@ -50,8 +50,8 @@ export function JournalSummary({
       : undefined;
   };
   return (
-    <Stack space="sm" testID={`journal-summary-${journalId}`}>
-      <Inline space="sm" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap">
+    <Stack gap="sm" testID={`journal-summary-${journalId}`}>
+      <Inline gap="sm" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap">
         <AppText
           variant="heading"
           fontRole="ui"

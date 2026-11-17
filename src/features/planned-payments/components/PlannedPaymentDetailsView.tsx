@@ -23,7 +23,7 @@ import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { JournalListModals } from '@/src/features/journal';
-import { Column, Row, Separator } from '@/src/design-system';
+import { Stack, Inline, Separator } from '@/src/design-system';
 import { PlannedPaymentStatus } from '@/src/types/enums';
 import { getNow } from '@/src/utils/dateFormatting';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
@@ -85,8 +85,8 @@ export function PlannedPaymentDetailsView({
 
   const actionCard = (
     <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
-      <Column gap="sm">
-        <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+      <Stack gap="sm">
+        <Inline align="center" justify="space-between" gap="sm" flexWrap="wrap">
           <AppText
             variant="body"
             weight="semibold"
@@ -108,10 +108,10 @@ export function PlannedPaymentDetailsView({
           >
             {urgency}
           </Badge>
-        </Row>
+        </Inline>
 
         {isEndedWithoutOutstanding && vm.activitySummary ? (
-          <Column gap="xs">
+          <Stack gap="xs">
             {vm.activitySummary.recordedTotals.map(total => (
               <MoneyText
                 key={total.currencyCode}
@@ -124,7 +124,7 @@ export function PlannedPaymentDetailsView({
             <AppText variant="body" color="secondary">
               {copy.endedPayments(vm.activitySummary.recordedCount)}
             </AppText>
-          </Column>
+          </Stack>
         ) : (
           vm.amount != null &&
           vm.currencyCode && (
@@ -237,7 +237,7 @@ export function PlannedPaymentDetailsView({
             )}
           </>
         )}
-      </Column>
+      </Stack>
     </AppCard>
   );
 
@@ -271,7 +271,7 @@ export function PlannedPaymentDetailsView({
         />
       ) : (
         <>
-          <Column paddingVertical="sm" gap="md">
+          <Stack paddingVertical="sm" gap="md">
             {actionCard}
             {vm.actionError && (
               <AppText color="error" accessibilityRole="alert">
@@ -310,7 +310,7 @@ export function PlannedPaymentDetailsView({
             )}
 
             {!vm.isPreview && (
-              <Column gap="sm">
+              <Stack gap="sm">
                 <ScreenSectionHeader
                   title={copy.details}
                   action={
@@ -328,7 +328,7 @@ export function PlannedPaymentDetailsView({
                   }
                 />
                 <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
-                  <Column>
+                  <Stack>
                     <DetailRow label={copy.repeats} value={vm.intervalLabel ?? ''} />
                     <Separator />
                     <DetailRow
@@ -351,17 +351,17 @@ export function PlannedPaymentDetailsView({
                     {vm.description?.trim() && (
                       <>
                         <Separator />
-                        <Column paddingHorizontal="lg" paddingVertical="sm" gap="xs">
+                        <Stack paddingHorizontal="lg" paddingVertical="sm" gap="xs">
                           <AppText variant="caption" color="secondary">
                             {copy.note}
                           </AppText>
                           <AppText variant="body">{vm.description}</AppText>
-                        </Column>
+                        </Stack>
                       </>
                     )}
-                  </Column>
+                  </Stack>
                 </AppCard>
-              </Column>
+              </Stack>
             )}
 
             {!vm.isPreview && vm.onToggleStatus && !isPaused && !isEnded && (
@@ -377,7 +377,7 @@ export function PlannedPaymentDetailsView({
                 <AppText color="secondary">{copy.pauseSchedule}</AppText>
               </AppButton>
             )}
-          </Column>
+          </Stack>
           {vm.modals ? <JournalListModals {...vm.modals} /> : null}
         </>
       )}

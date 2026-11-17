@@ -9,7 +9,7 @@ import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';
 import { BudgetListSummary } from './BudgetListSummary';
 import { summarizeBudgetList } from '../helpers/budgetListPresentation';
-import { Column } from '@/src/design-system';
+import { Stack } from '@/src/design-system';
 
 export type BudgetListViewProps = {
   items: BudgetItem[];
@@ -59,7 +59,7 @@ export function BudgetListView({
       contentContainerStyle={styles.listContent}
       ListHeaderComponent={
         items.length > 0 ? (
-          <Column gap="md" marginBottom="sm">
+          <Stack gap="md" marginBottom="sm">
             {missingRateQuotes.length > 0 && (
               <IncompleteFxWarning
                 testID="budgets-missing-rates"
@@ -77,7 +77,7 @@ export function BudgetListView({
             <AppText variant="bodySmall" color="secondary" weight="medium">
               {AppConfig.strings.commitmentsRedesign.thisMonth}
             </AppText>
-          </Column>
+          </Stack>
         ) : undefined
       }
       ListEmptyComponent={

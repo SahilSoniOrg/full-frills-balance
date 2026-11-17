@@ -54,13 +54,8 @@ export function JournalBudgetImpact({
             accessibilityRole="button"
             accessibilityLabel={`${budget.name}, ${headline}`}
           >
-            <Stack space="xs" padding="md">
-              <Inline
-                space="sm"
-                justifyContent="space-between"
-                alignItems="baseline"
-                flexWrap="wrap"
-              >
+            <Stack gap="xs" padding="md">
+              <Inline gap="sm" justifyContent="space-between" alignItems="baseline" flexWrap="wrap">
                 <AppText variant="body" weight="semibold">
                   {budget.name}
                 </AppText>

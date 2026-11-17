@@ -143,7 +143,7 @@ export function BalanceChangeClassifySheet({
   return (
     <>
       <BaseAccountPickerModal visible={showPicker} onClose={handleClose} title={copy.title}>
-        <Stack space="md" style={styles.headerBlock}>
+        <Stack gap="md" style={styles.headerBlock}>
           <AppText variant="body" color="secondary">
             {copy.subtitle(discrepancyLabel)}
           </AppText>

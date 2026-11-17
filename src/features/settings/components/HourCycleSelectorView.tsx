@@ -46,7 +46,7 @@ export function HourCycleSelectorView({
         icon={Icon.Clock}
         focusId={focusId}
         title={
-          <Inline align="center" space="sm">
+          <Inline align="center" gap="sm">
             <AppText variant="body" weight="semibold">
               {AppConfig.strings.settings.appearance.hourCycleTitle}
             </AppText>

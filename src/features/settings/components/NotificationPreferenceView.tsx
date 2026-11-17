@@ -58,7 +58,7 @@ export const NotificationPreferenceView = ({
 
   return (
     <ListGroup variant="plain">
-      <Stack space={0}>
+      <Stack gap={0}>
         <ListRow
           focusId="notifications"
           icon={Icon.Notifications}

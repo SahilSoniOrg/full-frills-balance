@@ -403,7 +403,7 @@ function SetupJourneyScreen({
     >
       {showRestoreFxRepairCompletion ? (
         <Box flex={1} padding="lg">
-          <Stack flex={1} space="md">
+          <Stack flex={1} gap="md">
             <AppText variant="title">Restore changes applied</AppText>
             <AppText variant="body" color="secondary">
               {restoreChangesSummary(restoreFxRepairReport.length, bulkRestoreCount)}
@@ -414,7 +414,7 @@ function SetupJourneyScreen({
               showsVerticalScrollIndicator
               testID="restore-changes-scroll"
             >
-              <Stack space="sm">
+              <Stack gap="sm">
                 {restoreFxRepairReport.map((change, index) => (
                   <AppText
                     key={`${index}-${change}`}
@@ -452,7 +452,7 @@ function SetupJourneyScreen({
         </Box>
       ) : resolving && resolutionError ? (
         <Box flex={1} padding="lg" justifyContent="center">
-          <Stack space="md">
+          <Stack gap="md">
             <AppText variant="body" color="secondary">
               {resolutionError}
             </AppText>
@@ -504,7 +504,7 @@ function SetupDraftContention({
   return (
     <Page testID="setup-draft-contention">
       <Box flex={1} padding="lg" justifyContent="center">
-        <Stack space="md">
+        <Stack gap="md">
           <AppText variant="title">{copy.sessionConflictTitle}</AppText>
           <AppText variant="body" color="secondary">
             {copy.sessionConflictBody}
@@ -534,7 +534,7 @@ function UnreadableSetupDraft() {
   return (
     <Page testID="setup-unreadable-draft">
       <Box flex={1} padding="lg" justifyContent="center">
-        <Stack space="md">
+        <Stack gap="md">
           <AppText variant="title">Setup could not be resumed</AppText>
           <AppText variant="body" color="secondary">
             The saved setup draft is invalid. Discard it to start again. Published restore books, if

@@ -2,7 +2,7 @@ import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel
 import { AppButton, AppText, ErrorStateView } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
 import type { AccountId } from '@/src/types/ids';
@@ -40,12 +40,12 @@ export function BudgetSpendingInsights({
   if (resolvedLeafCategoryCount === 1) return null;
 
   return (
-    <Column gap="sm">
-      <Row align="baseline" justify="space-between" gap="sm" flexWrap="wrap">
+    <Stack gap="sm">
+      <Inline align="baseline" justify="space-between" gap="sm" flexWrap="wrap">
         <AppText variant="heading" weight="semibold">
           {strings.whereItWent}
         </AppText>
-      </Row>
+      </Inline>
 
       {isLoading ? (
         <AppText variant="caption" color="secondary">
@@ -63,7 +63,7 @@ export function BudgetSpendingInsights({
           {strings.noCategorySpending}
         </AppText>
       ) : (
-        <Column gap="xs">
+        <Stack gap="xs">
           {categories.map(category => {
             const account = expenseAccounts.find(item => item.id === category.accountId);
             const selected = activityCategory?.id === category.accountId;
@@ -86,8 +86,8 @@ export function BudgetSpendingInsights({
                 onPress={() => onFilterCategory(selected ? null : category.accountId)}
                 buttonStyle={styles.categoryButton}
               >
-                <Column flex={1} gap="xs">
-                  <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+                <Stack flex={1} gap="xs">
+                  <Inline align="center" justify="space-between" gap="sm" flexWrap="wrap">
                     <View style={styles.categoryLabel}>
                       <AccountInlineLabel
                         account={account}
@@ -105,7 +105,7 @@ export function BudgetSpendingInsights({
                       variant="body"
                       weight="semibold"
                     />
-                  </Row>
+                  </Inline>
                   <View
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
@@ -121,27 +121,27 @@ export function BudgetSpendingInsights({
                       {strings.incompleteCurrencyValuation}
                     </AppText>
                   ) : null}
-                </Column>
+                </Stack>
               </AppButton>
             );
           })}
-        </Column>
+        </Stack>
       )}
 
       {chartData && chartData.refunds !== 0 ? (
-        <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
+        <Inline justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
           <AppText variant="caption" color="secondary">
             {strings.refundsAndReversals}
           </AppText>
           <MoneyText amount={chartData.refunds} currencyCode={currencyCode} variant="caption" />
-        </Row>
+        </Inline>
       ) : null}
       {chartData?.hasUnvaluedEntries ? (
         <AppText variant="caption" color="warning">
           {strings.partialCategoryAmounts}
         </AppText>
       ) : null}
-    </Column>
+    </Stack>
   );
 }
 

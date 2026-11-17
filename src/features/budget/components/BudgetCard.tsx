@@ -9,7 +9,7 @@ import {
   AppText,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
@@ -96,13 +96,13 @@ export function BudgetCard({
         accessibilityLabel={`${strings.remainingAccessibility(budget.name, headline, spent, limit, paceLabel)}. ${strings.categorySummary(item.scopeAccounts.map(account => account?.name ?? strings.unavailableCategory).join(', '))}`}
         accessibilityHint={strings.opensBudget}
       >
-        <Column gap="sm">
-          <Row justify="space-between" align="flex-start" gap="sm" flexWrap="wrap">
-            <Column gap="xs" flexGrow={1} flexBasis={120}>
+        <Stack gap="sm">
+          <Inline justify="space-between" align="flex-start" gap="sm" flexWrap="wrap">
+            <Stack gap="xs" flexGrow={1} flexBasis={120}>
               <AppText variant="body" weight="semibold">
                 {budget.name}
               </AppText>
-              <Row gap="xs" flexWrap="wrap" align="center">
+              <Inline gap="xs" flexWrap="wrap" align="center">
                 {chipAccounts.slice(0, 2).map((account, index) => (
                   <View key={account?.id ?? index} style={{ maxWidth: '100%' }}>
                     <AccountInlineLabel
@@ -114,23 +114,23 @@ export function BudgetCard({
                   </View>
                 ))}
                 {chipAccounts.length > 2 && (
-                  <Row gap="xs" align="center">
+                  <Inline gap="xs" align="center">
                     <AppIcon name={Icon.FolderOpen} size={Size.iconXs} color="textSecondary" />
                     <AppText variant="caption" color="secondary">
                       +{chipAccounts.length - 2}
                     </AppText>
-                  </Row>
+                  </Inline>
                 )}
-              </Row>
+              </Inline>
               {!isMonthly && (
-                <Row gap="xs" align="center">
+                <Inline gap="xs" align="center">
                   <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
                   <AppText variant="caption" color="secondary" numberOfLines={1}>
                     {formatRecurrence(budget)}
                   </AppText>
-                </Row>
+                </Inline>
               )}
-            </Column>
+            </Stack>
             <FitText
               variant="heading"
               tabular
@@ -146,7 +146,7 @@ export function BudgetCard({
             >
               {headline}
             </FitText>
-          </Row>
+          </Inline>
           <BudgetProgressBar
             progress={usage.usagePercent * 100}
             statusColor={vm.statusColor}
@@ -154,21 +154,21 @@ export function BudgetCard({
             accessibilityLabel={paceLabel}
           />
           {(hasSpent || usage.hasUnvaluedEntries) && (
-            <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
+            <Inline justify="space-between" align="center" gap="sm" flexWrap="wrap">
               <AppText variant="caption" color="secondary" testID="budget-card-spent">
                 {`${spent} ${limit}`}
               </AppText>
               {hasSpent && !usage.hasUnvaluedEntries && (
-                <Row gap="xs" align="center">
+                <Inline gap="xs" align="center">
                   <AppIcon name={statusIcon(vm.status)} size={Size.iconXs} color={statusColor} />
                   <AppText variant="caption" color={statusColor}>
                     {statusDisplay}
                   </AppText>
-                </Row>
+                </Inline>
               )}
-            </Row>
+            </Inline>
           )}
-        </Column>
+        </Stack>
       </PressScaleTouchable>
       {usage.hasUnvaluedEntries && (
         <AppButton
@@ -184,12 +184,12 @@ export function BudgetCard({
             })
           }
         >
-          <Row gap="xs" align="center">
+          <Inline gap="xs" align="center">
             <AppIcon name={Icon.Alert} size={Size.iconXs} color="warning" />
             <AppText variant="caption" color="warning" numberOfLines={2} style={{ flexShrink: 1 }}>
               {strings.fixFx(fxMessage)}
             </AppText>
-          </Row>
+          </Inline>
         </AppButton>
       )}
     </AppCard>

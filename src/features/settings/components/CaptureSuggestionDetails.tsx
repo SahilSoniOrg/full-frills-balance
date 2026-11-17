@@ -67,7 +67,7 @@ export function DefaultedDetail({
 }) {
   return (
     <Box paddingHorizontal="md" paddingVertical="sm">
-      <Stack space="sm">
+      <Stack gap="sm">
         <AppText variant="bodySmall" color="secondary">
           {`${strings.reviewTransaction} · ${formatDate(item.journalDate)} · ${item.currentCategoryNames?.join(', ') || strings.defaultedReview}. Confirming records this journal only; it does not create a future default.`}
         </AppText>
@@ -120,7 +120,7 @@ export function CategoryCandidateDetail({
     description && description.toLocaleLowerCase() !== merchant?.trim().toLocaleLowerCase();
   return (
     <Box paddingHorizontal="md" paddingVertical="sm">
-      <Stack space="sm">
+      <Stack gap="sm">
         <AppText variant="caption" weight="bold">
           Evidence
         </AppText>
@@ -208,7 +208,7 @@ export function NameCandidateDetail({
   const scope = descriptionScope(item);
   return (
     <Box paddingHorizontal="md" paddingVertical="sm">
-      <Stack space="sm">
+      <Stack gap="sm">
         <AppText variant="caption" weight="bold">
           Evidence
         </AppText>
@@ -689,7 +689,7 @@ function HistoricalPatternDetail({
 
   return (
     <View style={styles.detailBody}>
-      <Stack space="sm">
+      <Stack gap="sm">
         {!mixed ? (
           <HistoricalStatusInset
             pattern={pattern}
@@ -792,14 +792,14 @@ function HistoricalPatternDetail({
             </PressScaleTouchable>
           </View>
           {entriesOpen ? (
-            <Stack space="xs">
+            <Stack gap="xs">
               {loading ? (
                 <AppText variant="caption" color="secondary">
                   {strings.historicalEvidenceLoading}
                 </AppText>
               ) : null}
               {error ? (
-                <Stack space="xs">
+                <Stack gap="xs">
                   <AppText variant="caption" color="error">
                     {strings.historicalEvidenceError}
                   </AppText>
@@ -815,7 +815,7 @@ function HistoricalPatternDetail({
                 </Stack>
               ) : null}
               {!loading && !error && stale ? (
-                <Stack space="xs">
+                <Stack gap="xs">
                   <AppText variant="caption" color="secondary">
                     {strings.historicalEvidenceStale}
                   </AppText>

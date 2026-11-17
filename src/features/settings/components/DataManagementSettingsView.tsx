@@ -21,7 +21,7 @@ function DataManagementSettingsView() {
     <SettingsLayout title={AppConfig.strings.settings.sections.dataManagement}>
       <DataExportSection onImport={() => AppNavigation.toSetupJourney('settings_restore')} />
 
-      <Stack space="xxl">
+      <Stack gap="xxl">
         <ListGroup variant="plain" header="Sharing">
           <ListRow
             icon={Icon.Share}

@@ -18,7 +18,7 @@ export function SettingsFooter() {
         {Constants.expoConfig?.extra?.gitCommit ? ` - ${Constants.expoConfig.extra.gitCommit}` : ''}
       </AppText>
       <AppText variant="caption" color="secondary" align="center" style={{ marginTop: Spacing.xs }}>
-        <Inline space="xs" align="center" justify="center">
+        <Inline gap="xs" align="center" justify="center">
           <AppText variant="caption" color="secondary">
             Made with
           </AppText>

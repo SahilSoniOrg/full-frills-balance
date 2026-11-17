@@ -40,7 +40,7 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
 
   return (
     <ListGroup variant="plain">
-      <Stack space={0}>
+      <Stack gap={0}>
         <ListRow
           focusId="appearance"
           icon={Icon.Palette}

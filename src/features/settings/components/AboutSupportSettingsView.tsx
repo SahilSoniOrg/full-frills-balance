@@ -56,7 +56,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
           onPress={vm.onShareBugReport}
           chevron={false}
           trailing={
-            <Inline space="md">
+            <Inline gap="md">
               <IconButton
                 name={Icon.Share}
                 variant="clear"

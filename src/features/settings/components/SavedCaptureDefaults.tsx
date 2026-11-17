@@ -81,7 +81,7 @@ export function SavedCaptureDefaults({
   if (savedCount === 0) {
     return (
       <AppCard variant="secondary" padding="lg">
-        <Stack space="sm">
+        <Stack gap="sm">
           <AppText variant="body" weight="semibold">
             {strings.savedSuggestionsEmptyTitle}
           </AppText>
@@ -94,7 +94,7 @@ export function SavedCaptureDefaults({
   }
 
   return (
-    <Stack space="lg">
+    <Stack gap="lg">
       <CaptureSearchField
         value={search}
         onChangeText={value => {

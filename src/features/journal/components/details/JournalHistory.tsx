@@ -80,10 +80,10 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
             <DetailRow key={row.label} label={row.label} value={row.value} />
           ))
         ) : (
-          <Stack space="none" padding="md">
+          <Stack gap="none" padding="md">
             {events.map((event, index) => (
-              <Inline key={event.id} space="sm" alignItems="stretch">
-                <Stack space="none" alignItems="center" width={Size.md}>
+              <Inline key={event.id} gap="sm" alignItems="stretch">
+                <Stack gap="none" alignItems="center" width={Size.md}>
                   <IconTile
                     icon={
                       event.kind === 'journal.sms_auto_posted'
@@ -106,12 +106,12 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
                   ) : null}
                 </Stack>
                 <Stack
-                  space="xs"
+                  gap="xs"
                   flex={1}
                   minWidth={0}
                   paddingBottom={index < events.length - 1 ? 'md' : 'none'}
                 >
-                  <Inline space="sm" justifyContent="space-between" flexWrap="wrap">
+                  <Inline gap="sm" justifyContent="space-between" flexWrap="wrap">
                     <AppText variant="body" weight="semibold">
                       {event.title}
                     </AppText>

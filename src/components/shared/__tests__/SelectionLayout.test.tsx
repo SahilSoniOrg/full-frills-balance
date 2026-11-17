@@ -8,7 +8,7 @@ import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/compo
 import { JournalEntryModePickerModal } from '@/src/features/journal/entry/components/JournalEntryModePickerModal';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import { Icon } from '@/src/types/domainIcons';
-import { Row } from '@/src/design-system';
+import { Inline } from '@/src/design-system';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 import { fireEvent, render } from '@/src/testing/render';
 
@@ -105,7 +105,7 @@ describe('selection layout invariants', () => {
     };
     const view = render(<PlannedPaymentHistoryCard {...props} />);
     const footprint = () => {
-      const node = view.UNSAFE_getByType(Row).children[0];
+      const node = view.UNSAFE_getByType(Inline).children[0];
       if (typeof node === 'string') throw new Error('Expected a leading view');
       const style = StyleSheet.flatten(node.props.style) ?? {};
       return [style.width ?? node.props.size, style.height ?? node.props.size];

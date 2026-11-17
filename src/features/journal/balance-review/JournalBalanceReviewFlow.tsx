@@ -64,7 +64,7 @@ function EntrySummary<Id extends string>({
 }) {
   const sameCurrency = sameCurrencyImbalanceMessage(entry.currencyCode, entry.lines);
   return (
-    <Stack space="xs">
+    <Stack gap="xs">
       <AppText variant="body" weight="semibold">
         {entry.description?.trim() || untitledEntry}
       </AppText>
@@ -115,7 +115,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
 
   if (selected) {
     return (
-      <Stack space="sm">
+      <Stack gap="sm">
         <AppButton variant="ghost" onPress={() => setSelection(undefined)} disabled={isBusy}>
           Back to all entries
         </AppButton>
@@ -193,7 +193,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
 
       {suggested.length > 0 ? (
         <Box padding="sm" borderRadius="md" background="surfaceSecondary">
-          <Stack space="sm">
+          <Stack gap="sm">
             <AppText variant="body" weight="semibold">
               {`A calculated rate can balance ${suggested.length} ${plural(suggested.length, 'entry', 'entries')}`}
             </AppText>
@@ -201,7 +201,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
               {copy.suggestionsNote}
             </AppText>
             {suggested.map(entry => (
-              <Stack key={entry.journalId} space="xs">
+              <Stack key={entry.journalId} gap="xs">
                 <AppText variant="caption" weight="semibold">
                   {`${entry.description?.trim() || copy.untitledEntry} · ${formatDate(entry.journalDate)}`}
                 </AppText>
@@ -239,7 +239,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
           </AppText>
           {needsReview.map(entry => (
             <Box key={entry.journalId} padding="sm" borderRadius="md" background="surfaceSecondary">
-              <Stack space="sm">
+              <Stack gap="sm">
                 <EntrySummary entry={entry} untitledEntry={copy.untitledEntry} />
                 {entry.lines.map(line => (
                   <AppText key={line.id} variant="caption" color="secondary">

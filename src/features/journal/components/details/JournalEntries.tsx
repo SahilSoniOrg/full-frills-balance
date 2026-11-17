@@ -113,7 +113,7 @@ export function JournalEntries({ entries }: { entries: JournalEntriesPresentatio
     );
   }
   return (
-    <Stack space="lg" testID="journal-split">
+    <Stack gap="lg" testID="journal-split">
       {entries.groups.map((group, groupIndex) => (
         <ListGroup
           key={group.label}

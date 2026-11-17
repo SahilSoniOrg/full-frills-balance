@@ -57,7 +57,7 @@ const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
 function PreviewSectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <AppCard elevation="sm" padding="xl">
-      <Stack space="md">
+      <Stack gap="md">
         <AppText variant="heading">{title}</AppText>
         <Separator />
         {children}
@@ -69,24 +69,24 @@ function PreviewSectionCard({ title, children }: { title: string; children: Reac
 function SemanticColoredDots() {
   const { theme } = useTheme();
   return (
-    <Inline space="lg" alignItems="center" flexWrap="wrap">
-      <Inline space="xs" alignItems="center">
+    <Inline gap="lg" alignItems="center" flexWrap="wrap">
+      <Inline gap="xs" alignItems="center">
         <ColoredDot color={theme.asset} size={Spacing.sm} />
         <AppText variant="caption">Asset</AppText>
       </Inline>
-      <Inline space="xs" alignItems="center">
+      <Inline gap="xs" alignItems="center">
         <ColoredDot color={theme.liability} size={Spacing.sm} />
         <AppText variant="caption">Liability</AppText>
       </Inline>
-      <Inline space="xs" alignItems="center">
+      <Inline gap="xs" alignItems="center">
         <ColoredDot color={theme.income} size={Spacing.sm} />
         <AppText variant="caption">Income</AppText>
       </Inline>
-      <Inline space="xs" alignItems="center">
+      <Inline gap="xs" alignItems="center">
         <ColoredDot color={theme.expense} size={Spacing.sm} />
         <AppText variant="caption">Expense</AppText>
       </Inline>
-      <Inline space="xs" alignItems="center">
+      <Inline gap="xs" alignItems="center">
         <ColoredDot color={theme.transfer} size={Spacing.sm} />
         <AppText variant="caption">Transfer</AppText>
       </Inline>
@@ -138,7 +138,7 @@ export default function DesignPreviewScreen() {
           <Box paddingHorizontal="lg" paddingVertical="md">
             <Inline justifyContent="space-between" alignItems="center" flexWrap="wrap" gap="sm">
               <AppText variant="xl">Design System Preview</AppText>
-              <Inline space="sm" alignItems="center">
+              <Inline gap="sm" alignItems="center">
                 <AppText variant="body">Dark Mode:</AppText>
                 <Switch value={isDarkMode} onValueChange={setIsDarkMode} />
               </Inline>
@@ -147,10 +147,10 @@ export default function DesignPreviewScreen() {
         }
       >
         <Box paddingHorizontal="lg" paddingVertical="xl">
-          <Stack space="xl">
+          <Stack gap="xl">
             {/* Typography Section */}
             <AppCard elevation="sm" padding="xl">
-              <Stack space="md">
+              <Stack gap="md">
                 <AppText variant="heading">Typography</AppText>
                 <AppSegmentedControl
                   options={PREVIEW_FONT_OPTIONS}
@@ -183,7 +183,7 @@ export default function DesignPreviewScreen() {
                 >
                   ₹12,345
                 </AppText>
-                <Stack space="xs">
+                <Stack gap="xs">
                   <Inline justifyContent="space-between">
                     <AppText variant="bodySmall">Income</AppText>
                     <AppText variant="bodySmall" weight="semibold" tabular>
@@ -240,13 +240,13 @@ export default function DesignPreviewScreen() {
 
             {/* Layout Primitives Section */}
             <AppCard elevation="sm" padding="xl">
-              <Stack space="md">
+              <Stack gap="md">
                 <AppText variant="heading">Layout Primitives</AppText>
                 <Separator />
 
                 <AppText variant="subheading">Stack (Vertical, gap: md)</AppText>
                 <Box background="surfaceSecondary" padding="md" borderRadius="md">
-                  <Stack space="md">
+                  <Stack gap="md">
                     <AppCard elevation="none" padding="md">
                       <AppText variant="caption">Item 1</AppText>
                     </AppCard>
@@ -261,7 +261,7 @@ export default function DesignPreviewScreen() {
 
                 <AppText variant="subheading">Inline (Horizontal, gap: lg)</AppText>
                 <Box background="surfaceSecondary" padding="md" borderRadius="md">
-                  <Inline space="lg">
+                  <Inline gap="lg">
                     <TokenBox size={40} radius={Shape.radius.sm} />
                     <TokenBox size={40} radius={Shape.radius.sm} />
                     <TokenBox size={40} radius={Shape.radius.sm} />
@@ -273,7 +273,7 @@ export default function DesignPreviewScreen() {
             {/* Buttons Section */}
             <PreviewSectionCard title="Buttons">
               <AppText variant="subheading">Variants</AppText>
-              <Inline space="md" flexWrap="wrap">
+              <Inline gap="md" flexWrap="wrap">
                 <AppButton variant="primary">Primary</AppButton>
                 <AppButton variant="secondary">Secondary</AppButton>
                 <AppButton variant="outline">Outline</AppButton>
@@ -281,13 +281,13 @@ export default function DesignPreviewScreen() {
               </Inline>
 
               <AppText variant="subheading">Destructive</AppText>
-              <Inline space="md" flexWrap="wrap">
+              <Inline gap="md" flexWrap="wrap">
                 <AppButton variant="destructive">Delete</AppButton>
                 <AppButton variant="destructive-outline">Remove</AppButton>
               </Inline>
 
               <AppText variant="subheading">Sizes</AppText>
-              <Inline space="md" alignItems="center" flexWrap="wrap">
+              <Inline gap="md" alignItems="center" flexWrap="wrap">
                 <AppButton variant="primary" size="sm">
                   Small
                 </AppButton>
@@ -300,7 +300,7 @@ export default function DesignPreviewScreen() {
               </Inline>
 
               <AppText variant="subheading">States</AppText>
-              <Inline space="md" flexWrap="wrap">
+              <Inline gap="md" flexWrap="wrap">
                 <AppButton variant="primary" loading>
                   Loading
                 </AppButton>
@@ -313,7 +313,7 @@ export default function DesignPreviewScreen() {
             {/* Badges Section */}
             <PreviewSectionCard title="Badges">
               <AppText variant="subheading">Soft</AppText>
-              <Inline space="sm" flexWrap="wrap">
+              <Inline gap="sm" flexWrap="wrap">
                 <Badge variant="default">Default</Badge>
                 <Badge variant="success">Success</Badge>
                 <Badge variant="warning">Warning</Badge>
@@ -321,7 +321,7 @@ export default function DesignPreviewScreen() {
               </Inline>
 
               <AppText variant="subheading">Accounting</AppText>
-              <Inline space="sm" flexWrap="wrap">
+              <Inline gap="sm" flexWrap="wrap">
                 <Badge variant="asset">ASSET</Badge>
                 <Badge variant="liability">LIABILITY</Badge>
                 <Badge variant="income">INCOME</Badge>
@@ -329,7 +329,7 @@ export default function DesignPreviewScreen() {
               </Inline>
 
               <AppText variant="subheading">Solid &amp; sizes</AppText>
-              <Inline space="sm" flexWrap="wrap" alignItems="center">
+              <Inline gap="sm" flexWrap="wrap" alignItems="center">
                 <Badge variant="primary" solid>
                   Solid
                 </Badge>
@@ -344,7 +344,7 @@ export default function DesignPreviewScreen() {
 
             {/* List Rows Section */}
             <AppCard elevation="sm" padding="xl">
-              <Stack space="md">
+              <Stack gap="md">
                 <AppText variant="heading">List Rows</AppText>
                 <Separator />
 
@@ -376,7 +376,7 @@ export default function DesignPreviewScreen() {
 
             {/* AppInput & Fields Section */}
             <PreviewSectionCard title="Inputs & Fields">
-              <Stack space="lg">
+              <Stack gap="lg">
                 <Box>
                   <Box marginBottom="xs">
                     <AppText variant="caption" color="secondary">
@@ -422,7 +422,7 @@ export default function DesignPreviewScreen() {
 
             {/* Cards & surfaces */}
             <PreviewSectionCard title="Cards & Surfaces">
-              <Stack space="md">
+              <Stack gap="md">
                 <AppCard variant="default" padding="lg">
                   <AppText variant="body">Default card</AppText>
                 </AppCard>
@@ -448,7 +448,7 @@ export default function DesignPreviewScreen() {
             {/* Icon buttons & FAB */}
             <PreviewSectionCard title="Icon Buttons & FAB">
               <AppText variant="subheading">IconButton</AppText>
-              <Inline space="md" flexWrap="wrap" alignItems="center">
+              <Inline gap="md" flexWrap="wrap" alignItems="center">
                 <IconButton name={Icon.Settings} variant="surface" accessibilityLabel="Settings" />
                 <IconButton name={Icon.Add} variant="primary" accessibilityLabel="Add" />
                 <IconButton name={Icon.Close} variant="clear" accessibilityLabel="Close" />
@@ -464,7 +464,7 @@ export default function DesignPreviewScreen() {
 
               <AppText variant="subheading">Floating action button</AppText>
               <Box position="relative" minHeight={Size.fab + Spacing.xxl} width="100%">
-                <Inline space="lg" alignItems="center">
+                <Inline gap="lg" alignItems="center">
                   <FloatingActionButton
                     onPress={() => {}}
                     style={{ position: 'relative', bottom: undefined, right: undefined }}
@@ -482,7 +482,7 @@ export default function DesignPreviewScreen() {
 
             {/* Navigation controls */}
             <PreviewSectionCard title="Tabs, Segments & Chips">
-              <Stack space="lg">
+              <Stack gap="lg">
                 <Box marginHorizontal={-Spacing.lg}>
                   <AppTabs
                     options={PREVIEW_TAB_OPTIONS}
@@ -499,7 +499,7 @@ export default function DesignPreviewScreen() {
                   testID="design-preview-segment"
                 />
 
-                <Inline space="sm" flexWrap="wrap">
+                <Inline gap="sm" flexWrap="wrap">
                   <FilterChipButton
                     label="All"
                     icon={Icon.Filter}
@@ -514,7 +514,7 @@ export default function DesignPreviewScreen() {
                   />
                 </Inline>
 
-                <Inline space="md" alignItems="center">
+                <Inline gap="md" alignItems="center">
                   <AppText variant="body">AppToggle</AppText>
                   <AppToggle value={toggleOn} onValueChange={setToggleOn} />
                   <AppToggle value={false} onValueChange={() => {}} disabled />
@@ -525,7 +525,7 @@ export default function DesignPreviewScreen() {
             {/* Icons & indicators */}
             <PreviewSectionCard title="Icons & Indicators">
               <AppText variant="subheading">AppIcon</AppText>
-              <Inline space="lg" alignItems="center" flexWrap="wrap">
+              <Inline gap="lg" alignItems="center" flexWrap="wrap">
                 <AppIcon name={Icon.Wallet} size={Size.iconMd} />
                 <AppIcon name={Icon.Calendar} size={Size.iconMd} color="primary" />
                 <AppIcon name={Icon.TrendingUp} size={Size.iconMd} color="income" />
@@ -539,7 +539,7 @@ export default function DesignPreviewScreen() {
 
             {/* Feedback & loading */}
             <PreviewSectionCard title="Loading & Empty States">
-              <Stack space="lg">
+              <Stack gap="lg">
                 <Box minHeight={Size.xxl * 2} justifyContent="center">
                   <LoadingView loading text="Loading accounts…" />
                 </Box>
@@ -556,7 +556,7 @@ export default function DesignPreviewScreen() {
                 </Box>
 
                 <AppText variant="subheading">Skeleton</AppText>
-                <Stack space="sm">
+                <Stack gap="sm">
                   <Skeleton height={Spacing.lg} radius="sm" />
                   <Skeleton height={Spacing.lg} width="80%" radius="sm" />
                   <Skeleton height={Size.avatarMd} width={Size.avatarMd} radius="full" />
@@ -582,7 +582,7 @@ export default function DesignPreviewScreen() {
             {/* Shape tokens */}
             <PreviewSectionCard title="Shape Tokens">
               <AppText variant="subheading">Radius scale</AppText>
-              <Inline space="md" alignItems="center" flexWrap="wrap">
+              <Inline gap="md" alignItems="center" flexWrap="wrap">
                 <TokenBox size={Size.xl} radius={Shape.radius.xs} />
                 <TokenBox size={Size.xl} radius={Shape.radius.r4} />
                 <TokenBox size={Size.xl} radius={Shape.radius.r3} />
@@ -592,7 +592,7 @@ export default function DesignPreviewScreen() {
               </Inline>
 
               <AppText variant="subheading">Elevation</AppText>
-              <Stack space="md">
+              <Stack gap="md">
                 <Box background="surface" padding="md" borderRadius="r2" shadow="sm">
                   <AppText variant="caption">shadow sm</AppText>
                 </Box>
@@ -616,7 +616,7 @@ export default function DesignPreviewScreen() {
 
             {/* Performance Stress Test Section */}
             <AppCard elevation="sm" padding="xl">
-              <Stack space="md">
+              <Stack gap="md">
                 <AppText variant="heading">Performance Stress Test</AppText>
                 <AppText variant="caption" color="secondary">
                   Rendering 100 Box components with prop-drainage enabled.

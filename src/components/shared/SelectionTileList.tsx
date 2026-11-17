@@ -137,7 +137,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
       style={[styles.tile, tileStyle]}
       onPress={() => onSelect(isSelected && allowDeselect ? '' : item.id)}
     >
-      <Inline align="center" space="sm">
+      <Inline align="center" gap="sm">
         <AccountCategoryPill
           color={(item.categoryColor ?? item.color) as string}
           opacity={isSelected ? 1 : Opacity.soft}

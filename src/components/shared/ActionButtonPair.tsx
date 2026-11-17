@@ -1,7 +1,7 @@
 import { useWindowDimensions } from 'react-native';
 import { AppButton } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
-import { Row } from '@/src/design-system';
+import { Inline } from '@/src/design-system';
 
 interface PairAction {
   label: string;
@@ -41,9 +41,9 @@ export function ActionButtonPair({
     </AppButton>
   );
   return (
-    <Row gap="sm" align="stretch" style={{ flexDirection: stacked ? 'column' : 'row' }}>
+    <Inline gap="sm" align="stretch" style={{ flexDirection: stacked ? 'column' : 'row' }}>
       {button(primary, 'primary', 2)}
       {secondary ? button(secondary, 'secondary', 1) : null}
-    </Row>
+    </Inline>
   );
 }

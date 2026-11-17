@@ -93,7 +93,7 @@ export function BalancePreview({
   );
   return (
     <Box padding="sm" borderRadius="md" background="surfaceSecondary">
-      <Stack space="xs">
+      <Stack gap="xs">
         <AppText variant="caption" weight="semibold">
           {title}
         </AppText>
@@ -124,7 +124,7 @@ export function ImpliedFxProposalCard({
   const currency = lines.find(line => line.id === proposal.transactionId)?.currency ?? '';
   return (
     <Box padding="sm" borderRadius="md" background="surfaceSecondary">
-      <Stack space="xs">
+      <Stack gap="xs">
         <AppText variant="caption" weight="semibold">
           Suggested FX rate
         </AppText>
@@ -156,7 +156,7 @@ export function BalanceReviewLineList({
         const displayRate = line.proposedExchangeRate ?? line.exchangeRate;
         return (
           <Box key={line.id} padding="sm" borderRadius="md" background="surfaceSecondary">
-            <Stack space="xs">
+            <Stack gap="xs">
               <AppText variant="caption" color="secondary">
                 {`${lineLabel(line)} · ${line.currency}`}
               </AppText>
@@ -298,14 +298,14 @@ export function JournalBalanceLineEditor({
 
   const normalizedJournalCurrency = normalize(journalCurrency);
   return (
-    <Stack space="sm">
+    <Stack gap="sm">
       {lines.map((line, index) => {
         const normalizedCurrency = normalize(line.currency);
         const crossCurrency = normalizedCurrency !== normalizedJournalCurrency;
         const rateSource = edits[index]?.rateSource ?? 'missing';
         return (
           <Box key={line.id} padding="sm" borderRadius="md" background="surfaceSecondary">
-            <Stack space="xs">
+            <Stack gap="xs">
               <AppText variant="caption" color="secondary">
                 {`${lineLabel(line)} · ${line.currency}`}
               </AppText>

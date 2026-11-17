@@ -54,7 +54,7 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
 
   return (
     <ListGroup variant="plain">
-      <Stack space={0}>
+      <Stack gap={0}>
         <ListRow
           focusId="typography"
           leading={

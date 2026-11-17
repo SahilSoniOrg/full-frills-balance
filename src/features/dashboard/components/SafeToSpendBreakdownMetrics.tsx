@@ -1,7 +1,7 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText, ColoredDot, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/design-system/variants';
 import { useState } from 'react';
@@ -67,7 +67,7 @@ export function SafeToSpendBreakdownMetrics({
         setContentWidth(previousWidth => (previousWidth === width ? previousWidth : width));
       }}
     >
-      <Row gap={useColumns ? 'xl' : 'sm'} wrap={useColumns ? undefined : 'wrap'}>
+      <Inline gap={useColumns ? 'xl' : 'sm'} wrap={useColumns ? undefined : 'wrap'}>
         {items.map(item => (
           <PressScaleTouchable
             key={item.key}
@@ -78,13 +78,13 @@ export function SafeToSpendBreakdownMetrics({
             accessibilityLabel={`${item.label} ${item.value}`}
           >
             {useColumns ? (
-              <Column gap="xs">
-                <Row align="center" gap="xs">
+              <Stack gap="xs">
+                <Inline align="center" gap="xs">
                   <ColoredDot color={item.dotColor} />
                   <AppText variant="caption" color="secondary" numberOfLines={1}>
                     {item.label}
                   </AppText>
-                </Row>
+                </Inline>
                 <AppText
                   variant="subheading"
                   weight="bold"
@@ -93,9 +93,9 @@ export function SafeToSpendBreakdownMetrics({
                 >
                   {item.value}
                 </AppText>
-              </Column>
+              </Stack>
             ) : (
-              <Row align="center" gap="xs">
+              <Inline align="center" gap="xs">
                 <ColoredDot color={item.dotColor} />
                 <AppText variant="caption" color="secondary" numberOfLines={1}>
                   {item.label}
@@ -103,11 +103,11 @@ export function SafeToSpendBreakdownMetrics({
                 <AppText variant="caption" weight="bold" color={item.textColor} numberOfLines={1}>
                   {item.value}
                 </AppText>
-              </Row>
+              </Inline>
             )}
           </PressScaleTouchable>
         ))}
-      </Row>
+      </Inline>
     </View>
   );
 }

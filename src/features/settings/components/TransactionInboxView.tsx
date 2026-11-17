@@ -117,7 +117,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 </ScrollView>
                 {(filter === 'processed' || filter === 'auto_posted') &&
                 showOldUpiMerchantRepair ? (
-                  <Stack space="sm" style={styles.repairSection}>
+                  <Stack gap="sm" style={styles.repairSection}>
                     <AppText variant="caption" color="secondary">
                       Fixes old SMS merchant names cut at a period inside a UPI ID. Posted journal
                       entries stay unchanged.
@@ -179,7 +179,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                   loadFailure
                 ) : null
               ) : hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
-                <Stack space="lg" style={styles.footer}>
+                <Stack gap="lg" style={styles.footer}>
                   {(isLoadingMore || isScanningOlder) && (
                     <ActivityIndicator color={theme.primary} />
                   )}

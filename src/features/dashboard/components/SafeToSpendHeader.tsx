@@ -1,6 +1,6 @@
 import { Icon, IconButton, AppText } from '@/src/components/core';
 import { AppConfig, ChromeMotion, Size, Typography } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
+import { Stack, Inline } from '@/src/design-system';
 import { FitText } from '@/src/components/shared/FitText';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -69,8 +69,8 @@ export const SafeToSpendHeader = ({
   );
 
   return (
-    <Column gap="none">
-      <Row align="center" justify="space-between" gap="sm">
+    <Stack gap="none">
+      <Inline align="center" justify="space-between" gap="sm">
         <AppText
           variant="overline"
           color={isOverCommitted ? 'error' : 'secondary'}
@@ -95,7 +95,7 @@ export const SafeToSpendHeader = ({
           disabled={infoDisabled}
           accessibilityLabel="Open safe-to-spend calculation info"
         />
-      </Row>
+      </Inline>
 
       {!reduceMotion && !loading ? (
         <MotiView
@@ -121,6 +121,6 @@ export const SafeToSpendHeader = ({
             ? strings.afterCommitmentsForDays(forecastDays)
             : strings.afterObligations}
       </AppText>
-    </Column>
+    </Stack>
   );
 };

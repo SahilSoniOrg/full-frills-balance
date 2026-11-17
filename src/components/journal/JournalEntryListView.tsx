@@ -159,7 +159,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     <Stack>
       {items.length > 0 && !suppressEmptyContent ? loadFailure : null}
       {isLoadingMore && (
-        <Inline align="center" justify="center" space="sm" paddingVertical="lg">
+        <Inline align="center" justify="center" gap="sm" paddingVertical="lg">
           <ActivityIndicator size="small" />
           <AppText variant="caption" color="secondary">
             {loadingMoreText || AppConfig.strings.common.loadingMore}

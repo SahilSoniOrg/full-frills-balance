@@ -22,7 +22,7 @@ export function SettingsView({ actions }: { actions: SettingsActions }) {
       title={AppConfig.strings.settings.title}
       scrollViewProps={{ onScrollBeginDrag: () => searchInputRef.current?.blur() }}
     >
-      <Stack space="md">
+      <Stack gap="md">
         <SettingsSearchResults
           query={searchQuery}
           onQueryChange={setSearchQuery}
