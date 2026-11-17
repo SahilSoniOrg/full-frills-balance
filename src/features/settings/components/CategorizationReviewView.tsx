@@ -1,4 +1,11 @@
-import { AppButton, AppText, ListGroup, ListRow } from '@/src/components/core';
+import {
+  AppButton,
+  AppText,
+  ListGroup,
+  ListRow,
+  ErrorStateView,
+  LoadingView,
+} from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Stack } from '@/src/design-system';
@@ -19,14 +26,14 @@ export function CategorizationReviewView({ capture }: { capture: TransactionCapt
   return (
     <SettingsLayout title={strings.reviewPageTitle}>
       <Stack space="lg">
-        {capture.loading ? <AppText color="secondary">{strings.loading}</AppText> : null}
+        <LoadingView loading={capture.loading} variant="inline" text={strings.loading} />
         {capture.error ? (
-          <Stack space="sm">
-            <AppText color="secondary">{strings.loadError}</AppText>
-            <AppButton variant="secondary" onPress={() => void capture.onRetry()}>
-              {strings.retry}
-            </AppButton>
-          </Stack>
+          <ErrorStateView
+            variant="inline"
+            message={strings.loadError}
+            onRetry={() => void capture.onRetry()}
+            retryLabel={strings.retry}
+          />
         ) : null}
 
         <ListGroup

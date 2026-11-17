@@ -7,6 +7,8 @@ import {
   Badge,
   ListGroup,
   ListRow,
+  ErrorStateView,
+  LoadingView,
 } from '@/src/components/core';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -96,18 +98,18 @@ export function HistoricalCaptureSuggestionsView({
   return (
     <SettingsLayout title={title}>
       <Stack space="lg">
-        {capture.loading && !capture.hasSnapshot ? (
-          <AppText color="secondary">{strings.loading}</AppText>
-        ) : null}
+        <LoadingView
+          loading={capture.loading && !capture.hasSnapshot}
+          variant="inline"
+          text={strings.loading}
+        />
         {capture.error ? (
-          <Stack space="sm">
-            <AppText color="secondary">
-              {capture.hasSnapshot ? strings.refreshError : strings.loadError}
-            </AppText>
-            <AppButton variant="secondary" onPress={() => void capture.onRetry()}>
-              {strings.retry}
-            </AppButton>
-          </Stack>
+          <ErrorStateView
+            variant="inline"
+            message={capture.hasSnapshot ? strings.refreshError : strings.loadError}
+            onRetry={() => void capture.onRetry()}
+            retryLabel={strings.retry}
+          />
         ) : null}
 
         {privateMode ? (

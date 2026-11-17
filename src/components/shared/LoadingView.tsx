@@ -8,22 +8,30 @@ export interface LoadingViewProps {
   loading: boolean;
   text?: string;
   size?: 'small' | 'large';
+  /** `inline` sits inside a section or scroll content instead of filling the screen. */
+  variant?: 'screen' | 'inline';
   style?: ViewStyle;
 }
 
 export function LoadingView({
   loading,
   text = AppConfig.strings.common.loading,
-  size = 'large',
+  size,
+  variant = 'screen',
   style,
 }: LoadingViewProps) {
   const { theme } = useTheme();
   if (!loading) return null;
 
+  const inline = variant === 'inline';
   return (
-    <View style={[styles.container, style]}>
-      <ActivityIndicator size={size} color={theme.primary} />
-      <AppText variant="body" color="secondary" style={styles.text}>
+    <View
+      style={[inline ? styles.inline : styles.screen, style]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={text}
+    >
+      <ActivityIndicator size={size ?? (inline ? 'small' : 'large')} color={theme.primary} />
+      <AppText variant={inline ? 'bodySmall' : 'body'} color="secondary">
         {text}
       </AppText>
     </View>
@@ -31,13 +39,15 @@ export function LoadingView({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
-  text: {
-    marginTop: Spacing.sm,
+  inline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
 });

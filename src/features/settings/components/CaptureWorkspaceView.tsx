@@ -1,4 +1,12 @@
-import { AppButton, AppCard, AppText, Badge, ListGroup, ListRow } from '@/src/components/core';
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  Badge,
+  ListGroup,
+  ListRow,
+  ErrorStateView,
+} from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -47,12 +55,12 @@ export function CaptureWorkspaceView({
         </FocusTarget>
 
         {capture.error ? (
-          <Stack space="sm">
-            <AppText color="secondary">{strings.loadError}</AppText>
-            <AppButton variant="secondary" onPress={() => void capture.onRetry()}>
-              {strings.retry}
-            </AppButton>
-          </Stack>
+          <ErrorStateView
+            variant="inline"
+            message={strings.loadError}
+            onRetry={() => void capture.onRetry()}
+            retryLabel={strings.retry}
+          />
         ) : null}
         <FocusTarget targetId="transaction-capture-enabled">
           {Platform.OS === 'web' ? (

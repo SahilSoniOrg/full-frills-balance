@@ -5,6 +5,7 @@ import {
   EmptyStateView,
   FilterChipButton,
   Icon,
+  LoadingView,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -154,12 +155,12 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
               loadFailure ? (
                 loadFailure
               ) : isLoading ? (
-                <View style={styles.center}>
-                  <ActivityIndicator color={theme.primary} />
-                  <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
-                    {isAndroid ? 'Scanning SMS and pending inputs...' : 'Loading pending items...'}
-                  </AppText>
-                </View>
+                <LoadingView
+                  loading
+                  variant="inline"
+                  text={isAndroid ? 'Scanning SMS and pending inputs…' : 'Loading pending items…'}
+                  style={styles.center}
+                />
               ) : (
                 <EmptyStateView
                   title="Inbox is clear"
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   },
   center: {
     paddingVertical: Spacing.xl,
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     paddingVertical: Spacing.lg,
