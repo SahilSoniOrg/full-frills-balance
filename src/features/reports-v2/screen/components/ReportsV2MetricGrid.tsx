@@ -11,6 +11,7 @@ import {
   explanationForMetric,
   type ReportsV2ExplanationContext,
 } from './reportExplanations';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 type NonMoneyMeasure = Exclude<ReportMeasure, { kind: 'MONEY' }>;
 
@@ -106,8 +107,8 @@ export function ReportsV2MetricGrid({
             />
             {change !== undefined && change !== null ? (
               <AppText variant="caption" color="secondary" numberOfLines={1}>
-                {change > 0 ? '+' : ''}
-                {change.toFixed(1)}% vs prior
+                {signPrefix(change > 0 ? 1 : change < 0 ? -1 : 0)}
+                {Math.abs(change).toFixed(1)}% vs prior
               </AppText>
             ) : (
               <AppText variant="caption" color="secondary">

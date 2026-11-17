@@ -23,6 +23,7 @@ import { isCategoryAccountType } from '@/src/domain/accounts/accountClassificati
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
 import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 // Old minimumFontScale was 0.6; same floor, now honoured on web too.
 const TITLE_BALANCE_FIT = {
@@ -191,7 +192,8 @@ export function AccountSummaryCard({
               key={balance.currencyCode}
               amount={balance.amount}
               currencyCode={balance.currencyCode}
-              prefix="+ "
+              // Other-currency balances are added to the total, so this is additive, not a sign.
+              prefix={signPrefix(1)}
               variant="bodySmall"
               color="secondary"
             />

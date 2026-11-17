@@ -6,6 +6,11 @@ import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import {
+  directionSign,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
+import {
   formatPlannedPaymentInterval,
   plannedAccountLeg,
   presentPlannedListOccurrenceTiming,
@@ -53,6 +58,8 @@ function PlannedPaymentCardComponent({
       : formatPlannedPaymentInterval(item);
   const amountLabel = formatMoney(occurrence.amount, occurrence.currencyCode);
   const isIncome = item.flowDirection === 'inflow';
+  // OBLIGATION sign: inflow +, outflow −, transfers unsigned.
+  const obligation = directionSign(item.flowDirection);
   const fromLabel = item.fromAccount?.name ?? strings.noAccount;
   const toLabel = item.toAccount?.name ?? strings.noAccount;
   const dateBlockColor = isOverdue
@@ -127,8 +134,8 @@ function PlannedPaymentCardComponent({
           amount={occurrence.amount}
           currencyCode={occurrence.currencyCode}
           amountFormatStyle="compact"
-          amountPrefix={isIncome ? '+' : undefined}
-          amountColor={isIncome ? theme.income : theme.text}
+          amountPrefix={signPrefix(obligation) || undefined}
+          amountColor={theme[signColorKey(obligation)]}
           footer={
             isOverdue ? (
               <View style={[styles.footer, showRecord && !largeText && styles.footerWithAction]}>

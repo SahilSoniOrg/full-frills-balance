@@ -11,6 +11,7 @@ import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { bankEntrySign, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 const BODY_PREVIEW_LIMIT = 220;
 
@@ -22,7 +23,7 @@ function truncateBody(body: string): string {
 
 function formatInboxAmount(inbox: PlainInboxRecord, defaultCurrencyCode: string): string {
   const currency = inbox.parsedCurrencyCode || defaultCurrencyCode;
-  const prefix = inbox.direction === 'credit' ? '+ ' : inbox.direction === 'debit' ? '- ' : '';
+  const prefix = signPrefix(bankEntrySign(inbox.direction));
   return formatMoneyAmount(inbox.parsedAmount ?? 0, currency, false, { prefix });
 }
 

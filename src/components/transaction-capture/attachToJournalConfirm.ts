@@ -3,6 +3,7 @@ import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
+import { bankEntrySign, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 const BODY_PREVIEW_LIMIT = 220;
 
@@ -15,7 +16,7 @@ function truncateBody(body: string): string {
 function formatInboxAmount(inbox: PlainInboxRecord): string | undefined {
   if (inbox.parsedAmount == null) return undefined;
   const currency = inbox.parsedCurrencyCode || 'USD';
-  const prefix = inbox.direction === 'credit' ? '+ ' : inbox.direction === 'debit' ? '- ' : '';
+  const prefix = signPrefix(bankEntrySign(inbox.direction));
   return formatMoneyAmount(inbox.parsedAmount, currency, false, { prefix });
 }
 

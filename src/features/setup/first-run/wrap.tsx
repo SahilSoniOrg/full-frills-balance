@@ -16,6 +16,7 @@ import { publishedDraftAccountId } from './mapToWorkplaceOutput';
 import type { CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
 import { useClaritySceneViewModel } from './useClaritySceneViewModel';
+import { signPrefix, type FlowSign } from '@/src/domain/accounting/presentationPolicy';
 
 function ClarityResultPanel({ children }: { readonly children: ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -401,9 +402,9 @@ function ClarityBeatRow({
       ? stsColor
       : beat.key === 'held'
         ? 'warning'
-        : beat.sign === '+'
+        : beat.sign === 1
           ? 'income'
-          : beat.sign === '-'
+          : beat.sign === -1
             ? 'expense'
             : 'primary';
 
@@ -426,7 +427,7 @@ function ClarityBeatRow({
         amount={beat.amount}
         currencyCode={currency}
         formatStyle="compact"
-        prefix={beat.sign}
+        prefix={signPrefix(beat.sign ?? 0) || undefined}
         variant={beat.emphasize ? 'subheading' : 'body'}
         color={tint}
       />
@@ -465,7 +466,7 @@ function ClarityFormula({
           amount={projection.expectedIncomeInWindow}
           currencyCode={currency}
           formatStyle="compact"
-          prefix="+"
+          prefix={signPrefix(1)}
           variant="caption"
         />
       </Inline>
@@ -477,7 +478,7 @@ function ClarityFormula({
           amount={projection.plannedOutflowInWindow}
           currencyCode={currency}
           formatStyle="compact"
-          prefix="-"
+          prefix={signPrefix(-1)}
           variant="caption"
         />
       </Inline>
@@ -489,7 +490,7 @@ function ClarityFormula({
           amount={projection.budgetReserveInWindow}
           currencyCode={currency}
           formatStyle="compact"
-          prefix="-"
+          prefix={signPrefix(-1)}
           variant="caption"
         />
       </Inline>
@@ -511,7 +512,7 @@ function ClarityGroup({
   readonly dot: string;
   readonly amount: number;
   readonly currency: string;
-  readonly sign?: '+' | '-';
+  readonly sign?: FlowSign;
   readonly children: ReactNode;
 }) {
   return (
@@ -527,7 +528,7 @@ function ClarityGroup({
           amount={amount}
           currencyCode={currency}
           formatStyle="compact"
-          prefix={sign}
+          prefix={signPrefix(sign ?? 0) || undefined}
           variant="subheading"
           color={tint}
         />
@@ -568,7 +569,7 @@ function ClarityFigure({
 }: {
   readonly amount: number;
   readonly currency: string;
-  readonly sign?: '+' | '-';
+  readonly sign?: FlowSign;
   readonly tint: ComponentVariant;
   readonly label: string;
   readonly detail: string;
@@ -579,7 +580,7 @@ function ClarityFigure({
         amount={amount}
         currencyCode={currency}
         formatStyle="compact"
-        prefix={sign}
+        prefix={signPrefix(sign ?? 0) || undefined}
         variant="caption"
         color={tint}
       />

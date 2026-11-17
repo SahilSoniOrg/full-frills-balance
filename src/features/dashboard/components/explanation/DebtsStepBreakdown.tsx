@@ -5,6 +5,7 @@ import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpend
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface DebtsStepBreakdownProps {
   debt: SafeToSpendViewModel['debt'];
@@ -70,7 +71,7 @@ export const DebtsStepBreakdown = ({
               </AppText>
             </View>
             <AppText variant="caption" weight="bold" color="error" tabular>
-              {formatSts(acc.amount, currencyCode, { prefix: '–' })}
+              {formatSts(acc.amount, currencyCode, { prefix: signPrefix(-1) })}
             </AppText>
           </View>
         ))}

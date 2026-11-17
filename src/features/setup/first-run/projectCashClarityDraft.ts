@@ -20,12 +20,13 @@ import {
   type CashClarityDraft,
   type DraftAccount,
 } from './draft';
+import type { FlowSign } from '@/src/domain/accounting/presentationPolicy';
 
 export interface ClarityBeat {
   readonly key: string;
   readonly label: string;
   readonly amount: number;
-  readonly sign?: '+' | '-';
+  readonly sign?: FlowSign;
   readonly subtitle?: string;
   readonly emphasize?: boolean;
 }
@@ -313,7 +314,7 @@ function clarityBeats(
     { key: 'cash', label: copy.cashYouHave, amount: numbers.liquidNow },
   ];
   if (numbers.heldNow > 0) {
-    today.push({ key: 'held', label: heldLabel, amount: numbers.heldNow, sign: '-' });
+    today.push({ key: 'held', label: heldLabel, amount: numbers.heldNow, sign: -1 });
   }
   today.push({
     key: 'sts',
@@ -327,7 +328,7 @@ function clarityBeats(
       key: item.id,
       label: incomeItemName(item),
       amount: item.amount,
-      sign: '+' as const,
+      sign: 1 as const,
       subtitle: inWindow(recurrence.firstOccurrence, numbers.start, numbers.windowDays)
         ? copy.clarityIncomeSubtitle(formatDay(recurrence.firstOccurrence))
         : copy.clarityIncomeOutside,
@@ -336,14 +337,14 @@ function clarityBeats(
       key: item.id,
       label: paymentItemName(item),
       amount: item.amount,
-      sign: '-' as const,
+      sign: -1 as const,
       subtitle: paymentBeatSubtitle(item.dueDate, firstIncome),
     })),
     ...budgetItems.map(item => ({
       key: item.id,
       label: item.category === 'Food' || item.name === 'Food' ? copy.foodBuffer : item.name,
       amount: item.amount,
-      sign: '-' as const,
+      sign: -1 as const,
       subtitle: firstIncome ? copy.clarityBufferSubtitle : copy.clarityBufferNoIncome,
     })),
   ];

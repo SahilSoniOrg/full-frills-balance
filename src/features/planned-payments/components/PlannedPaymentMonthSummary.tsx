@@ -5,6 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { PlannedPaymentListPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import dayjs from 'dayjs';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 type SummaryProps = { listData: PlannedPaymentListPresentation };
 
@@ -35,7 +36,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
               amount={incoming.mainCurrency.amount}
               currencyCode={incoming.mainCurrency.currencyCode}
               formatStyle="compact"
-              prefix="+"
+              prefix={signPrefix(1)}
               variant="heading"
               fit={{
                 maxFontSize: Typography.roles.heading.fontSize,

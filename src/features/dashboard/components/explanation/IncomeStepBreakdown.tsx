@@ -4,6 +4,7 @@ import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDa
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface IncomeStepBreakdownProps {
   income: SafeToSpendViewModel['income'];
@@ -55,7 +56,7 @@ export const IncomeStepBreakdown = ({
               </View>
             </View>
             <AppText variant="caption" weight="bold" color="success" tabular>
-              {formatSts(inc.amount, currencyCode, { prefix: '+' })}
+              {formatSts(inc.amount, currencyCode, { prefix: signPrefix(1) })}
             </AppText>
           </PressScaleTouchable>
         ))

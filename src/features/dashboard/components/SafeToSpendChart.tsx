@@ -14,6 +14,7 @@ import {
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
@@ -278,7 +279,9 @@ export const SafeToSpendChart = ({
                               <AppIcon name={Icon.Calendar} size={12} color={theme.success} />
                               <AppText variant="caption" weight="bold" color="success">
                                 Planned Inflow:{' '}
-                                {formatSts(plannedInflowTotal, currencyCode, { prefix: '+' })}
+                                {formatSts(plannedInflowTotal, currencyCode, {
+                                  prefix: signPrefix(1),
+                                })}
                               </AppText>
                             </Inline>
                           )}
@@ -287,7 +290,9 @@ export const SafeToSpendChart = ({
                               <AppIcon name={Icon.CreditCard} size={12} color={theme.error} />
                               <AppText variant="caption" weight="bold" color="error">
                                 To Be Spent:{' '}
-                                {formatSts(toBeSpentTotal, currencyCode, { prefix: '-' })}
+                                {formatSts(toBeSpentTotal, currencyCode, {
+                                  prefix: signPrefix(-1),
+                                })}
                               </AppText>
                             </Inline>
                           )}
@@ -345,7 +350,7 @@ export const SafeToSpendChart = ({
                                   color={isInflow ? 'success' : 'error'}
                                 >
                                   {formatSts(Math.abs(detail.amount), currencyCode, {
-                                    prefix: isInflow ? '+' : '-',
+                                    prefix: signPrefix(isInflow ? 1 : -1),
                                   })}
                                 </AppText>
                               )}

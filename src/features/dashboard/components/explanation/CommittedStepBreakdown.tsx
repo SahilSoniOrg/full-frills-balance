@@ -4,6 +4,7 @@ import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDa
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface CommittedStepBreakdownProps {
   committed: SafeToSpendViewModel['committed'];
@@ -35,7 +36,7 @@ export const CommittedStepBreakdown = ({
               {acc.accountName}
             </AppText>
             <AppText variant="caption" weight="bold" color="warning" tabular>
-              {formatSts(acc.amount, currencyCode, { prefix: '–' })}
+              {formatSts(acc.amount, currencyCode, { prefix: signPrefix(-1) })}
             </AppText>
           </View>
           <View style={styles.detailsList}>

@@ -6,6 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface ReportSummaryCardProps {
   summary: ReportSummaryVm;
@@ -220,9 +221,7 @@ function HighlightRow({
 }
 
 function getSignPrefix(amount: number): string | undefined {
-  if (amount > 0) return '+';
-  if (amount < 0) return '−';
-  return undefined;
+  return signPrefix(amount > 0 ? 1 : amount < 0 ? -1 : 0) || undefined;
 }
 
 function getComparisonColor(
