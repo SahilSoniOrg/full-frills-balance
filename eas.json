@@ -34,14 +34,10 @@
       "android": {
         "gradleCommand": ":app:bundleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
       },
-      "buildArtifactPaths": [
-        "android/app/build/outputs/mapping/release/mapping.txt"
-      ],
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_E2E": "0",
-        "EXPO_PUBLIC_VERSION_POLICY_URL": "https://raw.githubusercontent.com/SahilSoniOrg/full-frills-balance-configs/main/version-policy.json",
-        "EAS_PROJECT_ROOT": "/Users/sahilsoni/me/projects/full-frills-balance"
+        "EXPO_PUBLIC_VERSION_POLICY_URL": "https://raw.githubusercontent.com/SahilSoniOrg/full-frills-balance-configs/main/version-policy.json"
       }
     },
     "production-test": {

@@ -7,6 +7,7 @@
     "android": "node scripts/run-android.mjs development",
     "android:preview": "node scripts/run-android.mjs preview",
     "android:release": "node scripts/run-android.mjs production",
+    "android:publish": "node scripts/publish-android.mjs",
     "ios": "expo run:ios",
     "ios:build:local": "rm -f ./build-ios.ipa ./build-ios.ipa.sha256 && eas build --platform ios --profile production --local --output ./build-ios.ipa && shasum -a 256 ./build-ios.ipa > ./build-ios.ipa.sha256",
     "ios:build:eas": "eas build --platform ios --profile production",
@@ -51,7 +52,6 @@
     "check:production-e2e-bundle": "APP_VARIANT=production EXPO_PUBLIC_E2E=0 expo export --platform android --output-dir dist/production-e2e-check && node scripts/check-e2e-bundle.mjs dist/production-e2e-check",
     "e2e:local": "bash scripts/e2e-local.sh",
     "test:detox:video": "DETOX_RECORD_VIDEO=1 detox test --configuration ios.sim.release --record-videos all --take-screenshots all",
-    "eas-build-on-success": "node scripts/upload-mapping-on-success.js",
     "prepare": "husky",
     "visualize": "expo export --platform android --source-maps --no-bytecode --output-dir dist-analysis && source-map-explorer dist-analysis/_expo/static/js/android/*.js dist-analysis/_expo/static/js/android/*.js.map --no-border-checks"
   },
