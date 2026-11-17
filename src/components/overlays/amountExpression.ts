@@ -281,6 +281,7 @@ function calculatorResult(overrides: Partial<CalculatorEvaluation>): CalculatorE
 export function evaluateCalculatorExpression(
   expression: string,
   precision: number,
+  options: { allowNegative?: boolean } = {},
 ): CalculatorEvaluation {
   const tokenized = tokenizeCalculatorExpression(expression);
   if ('error' in tokenized) {
@@ -336,12 +337,12 @@ export function evaluateCalculatorExpression(
     });
   }
 
-  const isNegative = evaluated.value.numerator < 0n;
+  const rejectNegative = evaluated.value.numerator < 0n && !options.allowNegative;
   return calculatorResult({
     formattedValue: formatRationalToCurrency(evaluated.value, precision),
     detailedValue: formatRationalForDetails(evaluated.value),
-    error: isNegative ? 'NEGATIVE_RESULT' : null,
-    errorMessage: isNegative ? 'Amount cannot be negative' : null,
-    canSubmit: !isNegative,
+    error: rejectNegative ? 'NEGATIVE_RESULT' : null,
+    errorMessage: rejectNegative ? 'Amount cannot be negative' : null,
+    canSubmit: !rejectNegative,
   });
 }

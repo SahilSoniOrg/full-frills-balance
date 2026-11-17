@@ -85,3 +85,18 @@ describe('exact calculator evaluator', () => {
     expect(formatRationalToCurrency({ numerator: 1035n, denominator: 1000n }, 2)).toBe('1.04');
   });
 });
+
+describe('negative calculator results', () => {
+  it('rejects a negative result by default', () => {
+    expect(evaluateCalculatorExpression('100-250', 2)).toMatchObject({
+      error: 'NEGATIVE_RESULT',
+      canSubmit: false,
+    });
+  });
+
+  it('accepts a negative result when allowed, and keeps the sign', () => {
+    const result = evaluateCalculatorExpression('100-250', 2, { allowNegative: true });
+    expect(result).toMatchObject({ canSubmit: true, error: null });
+    expect(result.formattedValue).toBe('-150.00');
+  });
+});
