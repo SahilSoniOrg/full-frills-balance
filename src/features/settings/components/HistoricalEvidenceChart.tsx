@@ -1,6 +1,7 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import type { Theme } from '@/src/constants/design-tokens';
+import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import type {
   HistoricalCategoryPattern,
   HistoricalEvidenceEntry,
@@ -10,19 +11,32 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { listHistoricalPatternEvidenceWindow } from '@/src/services/transaction-intelligence/captureReviewService';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
-import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import dayjs, { type Dayjs } from 'dayjs';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, View, type ViewToken } from 'react-native';
 
 const DAYS_PER_PAGE = 30;
 const CHART_HEIGHT = 72;
+const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 60 };
+
+function pageWindow(timelineEndMs: number, page: number) {
+  const end = dayjs(timelineEndMs)
+    .startOf('day')
+    .subtract(page * DAYS_PER_PAGE, 'day')
+    .add(1, 'day');
+  const start = end.subtract(DAYS_PER_PAGE, 'day');
+  return { start, end };
+}
+
+function pageOverlapsActivity(
+  timelineEndMs: number,
+  page: number,
+  earliest: Dayjs,
+  lastEntry: Dayjs,
+) {
+  const { start, end } = pageWindow(timelineEndMs, page);
+  return earliest.valueOf() < end.valueOf() && lastEntry.valueOf() >= start.valueOf();
+}
 
 type Props = {
   workplaceId: WorkplaceId;
@@ -89,16 +103,53 @@ export function HistoricalEvidenceChart({
   onSelectDay,
 }: Props) {
   const { theme } = useTheme();
+  const listRef = useRef<FlatList<number>>(null);
   const [width, setWidth] = useState(0);
   const [activePage, setActivePage] = useState(0);
-  const latest = dayjs(pattern.latestJournalDate).startOf('day');
+  const today = dayjs().startOf('day');
+  const lastEntry = dayjs(pattern.latestJournalDate).startOf('day');
+  // Right edge is today so the first page always starts from now; keep future-dated entries visible.
+  const latest = lastEntry.isAfter(today) ? lastEntry : today;
   const earliest = dayjs(pattern.earliestJournalDate ?? pattern.latestJournalDate).startOf('day');
   const pageCount = Math.max(1, Math.floor(latest.diff(earliest, 'day') / DAYS_PER_PAGE) + 1);
   const pages = useMemo(() => Array.from({ length: pageCount }, (_, index) => index), [pageCount]);
-  const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const timelineEndMs = latest.valueOf();
+  const pagesWithActivity = useMemo(
+    () => pages.filter(page => pageOverlapsActivity(timelineEndMs, page, earliest, lastEntry)),
+    [pages, timelineEndMs, earliest, lastEntry],
+  );
+  const timelineIdentity = `${pattern.key}:${timelineEndMs}:${pageCount}`;
+  const [seenIdentity, setSeenIdentity] = useState(timelineIdentity);
+  let page = activePage;
+  if (seenIdentity !== timelineIdentity) {
+    setSeenIdentity(timelineIdentity);
+    setActivePage(0);
+    page = 0;
+  }
+  const activeHasActivity = pageOverlapsActivity(timelineEndMs, page, earliest, lastEntry);
+  // inverted FlatList breaks contentOffset→page math; track the visible item instead.
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const index = viewableItems.find(token => token.isViewable && token.index != null)?.index;
+      if (index == null) return;
+      setActivePage(index);
+    },
+    [],
+  );
+  const goToPage = (page: number) => {
     if (width <= 0) return;
-    const page = Math.round(event.nativeEvent.contentOffset.x / width);
-    setActivePage(Math.max(0, Math.min(pageCount - 1, page)));
+    // activePage updates from onViewableItemsChanged once the page is actually visible.
+    listRef.current?.scrollToIndex({ index: page, animated: true });
+  };
+  const onScrollToIndexFailed = (info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    listRef.current?.scrollToOffset({ offset: width * info.index, animated: false });
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index: info.index, animated: true });
+    });
   };
   return (
     <View onLayout={event => setWidth(event.nativeEvent.layout.width)}>
@@ -110,36 +161,72 @@ export function HistoricalEvidenceChart({
           <View
             style={styles.dots}
             accessible
-            accessibilityLabel={`Timeline page ${activePage + 1} of ${pageCount}. Swipe for earlier dates.`}
+            accessibilityLabel={`Timeline page ${page + 1} of ${pageCount}. ${
+              pagesWithActivity.length
+                ? `Activity on ${pagesWithActivity.length} ${pagesWithActivity.length === 1 ? 'page' : 'pages'}. `
+                : ''
+            }Swipe or tap a dot for earlier dates.`}
           >
-            {pages.map(page => (
-              <View
-                key={page}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: page === activePage ? theme.text : theme.border,
-                  },
-                ]}
-              />
-            ))}
+            {pages.map(dotPage => {
+              const active = dotPage === page;
+              const hasActivity = pagesWithActivity.includes(dotPage);
+              return (
+                <Pressable
+                  key={dotPage}
+                  onPress={() => goToPage(dotPage)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={
+                    hasActivity
+                      ? `Go to timeline page ${dotPage + 1}, has activity`
+                      : `Go to timeline page ${dotPage + 1}, no activity`
+                  }
+                  hitSlop={6}
+                  style={styles.dotHit}
+                >
+                  <View
+                    style={[
+                      styles.dot,
+                      hasActivity ? styles.dotWithActivity : styles.dotEmpty,
+                      active ? styles.dotCurrent : null,
+                      {
+                        backgroundColor: active
+                          ? theme.primary
+                          : hasActivity
+                            ? theme.primary
+                            : theme.border,
+                        opacity: active ? 1 : hasActivity ? 0.45 : 0.35,
+                      },
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
           </View>
         ) : null}
       </View>
+      {!activeHasActivity && pagesWithActivity.length > 0 ? (
+        <AppText variant="caption" color="primary" style={styles.swipeHint}>
+          {strings.historicalSwipeEarlierActivity}
+        </AppText>
+      ) : null}
       {width > 0 ? (
         <FlatList
+          ref={listRef}
           horizontal
           inverted
           pagingEnabled
           nestedScrollEnabled
           data={pages}
-          extraData={`${selectedCategoryId ?? 'all'}:${selectedDayMs ?? 'none'}`}
-          keyExtractor={page => String(page)}
+          extraData={`${selectedCategoryId ?? 'all'}:${selectedDayMs ?? 'none'}:${page}`}
+          keyExtractor={item => String(item)}
           initialNumToRender={1}
           maxToRenderPerBatch={2}
           windowSize={3}
           showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={onScrollEnd}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={VIEWABILITY_CONFIG}
+          onScrollToIndexFailed={onScrollToIndexFailed}
           getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
           renderItem={({ item }) => (
             <ChartPage
@@ -151,6 +238,8 @@ export function HistoricalEvidenceChart({
               onSelectDay={onSelectDay}
               page={item}
               width={width}
+              timelineEndMs={timelineEndMs}
+              showEarlierHint={!pageOverlapsActivity(timelineEndMs, item, earliest, lastEntry)}
             />
           )}
         />
@@ -168,14 +257,12 @@ function ChartPage({
   selectedCategoryId,
   selectedDayMs,
   onSelectDay,
-}: Props & { page: number; width: number }) {
+  timelineEndMs,
+  showEarlierHint,
+}: Props & { page: number; width: number; timelineEndMs: number; showEarlierHint: boolean }) {
   const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
-  const end = dayjs(pattern.latestJournalDate)
-    .startOf('day')
-    .subtract(page * DAYS_PER_PAGE, 'day')
-    .add(1, 'day');
-  const start = end.subtract(DAYS_PER_PAGE, 'day');
+  const { start, end } = pageWindow(timelineEndMs, page);
   const [retry, setRetry] = useState(0);
   const startMs = start.valueOf();
   const endMs = end.valueOf();
@@ -218,7 +305,8 @@ function ChartPage({
     const filteredTotal = selectedCategoryId ? (amounts.get(selectedCategoryId) ?? 0) : total;
     return { date, amounts, total, filteredTotal, dayEntries };
   });
-  const scale = Math.max(0, ...days.map(day => day.total));
+  // When filtering, scale to the selected category so bar heights match “Largest day”.
+  const scale = Math.max(0, ...days.map(day => day.filteredTotal));
   const largest = Math.max(0, ...days.map(day => day.filteredTotal));
   const description = days
     .filter(day => day.filteredTotal > 0)
@@ -282,41 +370,36 @@ function ChartPage({
             {days.map(day => {
               const dayMs = day.date.valueOf();
               const selected = selectedDayMs === dayMs;
+              const visibleAmounts = [...day.amounts].filter(
+                ([id]) => !selectedCategoryId || selectedCategoryId === id,
+              );
               return (
                 <Pressable
                   key={dayMs}
                   onPress={() => selectDay(dayMs, day.dayEntries)}
-                  disabled={day.total <= 0}
+                  disabled={day.filteredTotal <= 0}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={
-                    day.total > 0
+                    day.filteredTotal > 0
                       ? `${formatDate(dayMs)}. Tap to see that day’s entries.`
                       : undefined
                   }
                   style={[styles.day, selected ? { backgroundColor: theme.primaryLight } : null]}
                 >
-                  {[...day.amounts].map(([id, amount]) => {
-                    const ghost = !!selectedCategoryId && selectedCategoryId !== id;
-                    return (
-                      <View
-                        key={id}
-                        style={{
-                          width: '100%',
-                          height: scale > 0 ? Math.max(3, (CHART_HEIGHT * amount) / scale) : 0,
-                          backgroundColor: historicalCategoryChartFill(
-                            pattern,
-                            id,
-                            theme,
-                            !ghost && (!selectedCategoryId || selectedCategoryId === id),
-                          ),
-                          opacity: ghost ? 0.15 : selectedCategoryId === id ? 1 : 0.92,
-                          borderTopLeftRadius: 1.5,
-                          borderTopRightRadius: 1.5,
-                        }}
-                      />
-                    );
-                  })}
+                  {visibleAmounts.map(([id, amount]) => (
+                    <View
+                      key={id}
+                      style={{
+                        width: '100%',
+                        height: scale > 0 ? Math.max(3, (CHART_HEIGHT * amount) / scale) : 0,
+                        backgroundColor: historicalCategoryChartFill(pattern, id, theme, true),
+                        opacity: selectedCategoryId === id ? 1 : 0.92,
+                        borderTopLeftRadius: 1.5,
+                        borderTopRightRadius: 1.5,
+                      }}
+                    />
+                  ))}
                 </Pressable>
               );
             })}
@@ -344,10 +427,12 @@ function ChartPage({
             <AppText variant="caption" color="secondary">
               {formatDate(startMs)}
             </AppText>
-            <AppText variant="caption" color="secondary">
+            <AppText variant="caption" color={showEarlierHint ? 'primary' : 'secondary'}>
               {largest > 0
                 ? `Largest day ${formatMoney(largest, pattern.currencyCode)}`
-                : 'No entries here'}
+                : showEarlierHint
+                  ? strings.historicalSwipeEarlierActivity
+                  : strings.historicalNoEntriesThisPeriod}
             </AppText>
             <AppText variant="caption" color="secondary">
               {formatDate(end.subtract(1, 'day').valueOf())}
@@ -367,8 +452,13 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dotHit: { minWidth: 20, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
+  dot: { borderRadius: 4 },
+  dotWithActivity: { width: 7, height: 7 },
+  dotEmpty: { width: 5, height: 5 },
+  dotCurrent: { width: 8, height: 8 },
+  swipeHint: { marginBottom: 2 },
   chart: {
     height: CHART_HEIGHT,
     flexDirection: 'row',
