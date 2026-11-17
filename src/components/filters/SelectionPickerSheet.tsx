@@ -1,4 +1,4 @@
-import { AppIcon, AppInput, AppText, Icon, ListRow, type IconName } from '@/src/components/core';
+import { AppIcon, AppText, Icon, ListRow, SearchField, type IconName } from '@/src/components/core';
 import { ListVariantContext } from '@/src/components/core/ListRow';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
@@ -170,11 +170,10 @@ export function SelectionPickerSheet<T extends string | number>({
     >
       {searchEnabled ? (
         <View style={styles.searchContainer}>
-          <AppInput
+          <SearchField
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            leftIcon={Icon.Search}
           />
         </View>
       ) : null}

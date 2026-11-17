@@ -1,12 +1,11 @@
-import { ListGroup, Icon, AppIcon, AppInput, PressScaleTouchable } from '@/src/components/core';
+import { ListGroup, Icon, SearchField } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
-import { Size, Spacing } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSections';
-import { useTheme } from '@/src/hooks/use-theme';
 import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSections';
 import { useMemo, type RefObject } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput } from 'react-native';
 
 type SettingsSearchResultsProps = {
   query: string;
@@ -21,42 +20,21 @@ export function SettingsSearchResults({
   items,
   inputRef,
 }: SettingsSearchResultsProps) {
-  const { theme } = useTheme();
   const results = useMemo(() => filterSettingsSearchItems(items, query), [items, query]);
   const hasQuery = query.trim().length > 0;
 
   return (
     <Stack gap="md">
-      <View style={styles.searchField}>
-        <AppInput
-          value={query}
-          onChangeText={onQueryChange}
-          placeholder="Search settings…"
-          leftIcon={Icon.Search}
-          inputStyle={[styles.searchInput, hasQuery && styles.inputWithClear]}
-          autoCorrect={false}
-          returnKeyType="search"
-          accessibilityLabel="Search settings"
-          testID="settings-search-input"
-          ref={inputRef}
-        />
-        {hasQuery && (
-          <PressScaleTouchable
-            pressScale="subtle"
-            onPress={() => {
-              onQueryChange('');
-              inputRef?.current?.focus();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Clear settings search"
-            testID="clear-settings-search"
-            style={styles.clearButton}
-            hitSlop={8}
-          >
-            <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
-          </PressScaleTouchable>
-        )}
-      </View>
+      <SearchField
+        ref={inputRef}
+        value={query}
+        onChangeText={onQueryChange}
+        placeholder="Search settings…"
+        accessibilityLabel="Search settings"
+        clearAccessibilityLabel="Clear settings search"
+        testID="settings-search-input"
+        clearTestID="clear-settings-search"
+      />
 
       {!hasQuery ? null : results.length === 0 ? (
         <EmptyStateView
@@ -88,27 +66,5 @@ const styles = StyleSheet.create({
   empty: {
     flex: 0,
     paddingVertical: Spacing.xl,
-  },
-  searchField: {
-    position: 'relative',
-  },
-  // Local override: AppInputField's paddingVertical+minHeight sinks placeholder text.
-  searchInput: {
-    paddingVertical: 0,
-    minHeight: 0,
-    height: Size.inputMd - 2,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-  },
-  inputWithClear: {
-    paddingRight: 40,
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

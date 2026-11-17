@@ -322,7 +322,7 @@ export function HistoricalPatternRow({
               </Badge>
             ) : null}
             <AppIcon
-              name={expanded ? Icon.ChevronDown : Icon.ChevronRight}
+              name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
               size={16}
               color={theme.textSecondary}
             />

@@ -10,8 +10,8 @@ import {
   ListRow,
   ErrorStateView,
   LoadingView,
+  SearchField,
 } from '@/src/components/core';
-import { CaptureSearchField } from './CaptureSearchField';
 import { SuggestionAmount, SuggestionItemSurface } from './SuggestionItemSurface';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { withPrivacyScope, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -177,11 +177,10 @@ function ReviewSuggestions({
       ) : (
         <>
           <Stack gap="sm">
-            <CaptureSearchField
+            <SearchField
               value={search}
               onChangeText={value => resetView(value, sort)}
               placeholder={strings.matchingSearchPlaceholder}
-              accessibilityLabel={strings.matchingSearchPlaceholder}
               testID="capture-suggestions-search"
               clearTestID="capture-suggestions-clear-search"
               clearAccessibilityLabel={strings.clearSearch}
@@ -487,7 +486,7 @@ function SuggestionGroup({
           </Badge>
         </View>
         <AppIcon
-          name={expanded ? Icon.ChevronDown : Icon.ChevronRight}
+          name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
           size={16}
           color={theme.textSecondary}
         />

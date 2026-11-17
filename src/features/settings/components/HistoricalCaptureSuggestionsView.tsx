@@ -1,7 +1,6 @@
 import {
   AppButton,
   AppCard,
-  AppInput,
   AppSegmentedControl,
   AppText,
   Badge,
@@ -9,6 +8,7 @@ import {
   ListRow,
   ErrorStateView,
   LoadingView,
+  SearchField,
 } from '@/src/components/core';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -17,7 +17,6 @@ import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
-import { Icon } from '@/src/types/domainIcons';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { Fragment, useMemo, useState } from 'react';
@@ -120,17 +119,14 @@ export function HistoricalCaptureSuggestionsView({
         <>
           {sourcePatterns.length > 0 ? (
             <Stack gap="sm">
-              <AppInput
+              <SearchField
                 value={search}
                 onChangeText={value => {
                   setSearch(value);
                   setVisibleCount(PAGE_SIZE);
                 }}
                 placeholder={strings.historicalSearchPlaceholder}
-                leftIcon={Icon.Search}
-                autoCorrect={false}
-                returnKeyType="search"
-                accessibilityLabel={strings.historicalSearchPlaceholder}
+                clearAccessibilityLabel={strings.clearSearch}
                 testID={`${kind}-historical-suggestions-search`}
               />
               <Box gap="sm">

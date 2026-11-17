@@ -1,6 +1,6 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
-import { AppIcon, AppText, Icon, LoadingView } from '@/src/components/core';
+import { AppIcon, AppText, FilterChipButton, Icon, LoadingView } from '@/src/components/core';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
@@ -179,57 +179,29 @@ export function BudgetEditView({
                 </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
                   {categorySuggestions.map((account, index) => (
-                    <PressScaleTouchable
+                    <FilterChipButton
                       key={account.id}
                       testID={
                         index === 0
                           ? 'budget-category-suggestion-first'
                           : `budget-category-suggestion-${account.id}`
                       }
-                      accessibilityRole="button"
+                      label={account.name}
                       accessibilityLabel={copy.chipAccessibility(account.name)}
                       onPress={() => addCategory(account.id)}
-                      style={{
-                        minHeight: Size.touchTarget - Spacing.xs,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.xs,
-                        paddingHorizontal: Spacing.sm,
-                        borderRadius: Shape.radius.full,
-                        borderWidth: 1,
-                        borderColor: theme.border,
-                      }}
-                    >
-                      <AppText variant="caption" color="secondary">
-                        {account.name}
-                      </AppText>
-                    </PressScaleTouchable>
+                    />
                   ))}
                 </View>
               </>
             )}
-            <PressScaleTouchable
+            <FilterChipButton
               testID="budget-category-add"
-              accessibilityRole="button"
+              icon={Icon.Plus}
+              label={selectedCategories.length ? copy.addCategory : copy.allCategories}
               accessibilityLabel={copy.addCategories}
               onPress={() => setIsAccountPickerVisible(true)}
-              style={{
-                alignSelf: 'flex-start',
-                minHeight: Size.touchTarget - Spacing.xs,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: Spacing.xs,
-                paddingHorizontal: Spacing.sm,
-                borderRadius: Shape.radius.full,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
-            >
-              <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.textSecondary} />
-              <AppText variant="caption" color="secondary">
-                {selectedCategories.length ? copy.addCategory : copy.allCategories}
-              </AppText>
-            </PressScaleTouchable>
+              style={styles.addChip}
+            />
           </FormSectionGroup>
 
           {spendingHistory.length > 0 ? (
@@ -345,5 +317,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 0,
     paddingVertical: 0,
+  },
+  addChip: {
+    alignSelf: 'flex-start',
   },
 });

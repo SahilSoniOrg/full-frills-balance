@@ -4,11 +4,11 @@ import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
   Icon,
-  AppInput,
   AppSegmentedControl,
   AppText,
   FilterChipButton,
   IconButton,
+  SearchField,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { transactionCaptureStrings as captureCopy } from '@/src/constants/copy/domains/transactionCaptureStrings';
@@ -53,11 +53,10 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             </Pressable>
           </View>
         ) : null}
-        <AppInput
+        <SearchField
           placeholder="Search description or notes..."
           value={vm.searchQuery}
           onChangeText={vm.setSearchQuery}
-          leftIcon={Icon.Search}
           autoFocus
           testID="journal-search-input"
         />

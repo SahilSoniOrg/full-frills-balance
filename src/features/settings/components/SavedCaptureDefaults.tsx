@@ -1,8 +1,15 @@
-import { AppButton, AppCard, AppText, Badge, ListGroup, ListRow } from '@/src/components/core';
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  Badge,
+  ListGroup,
+  ListRow,
+  SearchField,
+} from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { Stack } from '@/src/design-system';
-import { CaptureSearchField } from '@/src/features/settings/components/CaptureSearchField';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { Icon } from '@/src/types/domainIcons';
 import { Fragment, useState } from 'react';
@@ -95,14 +102,13 @@ export function SavedCaptureDefaults({
 
   return (
     <Stack gap="lg">
-      <CaptureSearchField
+      <SearchField
         value={search}
         onChangeText={value => {
           setSearch(value);
           setVisibleCounts({});
         }}
         placeholder={strings.savedDefaultsSearchPlaceholder}
-        accessibilityLabel={strings.savedDefaultsSearchPlaceholder}
         testID="capture-saved-defaults-search"
         clearTestID="capture-saved-defaults-clear-search"
         clearAccessibilityLabel={strings.clearSearch}

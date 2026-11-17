@@ -12,20 +12,35 @@ import { PressScaleTouchable } from './PressScaleTouchable';
 interface FilterChipButtonProps {
   label: string;
   icon?: IconName;
+  trailingIcon?: IconName;
   isActive?: boolean;
+  accessibilityLabel?: string;
   onPress: () => void;
   style?: ViewStyle;
   testID?: string;
 }
 
 export const FilterChipButton = memo(
-  ({ label, icon, isActive, onPress, style, testID }: FilterChipButtonProps) => {
+  ({
+    label,
+    icon,
+    trailingIcon,
+    isActive,
+    accessibilityLabel,
+    onPress,
+    style,
+    testID,
+  }: FilterChipButtonProps) => {
     const { theme } = useTheme();
+    const iconColor = isActive
+      ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
+      : resolveThemeColor(theme, theme.textSecondary);
 
     return (
       <PressScaleTouchable
         testID={testID}
         accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         accessibilityState={{ selected: !!isActive }}
         onPress={() => {
           Keyboard.dismiss();
@@ -41,17 +56,7 @@ export const FilterChipButton = memo(
           },
         ]}
       >
-        {icon && (
-          <AppIcon
-            name={icon}
-            size={Size.xs}
-            color={
-              isActive
-                ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
-                : resolveThemeColor(theme, theme.textSecondary)
-            }
-          />
-        )}
+        {icon && <AppIcon name={icon} size={Size.xs} color={iconColor} />}
         <AppText
           variant="caption"
           weight={isActive ? 'semibold' : 'medium'}
@@ -63,6 +68,7 @@ export const FilterChipButton = memo(
         >
           {label}
         </AppText>
+        {trailingIcon && <AppIcon name={trailingIcon} size={Size.xs} color={iconColor} />}
       </PressScaleTouchable>
     );
   },

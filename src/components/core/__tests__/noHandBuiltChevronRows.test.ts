@@ -24,6 +24,7 @@ const ALLOWED = new Set([
   'features/hub/components/HubWidget.tsx',
   'features/reports-v2/screen/components/ReportsV2Breakdown.tsx',
   'features/reports-v2/screen/components/ReportsV2QualityBanner.tsx',
+  'features/settings/components/CaptureSuggestionDetails.tsx',
   'features/setup/first-run/conversationUi.tsx',
 ]);
 

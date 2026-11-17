@@ -2,6 +2,7 @@ import {
   AppText,
   EmptyStateView,
   ErrorStateView,
+  FilterChipButton,
   Icon,
   AppIcon,
   LoadingView,
@@ -197,35 +198,18 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.filters}
                   >
-                    {ENTITY_FILTERS.map(filter => {
-                      const selected = entityFilter === filter;
-                      const label =
-                        filter === 'all'
-                          ? AppConfig.strings.audit.filters.all
-                          : AppConfig.strings.audit.filters[filter];
-                      return (
-                        <PressScaleTouchable
-                          key={filter}
-                          onPress={() => onEntityFilterChange(filter)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                          style={[
-                            styles.filterOption,
-                            {
-                              backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
-                              borderColor: selected ? theme.primary : theme.divider,
-                            },
-                          ]}
-                        >
-                          <AppText
-                            variant="caption"
-                            style={{ color: selected ? theme.onPrimary : theme.textSecondary }}
-                          >
-                            {label}
-                          </AppText>
-                        </PressScaleTouchable>
-                      );
-                    })}
+                    {ENTITY_FILTERS.map(filter => (
+                      <FilterChipButton
+                        key={filter}
+                        label={
+                          filter === 'all'
+                            ? AppConfig.strings.audit.filters.all
+                            : AppConfig.strings.audit.filters[filter]
+                        }
+                        isActive={entityFilter === filter}
+                        onPress={() => onEntityFilterChange(filter)}
+                      />
+                    ))}
                   </ScrollView>
                   <AppText variant="caption" color="secondary" style={styles.sourceFilterLabel}>
                     {AppConfig.strings.audit.sourceFilterLabel}
@@ -235,63 +219,26 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.filters}
                   >
-                    {SOURCE_FILTERS.map(filter => {
-                      const selected = sourceFilter === filter.id;
-                      return (
-                        <PressScaleTouchable
-                          key={filter.id ?? 'all-sources'}
-                          onPress={() => onSourceFilterChange(filter.id)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                          style={[
-                            styles.filterOption,
-                            {
-                              backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
-                              borderColor: selected ? theme.primary : theme.divider,
-                            },
-                          ]}
-                        >
-                          <AppText
-                            variant="caption"
-                            style={{ color: selected ? theme.onPrimary : theme.textSecondary }}
-                          >
-                            {filter.label}
-                          </AppText>
-                        </PressScaleTouchable>
-                      );
-                    })}
+                    {SOURCE_FILTERS.map(filter => (
+                      <FilterChipButton
+                        key={filter.id ?? 'all-sources'}
+                        label={filter.label}
+                        isActive={sourceFilter === filter.id}
+                        onPress={() => onSourceFilterChange(filter.id)}
+                      />
+                    ))}
                   </ScrollView>
                   <View style={styles.eventFilterRow}>
                     <AppText variant="caption" color="secondary">
                       {AppConfig.strings.audit.eventFilterLabel}
                     </AppText>
-                    <PressScaleTouchable
-                      onPress={() => setEventPickerVisible(true)}
-                      accessibilityRole="button"
+                    <FilterChipButton
+                      label={selectedEventLabel}
+                      trailingIcon={Icon.ChevronDown}
+                      isActive={eventFilter !== 'all'}
                       accessibilityLabel={`${AppConfig.strings.audit.eventFilterLabel}: ${selectedEventLabel}`}
-                      style={[
-                        styles.filterOption,
-                        {
-                          backgroundColor:
-                            eventFilter !== 'all' ? theme.primary : theme.surfaceSecondary,
-                          borderColor: eventFilter !== 'all' ? theme.primary : theme.divider,
-                        },
-                      ]}
-                    >
-                      <AppText
-                        variant="caption"
-                        style={{
-                          color: eventFilter !== 'all' ? theme.onPrimary : theme.textSecondary,
-                        }}
-                      >
-                        {selectedEventLabel}
-                      </AppText>
-                      <AppIcon
-                        name={Icon.ChevronDown}
-                        size={Size.xs}
-                        color={eventFilter !== 'all' ? theme.onPrimary : theme.textSecondary}
-                      />
-                    </PressScaleTouchable>
+                      onPress={() => setEventPickerVisible(true)}
+                    />
                   </View>
                   {correlationFilter && (
                     <View style={styles.operationFilterRow}>
@@ -434,11 +381,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  filterOption: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });

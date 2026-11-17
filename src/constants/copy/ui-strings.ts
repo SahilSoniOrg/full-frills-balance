@@ -21,6 +21,7 @@ export const UI_STRINGS = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     clearFilters: 'Clear filters',
+    clearSearch: 'Clear search',
     goBack: 'Go back',
     loading: 'Loading…',
     loadingMore: 'Loading…',

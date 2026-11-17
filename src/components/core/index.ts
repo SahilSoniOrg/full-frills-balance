@@ -46,6 +46,8 @@ export type { ColoredDotProps } from './ColoredDot';
 export { ErrorBoundary } from './ErrorBoundary';
 export { InlineSearchField } from './InlineSearchField';
 export type { InlineSearchFieldProps } from './InlineSearchField';
+export { SearchField } from './SearchField';
+export type { SearchFieldProps } from './SearchField';
 export { FloatingActionButton } from './FloatingActionButton';
 export { IconButton } from './IconButton';
 export { PressScaleTouchable } from './PressScaleTouchable';
