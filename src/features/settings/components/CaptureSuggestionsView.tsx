@@ -68,66 +68,64 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
 
   return (
     <SettingsLayout title={strings.suggestionsTitle}>
-      <Stack space="lg">
-        <AppSegmentedControl
-          options={[
-            {
-              id: 'review',
-              label: strings.suggestionsReviewTab(
-                capture.hasSnapshot && !privateMode ? reviewCount : undefined,
-              ),
-            },
-            {
-              id: 'saved',
-              label: strings.suggestionsSavedTab(
-                capture.hasSnapshot && !privateMode ? savedCount : undefined,
-              ),
-            },
-          ]}
-          value={tab}
-          onChange={setTab}
-          flex
-          testID="capture-suggestions-tabs"
-        />
-        <AppText variant="bodySmall" color="secondary">
-          {tab === 'review'
-            ? strings.suggestionsReviewCardDescription
-            : strings.suggestionsSavedCardDescription}
+      <AppSegmentedControl
+        options={[
+          {
+            id: 'review',
+            label: strings.suggestionsReviewTab(
+              capture.hasSnapshot && !privateMode ? reviewCount : undefined,
+            ),
+          },
+          {
+            id: 'saved',
+            label: strings.suggestionsSavedTab(
+              capture.hasSnapshot && !privateMode ? savedCount : undefined,
+            ),
+          },
+        ]}
+        value={tab}
+        onChange={setTab}
+        flex
+        testID="capture-suggestions-tabs"
+      />
+      <AppText variant="bodySmall" color="secondary">
+        {tab === 'review'
+          ? strings.suggestionsReviewCardDescription
+          : strings.suggestionsSavedCardDescription}
+      </AppText>
+      {capture.busy ? (
+        <AppText variant="bodySmall" color="secondary" accessibilityRole="alert">
+          {strings.matchingMutationBusy}
         </AppText>
-        {capture.busy ? (
-          <AppText variant="bodySmall" color="secondary" accessibilityRole="alert">
-            {strings.matchingMutationBusy}
-          </AppText>
-        ) : null}
+      ) : null}
 
-        <LoadingView
-          loading={capture.loading && !capture.hasSnapshot}
+      <LoadingView
+        loading={capture.loading && !capture.hasSnapshot}
+        variant="inline"
+        text={strings.loading}
+      />
+      {capture.error ? (
+        <ErrorStateView
           variant="inline"
-          text={strings.loading}
+          message={capture.hasSnapshot ? strings.refreshError : strings.loadError}
+          onRetry={() => void capture.onRetry()}
+          retryLabel={strings.retry}
         />
-        {capture.error ? (
-          <ErrorStateView
-            variant="inline"
-            message={capture.hasSnapshot ? strings.refreshError : strings.loadError}
-            onRetry={() => void capture.onRetry()}
-            retryLabel={strings.retry}
-          />
-        ) : null}
+      ) : null}
 
-        {privateMode ? (
-          <AppCard variant="secondary" paddingSize="md">
-            <AppText variant="bodySmall" color="secondary">
-              {strings.suggestionsHiddenInPrivateMode}
-            </AppText>
-          </AppCard>
-        ) : capture.hasSnapshot ? (
-          tab === 'review' ? (
-            <ReviewSuggestions capture={capture} reviewCount={reviewCount} />
-          ) : (
-            <SavedCaptureDefaults capture={capture} savedCount={savedCount} />
-          )
-        ) : null}
-      </Stack>
+      {privateMode ? (
+        <AppCard variant="secondary" paddingSize="md">
+          <AppText variant="bodySmall" color="secondary">
+            {strings.suggestionsHiddenInPrivateMode}
+          </AppText>
+        </AppCard>
+      ) : capture.hasSnapshot ? (
+        tab === 'review' ? (
+          <ReviewSuggestions capture={capture} reviewCount={reviewCount} />
+        ) : (
+          <SavedCaptureDefaults capture={capture} savedCount={savedCount} />
+        )
+      ) : null}
     </SettingsLayout>
   );
 }

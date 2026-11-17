@@ -117,7 +117,7 @@ export function SavedCaptureDefaults({
 
       {categoryDefaults.length > 0 ? (
         <ListGroup
-          variant="card"
+          variant="plain"
           header={strings.categoryDefaultsHeader}
           headerAccessory={
             <Badge variant="default" size="sm">
@@ -203,7 +203,7 @@ export function SavedCaptureDefaults({
 
       {descriptionDefaults.length > 0 ? (
         <ListGroup
-          variant="card"
+          variant="plain"
           header={strings.descriptionDefaultsHeader}
           headerAccessory={
             <Badge variant="default" size="sm">
@@ -265,7 +265,7 @@ export function SavedCaptureDefaults({
 
       {visiblePausedMerchants.length > 0 ? (
         <ListGroup
-          variant="card"
+          variant="plain"
           header={strings.pausedMerchantsHeader}
           headerAccessory={
             <Badge variant="default" size="sm">

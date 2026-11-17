@@ -11,7 +11,6 @@ import {
   LoadingView,
 } from '@/src/components/core';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import { Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Stack, Box } from '@/src/design-system';
 import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
@@ -97,96 +96,94 @@ export function HistoricalCaptureSuggestionsView({
 
   return (
     <SettingsLayout title={title}>
-      <Stack space="lg">
-        <LoadingView
-          loading={capture.loading && !capture.hasSnapshot}
+      <LoadingView
+        loading={capture.loading && !capture.hasSnapshot}
+        variant="inline"
+        text={strings.loading}
+      />
+      {capture.error ? (
+        <ErrorStateView
           variant="inline"
-          text={strings.loading}
+          message={capture.hasSnapshot ? strings.refreshError : strings.loadError}
+          onRetry={() => void capture.onRetry()}
+          retryLabel={strings.retry}
         />
-        {capture.error ? (
-          <ErrorStateView
-            variant="inline"
-            message={capture.hasSnapshot ? strings.refreshError : strings.loadError}
-            onRetry={() => void capture.onRetry()}
-            retryLabel={strings.retry}
-          />
-        ) : null}
+      ) : null}
 
-        {privateMode ? (
-          <AppCard variant="secondary" paddingSize="md">
-            <AppText variant="bodySmall" color="secondary">
-              {strings.suggestionsHiddenInPrivateMode}
-            </AppText>
-          </AppCard>
-        ) : capture.hasSnapshot ? (
-          <>
-            {sourcePatterns.length > 0 ? (
-              <Stack space="sm">
-                <AppInput
-                  value={search}
-                  onChangeText={value => {
-                    setSearch(value);
+      {privateMode ? (
+        <AppCard variant="secondary" paddingSize="md">
+          <AppText variant="bodySmall" color="secondary">
+            {strings.suggestionsHiddenInPrivateMode}
+          </AppText>
+        </AppCard>
+      ) : capture.hasSnapshot ? (
+        <>
+          {sourcePatterns.length > 0 ? (
+            <Stack space="sm">
+              <AppInput
+                value={search}
+                onChangeText={value => {
+                  setSearch(value);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                placeholder={strings.historicalSearchPlaceholder}
+                leftIcon={Icon.Search}
+                autoCorrect={false}
+                returnKeyType="search"
+                accessibilityLabel={strings.historicalSearchPlaceholder}
+                testID={`${kind}-historical-suggestions-search`}
+              />
+              <Box gap="sm">
+                <AppText variant="caption" color="secondary">
+                  {strings.historicalSortBy}
+                </AppText>
+                <AppSegmentedControl
+                  options={SORT_OPTIONS}
+                  value={sort}
+                  onChange={value => {
+                    setSort(value);
                     setVisibleCount(PAGE_SIZE);
                   }}
-                  placeholder={strings.historicalSearchPlaceholder}
-                  leftIcon={Icon.Search}
-                  autoCorrect={false}
-                  returnKeyType="search"
-                  accessibilityLabel={strings.historicalSearchPlaceholder}
-                  testID={`${kind}-historical-suggestions-search`}
+                  flex
+                  size="sm"
+                  testID={`${kind}-historical-suggestions-sort`}
                 />
-                <Box gap="sm">
-                  <AppText variant="caption" color="secondary">
-                    {strings.historicalSortBy}
-                  </AppText>
-                  <AppSegmentedControl
-                    options={SORT_OPTIONS}
-                    value={sort}
-                    onChange={value => {
-                      setSort(value);
-                      setVisibleCount(PAGE_SIZE);
-                    }}
-                    flex
-                    size="sm"
-                    testID={`${kind}-historical-suggestions-sort`}
-                  />
-                </Box>
-              </Stack>
-            ) : null}
+              </Box>
+            </Stack>
+          ) : null}
 
-            {patterns.length === 0 ? (
-              <AppCard variant="secondary" paddingSize="md">
-                <AppText variant="bodySmall" color="secondary">
-                  {search.trim() ? strings.historicalSearchNoResults : strings.historicalPageEmpty}
-                </AppText>
-              </AppCard>
-            ) : (
-              <ListGroup variant="card" header={title} dividerInset={Spacing.lg}>
-                <ListRow
-                  title={
-                    kind === 'categories'
-                      ? strings.historicalCategoryHint
-                      : strings.historicalMixedHint(patterns.length)
-                  }
-                  tone="utility"
-                  wrap
-                />
-                {patterns.slice(0, visibleCount).map(pattern => (
-                  <HistoricalSuggestionRow key={pattern.key} capture={capture} pattern={pattern} />
-                ))}
-                {patterns.length > visibleCount ? (
-                  <AppButton
-                    variant="ghost"
-                    onPress={() => setVisibleCount(count => count + PAGE_SIZE)}
-                  >
-                    {strings.showMore}
-                  </AppButton>
-                ) : null}
-              </ListGroup>
-            )}
-          </>
-        ) : null}
-      </Stack>
+          {patterns.length === 0 ? (
+            <AppCard variant="secondary" paddingSize="md">
+              <AppText variant="bodySmall" color="secondary">
+                {search.trim() ? strings.historicalSearchNoResults : strings.historicalPageEmpty}
+              </AppText>
+            </AppCard>
+          ) : (
+            <ListGroup variant="plain" header={title}>
+              <ListRow
+                title={
+                  kind === 'categories'
+                    ? strings.historicalCategoryHint
+                    : strings.historicalMixedHint(patterns.length)
+                }
+                tone="utility"
+                wrap
+              />
+              {patterns.slice(0, visibleCount).map(pattern => (
+                <HistoricalSuggestionRow key={pattern.key} capture={capture} pattern={pattern} />
+              ))}
+              {patterns.length > visibleCount ? (
+                <AppButton
+                  variant="ghost"
+                  onPress={() => setVisibleCount(count => count + PAGE_SIZE)}
+                >
+                  {strings.showMore}
+                </AppButton>
+              ) : null}
+            </ListGroup>
+          )}
+        </>
+      ) : null}
     </SettingsLayout>
   );
 }
