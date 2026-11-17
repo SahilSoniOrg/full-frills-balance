@@ -612,8 +612,8 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
 const styles = StyleSheet.create({
   surface: { flex: 1, position: 'relative' },
   drawer: {
-    borderTopRightRadius: Shape.radius.xl,
-    borderBottomRightRadius: Shape.radius.xl,
+    borderTopRightRadius: Shape.radius.xxl,
+    borderBottomRightRadius: Shape.radius.xxl,
     overflow: 'hidden',
     elevation: 20,
   },

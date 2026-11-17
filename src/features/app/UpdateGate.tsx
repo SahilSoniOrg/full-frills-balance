@@ -205,7 +205,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
 
   return (
     <Box flex={1} background="background" justifyContent="center" alignItems="center" padding="xl">
-      <AppCard padding="xl" radius="r3" elevation="md" style={styles.card}>
+      <AppCard padding="xl" radius="xl" elevation="md" style={styles.card}>
         <Stack gap="xl" alignItems="center">
           <IconTile icon={Icon.Sparkles} tint="primary" size="xl" shape="circle" />
 
@@ -247,7 +247,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
                 alignItems="center"
                 width="100%"
                 padding="lg"
-                borderRadius="r2"
+                borderRadius="xxl"
                 background="surfaceSecondary"
                 gap="md"
               >

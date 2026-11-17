@@ -9,7 +9,7 @@
 
 import { Icon, AppText, IconButton } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { Spacing } from '@/src/constants/design-tokens';
+import { Size, Spacing } from '@/src/constants/design-tokens';
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    minHeight: 64,
+    minHeight: Size.headerHeight,
   },
   leadingContainer: {
     flexDirection: 'column',
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   leadingRow: {
-    minHeight: 44,
+    minHeight: Size.navBarButton,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,

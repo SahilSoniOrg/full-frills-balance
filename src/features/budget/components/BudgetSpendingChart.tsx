@@ -384,7 +384,7 @@ export function BudgetSpendingChart({
 }
 
 const styles = StyleSheet.create({
-  card: { padding: Spacing.lg, borderRadius: Shape.radius.xl },
+  card: { padding: Spacing.lg, borderRadius: Shape.radius.xxl },
   heading: {
     flexDirection: 'row',
     alignItems: 'baseline',

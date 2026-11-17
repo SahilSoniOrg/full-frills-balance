@@ -84,7 +84,7 @@ export function PlannedPaymentDetailsView({
       : undefined;
 
   const actionCard = (
-    <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
+    <AppCard overflow="visible" elevation="sm" padding="md" radius="xxl">
       <Stack gap="sm">
         <Inline align="center" justify="space-between" gap="sm" flexWrap="wrap">
           <AppText
@@ -327,7 +327,7 @@ export function PlannedPaymentDetailsView({
                     ) : undefined
                   }
                 />
-                <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
+                <AppCard elevation="sm" padding="none" radius="xxl" overflow="hidden">
                   <Stack>
                     <DetailRow label={copy.repeats} value={vm.intervalLabel ?? ''} />
                     <Separator />

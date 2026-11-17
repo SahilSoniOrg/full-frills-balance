@@ -169,7 +169,7 @@ function ListRowBase(initialProps: ListRowProps) {
   } = initialProps;
 
   const { boxProps } = extractBoxProps(passthroughProps);
-  const { style, as: _as, ...rowBoxProps } = boxProps;
+  const { style, ...rowBoxProps } = boxProps;
 
   const plain = variant === 'plain';
   const utility = tone === 'utility';

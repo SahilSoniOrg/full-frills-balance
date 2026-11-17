@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   doneButton: {
     height: Size.buttonLg,
     paddingHorizontal: Spacing.md,
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',

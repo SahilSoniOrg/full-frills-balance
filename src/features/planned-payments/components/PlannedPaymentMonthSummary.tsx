@@ -19,7 +19,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
       overflow="visible"
       elevation="sm"
       padding="md"
-      radius="r3"
+      radius="xl"
       background="surface"
       borderWidth={1}
       borderColor="surfaceSecondary"

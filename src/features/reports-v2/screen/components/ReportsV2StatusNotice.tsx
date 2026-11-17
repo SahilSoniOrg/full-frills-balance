@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     borderWidth: 1,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },

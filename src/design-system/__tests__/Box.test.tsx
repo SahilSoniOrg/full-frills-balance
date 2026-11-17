@@ -1,6 +1,5 @@
 import { Box } from '@/src/design-system/Box';
 import { render, screen } from '@/src/testing/render';
-import { Pressable } from 'react-native';
 
 describe('Box', () => {
   it('supports the padding props used by the removed Inset wrapper', () => {
@@ -17,23 +16,6 @@ describe('Box', () => {
           paddingVertical: expect.any(Number),
         }),
       ]),
-    );
-  });
-
-  it('preserves Pressable callback styles', () => {
-    const pressableStyle = jest.fn(({ pressed }) => ({ opacity: pressed ? 0.5 : 1 }));
-
-    render(
-      <Box as={Pressable} testID="pressable-box" style={pressableStyle}>
-        child
-      </Box>,
-    );
-
-    const pressable = screen.getByTestId('pressable-box');
-
-    expect(pressableStyle).toHaveBeenCalled();
-    expect(pressable.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ opacity: 1 })]),
     );
   });
 });

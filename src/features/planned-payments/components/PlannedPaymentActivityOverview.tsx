@@ -137,7 +137,7 @@ export function PlannedPaymentActivityOverview({
                   testID={`planned-upcoming-${occurrence.date}`}
                   elevation="sm"
                   padding="sm"
-                  radius="r2"
+                  radius="xxl"
                   style={
                     largeText
                       ? { width: '100%' }
@@ -203,7 +203,7 @@ export function PlannedPaymentActivityOverview({
           }
         />
         {error ? (
-          <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
+          <AppCard overflow="visible" elevation="sm" padding="md" radius="xxl">
             <Stack gap="sm">
               <AppText color="warning" accessibilityRole="alert">
                 {error}
@@ -221,7 +221,7 @@ export function PlannedPaymentActivityOverview({
         ) : isLoading || !summary ? (
           <AppText color="secondary">{copy.loadingActivity}</AppText>
         ) : (
-          <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
+          <AppCard elevation="sm" padding="none" radius="xxl" overflow="hidden">
             <Stack>
               <Inline
                 justify="space-between"

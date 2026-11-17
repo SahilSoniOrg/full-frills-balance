@@ -16,16 +16,15 @@ describe('Design System Utilities', () => {
       expect(restProps).toEqual({ color: 'red', label: 'Submit' });
     });
 
-    it('correctly handles polymorphism and style whitelisting', () => {
+    it('treats style as a box prop', () => {
       const props = {
-        as: 'div',
         style: { opacity: 0.5 },
         testID: 'box',
       };
 
       const { boxProps, restProps } = extractBoxProps(props);
 
-      expect(boxProps).toEqual({ as: 'div', style: { opacity: 0.5 } });
+      expect(boxProps).toEqual({ style: { opacity: 0.5 } });
       expect(restProps).toEqual({ testID: 'box' });
     });
 
@@ -72,5 +71,4 @@ describe('Design System Utilities', () => {
       expect(resolvePaddingSpacing(undefined)).toBeUndefined();
     });
   });
-
 });

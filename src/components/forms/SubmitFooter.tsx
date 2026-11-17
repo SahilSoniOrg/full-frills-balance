@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   },
   buttonCompact: {
     height: Size.buttonLg,
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
   },
 });

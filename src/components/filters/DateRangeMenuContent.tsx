@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: 'transparent',
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
     marginHorizontal: -Spacing.xs,
   },
   panelHeader: {
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   inputButton: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
     padding: Spacing.md,
     gap: Spacing.xs,
     minHeight: 76,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   numberInputContainer: {
     width: 68,
     height: 50,
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: 'transparent',
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.lg,
     marginHorizontal: -Spacing.xs,
   },
   allTimeBtn: {

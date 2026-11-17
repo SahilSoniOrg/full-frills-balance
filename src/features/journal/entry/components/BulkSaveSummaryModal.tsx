@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
   },
   itemDesc: {
     flex: 1,

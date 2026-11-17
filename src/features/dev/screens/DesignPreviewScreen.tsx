@@ -584,22 +584,22 @@ export default function DesignPreviewScreen() {
               <AppText variant="subheading">Radius scale</AppText>
               <Inline gap="md" alignItems="center" flexWrap="wrap">
                 <TokenBox size={Size.xl} radius={Shape.radius.xs} />
-                <TokenBox size={Size.xl} radius={Shape.radius.r4} />
-                <TokenBox size={Size.xl} radius={Shape.radius.r3} />
-                <TokenBox size={Size.xl} radius={Shape.radius.r2} />
-                <TokenBox size={Size.xl} radius={Shape.radius.r1} />
+                <TokenBox size={Size.xl} radius={Shape.radius.lg} />
+                <TokenBox size={Size.xl} radius={Shape.radius.xl} />
+                <TokenBox size={Size.xl} radius={Shape.radius.xxl} />
+                <TokenBox size={Size.xl} radius={Shape.radius.xxxl} />
                 <TokenBox size={Size.xl} radius={Shape.radius.full} />
               </Inline>
 
               <AppText variant="subheading">Elevation</AppText>
               <Stack gap="md">
-                <Box background="surface" padding="md" borderRadius="r2" shadow="sm">
+                <Box background="surface" padding="md" borderRadius="xxl" shadow="sm">
                   <AppText variant="caption">shadow sm</AppText>
                 </Box>
-                <Box background="surface" padding="md" borderRadius="r2" shadow="md">
+                <Box background="surface" padding="md" borderRadius="xxl" shadow="md">
                   <AppText variant="caption">shadow md</AppText>
                 </Box>
-                <Box background="surface" padding="md" borderRadius="r2" shadow="lg">
+                <Box background="surface" padding="md" borderRadius="xxl" shadow="lg">
                   <AppText variant="caption">shadow lg</AppText>
                 </Box>
               </Stack>

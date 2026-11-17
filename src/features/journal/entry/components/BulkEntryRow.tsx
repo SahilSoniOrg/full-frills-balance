@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: Spacing.md,
-    borderRadius: Shape.radius.r3,
+    borderRadius: Shape.radius.xl,
     borderWidth: 1,
     marginBottom: Spacing.md,
     position: 'relative',

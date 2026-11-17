@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
-    borderRadius: Shape.radius.r3,
+    borderRadius: Shape.radius.xl,
   },
   expression: {
     minHeight: Size.buttonMd,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   detailsPanel: {
     gap: Spacing.xs,
     padding: Spacing.md,
-    borderRadius: Shape.radius.r3,
+    borderRadius: Shape.radius.xl,
   },
   keypad: {
     gap: Spacing.sm,
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     minHeight: Size.buttonLg,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Shape.radius.r3,
+    borderRadius: Shape.radius.xl,
   },
   keyLabel: {
     fontSize: Typography.sizes.xxl,

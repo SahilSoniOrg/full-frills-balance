@@ -67,7 +67,7 @@ describe('AppCard', () => {
 
   it('renders with custom border radius', () => {
     render(
-      <AppCard radius="xl">
+      <AppCard radius="xxl">
         <View testID="test-child" />
       </AppCard>,
     );

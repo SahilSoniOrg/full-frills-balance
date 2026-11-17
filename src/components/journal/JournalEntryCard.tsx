@@ -84,7 +84,7 @@ const JournalEntryCardComponent = ({
       testID="journal-entry-card"
       elevation="sm"
       padding="none"
-      radius="r2"
+      radius="xxl"
       accessible={!isPressable}
       accessibilityLabel={!isPressable ? accessibilityLabel : undefined}
       accessibilityState={!isPressable ? accessibilityState : undefined}
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     borderWidth: SELECTION_CARD_BORDER_WIDTH,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
     borderCurve: 'continuous',
     zIndex: 10,
   },

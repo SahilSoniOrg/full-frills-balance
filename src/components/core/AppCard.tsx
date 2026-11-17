@@ -42,7 +42,7 @@ export type AppCardProps = AppCardBaseProps;
 export const AppCard = forwardRef<View, AppCardProps>((initialProps, ref) => {
   const {
     elevation: elevationProp,
-    radius = 'r2',
+    radius = 'xxl',
     variant = 'default',
     children,
     ...propsWithoutCardProps

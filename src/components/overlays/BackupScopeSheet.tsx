@@ -71,7 +71,7 @@ export function BackupScopeSheet({
               flexDirection="row"
               alignItems="center"
               padding="md"
-              borderRadius="r2"
+              borderRadius="xxl"
               background={scope === option.scope ? 'primary' : 'surfaceSecondary'}
               backgroundOpacity={scope === option.scope ? 'selection' : undefined}
               gap="md"

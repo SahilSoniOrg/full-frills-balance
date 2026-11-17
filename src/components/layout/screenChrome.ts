@@ -1,15 +1,14 @@
-import type {
-  FloatingActionButtonBehavior,
-  FloatingActionButtonProps,
-} from '@/src/components/core/FloatingActionButton';
+import type { FloatingActionButtonProps } from '@/src/components/core/FloatingActionButton';
 import { Icon } from '@/src/types/domainIcons';
 import type { ReactNode } from 'react';
 import type { ViewStyle } from 'react-native';
 
 export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 
-export type ScreenFabChrome = FloatingActionButtonBehavior &
-  Pick<FloatingActionButtonProps, 'label' | 'icon' | 'placement' | 'accessibilityLabel'>;
+export type ScreenFabChrome = Pick<
+  FloatingActionButtonProps,
+  'onPress' | 'label' | 'icon' | 'placement' | 'accessibilityLabel'
+>;
 
 type ScreenChromeBase = {
   isSearchActive?: boolean;

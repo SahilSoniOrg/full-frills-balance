@@ -4,8 +4,6 @@ export { UnderlineNameField } from './UnderlineNameField';
 export type { UnderlineNameFieldProps } from './UnderlineNameField';
 export { SuggestionHint } from './SuggestionHint';
 export type { SuggestionHintProps } from './SuggestionHint';
-export { GlyphCarousel } from './GlyphCarousel';
-export type { GlyphCarouselItem, GlyphCarouselProps } from './GlyphCarousel';
 export { ScheduleField } from './schedule/ScheduleField';
 export type { ScheduleFieldProps } from './schedule/ScheduleField';
 export { ScheduleSheet } from './schedule/ScheduleSheet';

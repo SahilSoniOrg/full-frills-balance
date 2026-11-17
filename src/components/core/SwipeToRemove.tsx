@@ -23,7 +23,7 @@ export function SwipeToRemove({
   label,
   onRemove,
   children,
-  borderRadius = 'r2',
+  borderRadius = 'xxl',
 }: {
   readonly label: string;
   readonly onRemove: () => void;

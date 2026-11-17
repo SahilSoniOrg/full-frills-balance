@@ -101,7 +101,7 @@ export const SafeToSpendExplanationModal = ({
         },
         card: {
           marginBottom: Spacing.xl,
-          borderRadius: Shape.radius.r3,
+          borderRadius: Shape.radius.xl,
           borderWidth: 1,
           borderColor: withOpacity(theme.border, Opacity.muted),
           overflow: 'hidden',

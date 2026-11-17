@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     padding: Spacing.md,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
     borderWidth: 1,
     marginBottom: Spacing.md,
   },

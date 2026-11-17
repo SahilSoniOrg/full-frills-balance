@@ -77,7 +77,7 @@ const SelectableGridItem = React.memo(function SelectableGridItem({
         testID={`grid-item-${id}`}
       >
         <Box
-          borderRadius="r3"
+          borderRadius="xl"
           style={[
             styles.itemContainer,
             {

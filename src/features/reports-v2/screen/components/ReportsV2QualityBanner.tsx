@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     borderWidth: 1,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
     padding: Spacing.md,
   },
   qualityIcon: {

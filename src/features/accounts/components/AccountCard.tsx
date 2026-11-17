@@ -131,7 +131,7 @@ function AccountCardBase({
           testID="account-card"
           elevation="sm"
           padding="none"
-          radius="r2"
+          radius="xxl"
           background={surfaceColor}
           style={styles.cardContainer}
         >
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     borderWidth: BorderWidth.medium,
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
     borderCurve: 'continuous',
     zIndex: 10,
   },

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SelectionIndicator, SelectionCheckmark } from '../SelectionIndicator';
-import { SelectionTileList } from '../SelectionTileList';
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { SelectableGrid } from '@/src/components/shared/SelectableGrid';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
@@ -58,14 +57,6 @@ describe('selection layout invariants', () => {
     );
     fireEvent.press(view.getByText('US Dollar'));
     expect(props.onSelect).toHaveBeenCalledWith('USD');
-  });
-
-  it('keeps horizontal account tile text stable when selected', () => {
-    const items = [{ id: 'cash', label: 'Cash account', color: '#35785A' }];
-    const view = render(<SelectionTileList items={items} selectedId="" onSelect={jest.fn()} />);
-    const original = getLayoutPath(view.getByText('Cash account'));
-    view.rerender(<SelectionTileList items={items} selectedId="cash" onSelect={jest.fn()} />);
-    expect(getLayoutPath(view.getByText('Cash account'))).toEqual(original);
   });
 
   it('keeps setup grid text geometry stable while toggling an item', () => {

@@ -460,7 +460,7 @@ export const AppSegmentedControl = <T extends string | number>({
     <Box
       onLayout={handleLayout}
       style={containerStyle}
-      borderRadius={isVertical ? 'r4' : 'full'}
+      borderRadius={isVertical ? 'lg' : 'full'}
       accessibilityRole="tablist"
       testID={testID}
     >

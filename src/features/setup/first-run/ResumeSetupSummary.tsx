@@ -59,7 +59,7 @@ export function ResumeSetupSummary({
   ];
 
   return (
-    <Box padding="lg" background="surface" borderColor="border" borderWidth={1} borderRadius="r2">
+    <Box padding="lg" background="surface" borderColor="border" borderWidth={1} borderRadius="xxl">
       <Stack gap="md">
         <Stack direction="row" align="center" justify="space-between" gap="md">
           <AppText variant="subheading" weight="semibold">

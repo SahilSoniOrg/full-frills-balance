@@ -137,7 +137,6 @@ const BOX_PROP_KEY_LIST = [
   'borderBottomWidth',
   'borderLeftWidth',
   'borderRightWidth',
-  'as',
   'style',
   'display',
   'aspectRatio',

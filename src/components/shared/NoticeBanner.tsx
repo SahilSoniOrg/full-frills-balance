@@ -40,7 +40,7 @@ export function NoticeBanner({
       alignItems="flex-start"
       gap="xs"
       padding="sm"
-      borderRadius="r2"
+      borderRadius="xxl"
       unsafe_backgroundRaw={withOpacity(color, Opacity.soft)}
       style={style}
       accessibilityRole="alert"

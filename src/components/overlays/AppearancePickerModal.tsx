@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   preview: {
     minHeight: Size.appearancePreviewHeight,
     borderWidth: BorderWidth.thin,
-    borderRadius: Shape.radius.r3,
+    borderRadius: Shape.radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     height: Size.xxl,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: Shape.radius.r2,
+    borderRadius: Shape.radius.xxl,
   },
   autoColorRow: {
     flexDirection: 'row',

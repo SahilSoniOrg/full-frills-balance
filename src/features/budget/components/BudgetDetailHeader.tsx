@@ -224,7 +224,7 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
 }
 
 const styles = StyleSheet.create({
-  heroCard: { padding: Spacing.md, borderRadius: Shape.radius.xl, gap: Spacing.sm },
+  heroCard: { padding: Spacing.md, borderRadius: Shape.radius.xxl, gap: Spacing.sm },
   amountLine: {
     flexDirection: 'row',
     flexWrap: 'wrap',

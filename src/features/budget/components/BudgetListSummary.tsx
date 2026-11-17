@@ -23,7 +23,7 @@ export function BudgetListSummary({
     ? strings.todayMarker(Math.round(period.elapsedShare * period.periodDays), period.periodDays)
     : undefined;
   return (
-    <AppCard overflow="visible" elevation="sm" padding="md" radius="r3" background="surface">
+    <AppCard overflow="visible" elevation="sm" padding="md" radius="xl" background="surface">
       <Stack gap="sm">
         <Inline justify="space-between" align="center" gap="sm" flexWrap="wrap">
           <AppText variant="caption" color="secondary" weight="medium">

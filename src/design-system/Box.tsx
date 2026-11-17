@@ -8,17 +8,7 @@ import {
 } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { forwardRef, useMemo } from 'react';
-import {
-  Pressable,
-  type PressableProps,
-  type PressableStateCallbackType,
-  StyleProp,
-  TouchableOpacity,
-  type TouchableOpacityProps,
-  View,
-  type ViewProps,
-  type ViewStyle,
-} from 'react-native';
+import { StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
 import {
   extractBoxProps,
   resolveMarginSpacing,
@@ -94,43 +84,15 @@ export type BoxBaseProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-type BoxNativeProps<TNativeProps> = BoxBaseProps & Omit<TNativeProps, keyof BoxBaseProps | 'style'>;
-
-export type BoxViewProps = BoxNativeProps<ViewProps> & {
-  as?: typeof View;
-  ref?: React.Ref<View>;
-};
-
-/**
- * Non-View Box variants are intentionally style-normalized and ref-less.
- * Use raw Pressable/TouchableOpacity when callback styles or imperative refs are required.
- */
-export type BoxPressableProps = Omit<BoxBaseProps, 'style'> &
-  Omit<PressableProps, keyof BoxBaseProps | 'style'> & {
-    as: typeof Pressable;
-    ref?: never;
-    style?: PressableProps['style'];
+export type BoxViewProps = BoxBaseProps &
+  Omit<ViewProps, keyof BoxBaseProps | 'style'> & {
+    ref?: React.Ref<View>;
   };
+export type BoxProps = BoxViewProps;
 
-export type BoxTouchableOpacityProps = BoxNativeProps<TouchableOpacityProps> & {
-  as: typeof TouchableOpacity;
-  ref?: never;
-};
-
-export type BoxPolymorphicProps = BoxViewProps | BoxPressableProps | BoxTouchableOpacityProps;
-export type BoxProps = BoxPolymorphicProps;
-
-export type BoxComponent = {
-  (props: BoxViewProps): React.ReactElement | null;
-  (props: BoxPressableProps): React.ReactElement | null;
-  (props: BoxTouchableOpacityProps): React.ReactElement | null;
-  displayName?: string;
-};
-
-const BoxInner = forwardRef<View, BoxPolymorphicProps>((initialProps, ref) => {
+const BoxInner = forwardRef<View, BoxProps>((initialProps, ref) => {
   const { boxProps, restProps } = extractBoxProps(initialProps);
   const {
-    as,
     padding,
     paddingHorizontal,
     paddingVertical,
@@ -317,34 +279,7 @@ const BoxInner = forwardRef<View, BoxPolymorphicProps>((initialProps, ref) => {
     borderRightWidth,
   ]);
 
-  const resolvedStyle = [boxStyles, style as StyleProp<ViewStyle>];
-
-  if (as === TouchableOpacity) {
-    return (
-      <TouchableOpacity
-        style={resolvedStyle}
-        {...(finalRestProps as Omit<TouchableOpacityProps, keyof BoxBaseProps | 'style'>)}
-      >
-        {children as React.ReactNode}
-      </TouchableOpacity>
-    );
-  }
-
-  if (as === Pressable) {
-    const pressableStyle =
-      typeof style === 'function'
-        ? (state: PressableStateCallbackType) => [boxStyles, style(state)]
-        : resolvedStyle;
-
-    return (
-      <Pressable
-        style={pressableStyle}
-        {...(finalRestProps as Omit<PressableProps, keyof BoxBaseProps | 'style'>)}
-      >
-        {children}
-      </Pressable>
-    );
-  }
+  const resolvedStyle = [boxStyles, style];
 
   return (
     <View
@@ -359,6 +294,4 @@ const BoxInner = forwardRef<View, BoxPolymorphicProps>((initialProps, ref) => {
 
 BoxInner.displayName = 'Box';
 
-export const Box = BoxInner as BoxComponent;
-
-Box.displayName = 'Box';
+export const Box = BoxInner;

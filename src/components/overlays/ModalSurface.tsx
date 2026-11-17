@@ -77,7 +77,7 @@ export function ModalSurface({
     <AppCard
       elevation="lg"
       padding="xl"
-      radius="r2"
+      radius="xxl"
       style={[
         styles.modalCard,
         isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
@@ -217,8 +217,8 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.lg,
   },
   modalCardBottomSheet: {
-    borderTopLeftRadius: Shape.radius.r2,
-    borderTopRightRadius: Shape.radius.r2,
+    borderTopLeftRadius: Shape.radius.xxl,
+    borderTopRightRadius: Shape.radius.xxl,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },

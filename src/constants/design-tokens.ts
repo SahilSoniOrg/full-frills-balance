@@ -178,12 +178,10 @@ export const Size = {
   fieldNarrow: 72,
   fieldAmount: 96,
   typeIconWidth: 108,
-  lineAmountWidth: 56,
   calculatorPreview: 126,
 
   // Input sizes
   inputMd: 48,
-  inputLg: 60,
   textareaHeight: 80,
 
   // Icon sizes (semantic)
@@ -191,7 +189,6 @@ export const Size = {
   iconSm: 20,
   iconMd: 24,
   iconLg: 28,
-  iconXl: 32,
 
   // Avatar sizes
   avatarSm: 32,
@@ -213,12 +210,6 @@ export const Size = {
 
   // Card minimums
   cardMinWidth: 160,
-  cardMinHeight: 110,
-  maxContentWidth: 400,
-
-  // Grid layout
-  gridItemWidth: '46%',
-  gridItemMargin: '2%',
 } as const;
 
 // === THEME ID ===
@@ -380,16 +371,14 @@ export interface ElevationStyle {
 export const Shape = {
   radius: {
     none: 0,
-    r4: 16, // Ivy r4
-    r3: 20, // Ivy r3
-    r2: 24, // Ivy r2
-    r1: 32, // Ivy r1
-    full: 9999, // Circular elements
-    xs: 4, // Very small components
-    sm: 8, // Backward compatibility
-    md: 12, // Backward compatibility
-    lg: 16, // Backward compatibility
-    xl: 24, // Backward compatibility
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 24,
+    xxxl: 32,
+    full: 9999,
   },
 
   elevation: {
@@ -943,11 +932,6 @@ export const Layout = {
   },
   touchTarget: {
     minHeight: 110,
-    minWidth: 44,
-  },
-  keyboardOffset: {
-    ios: 0,
-    android: 20,
   },
   modal: {
     defaultHeight: '85%',
@@ -964,59 +948,26 @@ export const Layout = {
       defaultStrokeWidth: 20,
       defaultSize: 200,
     },
-    line: {
-      defaultHeight: 200,
-      paddingVertical: 20,
-      strokeWidth: 3,
-    },
   },
   datePicker: {
     monthSlider: {
       initialIndex: 25,
-      monthsBefore: 25,
-      monthsAfter: 13,
       itemWidth: 120,
-      totalMonths: 39,
     },
-    maxLength: {
-      lastN: 3,
-    },
-  },
-  hierarchy: {
-    indentWidth: 20,
-    guideOffset: 10,
-    parentIndicator: {
-      width: 3,
-      height: 32,
-      marginRight: 4,
-      borderRadius: 2,
-    },
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    circleSize: 22,
   },
 } as const;
 
 // === ANIMATION CONSTANTS ===
 // Timing values for interactions
 export const Animation = {
-  scrollDelay: 100,
   dataRefreshDebounce: 150,
   observeDebounce: 200,
-  patternDebounce: 500,
 } as const;
 
 // === Z-INDEX STACK ===
 // Standardized layering for the application
 export const ZIndex = {
-  base: 0,
   fab: 100,
-  header: 200,
-  overlay: 500,
-  modal: 1000,
   toast: 2000,
 } as const;
 

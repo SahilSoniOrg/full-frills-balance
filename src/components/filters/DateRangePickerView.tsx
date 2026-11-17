@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   content: {
-    borderTopLeftRadius: Shape.radius.r2,
-    borderTopRightRadius: Shape.radius.r2,
+    borderTopLeftRadius: Shape.radius.xxl,
+    borderTopRightRadius: Shape.radius.xxl,
     borderTopWidth: 1,
     height: Layout.modal.defaultHeight,
     paddingHorizontal: Spacing.lg,

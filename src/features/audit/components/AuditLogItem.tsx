@@ -60,7 +60,7 @@ export const AuditLogItem = ({
   } = useAuditLogItemMeta({ item, entityStatusMap });
 
   return (
-    <AppCard padding="lg" elevation="sm" radius="r2" style={styles.card}>
+    <AppCard padding="lg" elevation="sm" radius="xxl" style={styles.card}>
       <PressScaleTouchable
         pressScale="subtle"
         onPress={onToggle}
