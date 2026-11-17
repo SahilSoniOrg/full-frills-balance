@@ -53,6 +53,12 @@ export type AccountFields = Omit<
   archivedAt?: Date | number;
 };
 
+/** Minimal account identity and presentation for compact inline labels. */
+export type AccountDisplay = Pick<
+  AccountFields,
+  'id' | 'name' | 'accountType' | 'color' | 'icon' | 'archivedAt'
+>;
+
 export interface PlainAccountMetadata {
   accountId: AccountId;
   statementDay?: number;

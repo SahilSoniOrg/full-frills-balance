@@ -66,6 +66,7 @@ async function captureItems(workplaceId: WorkplaceId): Promise<CaptureReviewItem
           suggestedCategoryName: undefined,
           suggestedDefault: undefined,
           suggestedDefaultAccountName: undefined,
+          suggestedDefaultAccount: undefined,
           keepOpen: true,
           savedDescriptionDefault: item.descriptionDefaultKey
             ? defaults[item.descriptionDefaultKey]

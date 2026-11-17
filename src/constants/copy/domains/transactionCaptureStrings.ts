@@ -152,6 +152,9 @@ export const transactionCaptureStrings = {
     kind: string,
   ) =>
     `${journalCount} ${journalCount === 1 ? 'entry' : 'entries'} · ${account} · ${currency} ${kind}`,
+  historicalCollapsedMetaPrefix: (journalCount: number) =>
+    `${journalCount} ${journalCount === 1 ? 'entry' : 'entries'} · `,
+  historicalCollapsedMetaSuffix: (currency: string, kind: string) => ` · ${currency} ${kind}`,
   historicalCategoryScope: (
     merchant: string,
     account: string,
@@ -161,6 +164,13 @@ export const transactionCaptureStrings = {
     journalCount: number,
   ) =>
     `All ${journalCount} ${journalCount === 1 ? 'entry agrees' : 'entries agree'}. Applies to future ${currency} ${kind} matches for ${merchant} on ${account}.`,
+  historicalCategoryScopeBeforeAccount: (
+    merchant: string,
+    currency: string,
+    kind: string,
+    journalCount: number,
+  ) =>
+    `All ${journalCount} ${journalCount === 1 ? 'entry agrees' : 'entries agree'}. Applies to future ${currency} ${kind} matches for ${merchant} on `,
   historicalAlwaysReviewAllAccounts: 'Always review · all accounts',
   historicalTapBarHint: 'Tap a bar to see that day’s entries',
   historicalSwipeEarlierActivity: 'Swipe for earlier activity',

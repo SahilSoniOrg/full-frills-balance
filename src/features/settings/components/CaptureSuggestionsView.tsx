@@ -13,9 +13,10 @@ import {
   SearchField,
 } from '@/src/components/core';
 import { SuggestionAmount, SuggestionItemSurface } from './SuggestionItemSurface';
+import { SuggestionAccountLabel } from './SuggestionAccountLabel';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { withPrivacyScope, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { Box, Stack } from '@/src/design-system';
+import { Box, Inline, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
@@ -224,16 +225,35 @@ function ReviewSuggestions({
             <ListGroup variant="plain" testID="matching-group-defaulted">
               {filtered.defaulted.slice(0, visibleCounts.defaulted ?? PAGE_SIZE).map(item => {
                 const id = `defaulted:${item.journalId}`;
+                const title =
+                  item.merchantName ||
+                  item.merchantKey ||
+                  item.description ||
+                  strings.privateDescription;
+                const categoryLabel =
+                  item.currentCategoryNames?.join(', ') || strings.defaultedReview;
+                const accountLabel = item.financialAccountName ?? strings.unavailableAccount;
+                const dateLabel = formatDate(item.journalDate);
                 return (
                   <SuggestionItemSurface key={id} expanded={expandedRows.has(id)}>
                     <ListRow
-                      title={
-                        item.merchantName ||
-                        item.merchantKey ||
-                        item.description ||
-                        strings.privateDescription
+                      title={title}
+                      subtitle={
+                        <Inline wrap align="center">
+                          <AppText variant="caption" color="secondary" weight="medium">
+                            {`${item.description || strings.privateDescription} · ${categoryLabel} · `}
+                          </AppText>
+                          <SuggestionAccountLabel
+                            account={item.financialAccount}
+                            name={item.financialAccountName}
+                            placeholder={strings.unavailableAccount}
+                          />
+                          <AppText variant="caption" color="secondary" weight="medium">
+                            {` · ${dateLabel}`}
+                          </AppText>
+                        </Inline>
                       }
-                      subtitle={`${item.description || strings.privateDescription} · ${item.currentCategoryNames?.join(', ') || strings.defaultedReview} · ${item.financialAccountName ?? strings.unavailableAccount} · ${formatDate(item.journalDate)}`}
+                      accessibilityLabel={`${title}, ${item.description || strings.privateDescription} · ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
                       trailing={
                         <SuggestionAmount
                           amount={item.totalAmount}
@@ -279,16 +299,34 @@ function ReviewSuggestions({
             <ListGroup variant="plain" testID="matching-group-category">
               {filtered.category.slice(0, visibleCounts.category ?? PAGE_SIZE).map(item => {
                 const id = `category:${item.journalId}`;
+                const title =
+                  item.merchantName ||
+                  item.merchantKey ||
+                  item.description ||
+                  strings.privateDescription;
+                const categoryLabel = item.suggestedCategoryName ?? strings.reviewAction;
+                const accountLabel = item.suggestedDefaultAccountName ?? strings.unavailableAccount;
+                const dateLabel = formatDate(item.journalDate);
                 return (
                   <SuggestionItemSurface key={id} expanded={expandedRows.has(id)}>
                     <ListRow
-                      title={
-                        item.merchantName ||
-                        item.merchantKey ||
-                        item.description ||
-                        strings.privateDescription
+                      title={title}
+                      subtitle={
+                        <Inline wrap align="center">
+                          <AppText variant="caption" color="secondary" weight="medium">
+                            {`${categoryLabel} · `}
+                          </AppText>
+                          <SuggestionAccountLabel
+                            account={item.suggestedDefaultAccount}
+                            name={item.suggestedDefaultAccountName}
+                            placeholder={strings.unavailableAccount}
+                          />
+                          <AppText variant="caption" color="secondary" weight="medium">
+                            {` · ${dateLabel}`}
+                          </AppText>
+                        </Inline>
                       }
-                      subtitle={`${item.suggestedCategoryName ?? strings.reviewAction} · ${item.suggestedDefaultAccountName ?? strings.unavailableAccount} · ${formatDate(item.journalDate)}`}
+                      accessibilityLabel={`${title}, ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
                       trailing={
                         <SuggestionAmount
                           amount={item.totalAmount}

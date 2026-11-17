@@ -16,6 +16,8 @@ import { fetchSequentiallyInChunks } from '@/src/data/repositories/fetchSequenti
 import { captureDescriptionKey } from '@/src/domain/transaction-intelligence/descriptionDefaults';
 import type { CaptureCategoryDefault } from '@/src/domain/transaction-intelligence/categoryDefaults';
 import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
+import type { AccountDisplay } from '@/src/types/plainDtos';
+import { captureAccountDisplayForId } from '@/src/data/repositories/journal/captureAccountDisplay';
 
 export interface CaptureReviewItem {
   journalId: JournalId;
@@ -24,10 +26,14 @@ export interface CaptureReviewItem {
   totalAmount: number;
   currencyCode: string;
   financialAccountName?: string;
+  /** Presentation fields so the suggestion row can show the account colour and icon. */
+  financialAccount?: AccountDisplay;
   reviewState: 'needs_categorization' | 'confirmed' | 'defaulted';
   suggestedCategoryName?: string;
   suggestedDefault?: CaptureCategoryDefault;
   suggestedDefaultAccountName?: string;
+  /** Presentation fields for the account the suggested default applies to. */
+  suggestedDefaultAccount?: AccountDisplay;
   merchantKey?: string;
   merchantName?: string;
   keepOpen?: boolean;
@@ -143,6 +149,7 @@ export class JournalCaptureQueries {
       .query(Q.where('workplace_id', workplaceId), Q.where('deleted_at', Q.eq(null)))
       .fetch();
     const accountIndex = createCaptureAccountIndex(accounts);
+    const accountsById = new Map(accounts.map(account => [account.id, account] as const));
     const accountMap = accountIndex.byId;
     const captures = new Map(
       metadata.map(row => [row.journalId, readCaptureMetadata(row.metadataJson)]),
@@ -243,6 +250,7 @@ export class JournalCaptureQueries {
             ? [...financialByJournal.get(journal.id)!][0]
             : undefined;
         const financialAccount = financialId ? accountMap.get(financialId) : undefined;
+        const financialAccountDisplay = captureAccountDisplayForId(accountsById, financialId);
         const categoryKind =
           capture?.economicKind === 'expense' || capture?.economicKind === 'income'
             ? capture.economicKind
@@ -258,6 +266,8 @@ export class JournalCaptureQueries {
           )
             ? candidate
             : undefined;
+        const suggestedDefaultAccountDisplay =
+          category && key ? financialAccountDisplay : undefined;
         const currentCategories = capture?.allocations.map(allocation =>
           accountMap.get(allocation.accountId),
         );
@@ -296,7 +306,12 @@ export class JournalCaptureQueries {
           journalDate: journal.journalDate,
           totalAmount: journal.totalAmount,
           currencyCode: journal.currencyCode,
-          ...(financialAccount ? { financialAccountName: financialAccount.name } : {}),
+          ...(financialAccount
+            ? {
+                financialAccountName: financialAccount.name,
+                financialAccount: financialAccountDisplay,
+              }
+            : {}),
           reviewState:
             capture?.reviewState === 'confirmed' || capture?.reviewState === 'defaulted'
               ? capture.reviewState
@@ -322,9 +337,8 @@ export class JournalCaptureQueries {
             : {}),
           ...(category && key
             ? {
-                suggestedDefaultAccountName: accountMap.get(
-                  [...financialByJournal.get(journal.id)!][0],
-                )?.name,
+                suggestedDefaultAccountName: suggestedDefaultAccountDisplay?.name,
+                suggestedDefaultAccount: suggestedDefaultAccountDisplay,
               }
             : {}),
           ...(merchantKey ? { merchantKey } : {}),

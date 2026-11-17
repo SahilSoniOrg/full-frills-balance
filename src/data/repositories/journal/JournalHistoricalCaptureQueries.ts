@@ -24,6 +24,8 @@ import {
   createCaptureAccountIndex,
   type CaptureAccountIndex,
 } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
+import type { AccountDisplay } from '@/src/types/plainDtos';
+import { toCaptureAccountDisplay } from '@/src/data/repositories/journal/captureAccountDisplay';
 
 export interface HistoricalCategoryPattern {
   key: string;
@@ -32,6 +34,8 @@ export interface HistoricalCategoryPattern {
   categoryByJournalId: Record<string, AccountId>;
   financialAccountId: AccountId;
   financialAccountName: string;
+  /** Presentation fields so the row can show the account colour and icon. */
+  financialAccount?: AccountDisplay;
   kind: 'expense' | 'income';
   currencyCode: string;
   latestJournalDate: number;
@@ -523,43 +527,49 @@ export class JournalHistoricalCaptureQueries {
 
     return (
       [...groups.entries()]
-        .map(([key, group]) => ({
-          key,
-          merchant: group.merchant,
-          categoryByJournalId: Object.fromEntries(
-            [...group.categories.entries()].flatMap(([accountId, value]) =>
-              [...value.journals].map(journalId => [journalId, accountId]),
+        .map(([key, group]) => {
+          const financialAccount = accountById.get(group.financialAccountId);
+          return {
+            key,
+            merchant: group.merchant,
+            categoryByJournalId: Object.fromEntries(
+              [...group.categories.entries()].flatMap(([accountId, value]) =>
+                [...value.journals].map(journalId => [journalId, accountId]),
+              ),
             ),
-          ),
-          journalIds: [...group.journals.entries()]
-            .sort(
-              (left, right) =>
-                right[1].journalDate - left[1].journalDate || left[0].localeCompare(right[0]),
-            )
-            .map(([journalId]) => journalId),
-          financialAccountId: group.financialAccountId,
-          financialAccountName: group.financialAccountName,
-          kind: group.kind,
-          currencyCode: group.currencyCode,
-          latestJournalDate: group.latestJournalDate,
-          earliestJournalDate: group.earliestJournalDate,
-          journalCount: group.journals.size,
-          sourceCount: group.sourceIds.size,
-          evidenceMarks: [...group.journals.values()]
-            .sort(
-              (left, right) =>
-                right.journalDate - left.journalDate ||
-                left.journalId.localeCompare(right.journalId),
-            )
-            .slice(0, HISTORICAL_EVIDENCE_MARK_LIMIT),
-          categories: [...group.categories.entries()].map(([accountId, value]) => ({
-            accountId,
-            name: value.name,
-            journalCount: value.journals.size,
-            color: value.color,
-            icon: value.icon,
-          })),
-        }))
+            journalIds: [...group.journals.entries()]
+              .sort(
+                (left, right) =>
+                  right[1].journalDate - left[1].journalDate || left[0].localeCompare(right[0]),
+              )
+              .map(([journalId]) => journalId),
+            financialAccountId: group.financialAccountId,
+            financialAccountName: group.financialAccountName,
+            financialAccount: financialAccount
+              ? toCaptureAccountDisplay(financialAccount)
+              : undefined,
+            kind: group.kind,
+            currencyCode: group.currencyCode,
+            latestJournalDate: group.latestJournalDate,
+            earliestJournalDate: group.earliestJournalDate,
+            journalCount: group.journals.size,
+            sourceCount: group.sourceIds.size,
+            evidenceMarks: [...group.journals.values()]
+              .sort(
+                (left, right) =>
+                  right.journalDate - left.journalDate ||
+                  left.journalId.localeCompare(right.journalId),
+              )
+              .slice(0, HISTORICAL_EVIDENCE_MARK_LIMIT),
+            categories: [...group.categories.entries()].map(([accountId, value]) => ({
+              accountId,
+              name: value.name,
+              journalCount: value.journals.size,
+              color: value.color,
+              icon: value.icon,
+            })),
+          };
+        })
         // A pattern needs repeat transactions, not just repeated SMS evidence for one journal.
         .filter(pattern => pattern.journalCount >= MIN_HISTORICAL_PATTERN_JOURNALS)
         .sort(

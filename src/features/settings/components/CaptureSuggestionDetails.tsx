@@ -8,7 +8,7 @@ import {
 } from './HistoricalEvidenceChart';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import { Box, Stack } from '@/src/design-system';
+import { Box, Inline, Stack } from '@/src/design-system';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import { categoryDefaultKey } from '@/src/domain/transaction-intelligence/categoryDefaults';
@@ -23,6 +23,7 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccountId } from '@/src/types/ids';
 import { SuggestionItemSurface } from './SuggestionItemSurface';
+import { SuggestionAccountLabel } from './SuggestionAccountLabel';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
 
@@ -136,9 +137,19 @@ export function CategoryCandidateDetail({
               <AppText variant="body" weight="semibold">
                 {item.suggestedCategoryName ?? strings.unavailableCategory}
               </AppText>
-              <AppText variant="caption" color="secondary">
-                {`${merchant ?? strings.unknownMerchant} · ${item.suggestedDefaultAccountName ?? strings.unavailableAccount} · ${choice.currencyCode} · ${choice.kind}`}
-              </AppText>
+              <Inline wrap align="center">
+                <AppText variant="caption" color="secondary">
+                  {`${merchant ?? strings.unknownMerchant} · `}
+                </AppText>
+                <SuggestionAccountLabel
+                  account={item.suggestedDefaultAccount}
+                  name={item.suggestedDefaultAccountName}
+                  placeholder={strings.unavailableAccount}
+                />
+                <AppText variant="caption" color="secondary">
+                  {` · ${choice.currencyCode} · ${choice.kind}`}
+                </AppText>
+              </Inline>
               <AppText variant="caption" color="secondary">
                 Applies to future matches. Existing entries stay unchanged.
               </AppText>
@@ -291,7 +302,7 @@ export function HistoricalPatternRow({
         `${displayCategoryName(category.name)}${mixed ? `, ${category.journalCount}` : ''}`,
     )
     .join('; ');
-  const meta = mixed
+  const metaText = mixed
     ? strings.historicalCollapsedMixedMeta(pattern.journalCount, pattern.categories.length)
     : strings.historicalCollapsedMeta(
         pattern.journalCount,
@@ -306,7 +317,7 @@ export function HistoricalPatternRow({
         <PressScaleTouchable
           onPress={onToggle}
           accessibilityRole="button"
-          accessibilityLabel={`${pattern.merchant}. ${mixed ? 'No default. ' : 'Suggested category: '}${breakdown}. ${meta}`}
+          accessibilityLabel={`${pattern.merchant}. ${mixed ? 'No default. ' : 'Suggested category: '}${breakdown}. ${metaText}`}
           accessibilityState={{ expanded }}
           testID={`matching-row-history-${pattern.key}`}
           style={styles.historyRow}
@@ -327,9 +338,25 @@ export function HistoricalPatternRow({
               color={theme.textSecondary}
             />
           </View>
-          <AppText variant="caption" color="secondary">
-            {meta}
-          </AppText>
+          {mixed ? (
+            <AppText variant="caption" color="secondary">
+              {metaText}
+            </AppText>
+          ) : (
+            <Inline wrap align="center">
+              <AppText variant="caption" color="secondary">
+                {strings.historicalCollapsedMetaPrefix(pattern.journalCount)}
+              </AppText>
+              <SuggestionAccountLabel
+                account={pattern.financialAccount}
+                name={pattern.financialAccountName}
+                placeholder={strings.unavailableAccount}
+              />
+              <AppText variant="caption" color="secondary">
+                {strings.historicalCollapsedMetaSuffix(pattern.currencyCode, pattern.kind)}
+              </AppText>
+            </Inline>
+          )}
         </PressScaleTouchable>
       </View>
       {expanded ? (
@@ -363,16 +390,24 @@ function HistoricalStatusInset({
       <AppText variant="bodySmall" weight="semibold" style={{ color: theme.primary }}>
         {`${strings.historicalVerdictSuggested} · ${category}`}
       </AppText>
-      <AppText variant="caption" color="secondary">
-        {strings.historicalCategoryScope(
-          pattern.merchant,
-          pattern.financialAccountName,
-          pattern.currencyCode,
-          pattern.kind,
-          category,
-          pattern.journalCount,
-        )}
-      </AppText>
+      <Inline wrap align="center">
+        <AppText variant="caption" color="secondary">
+          {strings.historicalCategoryScopeBeforeAccount(
+            pattern.merchant,
+            pattern.currencyCode,
+            pattern.kind,
+            pattern.journalCount,
+          )}
+        </AppText>
+        <SuggestionAccountLabel
+          account={pattern.financialAccount}
+          name={pattern.financialAccountName}
+          placeholder={strings.unavailableAccount}
+        />
+        <AppText variant="caption" color="secondary">
+          {'.'}
+        </AppText>
+      </Inline>
       {action ? <View style={styles.statusInsetAction}>{action}</View> : null}
     </View>
   );
