@@ -100,7 +100,9 @@ describe('historical capture suggestions', () => {
     const patterns = await journalHistoricalCaptureQueries.listCategoryPatterns(workplaceId);
     expect(patterns).toHaveLength(1);
     expect(patterns[0].journalIds).toEqual([second.id, first.id]);
-    expect(patterns[0].categories).toEqual([{ accountId: food, name: 'Food', journalCount: 2 }]);
+    expect(patterns[0].categories).toEqual([
+      { accountId: food, name: 'Food', color: null, icon: null, journalCount: 2 },
+    ]);
     expect(
       await journalHistoricalCaptureQueries.listPatternEvidenceEntries(
         workplaceId,
@@ -211,7 +213,7 @@ describe('historical capture suggestions', () => {
     expect(items.historicalCategorySuggestions).toHaveLength(1);
     expect(items.historicalCategorySuggestions[0].journalIds).not.toContain(uncategorized.id);
     expect(items.historicalCategorySuggestions[0].categories).toEqual([
-      { accountId: food, name: 'Food', journalCount: 2 },
+      { accountId: food, name: 'Food', color: null, icon: null, journalCount: 2 },
     ]);
   });
 
