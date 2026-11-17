@@ -20,11 +20,11 @@ function ReportsScreen() {
         <ScreenHeaderActions
           actions={[
             {
-              name: Icon.Sparkles,
+              name: Icon.PieChart,
               size: Size.iconSm,
-              variant: 'primary',
+              variant: 'surface',
               onPress: AppNavigation.toReportsV2,
-              accessibilityLabel: 'Open Reports V2',
+              accessibilityLabel: `Open ${AppConfig.strings.reportsV2.title}`,
               testID: 'reports-v2-header-button',
             },
           ]}

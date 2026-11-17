@@ -53,7 +53,6 @@ function AccountDetailsScreen() {
         onBack: vm.onBack,
         headerActions: (
           <DetailHeaderMenuActions
-            privacyPosition="leading"
             leadingActions={headerActions.leading}
             actions={headerActions.menu}
           />

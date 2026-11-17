@@ -346,7 +346,6 @@ it('keeps Edit visible and Duplicate/Delete inside the shared overflow', () => {
     remove = jest.fn();
   const view = render(
     <DetailHeaderMenuActions
-      privacyPosition="leading"
       leadingActions={[
         {
           name: Icon.Edit,

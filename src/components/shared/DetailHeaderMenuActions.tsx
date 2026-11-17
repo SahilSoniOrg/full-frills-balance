@@ -3,7 +3,7 @@ import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { PrivacyToggleButton } from './PrivacyToggleButton';
 import { ScreenHeaderActions, type ScreenHeaderActionItem } from './ScreenHeaderActions';
-import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Column } from '@/src/design-system';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -17,25 +17,21 @@ export interface DetailMenuAction {
   testID?: string;
 }
 
-/** Keep the established privacy slot and move secondary detail actions into one menu. */
+/** Detail header: inline actions, then a More menu, then the privacy toggle (always last). */
 export function DetailHeaderMenuActions({
   actions,
   leadingActions = [],
-  privacyPosition = 'trailing',
 }: {
   actions: DetailMenuAction[];
   leadingActions?: ScreenHeaderActionItem[];
-  privacyPosition?: 'leading' | 'trailing';
 }) {
   const [open, setOpen] = useState(false);
   const afterDismiss = useAfterDismiss();
   const strings = AppConfig.strings.common;
-  const privacy = <PrivacyToggleButton variant="surface" size={Typography.sizes.xl} />;
   return (
     <>
       <ScreenHeaderActions
-        leading={privacyPosition === 'leading' ? privacy : undefined}
-        trailing={privacyPosition === 'trailing' ? privacy : undefined}
+        trailing={<PrivacyToggleButton />}
         actions={[
           ...leadingActions,
           ...(actions.length > 0
@@ -43,7 +39,6 @@ export function DetailHeaderMenuActions({
                 {
                   name: Icon.More,
                   onPress: () => setOpen(true),
-                  variant: 'surface' as const,
                   accessibilityLabel: strings.moreActions,
                   testID: 'detail-more-actions',
                 },

@@ -1,7 +1,7 @@
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Typography } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalDetailsView } from '@/src/features/journal/components/JournalDetailsView';
 import { useJournalDetailsViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
@@ -22,14 +22,12 @@ function JournalDetailsScreen() {
         onBack: vm.onBack,
         headerActions: (
           <DetailHeaderMenuActions
-            privacyPosition="leading"
             leadingActions={[
               {
                 name: Icon.Edit,
                 onPress: vm.headerActions.onEdit,
                 variant: 'surface',
                 iconColor: theme.text,
-                size: Typography.sizes.xl,
                 testID: 'edit-button',
                 accessibilityLabel: AppConfig.strings.journalDetails.edit,
               },

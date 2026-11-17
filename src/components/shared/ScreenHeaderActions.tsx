@@ -1,7 +1,7 @@
 import { IconButton } from '@/src/components/core';
 import type { IconName } from '@/src/components/core';
 import type { IconButtonVariant } from '@/src/components/core/IconButton';
-import { Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -33,9 +33,9 @@ export function ScreenHeaderActions({ actions, leading, trailing }: ScreenHeader
           key={`${action.name}-${index}`}
           name={action.name}
           onPress={action.onPress}
-          variant={action.variant ?? 'clear'}
+          variant={action.variant ?? 'surface'}
           iconColor={action.iconColor}
-          size={action.size}
+          size={action.size ?? Size.iconSm}
           testID={action.testID}
           disabled={action.disabled}
           accessibilityLabel={action.accessibilityLabel}

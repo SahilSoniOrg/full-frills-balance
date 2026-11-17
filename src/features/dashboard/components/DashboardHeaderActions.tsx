@@ -1,6 +1,6 @@
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { Icon, IconButton } from '@/src/components/core';
-import { Size } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
@@ -26,18 +26,15 @@ export function DashboardHeaderActions({
       <IconButton
         name={Icon.Search}
         size={Size.iconSm}
-        variant="clear"
         onPress={onSearchPress}
         accessibilityRole="button"
         accessibilityLabel="Search and Filter"
-        iconColor={theme.text}
       />
       {onSmsPress ? (
         <View style={styles.badgeContainer}>
           <IconButton
             name={Icon.MessageSquare}
             size={Size.iconSm}
-            variant="clear"
             onPress={onSmsPress}
             accessibilityRole="button"
             accessibilityLabel={
@@ -45,7 +42,6 @@ export function DashboardHeaderActions({
                 ? `View transaction inbox, ${unreadSmsCount} item${unreadSmsCount === 1 ? '' : 's'} need${unreadSmsCount === 1 ? 's' : ''} review`
                 : 'View transaction inbox'
             }
-            iconColor={theme.text}
           />
           {unreadSmsCount > 0 ? (
             <View style={[styles.badge, { backgroundColor: theme.primary }]} />
@@ -56,7 +52,6 @@ export function DashboardHeaderActions({
         <IconButton
           name={Icon.Sparkles}
           size={Size.iconSm}
-          variant="clear"
           onPress={onReviewPress}
           accessibilityRole="button"
           accessibilityLabel={
@@ -64,13 +59,12 @@ export function DashboardHeaderActions({
               ? `Open Review, ${insightCount} insight${insightCount === 1 ? '' : 's'}`
               : 'Open Review'
           }
-          iconColor={theme.text}
         />
         {insightCount > 0 ? (
           <View style={[styles.badge, { backgroundColor: theme.error }]} />
         ) : null}
       </View>
-      <PrivacyToggleButton variant="clear" />
+      <PrivacyToggleButton />
     </View>
   );
 }
@@ -79,17 +73,17 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
   },
   badgeContainer: {
     position: 'relative',
   },
   badge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 0,
+    right: 0,
+    width: Spacing.sm,
+    height: Spacing.sm,
+    borderRadius: Shape.radius.full,
   },
 });

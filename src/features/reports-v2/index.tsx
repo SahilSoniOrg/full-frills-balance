@@ -25,7 +25,7 @@ function ReportsV2Screen() {
     }, []),
   );
   const chrome = useMemo<ScreenNavChrome>(
-    () => privacyNavChrome(AppConfig.strings.reports.title, AppNavigation.back),
+    () => privacyNavChrome(AppConfig.strings.reportsV2.title, AppNavigation.back),
     [],
   );
   return (
