@@ -1,5 +1,5 @@
 import { AppButton, AppIcon, AppText, FilterChipButton } from '@/src/components/core';
-import { Size, Spacing, Typography } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Stack, usePageKeyboard } from '@/src/design-system';
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
@@ -88,16 +88,16 @@ export function ConversationStep({
   const heading = title ? (
     <Stack gap="sm" align="center">
       <AppText
-        variant="title"
+        variant="xl"
         align="center"
         adjustsFontSizeToFit
         minimumFontScale={0.75}
-        style={styles.title}
+        style={styles.fullWidth}
       >
         {title}
       </AppText>
       {subtitle ? (
-        <AppText variant="body" color="secondary" style={styles.subtitle}>
+        <AppText variant="body" color="secondary" align="center" style={styles.fullWidth}>
           {subtitle}
         </AppText>
       ) : null}
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   chipTarget: {
-    minHeight: Platform.OS === 'android' ? 48 : 44,
+    minHeight: Platform.OS === 'android' ? Size.touchTargetLg : Size.touchTarget,
     justifyContent: 'center',
   },
   scrollView: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    width: 28,
+    width: Size.xs + Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -325,15 +325,9 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    paddingBottom: 24,
+    paddingBottom: Spacing.xxl,
   },
-  title: {
-    width: '100%',
-    fontSize: Typography.roles.xl.fontSize,
-    lineHeight: Typography.roles.xl.lineHeight,
-  },
-  subtitle: {
-    textAlign: 'center',
+  fullWidth: {
     width: '100%',
   },
 });
