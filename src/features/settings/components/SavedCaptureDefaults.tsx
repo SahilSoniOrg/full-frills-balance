@@ -1,15 +1,8 @@
-import {
-  AppButton,
-  AppCard,
-  AppInput,
-  AppText,
-  Badge,
-  ListGroup,
-  ListRow,
-} from '@/src/components/core';
+import { AppButton, AppCard, AppText, Badge, ListGroup, ListRow } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { Stack } from '@/src/design-system';
+import { CaptureSearchField } from '@/src/features/settings/components/CaptureSearchField';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { Icon } from '@/src/types/domainIcons';
 import { Fragment, useState } from 'react';
@@ -102,32 +95,18 @@ export function SavedCaptureDefaults({
 
   return (
     <Stack space="lg">
-      <Stack space="sm">
-        <AppInput
-          value={search}
-          onChangeText={value => {
-            setSearch(value);
-            setVisibleCounts({});
-          }}
-          placeholder={strings.savedDefaultsSearchPlaceholder}
-          leftIcon={Icon.Search}
-          autoCorrect={false}
-          returnKeyType="search"
-          accessibilityLabel={strings.savedDefaultsSearchPlaceholder}
-          testID="capture-saved-defaults-search"
-        />
-        {search ? (
-          <AppButton
-            variant="ghost"
-            onPress={() => {
-              setSearch('');
-              setVisibleCounts({});
-            }}
-          >
-            {strings.clearSearch}
-          </AppButton>
-        ) : null}
-      </Stack>
+      <CaptureSearchField
+        value={search}
+        onChangeText={value => {
+          setSearch(value);
+          setVisibleCounts({});
+        }}
+        placeholder={strings.savedDefaultsSearchPlaceholder}
+        accessibilityLabel={strings.savedDefaultsSearchPlaceholder}
+        testID="capture-saved-defaults-search"
+        clearTestID="capture-saved-defaults-clear-search"
+        clearAccessibilityLabel={strings.clearSearch}
+      />
       {filteredSavedCount === 0 ? (
         <AppCard variant="secondary" paddingSize="md">
           <AppText variant="bodySmall" color="secondary">

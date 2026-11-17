@@ -55,6 +55,7 @@ export const transactionCaptureStrings = {
   suggestedCategory: (name: string) => `Suggested: ${name}`,
   confirmCurrentCategories: (names: string) => `Confirm ${names}`,
   defaultedHeader: 'Confirm automatic categories',
+  defaultedGroupDescription: 'A saved category was applied. Confirm each entry individually.',
   defaultedHint:
     'These entries used a saved category. Confirm the ones that look right to inform future suggestions.',
   defaultedReview: 'Category needs review',
@@ -89,6 +90,7 @@ export const transactionCaptureStrings = {
     'An account merge brought these saved choices together. No category is applied until you choose one.',
   chooseCategoryDefault: (category: string) => `Keep ${category}`,
   categoryCandidatesHeader: 'Category suggestions',
+  categoryCandidatesGroupDescription: 'Based on confirmed captured transactions.',
   categoryCandidatesHint:
     'Save a confirmed category for future matches with the same merchant, account, currency, and transaction type. Existing entries stay unchanged.',
   confirmedCaptureEvidence: 'Confirmed captured transaction',
@@ -105,6 +107,8 @@ export const transactionCaptureStrings = {
   ) =>
     `Evidence suggests ${category}. A saved default applies to future ${currency} ${kind} entries for ${merchant} on ${account}. Matching ignores case; other spellings are separate. Existing entries stay unchanged.`,
   historicalCategoryHeader: 'Suggestions from SMS history',
+  historicalCategoryGroupDescription:
+    'Past SMS-linked entries suggest a category for future matches.',
   historicalPagesHeader: 'SMS history',
   historicalCategoryPageDescription: 'Review repeated categories from past SMS-linked entries.',
   historicalMixedPageDescription:
@@ -112,6 +116,8 @@ export const transactionCaptureStrings = {
   historicalPageEmpty: 'No repeated SMS history patterns are available.',
   historicalCategoryHint:
     'These categories come from past transactions linked to SMS. Review the matching entries before saving a future default.',
+  historicalMixedGroupDescription:
+    'More than one category appears in past entries for these merchants.',
   historicalSearchPlaceholder: 'Search merchants, categories, or accounts',
   historicalSearchNoResults: 'No SMS history matches that search.',
   historicalSortBy: 'Sort by',
@@ -119,6 +125,7 @@ export const transactionCaptureStrings = {
   historicalSortAlphabetical: 'A–Z',
   historicalSortRepeats: 'Most repeats',
   historicalOpenEntries: 'Open matching entries',
+  historicalOpenInline: 'Open',
   historicalOpenNEntries: (count: number) =>
     count === 1 ? 'Open 1 entry' : `Open ${count} entries`,
   historicalOpenFilteredEntries: (count: number, category: string) =>
@@ -135,9 +142,16 @@ export const transactionCaptureStrings = {
   historicalCategoryBreakdownSummary: (breakdown: string) =>
     `Different past categories · ${breakdown}`,
   historicalVerdictSuggested: 'Suggested default',
-  historicalVerdictNone: 'No default suggested',
-  historicalVerdictMixedTitle: (categoryCount: number, journalCount: number) =>
-    `${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'} in ${journalCount} ${journalCount === 1 ? 'entry' : 'entries'}`,
+  historicalNoDefaultBadge: 'No default',
+  historicalCollapsedMixedMeta: (journalCount: number, categoryCount: number) =>
+    `${journalCount} ${journalCount === 1 ? 'entry' : 'entries'} · ${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'}`,
+  historicalCollapsedMeta: (
+    journalCount: number,
+    account: string,
+    currency: string,
+    kind: string,
+  ) =>
+    `${journalCount} ${journalCount === 1 ? 'entry' : 'entries'} · ${account} · ${currency} ${kind}`,
   historicalCategoryScope: (
     merchant: string,
     account: string,
@@ -146,14 +160,11 @@ export const transactionCaptureStrings = {
     _category: string,
     journalCount: number,
   ) =>
-    `All ${journalCount} ${journalCount === 1 ? 'entry agrees' : 'entries agree'}. Applies to future ${currency} ${kind} matches for ${merchant} on ${account}. Past entries stay unchanged.`,
-  historicalMixedScope: (_merchant: string) =>
-    'Past entries disagree, so you choose each time, or keep this merchant in review.',
-  historicalFilterViewOnly: 'Filtering is a view only. It never creates a default.',
-  historicalAlwaysReviewHint: (merchant: string) =>
-    `Always review pauses matching for ${merchant} on every account.`,
+    `All ${journalCount} ${journalCount === 1 ? 'entry agrees' : 'entries agree'}. Applies to future ${currency} ${kind} matches for ${merchant} on ${account}.`,
   historicalAlwaysReviewAllAccounts: 'Always review · all accounts',
   historicalTapBarHint: 'Tap a bar to see that day’s entries',
+  historicalSwipeEarlierActivity: 'Swipe for earlier activity',
+  historicalNoEntriesThisPeriod: 'No entries here',
   historicalAllEntries: (count: number) => (count === 1 ? 'All 1 entry' : `All ${count} entries`),
   historicalFilteredEntries: (count: number, category: string) =>
     count === 1 ? `1 ${category} entry` : `${count} ${category} entries`,
@@ -186,7 +197,7 @@ export const transactionCaptureStrings = {
   historicalMixedHeader: 'Different past categories',
   historicalMixedHint: (count: number) =>
     `${count} merchant groups have different categories in past transactions. No default is suggested; keep these merchants in review and choose a category each time.`,
-  historicalMixedBadge: 'Mixed',
+  historicalMixedBadge: 'No default',
   historicalCategoryBreakdown: 'Past categories',
   rememberHistoricalCategoryTitle: 'Save this category default?',
   rememberHistoricalCategoryAction: 'Save default',
@@ -205,6 +216,7 @@ export const transactionCaptureStrings = {
     return `${entries} and ${messages} show ${merchant} on ${account} in ${category}. This default applies to future entries matching the merchant, account, type (${kind}), and currency (${currency}), whether captured from SMS or Gmail. SMS matchers help recognize the account; this default does not select or change a matcher. Past entries are unchanged. Merchant matching ignores case; other spellings are separate.`;
   },
   descriptionCandidatesHeader: 'Name suggestions',
+  descriptionCandidatesGroupDescription: 'Save a name for future matches at the same amount.',
   descriptionCandidatesHint:
     'Save this description for future matches with the same merchant, amount, currency, and transaction type. Existing entries stay unchanged.',
   categoryDefaultDetails: (

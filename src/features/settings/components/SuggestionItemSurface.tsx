@@ -52,7 +52,7 @@ export function SuggestionAmount({
 }
 
 const styles = StyleSheet.create({
-  expanded: { marginVertical: 6 },
+  expanded: { marginTop: 6, borderRadius: 12, overflow: 'hidden' },
   trailing: {
     flexDirection: 'row',
     alignItems: 'center',

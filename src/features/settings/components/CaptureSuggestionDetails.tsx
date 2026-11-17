@@ -20,7 +20,7 @@ import { listHistoricalPatternEvidenceEntries } from '@/src/services/transaction
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccountId } from '@/src/types/ids';
 import { SuggestionItemSurface } from './SuggestionItemSurface';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -288,16 +288,17 @@ export function HistoricalPatternRow({
   const breakdown = pattern.categories
     .map(
       category =>
-        `${category.name}${mixed ? `, ${category.journalCount} ${category.journalCount === 1 ? 'entry' : 'entries'}` : ''}`,
+        `${displayCategoryName(category.name)}${mixed ? `, ${category.journalCount}` : ''}`,
     )
     .join('; ');
-  const details = strings.historicalCategoryDetails(
-    pattern.journalCount,
-    pattern.sourceCount,
-    pattern.financialAccountName,
-    pattern.currencyCode,
-    pattern.kind,
-  );
+  const meta = mixed
+    ? strings.historicalCollapsedMixedMeta(pattern.journalCount, pattern.categories.length)
+    : strings.historicalCollapsedMeta(
+        pattern.journalCount,
+        pattern.financialAccountName,
+        pattern.currencyCode,
+        pattern.kind,
+      );
 
   return (
     <SuggestionItemSurface expanded={expanded}>
@@ -305,19 +306,19 @@ export function HistoricalPatternRow({
         <PressScaleTouchable
           onPress={onToggle}
           accessibilityRole="button"
-          accessibilityLabel={`${pattern.merchant}. ${mixed ? 'Different past categories. ' : 'Suggested category: '}${breakdown}. ${details}`}
+          accessibilityLabel={`${pattern.merchant}. ${mixed ? 'No default. ' : 'Suggested category: '}${breakdown}. ${meta}`}
           accessibilityState={{ expanded }}
           testID={`matching-row-history-${pattern.key}`}
           style={styles.historyRow}
           pressScale="subtle"
         >
           <View style={styles.historyHeading}>
-            <AppText variant="body" weight="semibold" style={styles.historyTitle}>
+            <AppText variant="heading" weight="semibold" style={styles.historyTitle}>
               {pattern.merchant}
             </AppText>
             {mixed ? (
               <Badge variant="warning" size="sm">
-                {strings.historicalMixedBadge}
+                {strings.historicalNoDefaultBadge}
               </Badge>
             ) : null}
             <AppIcon
@@ -327,7 +328,7 @@ export function HistoricalPatternRow({
             />
           </View>
           <AppText variant="caption" color="secondary">
-            {details}
+            {meta}
           </AppText>
         </PressScaleTouchable>
       </View>
@@ -338,58 +339,41 @@ export function HistoricalPatternRow({
   );
 }
 
-function HistoricalVerdict({
-  mixed,
+/** Strip trailing currency tags like " (INR)" from category display names. */
+function displayCategoryName(name: string) {
+  return name.replace(/\s*\([A-Z]{3}\)\s*$/u, '').trim() || name;
+}
+
+function HistoricalStatusInset({
   pattern,
-  filtering,
+  action,
 }: {
-  mixed: boolean;
   pattern: HistoricalCategoryPattern;
-  filtering: boolean;
+  action?: ReactNode;
 }) {
   const { theme } = useTheme();
-  if (mixed) {
-    return (
-      <View style={[styles.verdict, { borderLeftColor: theme.border }]}>
-        <AppText variant="caption" weight="semibold" color="secondary" style={styles.verdictKey}>
-          {strings.historicalVerdictNone}
-        </AppText>
-        <AppText variant="body" weight="semibold">
-          {strings.historicalVerdictMixedTitle(pattern.categories.length, pattern.journalCount)}
-        </AppText>
-        <AppText variant="bodySmall" color="secondary">
-          {strings.historicalMixedScope(pattern.merchant)}
-        </AppText>
-        {filtering ? (
-          <AppText variant="caption" color="secondary" style={styles.verdictHint}>
-            {strings.historicalFilterViewOnly}
-          </AppText>
-        ) : null}
-      </View>
-    );
-  }
+  const category = displayCategoryName(pattern.categories[0]?.name ?? strings.unavailableCategory);
   return (
-    <View style={[styles.verdict, { borderLeftColor: theme.primary }]}>
-      <AppText
-        variant="caption"
-        weight="semibold"
-        style={[styles.verdictKey, { color: theme.primary }]}
-      >
-        {strings.historicalVerdictSuggested}
+    <View
+      style={[
+        styles.statusInset,
+        { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+      ]}
+    >
+      <AppText variant="bodySmall" weight="semibold" style={{ color: theme.primary }}>
+        {`${strings.historicalVerdictSuggested} · ${category}`}
       </AppText>
-      <AppText variant="subheading" weight="semibold">
-        {pattern.categories[0]?.name ?? strings.unavailableCategory}
-      </AppText>
-      <AppText variant="bodySmall" color="secondary">
+      <AppText variant="caption" color="secondary">
         {strings.historicalCategoryScope(
           pattern.merchant,
           pattern.financialAccountName,
           pattern.currencyCode,
           pattern.kind,
-          pattern.categories[0]?.name ?? strings.unavailableCategory,
+          category,
           pattern.journalCount,
         )}
       </AppText>
+      {action ? <View style={styles.statusInsetAction}>{action}</View> : null}
     </View>
   );
 }
@@ -410,6 +394,7 @@ function CategoryLegend({
         const selected = selectedCategoryId === category.accountId;
         const dimmed = !!selectedCategoryId && !selected;
         const color = historicalCategoryColor(pattern, category.accountId, theme);
+        const name = displayCategoryName(category.name);
         return (
           <PressScaleTouchable
             key={category.accountId}
@@ -418,8 +403,8 @@ function CategoryLegend({
             accessibilityState={{ selected }}
             accessibilityLabel={
               selected
-                ? `${category.name}. Show all categories for ${pattern.merchant}`
-                : `Show ${category.name} entries for ${pattern.merchant}`
+                ? `${name}. Show all categories for ${pattern.merchant}`
+                : `Show ${name} entries for ${pattern.merchant}`
             }
             testID={`historical-category-badge-${pattern.key}-${category.accountId}`}
             pressScale="subtle"
@@ -435,7 +420,7 @@ function CategoryLegend({
               weight={selected ? 'semibold' : 'medium'}
               color={dimmed ? 'secondary' : undefined}
             >
-              {category.name}
+              {name}
             </AppText>
             <AppText variant="caption" color="secondary" weight={selected ? 'semibold' : 'regular'}>
               {category.journalCount}
@@ -678,20 +663,57 @@ function HistoricalPatternDetail({
   };
 
   const showEntryCategory = mixed && !activeCategoryId;
-  const disclosureLabel = selectedCategory
-    ? strings.historicalFilteredEntries(filteredPattern.journalIds.length, selectedCategory.name)
+  const categoryLabel = selectedCategory ? displayCategoryName(selectedCategory.name) : null;
+  const disclosureLabel = categoryLabel
+    ? strings.historicalFilteredEntries(filteredPattern.journalIds.length, categoryLabel)
     : strings.historicalAllEntries(pattern.journalCount);
-  const openLabel = selectedCategory
-    ? strings.historicalOpenFilteredEntries(
-        filteredPattern.journalIds.length,
-        selectedCategory.name,
-      )
+  const openLabel = categoryLabel
+    ? strings.historicalOpenFilteredEntries(filteredPattern.journalIds.length, categoryLabel)
     : strings.historicalOpenNEntries(pattern.journalCount);
 
+  const entryGroups = useMemo(() => {
+    const groups: { dayMs: number; label: string; entries: HistoricalEvidenceEntry[] }[] = [];
+    for (const entry of entries) {
+      const dayMs = dayjsStart(entry.journalDate);
+      const last = groups[groups.length - 1];
+      if (last && last.dayMs === dayMs) last.entries.push(entry);
+      else
+        groups.push({
+          dayMs,
+          label: formatDate(entry.journalDate),
+          entries: [entry],
+        });
+    }
+    return groups;
+  }, [entries]);
+
   return (
-    <Box paddingHorizontal="md" paddingBottom="sm">
+    <View style={styles.detailBody}>
       <Stack space="sm">
-        <HistoricalVerdict mixed={mixed} pattern={pattern} filtering={!!activeCategoryId} />
+        {!mixed ? (
+          <HistoricalStatusInset
+            pattern={pattern}
+            action={
+              hasDifferentDefault ? (
+                <AppText variant="caption" color="secondary">
+                  {existing?.conflicted
+                    ? strings.conflictedCategoryDefaultHint
+                    : strings.existingCategoryDefaultHint}
+                </AppText>
+              ) : (
+                <AppButton
+                  size="sm"
+                  style={styles.actionWide}
+                  variant="primary"
+                  disabled={capture.busy || capture.loading}
+                  onPress={() => capture.onRememberHistoricalCategory(pattern)}
+                >
+                  {strings.historicalCategoryCompactAction}
+                </AppButton>
+              )
+            }
+          />
+        ) : null}
         <View>
           <HistoricalEvidenceChart
             key={`${capture.workplaceId}:${capture.changeRevision}:${pattern.key}`}
@@ -714,7 +736,7 @@ function HistoricalPatternDetail({
           ) : null}
         </View>
         {selectedDayMs == null || dayEntries.length === 0 ? (
-          <AppText variant="caption" color="secondary" style={styles.readoutEmpty}>
+          <AppText variant="caption" color="secondary">
             {strings.historicalTapBarHint}
           </AppText>
         ) : (
@@ -733,24 +755,42 @@ function HistoricalPatternDetail({
             ))}
           </View>
         )}
-        <View>
-          <PressScaleTouchable
-            onPress={() => setEntriesOpen(open => !open)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: entriesOpen }}
-            testID={`historical-entries-disclosure-${pattern.key}`}
-            pressScale="subtle"
-            style={[styles.disclosure, { borderTopColor: theme.border }]}
-          >
-            <AppText variant="bodySmall" color="secondary">
-              {disclosureLabel}
-            </AppText>
-            <AppIcon
-              name={entriesOpen ? Icon.ChevronUp : Icon.ChevronDown}
-              size={16}
-              color={theme.textSecondary}
-            />
-          </PressScaleTouchable>
+
+        <View style={styles.entriesSection}>
+          <View style={styles.disclosure}>
+            <PressScaleTouchable
+              onPress={() => setEntriesOpen(open => !open)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: entriesOpen }}
+              testID={`historical-entries-disclosure-${pattern.key}`}
+              pressScale="subtle"
+              style={styles.disclosureToggle}
+            >
+              <AppText variant="bodySmall" weight="semibold" style={styles.disclosureLabel}>
+                {disclosureLabel}
+              </AppText>
+              <AppIcon
+                name={entriesOpen ? Icon.ChevronUp : Icon.ChevronDown}
+                size={16}
+                color={theme.textSecondary}
+              />
+            </PressScaleTouchable>
+            <PressScaleTouchable
+              onPress={() =>
+                openMatchingJournalEntries(filteredPattern.journalIds, activeCategoryId)
+              }
+              disabled={capture.busy}
+              accessibilityRole="button"
+              accessibilityLabel={openLabel}
+              testID={`historical-open-entries-${pattern.key}`}
+              pressScale="subtle"
+              style={styles.disclosureOpen}
+            >
+              <AppText variant="bodySmall" weight="semibold" color="primary">
+                {strings.historicalOpenInline}
+              </AppText>
+            </PressScaleTouchable>
+          </View>
           {entriesOpen ? (
             <Stack space="xs">
               {loading ? (
@@ -791,17 +831,44 @@ function HistoricalPatternDetail({
                 </Stack>
               ) : null}
               <View style={styles.evidenceList}>
-                {entries.map(entry => (
-                  <HistoricalEvidenceRow
-                    key={entry.journalId}
-                    entry={entry}
-                    hourCycle={resolvedHourCycle}
-                    showCategory={showEntryCategory}
-                    highlight={
-                      selectedDayMs != null &&
-                      dayjsStart(entry.journalDate) === dayjsStart(selectedDayMs)
-                    }
-                  />
+                {entryGroups.map(group => (
+                  <View key={group.dayMs} style={styles.dateGroup}>
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      weight="semibold"
+                      style={styles.dateGroupLabel}
+                    >
+                      {group.label}
+                    </AppText>
+                    <View
+                      style={[
+                        styles.dayBox,
+                        { backgroundColor: theme.background, borderColor: theme.border },
+                      ]}
+                    >
+                      {group.entries.map((entry, index) => (
+                        <View
+                          key={entry.journalId}
+                          style={
+                            index < group.entries.length - 1
+                              ? [styles.dayBoxRow, { borderBottomColor: theme.border }]
+                              : null
+                          }
+                        >
+                          <HistoricalEvidenceRow
+                            entry={entry}
+                            hourCycle={resolvedHourCycle}
+                            showCategory={showEntryCategory}
+                            highlight={
+                              selectedDayMs != null &&
+                              dayjsStart(entry.journalDate) === dayjsStart(selectedDayMs)
+                            }
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
                 ))}
               </View>
               {!loading &&
@@ -821,81 +888,32 @@ function HistoricalPatternDetail({
             </Stack>
           ) : null}
         </View>
+
         {mixed ? (
-          <Stack space="xs">
-            <AppButton
-              size="sm"
-              style={styles.actionWide}
-              variant="outline"
-              onPress={() =>
-                openMatchingJournalEntries(filteredPattern.journalIds, activeCategoryId)
-              }
-              disabled={capture.busy}
-            >
-              {openLabel}
-            </AppButton>
-            <AppButton
-              size="sm"
-              style={styles.actionWide}
-              variant="outline"
-              disabled={capture.busy || capture.loading}
-              onPress={() => void capture.onSetMerchantOpen(pattern.merchant, true)}
-            >
-              {strings.historicalAlwaysReviewAllAccounts}
-            </AppButton>
-            <AppText variant="caption" color="secondary">
-              {strings.historicalAlwaysReviewHint(pattern.merchant)}
-            </AppText>
-          </Stack>
+          <AppButton
+            size="sm"
+            style={styles.actionWide}
+            variant="outline"
+            disabled={capture.busy || capture.loading}
+            onPress={() => void capture.onSetMerchantOpen(pattern.merchant, true)}
+          >
+            {strings.historicalAlwaysReviewAllAccounts}
+          </AppButton>
         ) : (
-          <Stack space="xs">
-            {hasDifferentDefault ? (
-              <AppText variant="bodySmall" color="secondary">
-                {existing?.conflicted
-                  ? strings.conflictedCategoryDefaultHint
-                  : strings.existingCategoryDefaultHint}
-              </AppText>
-            ) : (
-              <AppButton
-                size="sm"
-                style={styles.actionWide}
-                variant="primary"
-                disabled={capture.busy || capture.loading}
-                onPress={() => capture.onRememberHistoricalCategory(pattern)}
-              >
-                {strings.historicalCategoryCompactAction}
-              </AppButton>
-            )}
-            <View style={styles.linkRow}>
-              <PressScaleTouchable
-                onPress={() =>
-                  openMatchingJournalEntries(filteredPattern.journalIds, activeCategoryId)
-                }
-                disabled={capture.busy}
-                accessibilityRole="button"
-                pressScale="subtle"
-                style={styles.link}
-              >
-                <AppText variant="bodySmall" color="secondary" style={styles.linkText}>
-                  {openLabel}
-                </AppText>
-              </PressScaleTouchable>
-              <PressScaleTouchable
-                onPress={() => void capture.onSetMerchantOpen(pattern.merchant, true)}
-                disabled={capture.busy || capture.loading}
-                accessibilityRole="button"
-                pressScale="subtle"
-                style={styles.link}
-              >
-                <AppText variant="bodySmall" color="secondary" style={styles.linkText}>
-                  {strings.historicalAlwaysReviewAllAccounts}
-                </AppText>
-              </PressScaleTouchable>
-            </View>
-          </Stack>
+          <PressScaleTouchable
+            onPress={() => void capture.onSetMerchantOpen(pattern.merchant, true)}
+            disabled={capture.busy || capture.loading}
+            accessibilityRole="button"
+            pressScale="subtle"
+            style={[styles.link, styles.linkCentered]}
+          >
+            <AppText variant="bodySmall" color="secondary" style={styles.linkText}>
+              {strings.historicalAlwaysReviewAllAccounts}
+            </AppText>
+          </PressScaleTouchable>
         )}
       </Stack>
-    </Box>
+    </View>
   );
 }
 
@@ -919,22 +937,20 @@ function HistoricalEvidenceRow({
 }) {
   const formatMoney = useMoneyFormat();
   const { theme } = useTheme();
-  const date = formatDate(entry.journalDate, {
-    includeTime: !compact,
-    hourCycle,
-  });
+  const time = formatDate(entry.journalDate, { includeTime: true, hourCycle });
   const description = entry.description?.trim() || strings.privateDescription;
+  const categoryName = entry.categoryName ? displayCategoryName(entry.categoryName) : null;
   const metaParts = [
-    compact ? null : date,
+    compact ? time : null,
     entry.sourceCount > 1 ? smsCount(entry.sourceCount) : null,
-    showCategory ? entry.categoryName : null,
+    showCategory ? categoryName : null,
   ].filter(Boolean);
   const meta = metaParts.join(' · ');
   return (
     <PressScaleTouchable
       onPress={() => AppNavigation.toJournalDetails(entry.journalId)}
       accessibilityRole="button"
-      accessibilityLabel={`${description}, ${date}${meta ? `, ${meta}` : ''}, ${formatMoney(entry.totalAmount, entry.currencyCode)}`}
+      accessibilityLabel={`${description}, ${time}${meta ? `, ${meta}` : ''}, ${formatMoney(entry.totalAmount, entry.currencyCode)}`}
       accessibilityHint={strings.historicalEntryOpen}
       testID={`historical-evidence-${entry.journalId}`}
       style={[
@@ -943,24 +959,19 @@ function HistoricalEvidenceRow({
       ]}
       pressScale="subtle"
     >
-      {compact ? (
-        <AppText variant="caption" color="secondary" style={styles.entryDate}>
-          {date}
-        </AppText>
-      ) : null}
       <View style={styles.entryText}>
         <AppText variant="caption" weight="medium" numberOfLines={1}>
           {description}
         </AppText>
         {meta ? (
-          <AppText variant="caption" color="secondary" numberOfLines={2}>
+          <AppText variant="caption" color="secondary" numberOfLines={1}>
             {meta}
           </AppText>
         ) : null}
       </View>
       <View style={styles.entryAmount}>
         <MoneyText amount={entry.totalAmount} currencyCode={entry.currencyCode} variant="caption" />
-        <AppIcon name={Icon.ChevronRight} size={14} color={theme.textSecondary} />
+        <AppIcon name={Icon.ChevronRight} size={12} color={theme.textSecondary} />
       </View>
     </PressScaleTouchable>
   );
@@ -972,18 +983,24 @@ function ScopePanel({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  historyTile: { paddingHorizontal: 16, paddingVertical: 6, gap: 2 },
-  historyRow: { gap: 1 },
-  historyHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  historyTile: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
+  historyRow: { gap: 2 },
+  historyHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   historyTitle: { flex: 1, flexShrink: 1 },
-  verdict: { paddingLeft: 12, borderLeftWidth: 3, gap: 2 },
-  verdictKey: { letterSpacing: 0.6, textTransform: 'uppercase' },
-  verdictHint: { marginTop: 4 },
+  detailBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
+  statusInset: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  statusInsetAction: { marginTop: 4 },
   legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 4,
   },
   legendItem: {
     flexDirection: 'row',
@@ -1006,40 +1023,58 @@ const styles = StyleSheet.create({
   markSquare: { width: 9, height: 9, borderRadius: 2 },
   markDiamondWrap: { width: 9, height: 9, alignItems: 'center', justifyContent: 'center' },
   markDiamond: { width: 7, height: 7, borderRadius: 1, transform: [{ rotate: '45deg' }] },
-  readoutEmpty: { paddingTop: 6 },
+  entriesSection: { gap: 6 },
+  dayBox: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+  },
+  dayBoxRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   readout: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 0 },
   readoutDate: { letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 },
   disclosure: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     minHeight: 44,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  disclosureToggle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    minHeight: 44,
+    minWidth: 0,
+  },
+  disclosureLabel: { flexShrink: 1 },
+  disclosureOpen: {
+    flexShrink: 0,
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
   },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   action: { minHeight: 44, paddingHorizontal: 14 },
   actionWide: { alignSelf: 'stretch', width: '100%', minHeight: 46 },
-  linkRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
   link: { minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' },
+  linkCentered: { alignSelf: 'center' },
   linkText: { textDecorationLine: 'underline' },
   textAction: { minHeight: 40, justifyContent: 'center', alignSelf: 'flex-start' },
   scope: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 4 },
-  evidenceList: { gap: 0 },
+  evidenceList: { gap: 14, paddingBottom: 2 },
+  dateGroup: { gap: 6 },
+  dateGroupLabel: { paddingHorizontal: 2 },
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingVertical: 6,
-    paddingLeft: 2,
     minHeight: 44,
   },
-  entryDate: { width: 44, flexShrink: 0 },
   entryText: { flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 1, minWidth: 0 },
   entryAmount: {
     flexDirection: 'row',

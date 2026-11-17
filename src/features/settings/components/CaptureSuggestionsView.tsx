@@ -1,7 +1,6 @@
 import {
   AppButton,
   AppCard,
-  AppInput,
   AppSegmentedControl,
   Badge,
   AppText,
@@ -10,10 +9,11 @@ import {
   ListGroup,
   ListRow,
 } from '@/src/components/core';
+import { CaptureSearchField } from './CaptureSearchField';
 import { SuggestionAmount, SuggestionItemSurface } from './SuggestionItemSurface';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { withPrivacyScope, useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { Stack } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
@@ -67,9 +67,6 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
   return (
     <SettingsLayout title={strings.suggestionsTitle}>
       <Stack space="lg">
-        <AppText variant="bodySmall" color="secondary">
-          {'Review suggestions and choose what to use for future matches.'}
-        </AppText>
         <AppSegmentedControl
           options={[
             {
@@ -90,6 +87,11 @@ export function CaptureSuggestionsView({ capture }: CaptureSuggestionsViewProps)
           flex
           testID="capture-suggestions-tabs"
         />
+        <AppText variant="bodySmall" color="secondary">
+          {tab === 'review'
+            ? strings.suggestionsReviewCardDescription
+            : strings.suggestionsSavedCardDescription}
+        </AppText>
         {capture.busy ? (
           <AppText variant="bodySmall" color="secondary" accessibilityRole="alert">
             {strings.matchingMutationBusy}
@@ -135,7 +137,6 @@ function ReviewSuggestions({
   capture: TransactionCaptureViewModel;
   reviewCount: number;
 }) {
-  const { theme } = useTheme();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SuggestionSort>('latest');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -176,49 +177,28 @@ function ReviewSuggestions({
       ) : (
         <>
           <Stack space="sm">
-            <AppInput
+            <CaptureSearchField
               value={search}
               onChangeText={value => resetView(value, sort)}
-              placeholder="Search suggestions"
-              leftIcon={Icon.Search}
-              autoCorrect={false}
-              returnKeyType="search"
+              placeholder={strings.matchingSearchPlaceholder}
               accessibilityLabel={strings.matchingSearchPlaceholder}
               testID="capture-suggestions-search"
+              clearTestID="capture-suggestions-clear-search"
+              clearAccessibilityLabel={strings.clearSearch}
             />
-            {search ? (
-              <AppButton variant="ghost" onPress={() => resetView('', sort)}>
-                {strings.clearSearch}
-              </AppButton>
-            ) : null}
-            <View style={styles.sortRow} testID="capture-suggestions-sort">
+            <Box gap="sm">
               <AppText variant="caption" color="secondary">
                 {strings.historicalSortBy}
               </AppText>
-              {SORT_OPTIONS.map(option => (
-                <PressScaleTouchable
-                  key={option.id}
-                  onPress={() => resetView(search, option.id)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: sort === option.id }}
-                  style={[
-                    styles.sortChip,
-                    {
-                      borderColor: sort === option.id ? theme.primary : theme.border,
-                      backgroundColor: sort === option.id ? theme.primaryLight : 'transparent',
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={{ color: sort === option.id ? theme.primary : theme.textSecondary }}
-                  >
-                    {option.label}
-                  </AppText>
-                </PressScaleTouchable>
-              ))}
-            </View>
+              <AppSegmentedControl
+                options={SORT_OPTIONS}
+                value={sort}
+                onChange={value => resetView(search, value)}
+                flex
+                size="sm"
+                testID="capture-suggestions-sort"
+              />
+            </Box>
           </Stack>
 
           {visibleTotal === 0 ? (
@@ -233,7 +213,7 @@ function ReviewSuggestions({
             id="defaulted"
             title={strings.defaultedHeader}
             count={filtered.defaulted.length}
-            description="A saved category was applied. Confirm each entry individually."
+            description={strings.defaultedGroupDescription}
             expanded={expandedGroups.defaulted ?? true}
             onToggle={() =>
               setExpandedGroups(current => ({
@@ -291,7 +271,7 @@ function ReviewSuggestions({
             id="category"
             title={strings.categoryCandidatesHeader}
             count={filtered.category.length}
-            description="Based on confirmed captured transactions."
+            description={strings.categoryCandidatesGroupDescription}
             expanded={expandedGroups.category ?? true}
             onToggle={() =>
               setExpandedGroups(current => ({ ...current, category: !(current.category ?? true) }))
@@ -346,7 +326,7 @@ function ReviewSuggestions({
             id="historical"
             title={strings.historicalCategoryHeader}
             count={filtered.historical.length}
-            description="Past SMS-linked entries suggest a category for future matches."
+            description={strings.historicalCategoryGroupDescription}
             expanded={expandedGroups.historical ?? true}
             onToggle={() =>
               setExpandedGroups(current => ({
@@ -382,7 +362,7 @@ function ReviewSuggestions({
             id="mixed"
             title={strings.historicalMixedHeader}
             count={filtered.mixed.length}
-            description="Past entries have different categories, so no default is suggested."
+            description={strings.historicalMixedGroupDescription}
             expanded={expandedGroups.mixed ?? true}
             onToggle={() =>
               setExpandedGroups(current => ({ ...current, mixed: !(current.mixed ?? true) }))
@@ -416,7 +396,7 @@ function ReviewSuggestions({
             id="names"
             title={strings.descriptionCandidatesHeader}
             count={filtered.names.length}
-            description="Save a name for future matches at the same amount."
+            description={strings.descriptionCandidatesGroupDescription}
             expanded={expandedGroups.names ?? true}
             onToggle={() =>
               setExpandedGroups(current => ({ ...current, names: !(current.names ?? true) }))
@@ -488,7 +468,7 @@ function SuggestionGroup({
   const { theme } = useTheme();
   if (count === 0) return null;
   return (
-    <View style={[styles.group, { backgroundColor: theme.surface }]}>
+    <Stack space="sm">
       <PressScaleTouchable
         onPress={onToggle}
         accessibilityRole="button"
@@ -498,12 +478,14 @@ function SuggestionGroup({
         style={styles.groupHeader}
         pressScale="subtle"
       >
-        <AppText variant="body" weight="semibold" style={{ flex: 1 }}>
-          {title}
-        </AppText>
-        <Badge variant="default" size="sm">
-          {count}
-        </Badge>
+        <View style={styles.groupTitleRow}>
+          <AppText variant="body" weight="semibold" style={styles.groupTitle}>
+            {title}
+          </AppText>
+          <Badge variant="primary" size="sm">
+            {count}
+          </Badge>
+        </View>
         <AppIcon
           name={expanded ? Icon.ChevronDown : Icon.ChevronRight}
           size={16}
@@ -515,10 +497,10 @@ function SuggestionGroup({
           <AppText variant="caption" color="secondary" style={styles.groupDescription}>
             {description}
           </AppText>
-          <View style={[styles.rows, { borderTopColor: theme.border }]}>{children}</View>
+          <View style={[styles.groupCard, { backgroundColor: theme.surface }]}>{children}</View>
         </>
       ) : null}
-    </View>
+    </Stack>
   );
 }
 
@@ -665,23 +647,22 @@ function CaptureSuggestionsScreen() {
 export default withPrivacyScope(CaptureSuggestionsScreen);
 
 const styles = StyleSheet.create({
-  sortRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  sortChip: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderRadius: 24,
-  },
-  group: { borderRadius: 16, overflow: 'hidden' },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    minHeight: 54,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    minHeight: 44,
+    paddingHorizontal: 4,
   },
-  groupDescription: { marginBottom: 6, marginHorizontal: 16 },
-  rows: { borderTopWidth: StyleSheet.hairlineWidth },
+  groupTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    minWidth: 0,
+  },
+  groupTitle: { flexShrink: 1 },
+  groupDescription: { paddingHorizontal: 4 },
+  groupCard: { borderRadius: 16, overflow: 'hidden' },
 });
