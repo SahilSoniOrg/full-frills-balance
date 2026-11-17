@@ -1,3 +1,4 @@
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/components/core';
@@ -112,14 +113,14 @@ export function PlannedPaymentActivityOverview({
     <Column gap="md">
       {!isPaused && !isEnded && upcoming.length > 0 && (
         <Column gap="sm">
-          <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-            <AppText variant="subheading" weight="semibold">
-              {copy.comingUp}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {copy.comingUpCadence(cadenceLabel ?? copy.usualAmount)}
-            </AppText>
-          </Row>
+          <ScreenSectionHeader
+            title={copy.comingUp}
+            action={
+              <AppText variant="caption" color="secondary">
+                {copy.comingUpCadence(cadenceLabel ?? copy.usualAmount)}
+              </AppText>
+            }
+          />
           <Row gap="sm" style={{ flexDirection: largeText ? 'column' : 'row' }}>
             {upcoming.map(occurrence => {
               const differs = plannedMoneyDiffers(
@@ -182,23 +183,25 @@ export function PlannedPaymentActivityOverview({
       )}
 
       <Column gap="sm">
-        <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-          <AppText variant="subheading" weight="semibold">
-            {copy.history}
-          </AppText>
-          <JournalCsvExportButton appearance="label" csvExport={csvExport} />
-          {(rows.length > 3 || totalHistoryCount > 3 || !!hasMore) && (
-            <AppButton
-              variant="ghost"
-              onPress={() => setExpanded(value => !value)}
-              accessibilityRole="button"
-              accessibilityLabel={expanded ? copy.showRecent : copy.seeAll(totalHistoryCount)}
-              buttonStyle={{ minHeight: 44, paddingHorizontal: 4 }}
-            >
-              {expanded ? copy.showRecent : copy.seeAll(totalHistoryCount)}
-            </AppButton>
-          )}
-        </Row>
+        <ScreenSectionHeader
+          title={copy.history}
+          action={
+            <Row align="center" gap="xs">
+              <JournalCsvExportButton appearance="label" csvExport={csvExport} />
+              {(rows.length > 3 || totalHistoryCount > 3 || !!hasMore) && (
+                <AppButton
+                  variant="ghost"
+                  onPress={() => setExpanded(value => !value)}
+                  accessibilityRole="button"
+                  accessibilityLabel={expanded ? copy.showRecent : copy.seeAll(totalHistoryCount)}
+                  buttonStyle={{ minHeight: 44, paddingHorizontal: 4 }}
+                >
+                  {expanded ? copy.showRecent : copy.seeAll(totalHistoryCount)}
+                </AppButton>
+              )}
+            </Row>
+          }
+        />
         {error ? (
           <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
             <Column gap="sm">

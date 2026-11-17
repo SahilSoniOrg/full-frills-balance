@@ -1,3 +1,4 @@
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import dayjs from 'dayjs';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import {
@@ -310,22 +311,22 @@ export function PlannedPaymentDetailsView({
 
             {!vm.isPreview && (
               <Column gap="sm">
-                <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-                  <AppText variant="subheading" weight="semibold">
-                    {copy.details}
-                  </AppText>
-                  {vm.headerActions?.onEdit && (
-                    <AppButton
-                      variant="ghost"
-                      onPress={vm.headerActions.onEdit}
-                      accessibilityRole="button"
-                      accessibilityLabel={copy.edit}
-                      buttonStyle={{ minHeight: 44, paddingHorizontal: 8 }}
-                    >
-                      {copy.edit}
-                    </AppButton>
-                  )}
-                </Row>
+                <ScreenSectionHeader
+                  title={copy.details}
+                  action={
+                    vm.headerActions?.onEdit ? (
+                      <AppButton
+                        variant="ghost"
+                        onPress={vm.headerActions.onEdit}
+                        accessibilityRole="button"
+                        accessibilityLabel={copy.edit}
+                        buttonStyle={{ minHeight: 44, paddingHorizontal: 8 }}
+                      >
+                        {copy.edit}
+                      </AppButton>
+                    ) : undefined
+                  }
+                />
                 <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
                   <Column>
                     <DetailRow label={copy.repeats} value={vm.intervalLabel ?? ''} />

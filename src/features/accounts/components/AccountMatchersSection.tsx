@@ -1,3 +1,4 @@
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import type { AccountMatcherSnapshot, AccountMatcherProposal } from '@/src/types/accountMatcher';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
@@ -64,29 +65,33 @@ export function AccountMatchersSectionView({
 
   return (
     <View style={styles.section} testID="account-matchers-section">
-      <View style={styles.header}>
-        <AppText variant="subheading" accessibilityRole="header" style={styles.flex}>
-          {copy.messagePatterns}
-        </AppText>
-        <PressScaleTouchable
-          style={styles.textAction}
-          onPress={() => AppNavigation.toAccountMatcherEditor(accountId)}
-          accessibilityRole="button"
-          accessibilityLabel={copy.addMatcher}
-          disabled={!eligible}
-          accessibilityState={{ disabled: !eligible }}
-          testID="add-account-matcher"
-        >
-          <AppIcon
-            name={Icon.Plus}
-            size={Size.iconXs}
-            color={eligible ? theme.primary : theme.textSecondary}
-          />
-          <AppText variant="bodySmall" weight="semibold" color={eligible ? 'primary' : 'secondary'}>
-            {copy.add}
-          </AppText>
-        </PressScaleTouchable>
-      </View>
+      <ScreenSectionHeader
+        title={copy.messagePatterns}
+        action={
+          <PressScaleTouchable
+            style={styles.textAction}
+            onPress={() => AppNavigation.toAccountMatcherEditor(accountId)}
+            accessibilityRole="button"
+            accessibilityLabel={copy.addMatcher}
+            disabled={!eligible}
+            accessibilityState={{ disabled: !eligible }}
+            testID="add-account-matcher"
+          >
+            <AppIcon
+              name={Icon.Plus}
+              size={Size.iconXs}
+              color={eligible ? theme.primary : theme.textSecondary}
+            />
+            <AppText
+              variant="bodySmall"
+              weight="semibold"
+              color={eligible ? 'primary' : 'secondary'}
+            >
+              {copy.add}
+            </AppText>
+          </PressScaleTouchable>
+        }
+      />
       {!eligible ? (
         <AppText variant="caption" color="secondary">
           {copy.suspended}
@@ -289,7 +294,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     gap: Spacing.sm,
   },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   flex: { flex: 1, minWidth: 0 },
   textAction: {
     flexDirection: 'row',
