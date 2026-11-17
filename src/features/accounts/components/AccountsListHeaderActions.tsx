@@ -1,7 +1,7 @@
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
 import { Icon, IconButton, InlineSearchField } from '@/src/components/core';
-import { Size, Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 
 type ArchiveAccountRef = { archivedAt?: Date | number | null };
@@ -32,7 +32,7 @@ export function AccountsListHeaderActions({
             size={Size.iconSm}
             variant="surface"
             onPress={onManageHierarchy}
-            accessibilityLabel="Manage hierarchy"
+            accessibilityLabel={AppConfig.strings.accounts.manageHierarchy}
           />
         </>
       ) : null}

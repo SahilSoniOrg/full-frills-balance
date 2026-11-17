@@ -9,7 +9,7 @@ jest.setTimeout(180000);
 
 const settingsDestinations = [
   ['settings-profile', 'Profile'],
-  ['settings-current-workplace', 'Current Workplace'],
+  ['settings-current-workplace', 'Workplace settings'],
   ['settings-appearance', 'Appearance'],
   ['settings-capture-review', 'Capture & review'],
   ['settings-privacy-security', 'Privacy & Security'],

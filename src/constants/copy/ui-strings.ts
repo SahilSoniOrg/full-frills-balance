@@ -493,7 +493,7 @@ export const UI_STRINGS = {
     sections: {
       profile: 'Profile',
       documents: 'Documents',
-      currentWorkplace: 'Current Workplace',
+      workplace: 'Workplace settings',
       devicesAndSessions: 'Devices & Sessions',
       forecasting: 'Forecasting',
       moneyDefaults: 'Money Defaults',
@@ -840,6 +840,7 @@ export const UI_STRINGS = {
     exampleItems: ['From Bank $40', 'From Cash $10', 'To Food $50'],
   },
   accounts: {
+    manageHierarchy: 'Manage hierarchy',
     missingTitle: 'Account not found',
     missingSubtitle: 'This account may have been deleted.',
     emptyTitle: 'No accounts yet',
@@ -1369,8 +1370,6 @@ export const UI_STRINGS = {
           ? 'This page differs from your privacy preference.'
           : 'Using your privacy preference.'
       } Tap to change visibility on this page only.`,
-    yourDetails: 'Your details',
-    manageWorkplace: 'Manage this workplace',
     allSettings: 'All settings',
     closeDrawer: 'Close navigation drawer',
     workplacesGroup: 'Workplaces',

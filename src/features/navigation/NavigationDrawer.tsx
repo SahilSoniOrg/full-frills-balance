@@ -111,7 +111,7 @@ const NAV_SECTIONS: {
     items: [
       {
         id: 'details',
-        label: copy.yourDetails,
+        label: settingsCopy.sections.profile,
         icon: Icon.User,
         onPress: AppNavigation.toPersonalizationSettings,
       },
@@ -395,7 +395,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
               <ListGroup variant="plain" dividerInset="none">
                 <ListRow
                   icon={Icon.Settings}
-                  title={copy.manageWorkplace}
+                  title={settingsCopy.sections.workplace}
                   tone="utility"
                   level={1}
                   chevron={false}

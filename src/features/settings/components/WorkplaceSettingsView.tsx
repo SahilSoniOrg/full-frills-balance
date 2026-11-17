@@ -26,7 +26,7 @@ export function WorkplaceSettingsView({ vm }: WorkplaceSettingsViewProps) {
 
   return (
     <>
-      <SettingsLayout title="Workplace settings">
+      <SettingsLayout title={AppConfig.strings.settings.sections.workplace}>
         <Stack space="xl">
           <AppText variant="caption" color="secondary">
             Switch or create workplaces from the sidebar. These settings apply to the active

@@ -122,7 +122,7 @@ export type ListRowProps = BoxViewProps &
     destructive?: boolean;
     /**
      * Rank inside a group. `utility` is quieter (secondary, regular weight) for subordinate
-     * actions under a section — e.g. “Manage this workplace” under the active workplace.
+     * actions under a section — e.g. “Workplace settings” under the active workplace.
      */
     tone?: 'default' | 'utility';
     /**

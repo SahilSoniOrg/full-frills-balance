@@ -83,7 +83,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...screen('Workplaces', 'onCurrentWorkplace', [
     row('workplace', Icon.Briefcase, 'Current workplace', 'Rename this workplace or change its icon', ['workplace', 'books', 'rename', 'icon'], {
       focusId: 'active-workplace',
-      hub: { testID: 'settings-current-workplace', title: sec.currentWorkplace, description: hub.currentWorkplaceDescription },
+      hub: { testID: 'settings-current-workplace', title: sec.workplace, description: hub.currentWorkplaceDescription },
     }),
     row('currency', Icon.Bank, s.currency.title, s.currency.description, ['workplace', 'money', 'currency code', 'default currency']),
     row('safe-to-spend-forecast', Icon.Safe, me.forecastTitle, me.forecastDesc, ['workplace', 'money', 'safe to spend', 'forecast', 'horizon', '30 days', '60 days', '90 days']),
