@@ -599,14 +599,26 @@ describe('cash-flow sign across journal rows', () => {
     expect(viewed(transfer, 'savings')).toBe('+ ');
   });
 
-  it('signs a debt payoff by the change in the liability balance', () => {
+  it('signs a debt payoff as + on the card, since it leaves less owed', () => {
     const payoff = journal(
       JournalDisplayType.TRANSFER,
       [bank('SOURCE', 100), leg('card', AccountType.LIABILITY, 'DESTINATION', 100)],
       100,
     );
     expect(mapJournalToEntryCardProps(payoff).presentation.amountPrefix).toBe('');
-    expect(viewed(payoff, 'card')).toBe('− ');
+    expect(viewed(payoff, 'card')).toBe('+ ');
+  });
+
+  it('signs a card purchase as − on the card, since it adds debt', () => {
+    const purchase = journal(
+      JournalDisplayType.EXPENSE,
+      [
+        leg('card', AccountType.LIABILITY, 'SOURCE', 100),
+        leg('food', AccountType.EXPENSE, 'DESTINATION', 100),
+      ],
+      100,
+    );
+    expect(viewed(purchase, 'card')).toBe('− ');
   });
 
   it('signs a mixed journal by its income and expense net', () => {

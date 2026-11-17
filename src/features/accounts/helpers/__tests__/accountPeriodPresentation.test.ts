@@ -213,12 +213,21 @@ describe('presentAccountPeriod flow signs', () => {
     expect(spent.heroSign).toBe('− ');
   });
 
-  it('keeps balance direction for liabilities', () => {
-    const card = presentAccountPeriod({
+  it('signs liabilities against the balance: paying down is +, new debt is −', () => {
+    const paidDown = presentAccountPeriod({
       accountType: AccountType.LIABILITY,
       metrics: metrics(2000, 3000),
       isPrivate: false,
     });
-    expect(card.heroSign).toBe('− ');
+    expect(paidDown.badge?.label).toBe('Paid down');
+    expect(paidDown.heroSign).toBe('+ ');
+
+    const grew = presentAccountPeriod({
+      accountType: AccountType.LIABILITY,
+      metrics: metrics(3000, 2000),
+      isPrivate: false,
+    });
+    expect(grew.badge?.label).toBe('Balance grew');
+    expect(grew.heroSign).toBe('− ');
   });
 });

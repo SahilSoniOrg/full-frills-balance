@@ -14,8 +14,10 @@
  * Intents:
  * - FLOW: economic flow of a journal. Income +, spending −, refunds +.
  *   Balance-sheet-only journals (transfers, debt payments) are unsigned.
- * - LEG: one account's own view. A leg is + when it increases the balance,
- *   except expenses, where an increase is spending, so it is −.
+ * - LEG: one account's own view. A leg is + when it leaves the user better off:
+ *   an asset or income balance going up, an expense going down (a refund), or
+ *   a liability going down (a payment). Spending and new debt are −. Equity
+ *   follows its balance.
  * - OBLIGATION: planned and upcoming money, by the direction of the obligation
  *   (`obligationDirection`).
  * - BANK_ENTRY: an SMS entry. `credit` is money in, so it is +.
@@ -80,14 +82,15 @@ function flip(sign: BalanceSign): FlowSign {
 }
 
 /**
- * LEG sign of one posting. This is `balanceSign`, except that an expense
- * increase is spending, so the expense rows flip.
+ * LEG sign of one posting. This is `balanceSign`, except for the two types
+ * whose balance growing leaves the user worse off: an expense increase is
+ * spending and a liability increase is new debt, so both flip.
  */
 export function legSign(accountType: string, transactionType: TransactionType): FlowSign {
   const type = knownAccountType(accountType);
   if (!type) return 0;
   const sign = balanceSign(type, transactionType);
-  return type === EXPENSE ? flip(sign) : sign;
+  return type === EXPENSE || type === LIABILITY ? flip(sign) : sign;
 }
 
 export interface FlowLine {
