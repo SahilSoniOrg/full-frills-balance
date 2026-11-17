@@ -11,6 +11,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { useNavigation } from 'expo-router';
 import type { NativeStackNavigationProp } from 'expo-router/native-stack';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 type NavigationParamList = Record<string, object | undefined>;
 
@@ -18,7 +19,8 @@ function AccountDetailsScreen() {
   const vm = useAccountDetailsViewModel();
   const navigation = useNavigation<NativeStackNavigationProp<NavigationParamList>>();
   const accountRenderMode = readE2eLaunchConfig()?.accountRenderMode ?? 'deferred-full';
-  const deferSecondaryContent = accountRenderMode === 'deferred-full';
+  // The web stack never emits transitionEnd, so deferring there would hide the rows for good.
+  const deferSecondaryContent = accountRenderMode === 'deferred-full' && Platform.OS !== 'web';
   const [transitionCompleted, setTransitionCompleted] = useState(!deferSecondaryContent);
   const transitionReported = useRef(false);
   const {
