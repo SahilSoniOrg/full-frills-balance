@@ -2,20 +2,19 @@ import { AccountPickerModal } from '@/src/components/account-selection/AccountPi
 import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
-import { AppButton, AppText } from '@/src/components/core';
+import { EmptyStateView, Icon, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AccountDetailsListHeader } from '@/src/features/accounts/components/AccountDetailsListHeader';
 import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
-import { useTheme } from '@/src/hooks/use-theme';
 import { logAccountPerformanceMarker } from '@/src/testing/accountPerformanceMarkers';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { useCallback, useEffect, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export function AccountDetailsView({
   chrome,
@@ -25,7 +24,6 @@ export function AccountDetailsView({
   chrome: ScreenNavChrome;
   secondaryContentReady?: boolean;
 }) {
-  const { theme } = useTheme();
   const launchConfig = readE2eLaunchConfig();
   const accountRenderMode = launchConfig?.accountRenderMode ?? 'full';
   const isAccountPerfRun = launchConfig?.accountRenderMode !== undefined;
@@ -152,18 +150,15 @@ export function AccountDetailsView({
   return (
     <ScreenWithChrome chrome={chrome}>
       {accountLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <LoadingView loading />
       ) : accountMissing ? (
-        <View style={styles.errorContainer}>
-          <AppText variant="body" color="error">
-            Account not found
-          </AppText>
-          <AppButton variant="outline" onPress={onBack}>
-            Go Back
-          </AppButton>
-        </View>
+        <EmptyStateView
+          icon={Icon.Error}
+          title={AppConfig.strings.accounts.missingTitle}
+          subtitle={AppConfig.strings.accounts.missingSubtitle}
+          primaryActionLabel={AppConfig.strings.common.goBack}
+          onPrimaryAction={onBack}
+        />
       ) : (
         <>
           <JournalEntryListView
@@ -238,18 +233,6 @@ export function AccountDetailsView({
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.lg,
-    padding: Spacing.lg,
-  },
   list: {
     flex: 1,
   },

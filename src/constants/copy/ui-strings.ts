@@ -21,6 +21,7 @@ export const UI_STRINGS = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     clearFilters: 'Clear filters',
+    goBack: 'Go back',
     loading: 'Loading…',
     loadingMore: 'Loading…',
     iconPickerTitle: 'Select Icon',
@@ -839,6 +840,8 @@ export const UI_STRINGS = {
     exampleItems: ['From Bank $40', 'From Cash $10', 'To Food $50'],
   },
   accounts: {
+    missingTitle: 'Account not found',
+    missingSubtitle: 'This account may have been deleted.',
     emptyTitle: 'No accounts yet',
     emptySubtitle: 'Create your first account to get started.',
     emptyCategoriesTitle: 'No categories yet',

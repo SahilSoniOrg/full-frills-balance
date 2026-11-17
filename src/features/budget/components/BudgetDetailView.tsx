@@ -1,7 +1,7 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
-import { AppButton, AppText, EmptyStateView, LoadingView } from '@/src/components/core';
+import { AppText, EmptyStateView, Icon, LoadingView } from '@/src/components/core';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -36,15 +36,13 @@ export function BudgetDetailView({
   if (vm.isMissing || !budget || !usage || !periodRange) {
     return (
       <ScreenWithChrome chrome={chrome}>
-        <EmptyStateView title={strings.missingTitle} subtitle={strings.missingSubtitle} />
-        <AppButton
-          variant="ghost"
-          onPress={AppNavigation.back}
-          accessibilityRole="button"
-          accessibilityLabel={strings.goBack}
-        >
-          {strings.goBack}
-        </AppButton>
+        <EmptyStateView
+          icon={Icon.Error}
+          title={strings.missingTitle}
+          subtitle={strings.missingSubtitle}
+          primaryActionLabel={strings.goBack}
+          onPrimaryAction={AppNavigation.back}
+        />
       </ScreenWithChrome>
     );
   }

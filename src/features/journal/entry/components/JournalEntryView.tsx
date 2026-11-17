@@ -198,7 +198,7 @@ export function JournalEntryView(props: JournalEntryShell) {
             }
             subtitle="The transaction could not be loaded. Go back and try again."
             icon={Icon.Error}
-            primaryActionLabel="Go Back"
+            primaryActionLabel={AppConfig.strings.common.goBack}
             onPrimaryAction={onClose}
           />
         )}

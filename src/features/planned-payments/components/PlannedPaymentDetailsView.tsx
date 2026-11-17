@@ -2,11 +2,11 @@ import dayjs from 'dayjs';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import {
   AppButton,
-  AppIcon,
   AppCard,
   AppText,
   Badge,
   Icon,
+  EmptyStateView,
   LoadingView,
 } from '@/src/components/core';
 import {
@@ -45,7 +45,7 @@ export function PlannedPaymentDetailsView({
   chrome,
   ...vm
 }: PlannedPaymentDetailsViewModel & { chrome: ScreenNavChrome }) {
-  const { theme, history = [], selectedIds, isSelectionModeActive } = vm;
+  const { history = [], selectedIds, isSelectionModeActive } = vm;
   const formatMoney = useMoneyFormat();
   const pending = !!vm.pendingAction;
   const hasOccurrence = !!vm.onPost;
@@ -261,18 +261,13 @@ export function PlannedPaymentDetailsView({
       {vm.isLoading ? (
         <LoadingView loading text={AppConfig.strings.common.loading} />
       ) : vm.isMissing ? (
-        <Column flex={1} align="center" justify="center" gap="md">
-          <AppIcon name={Icon.Error} size={Size.xxl} color={theme.textSecondary} />
-          <AppText variant="subheading">{copy.missingTitle}</AppText>
-          <AppButton
-            variant="ghost"
-            onPress={vm.onBack}
-            accessibilityRole="button"
-            accessibilityLabel={copy.goBack}
-          >
-            {copy.goBack}
-          </AppButton>
-        </Column>
+        <EmptyStateView
+          icon={Icon.Error}
+          title={copy.missingTitle}
+          subtitle={copy.missingSubtitle}
+          primaryActionLabel={copy.goBack}
+          onPrimaryAction={vm.onBack}
+        />
       ) : (
         <>
           <Column paddingVertical="sm" gap="md">

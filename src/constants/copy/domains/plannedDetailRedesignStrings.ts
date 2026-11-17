@@ -1,5 +1,6 @@
 export const plannedDetailRedesignStrings = {
   missingTitle: 'Planned payment not found',
+  missingSubtitle: 'This planned payment may have been deleted.',
   goBack: 'Go back',
   nextPayment: 'Next payment',
   missedPayment: 'Missed payment',
