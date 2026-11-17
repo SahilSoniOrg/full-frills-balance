@@ -147,10 +147,9 @@ export class LiabilityFlowGenerator {
     const obligations: Obligation[] = [];
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
     const statementDay = metadata?.statementDay;
-    // A negative balance is a credit on the account: nothing is owed on it, and it
-    // offsets future charges before they become bills.
+    // An overpaid card owes nothing. Its negative balance is cleared to zero, so it
+    // neither creates a payment nor reduces what other liabilities owe.
     const owedNow = Math.max(0, currentBalance);
-    let creditAvailable = Math.max(0, -currentBalance);
 
     const isMinMode = metadata?.minPaymentOnly === true;
     const paymentModeLabel = isMinMode ? ' (Min)' : '';
@@ -224,13 +223,6 @@ export class LiabilityFlowGenerator {
         }
       }
 
-      // 3b. The credit on the card pays down bills in order, before they are emitted
-      for (const c of cycles) {
-        const offset = Math.min(creditAvailable, c.amount);
-        c.amount -= offset;
-        creditAvailable -= offset;
-      }
-
       // 4. Emit obligations
       for (let i = 0; i < cycles.length; i++) {
         const c = cycles[i];
@@ -265,7 +257,6 @@ export class LiabilityFlowGenerator {
       for (const f of spendingFlows) {
         remainingBalance += f.amount;
       }
-      remainingBalance = Math.max(0, remainingBalance - creditAvailable);
 
       const rawEmiAmount =
         metadata?.emiAmount ??

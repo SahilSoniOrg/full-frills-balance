@@ -446,8 +446,9 @@ export function observeSafeToSpendInputSnapshot(
           );
 
           const liabilityAccountBalances = mapped.liquidLiabilities.map(l => {
-            // Signed: a negative balance is a credit the generator applies to future bills.
-            const balance = balancesMapByAccountId.get(l.id) || 0;
+            // An overpaid liability (negative balance) is cleared to zero: it is not a credit
+            // against other liabilities.
+            const balance = Math.max(0, balancesMapByAccountId.get(l.id) || 0);
             return { account: l, balance };
           });
 
