@@ -1,5 +1,6 @@
 import './auditUiTestMocks';
 import { render } from '@testing-library/react-native';
+import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
 import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { AuditAction } from '@/src/types/enums';
@@ -15,7 +16,11 @@ test('a foreign-currency amount edit uses the entity currency', () => {
     },
   });
   const format = jest.spyOn(CurrencyFormatter, 'format');
-  render(<AuditLogChangesView changes={changes} accountMap={{}} workplaceCurrency="USD" />);
+  render(
+    <PrivacyScopeProvider>
+      <AuditLogChangesView changes={changes} accountMap={{}} workplaceCurrency="USD" />
+    </PrivacyScopeProvider>,
+  );
   expect(format).toHaveBeenCalledWith(200, 'INR');
   format.mockRestore();
 });

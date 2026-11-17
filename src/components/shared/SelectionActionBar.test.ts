@@ -5,8 +5,12 @@ import {
 } from '@/src/components/shared/SelectionActionBar';
 
 describe('partitionSelectionActions', () => {
-  const action = (name: SelectionAction['name'], options: Partial<SelectionAction> = {}) => ({
+  const action = (
+    name: SelectionAction['name'],
+    options: Partial<SelectionAction> = {},
+  ): SelectionAction => ({
     name,
+    label: String(name),
     onPress: jest.fn(),
     ...options,
   });

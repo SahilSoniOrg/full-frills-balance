@@ -1,6 +1,6 @@
 import { CustomDateTimePicker } from '@/src/components/filters/CustomDateTimePicker';
 import { Icon, AppIcon, AppText, IconButton } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
@@ -27,6 +27,7 @@ export function DateRangeCalendarStep({
         <IconButton
           name={Icon.Back}
           onPress={onBack}
+          accessibilityLabel={AppConfig.strings.common.back}
           variant="surface"
           iconColor={theme.textSecondary}
         />

@@ -135,6 +135,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
               name={Icon.Close}
               size={Size.iconXs}
               onPress={vm.clearFilters}
+              accessibilityLabel={AppConfig.strings.common.clearFilters}
               style={styles.clearButton}
             />
           )}

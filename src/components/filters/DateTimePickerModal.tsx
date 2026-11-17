@@ -1,7 +1,7 @@
 import { DateView } from '@/src/components/filters/CustomDateTimePicker/DateView';
 import { TimeView } from '@/src/components/filters/CustomDateTimePicker/TimeView';
 import { Icon, AppButton, AppSegmentedControl, AppText, IconButton } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -85,7 +85,11 @@ export function DateTimePickerModal({
           onPress={e => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <IconButton name={Icon.Close} onPress={onClose} />
+            <IconButton
+              name={Icon.Close}
+              onPress={onClose}
+              accessibilityLabel={AppConfig.strings.common.close}
+            />
             <View style={styles.headerTitle}>
               <AppText variant="subheading" weight="bold">
                 {hideDate ? 'Select Time' : hideTime ? 'Select Date' : 'Date & Time'}

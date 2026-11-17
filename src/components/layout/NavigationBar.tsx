@@ -8,6 +8,7 @@
  */
 
 import { Icon, AppText, IconButton } from '@/src/components/core';
+import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants/design-tokens';
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
@@ -72,6 +73,11 @@ export function NavigationBar({
             <IconButton
               name={left.icon ?? Icon.Back}
               onPress={left.onPress}
+              accessibilityLabel={
+                left.icon === Icon.Close
+                  ? AppConfig.strings.common.close
+                  : AppConfig.strings.common.back
+              }
               variant="surface"
               testID="nav-back-button"
             />

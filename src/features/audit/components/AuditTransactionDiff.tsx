@@ -10,7 +10,7 @@ import {
   shouldHideUnchangedTransactionLeg,
 } from '@/src/services/audit/auditLogDiffDisplay';
 import { AuditChangeValue, AuditTransactionSnapshot } from '@/src/services/audit/auditLogTypes';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { View } from 'react-native';
 
 interface AuditTransactionSnapshotStackProps {
@@ -31,6 +31,7 @@ export function AuditTransactionSnapshotStack({
   currencyCode,
   isAfter = false,
 }: AuditTransactionSnapshotStackProps) {
+  const formatMoney = useMoneyFormat();
   return (
     <View style={{ marginTop: Spacing.xs }}>
       {snapshots.map((snapshot, index) => {
@@ -60,8 +61,7 @@ export function AuditTransactionSnapshotStack({
             )}
             <View style={shouldShowName ? { marginLeft: Spacing.md } : {}}>
               <AppText variant="caption" color="secondary">
-                {CurrencyFormatter.format(snapshot.amount, itemCurrency || workplaceCurrency)} (
-                {snapshot.type})
+                {formatMoney(snapshot.amount, itemCurrency || workplaceCurrency)} ({snapshot.type})
               </AppText>
             </View>
           </View>
@@ -87,6 +87,7 @@ export function AuditTransactionsFieldDiff({
   workplaceCurrency,
   theme,
 }: AuditTransactionsFieldDiffProps) {
+  const formatMoney = useMoneyFormat();
   const beforeTxs = asTransactionSnapshots(beforeVal);
   const afterTxs = asTransactionSnapshots(afterVal);
   if (beforeTxs.length === 0 && afterTxs.length === 0) return null;
@@ -133,7 +134,7 @@ export function AuditTransactionsFieldDiff({
                 color="secondary"
                 style={{ fontSize: Typography.sizes.xs, opacity: Opacity.medium }}
               >
-                {CurrencyFormatter.format(beforeAmt, currency)} ({beforeType})
+                {formatMoney(beforeAmt, currency)} ({beforeType})
               </AppText>
               <AppText
                 variant="caption"
@@ -149,7 +150,7 @@ export function AuditTransactionsFieldDiff({
                 color="secondary"
                 style={{ fontSize: Typography.sizes.xs, opacity: Opacity.heavy }}
               >
-                {CurrencyFormatter.format(afterAmt, currency)} ({afterType})
+                {formatMoney(afterAmt, currency)} ({afterType})
               </AppText>
               {typeChanged && (
                 <AppText

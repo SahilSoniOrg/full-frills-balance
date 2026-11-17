@@ -19,7 +19,7 @@ import {
 import { isAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { formatDate } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import React from 'react';
@@ -132,6 +132,7 @@ function ChangeValueRenderer({
   isAfter = false,
   oppositeValue,
 }: ChangeValueRendererProps): React.ReactNode {
+  const formatMoney = useMoneyFormat();
   if (value === null || value === undefined) {
     return <AppText variant="caption">{AppConfig.strings.audit.notSet}</AppText>;
   }
@@ -182,7 +183,7 @@ function ChangeValueRenderer({
   ) {
     return (
       <AppText variant="caption" color="secondary">
-        {CurrencyFormatter.format(value, currencyCode || workplaceCurrency)}
+        {formatMoney(value, currencyCode || workplaceCurrency)}
       </AppText>
     );
   }
@@ -295,6 +296,7 @@ function BeforeAfterChangesView({
   hourCycle,
   theme,
 }: AuditLogChangesRenderProps & { theme: Theme }) {
+  const formatMoney = useMoneyFormat();
   if (!hasBeforeAfterChanges(changes)) return null;
 
   const { before, after } = changes;
@@ -352,7 +354,7 @@ function BeforeAfterChangesView({
                   }}
                 >
                   <AppText variant="caption" color="secondary">
-                    {CurrencyFormatter.format(bNum, currency)}
+                    {formatMoney(bNum, currency)}
                   </AppText>
                   <AppText
                     variant="caption"
@@ -361,8 +363,7 @@ function BeforeAfterChangesView({
                     :
                   </AppText>
                   <AppText variant="caption" weight="bold" style={{ color }}>
-                    {diffPrefix}
-                    {CurrencyFormatter.format(diff, currency)}
+                    {formatMoney(diff, currency, { prefix: diffPrefix })}
                   </AppText>
                   <AppText
                     variant="caption"
@@ -371,7 +372,7 @@ function BeforeAfterChangesView({
                     :
                   </AppText>
                   <AppText variant="caption" color="secondary">
-                    {CurrencyFormatter.format(aNum, currency)}
+                    {formatMoney(aNum, currency)}
                   </AppText>
                 </View>
               </View>

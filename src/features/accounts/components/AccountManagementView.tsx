@@ -1,3 +1,4 @@
+import { LoadingView } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { HierarchyMoveModal } from '@/src/features/accounts/components/hierarchy/HierarchyMoveModal';
 import { AccountManagementTreeList } from '@/src/features/accounts/components/hierarchy/AccountManagementTreeList';
@@ -10,7 +11,13 @@ export function AccountManagementView({
   vm: ReturnType<typeof useAccountManagementViewModel>;
   chrome: ScreenNavChrome;
 }) {
-  if (vm.isLoading) return null;
+  if (vm.isLoading) {
+    return (
+      <ScreenWithChrome chrome={chrome}>
+        <LoadingView loading />
+      </ScreenWithChrome>
+    );
+  }
   return (
     <ScreenWithChrome chrome={chrome}>
       <AccountManagementTreeList

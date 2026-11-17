@@ -7,6 +7,7 @@ import {
 describe('buildListSelectionActions', () => {
   const action = {
     name: Icon.Edit,
+    label: 'Edit',
     onPress: jest.fn(),
   };
 

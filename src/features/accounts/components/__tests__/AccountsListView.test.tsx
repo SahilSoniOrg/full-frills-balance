@@ -266,6 +266,7 @@ describe('AccountsListView', () => {
           actions: [
             {
               name: Icon.Archive,
+              label: 'Archive',
               onPress: jest.fn(),
               accessibilityLabel: 'Archive selected',
             },

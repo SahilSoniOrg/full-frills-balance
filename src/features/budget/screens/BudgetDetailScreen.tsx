@@ -1,4 +1,5 @@
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
+import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -13,32 +14,36 @@ function BudgetDetailScreenInner() {
   const strings = AppConfig.strings.commitmentsRedesign;
   const chrome = useMemo<ScreenNavChrome>(
     () =>
-      buildDetailNavChrome({
-        phase: vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready',
-        readyTitle: vm.budget?.name ?? AppConfig.strings.budget.details.screenTitle,
-        loadingTitle: AppConfig.strings.budget.details.screenTitle,
-        onBack: AppNavigation.back,
-        headerActions: (
-          <DetailHeaderMenuActions
-            actions={[
-              { label: strings.edit, onPress: vm.handleEdit, testID: 'edit-button' },
-              {
-                label: strings.delete,
-                onPress: vm.handleDelete,
-                destructive: true,
-                testID: 'delete-button',
-              },
-            ]}
-          />
-        ),
-        fab: vm.isSelectionModeActive
-          ? undefined
-          : {
-              onPress: vm.onAddExpense,
-              label: strings.expenseAction,
-              accessibilityLabel: strings.addExpense,
-            },
-      }),
+      applySelectionChrome(
+        buildDetailNavChrome({
+          phase: vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready',
+          readyTitle: vm.budget?.name ?? AppConfig.strings.budget.details.screenTitle,
+          loadingTitle: AppConfig.strings.budget.details.screenTitle,
+          onBack: AppNavigation.back,
+          headerActions: (
+            <DetailHeaderMenuActions
+              actions={[
+                { label: strings.edit, onPress: vm.handleEdit, testID: 'edit-button' },
+                {
+                  label: strings.delete,
+                  onPress: vm.handleDelete,
+                  destructive: true,
+                  testID: 'delete-button',
+                },
+              ]}
+            />
+          ),
+        }),
+        {
+          active: vm.isSelectionModeActive,
+          onExit: vm.selectionChrome.exitSelectionMode,
+          fab: {
+            onPress: vm.onAddExpense,
+            label: strings.expenseAction,
+            accessibilityLabel: strings.addExpense,
+          },
+        },
+      ),
     [
       vm.isLoading,
       vm.isMissing,
@@ -47,6 +52,7 @@ function BudgetDetailScreenInner() {
       vm.handleDelete,
       vm.onAddExpense,
       vm.isSelectionModeActive,
+      vm.selectionChrome.exitSelectionMode,
       strings,
     ],
   );

@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core/AppText';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { useTheme } from '@/src/hooks/use-theme';
 import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 
 export interface LoadingViewProps {
@@ -16,11 +17,12 @@ export function LoadingView({
   size = 'large',
   style,
 }: LoadingViewProps) {
+  const { theme } = useTheme();
   if (!loading) return null;
 
   return (
     <View style={[styles.container, style]}>
-      <ActivityIndicator size={size} />
+      <ActivityIndicator size={size} color={theme.primary} />
       <AppText variant="body" color="secondary" style={styles.text}>
         {text}
       </AppText>

@@ -16,6 +16,7 @@ import {
   lineLabel,
   sameCurrencyImbalanceMessage,
   type BalanceRateLabels,
+  useMaskAmount,
 } from './JournalBalanceReviewParts';
 
 /** Copy that differs between reviewing a backup during restore and reviewing saved entries. */
@@ -96,6 +97,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
   detailFooter,
 }: JournalBalanceReviewFlowProps<Id>) {
   const [selection, setSelection] = useState<{ journalId: Id; editing: boolean }>();
+  const maskAmount = useMaskAmount();
   // A saved entry balances and drops out of `entries`, which returns the flow to the list.
   const selected = selection && entries.find(entry => entry.journalId === selection.journalId);
   const select = (journalId: Id, editing = false) => setSelection({ journalId, editing });
@@ -241,7 +243,7 @@ export function JournalBalanceReviewFlow<Id extends string>({
                 <EntrySummary entry={entry} untitledEntry={copy.untitledEntry} />
                 {entry.lines.map(line => (
                   <AppText key={line.id} variant="caption" color="secondary">
-                    {`${lineLabel(line)} · ${line.amount} ${line.currency}`}
+                    {`${lineLabel(line)} · ${maskAmount(String(line.amount))} ${line.currency}`}
                   </AppText>
                 ))}
                 <View style={styles.actions}>

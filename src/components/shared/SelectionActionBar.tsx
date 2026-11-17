@@ -19,7 +19,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 export interface SelectionAction {
   name: IconName;
-  label?: string;
+  label: string;
   onPress: () => void;
   variant?: IconButtonProps['variant'];
   iconColor?: string;

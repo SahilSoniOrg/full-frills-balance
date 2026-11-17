@@ -7,7 +7,9 @@ import { Keyboard, StyleSheet, type TouchableOpacityProps, type ViewStyle } from
 
 export type IconButtonVariant = 'primary' | 'surface' | 'clear' | 'error' | 'success';
 
-export type IconButtonProps = Omit<TouchableOpacityProps, 'children'> & {
+export type IconButtonProps = Omit<TouchableOpacityProps, 'children' | 'accessibilityLabel'> & {
+  /** Icon-only control: screen readers have nothing else to announce. */
+  accessibilityLabel: string;
   name: IconName;
   size?: number;
   variant?: IconButtonVariant;

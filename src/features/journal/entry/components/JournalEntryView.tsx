@@ -1,6 +1,13 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
-import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+import {
+  AppIcon,
+  AppText,
+  EmptyStateView,
+  Icon,
+  LoadingView,
+  PressScaleTouchable,
+} from '@/src/components/core';
+import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
@@ -22,7 +29,7 @@ import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitMo
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
 import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
@@ -173,27 +180,29 @@ export function JournalEntryView(props: JournalEntryShell) {
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
   const valuationCurrency = editor.valuationCurrency;
 
-  if (isLoading) {
+  if (isLoading || loadState === 'not_found' || loadState === 'error') {
+    const statusChrome: ScreenNavChrome = {
+      kind: 'nav',
+      screenTitle: headerTitle,
+      backIcon: Icon.Close,
+      onBack: onClose,
+    };
     return (
-      <Page>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      </Page>
-    );
-  }
-
-  if (loadState === 'not_found' || loadState === 'error') {
-    return (
-      <Page>
-        <EmptyStateView
-          title={loadState === 'not_found' ? 'Transaction not found' : 'Unable to load transaction'}
-          subtitle="The transaction could not be loaded. Go back and try again."
-          icon={Icon.Error}
-          primaryActionLabel="Go Back"
-          onPrimaryAction={onClose}
-        />
-      </Page>
+      <ScreenWithChrome chrome={statusChrome}>
+        {isLoading ? (
+          <LoadingView loading />
+        ) : (
+          <EmptyStateView
+            title={
+              loadState === 'not_found' ? 'Transaction not found' : 'Unable to load transaction'
+            }
+            subtitle="The transaction could not be loaded. Go back and try again."
+            icon={Icon.Error}
+            primaryActionLabel="Go Back"
+            onPrimaryAction={onClose}
+          />
+        )}
+      </ScreenWithChrome>
     );
   }
 
@@ -415,11 +424,6 @@ export function JournalEntryView(props: JournalEntryShell) {
 }
 
 const styles = StyleSheet.create({
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   headerContainer: {
     paddingBottom: Spacing.xs,
   },

@@ -3,7 +3,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
-import { AppTabs, Icon, type TabOption } from '@/src/components/core';
+import { AppTabs, ErrorStateView, Icon, type TabOption } from '@/src/components/core';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
@@ -36,6 +36,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
     activeTab,
     setActiveTab,
     loading,
+    hasError,
     hasUnvaluedEntries,
     overview,
     spending,
@@ -109,6 +110,13 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
                   currencyCode: overview.targetCurrency,
                 })
               }
+            />
+          ) : null}
+          {hasError && !loading ? (
+            <ErrorStateView
+              variant="inline"
+              message={AppConfig.strings.reports.loadError}
+              onRetry={filters.onRefresh}
             />
           ) : null}
           {activeTab === 'OVERVIEW' && (

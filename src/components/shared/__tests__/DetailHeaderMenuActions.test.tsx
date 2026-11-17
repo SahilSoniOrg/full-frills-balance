@@ -10,7 +10,14 @@ it.each(['leading', 'trailing'] as const)(
     const screen = render(
       <DetailHeaderMenuActions
         privacyPosition={privacyPosition}
-        leadingActions={[{ name: Icon.Edit, onPress: jest.fn(), testID: 'edit-action' }]}
+        leadingActions={[
+          {
+            name: Icon.Edit,
+            onPress: jest.fn(),
+            testID: 'edit-action',
+            accessibilityLabel: 'Edit',
+          },
+        ]}
         actions={[{ label: 'Delete', onPress: jest.fn() }]}
       />,
     );

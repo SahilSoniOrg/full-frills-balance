@@ -225,6 +225,8 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
+  /** Set when either report source failed; the view keeps the last data under the error. */
+  hasError: boolean;
   hasUnvaluedEntries: boolean;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
@@ -245,6 +247,7 @@ export function useReportsViewModel(): ReportsViewModel {
     incomeVsExpense,
     previousIncomeVsExpense,
     loading,
+    error,
     targetCurrency,
     dateRange,
     periodFilter,
@@ -482,6 +485,7 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
     loading,
+    hasError: !!error,
     hasUnvaluedEntries,
     overview,
     spending,

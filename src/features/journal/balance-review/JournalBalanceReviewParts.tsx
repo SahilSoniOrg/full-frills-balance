@@ -1,4 +1,6 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Box, Stack } from '@/src/design-system';
 import {
   evaluateJournalBalance,
@@ -30,13 +32,24 @@ export interface BalanceRateLabels {
 
 type JournalLineDraft = JournalBalanceLineEdit & { rateSource: BalanceRateSource };
 
-function balanceMessage(evaluation: JournalBalanceEvaluation): string {
+/** Exact amounts stay unrounded here; privacy mode replaces the number with the mask. */
+export function useMaskAmount(): (amount: string) => string {
+  const isPrivacyMode = useEffectivePrivacyMode();
+  return amount => (isPrivacyMode ? AppConfig.privacyMask : amount);
+}
+
+function balanceMessage(
+  evaluation: JournalBalanceEvaluation,
+  maskAmount: (amount: string) => string,
+): string {
   if (evaluation.isBalanced) return 'Debits and credits match.';
   const [blockingIssue] = getValuationIssues(evaluation);
   if (blockingIssue) return blockingIssue.message;
-  return `Out by ${formatRoundedAmount(
-    fromMinorUnits(Math.abs(evaluation.differenceMinorUnits), evaluation.journalPrecision),
-    evaluation.journalPrecision,
+  return `Out by ${maskAmount(
+    formatRoundedAmount(
+      fromMinorUnits(Math.abs(evaluation.differenceMinorUnits), evaluation.journalPrecision),
+      evaluation.journalPrecision,
+    ),
   )} ${evaluation.journalCurrency}.`;
 }
 
@@ -70,14 +83,13 @@ export function BalancePreview({
   title: string;
   evaluation: JournalBalanceEvaluation;
 }) {
+  const maskAmount = useMaskAmount();
   const precision = evaluation.journalPrecision;
-  const debit = formatRoundedAmount(
-    fromMinorUnits(evaluation.debitTotalMinorUnits, precision),
-    precision,
+  const debit = maskAmount(
+    formatRoundedAmount(fromMinorUnits(evaluation.debitTotalMinorUnits, precision), precision),
   );
-  const credit = formatRoundedAmount(
-    fromMinorUnits(evaluation.creditTotalMinorUnits, precision),
-    precision,
+  const credit = maskAmount(
+    formatRoundedAmount(fromMinorUnits(evaluation.creditTotalMinorUnits, precision), precision),
   );
   return (
     <Box padding="sm" borderRadius="md" background="surfaceSecondary">
@@ -89,7 +101,7 @@ export function BalancePreview({
           {`Debit ${debit} · Credit ${credit} ${evaluation.journalCurrency}`}
         </AppText>
         <AppText variant="body" color={evaluation.isBalanced ? 'primary' : 'error'}>
-          {balanceMessage(evaluation)}
+          {balanceMessage(evaluation, maskAmount)}
         </AppText>
       </Stack>
     </Box>
@@ -136,6 +148,7 @@ export function BalanceReviewLineList({
   journalCurrency: string;
   lines: readonly JournalBalanceReviewLine[];
 }) {
+  const maskAmount = useMaskAmount();
   return (
     <>
       {lines.map(line => {
@@ -148,7 +161,7 @@ export function BalanceReviewLineList({
                 {`${lineLabel(line)} · ${line.currency}`}
               </AppText>
               <AppText variant="body">
-                {`${line.amount} ${line.currency}`}
+                {`${maskAmount(String(line.amount))} ${line.currency}`}
                 {crossCurrency && displayRate !== undefined
                   ? ` · ${line.proposedExchangeRate === undefined ? 'rate' : 'suggested rate'} ${displayRate} ${journalCurrency}`
                   : ''}

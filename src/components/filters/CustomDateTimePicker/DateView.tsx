@@ -1,5 +1,5 @@
 import { Icon, AppText, IconButton, PressScaleTouchable } from '@/src/components/core';
-import { Opacity, Shape, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
@@ -49,6 +49,7 @@ export function DateView({ date, onChange }: DateViewProps) {
         <IconButton
           name={Icon.ChevronLeft}
           onPress={handlePrevMonth}
+          accessibilityLabel={AppConfig.strings.common.previousMonth}
           variant="surface"
           iconColor={theme.textSecondary}
           size={32}
@@ -61,6 +62,7 @@ export function DateView({ date, onChange }: DateViewProps) {
         <IconButton
           name={Icon.ChevronRight}
           onPress={handleNextMonth}
+          accessibilityLabel={AppConfig.strings.common.nextMonth}
           variant="surface"
           iconColor={theme.textSecondary}
           size={32}

@@ -13,7 +13,7 @@ export interface ScreenHeaderActionItem {
   size?: number;
   testID?: string;
   disabled?: boolean;
-  accessibilityLabel?: string;
+  accessibilityLabel: string;
   accessibilityHint?: string;
 }
 

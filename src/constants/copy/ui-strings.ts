@@ -16,6 +16,11 @@ export const UI_STRINGS = {
     listLoadError: 'Could not load entries',
     listLoadErrorSubtitle: 'Try again to reload this list.',
     retry: 'Retry',
+    close: 'Close',
+    back: 'Back',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    clearFilters: 'Clear filters',
     loading: 'Loading…',
     loadingMore: 'Loading…',
     iconPickerTitle: 'Select Icon',
@@ -351,6 +356,7 @@ export const UI_STRINGS = {
   },
   reports: {
     title: 'Reports',
+    loadError: "We couldn't build this report. Pull to refresh or try again.",
     tabs: {
       overview: 'Overview',
       spending: 'Spending',
