@@ -3,10 +3,10 @@ import { RestartRequiredScreen } from '@/src/features/dev';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
 import { RoutePresentationProvider } from '@/src/navigation/RoutePresentationContext';
-import { ROUTE_MANIFEST } from '@/src/navigation/routeManifest';
+import { ROUTE_MANIFEST, type RoutePresentation } from '@/src/navigation/routeManifest';
 import { WorkplaceBoundScreen } from '@/src/navigation/WorkplaceBoundScreen';
 import { Stack } from 'expo-router';
-import type { ReactNode } from 'react';
+import type { ReactElement } from 'react';
 
 /**
  * Orchestrates the main app content based on onboarding and restart state.
@@ -35,28 +35,12 @@ export function NavigationStack() {
       screenOptions={{
         headerShown: false,
       }}
+      screenLayout={StackRouteLayout}
     >
       {stackRoutes.map(route => (
         <Stack.Screen
           key={route.name}
           name={route.name}
-          {...(route.presentation === 'detail'
-            ? {
-                layout: ({ children }: { children: ReactNode }) => (
-                  <RoutePresentationProvider presentation="detail">
-                    <RemountOnWorkplace>{children}</RemountOnWorkplace>
-                  </RoutePresentationProvider>
-                ),
-              }
-            : route.presentation === 'composer'
-              ? {
-                  layout: ({ children }: { children: ReactNode }) => (
-                    <RoutePresentationProvider presentation="composer">
-                      <WorkplaceBoundScreen>{children}</WorkplaceBoundScreen>
-                    </RoutePresentationProvider>
-                  ),
-                }
-              : {})}
           options={{
             headerShown: false,
             ...(route.presentation === 'composer'
@@ -79,4 +63,34 @@ export function NavigationStack() {
       ))}
     </Stack>
   );
+}
+
+const PRESENTATION_BY_ROUTE = new Map<string, RoutePresentation>(
+  ROUTE_MANIFEST.map(route => [route.name, route.presentation]),
+);
+
+/** expo-router drops per-screen `layout`, so per-presentation wrappers go through the navigator. */
+function StackRouteLayout({
+  route,
+  children,
+}: {
+  route: { name: string };
+  children: ReactElement;
+}) {
+  const presentation = PRESENTATION_BY_ROUTE.get(route.name);
+  if (presentation === 'detail') {
+    return (
+      <RoutePresentationProvider presentation="detail">
+        <RemountOnWorkplace>{children}</RemountOnWorkplace>
+      </RoutePresentationProvider>
+    );
+  }
+  if (presentation === 'composer') {
+    return (
+      <RoutePresentationProvider presentation="composer">
+        <WorkplaceBoundScreen>{children}</WorkplaceBoundScreen>
+      </RoutePresentationProvider>
+    );
+  }
+  return children;
 }
