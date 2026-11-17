@@ -21,7 +21,8 @@ test('Account Edit opens SMS recognition management and saves a matcher', async 
   await page.getByTestId('account-matcher-sender').fill('HDFCBK');
   await page.getByTestId('account-matcher-advanced-toggle').click();
   await page.getByTestId('account-matcher-fragments').fill('debited\nAvbl bal');
-  await page.getByTestId('submit-footer-button').click();
+  // The form and its matcher sheet both render a submit footer; the sheet's is the visible one.
+  await page.getByTestId('submit-footer-button').filter({ visible: true }).click();
 
   await expect(page.getByTestId('account-matchers-section')).toContainText('HDFCBK');
 });
