@@ -64,6 +64,26 @@ describe('account commands (integration)', () => {
     expect(journals.some(j => j.description?.includes('Initial Balance'))).toBe(true);
   });
 
+  it.each([AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY])(
+    'creates and edits a %s with a negative balance',
+    async accountType => {
+      const created = await createAccount(WP, {
+        name: `Negative ${accountType}`,
+        accountType,
+        currencyCode: 'USD',
+        initialBalance: -500,
+        workplaceId: WP,
+      });
+      expect((await balanceReadService.getAccountBalance(created.id, WP)).balance).toBe(-500);
+
+      await adjustAccountBalance(WP, created, -1200);
+      expect((await balanceReadService.getAccountBalance(created.id, WP)).balance).toBe(-1200);
+
+      await adjustAccountBalance(WP, created, 300);
+      expect((await balanceReadService.getAccountBalance(created.id, WP)).balance).toBe(300);
+    },
+  );
+
   it('create with opening balance uses one write', async () => {
     const writeSpy = jest.spyOn(database, 'write');
     const batchSpy = jest.spyOn(database, 'batch');
