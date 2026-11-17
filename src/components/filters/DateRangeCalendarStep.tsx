@@ -1,6 +1,6 @@
 import { CustomDateTimePicker } from '@/src/components/filters/CustomDateTimePicker';
 import { Icon, AppIcon, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
@@ -31,15 +31,11 @@ export function DateRangeCalendarStep({
           variant="surface"
           iconColor={theme.textSecondary}
         />
-        <View style={styles.headerCopy}>
-          <AppText variant="heading">{mode === 'START_DATE' ? 'Start Date' : 'End Date'}</AppText>
-          <AppText variant="caption" color="secondary">
-            {mode === 'START_DATE'
-              ? 'Choose where the range begins.'
-              : 'Choose where the range ends.'}
-          </AppText>
-        </View>
-        <View style={{ width: Size.xl }} />
+        <AppText variant="caption" color="secondary" style={styles.headerCopy}>
+          {mode === 'START_DATE'
+            ? 'Choose where the range begins.'
+            : 'Choose where the range ends.'}
+        </AppText>
       </View>
 
       <View
@@ -70,13 +66,12 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
   headerCopy: {
     flex: 1,
-    gap: Spacing.xs,
   },
   selectedDatePill: {
     flexDirection: 'row',

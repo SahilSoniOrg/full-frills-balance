@@ -1,11 +1,9 @@
-import { Icon, AppButton, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/design-system/colorMath';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppButton, AppText } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { AppConfig } from '@/src/constants';
 import { PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import type { Dayjs } from 'dayjs';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
+import { StyleSheet } from 'react-native';
 import { DateRangeCalendarStep } from './DateRangeCalendarStep';
 import { DateRangeMenuContent } from './DateRangeMenuContent';
 
@@ -29,6 +27,12 @@ export interface DateRangePickerViewProps {
   handleApply: () => void;
 }
 
+const TITLE_BY_VIEW: Record<PickerView, string> = {
+  MENU: 'Choose Range',
+  START_DATE: 'Start Date',
+  END_DATE: 'End Date',
+};
+
 export function DateRangePickerView({
   visible,
   onClose,
@@ -46,139 +50,58 @@ export function DateRangePickerView({
   handleDateSelect,
   handleApply,
 }: DateRangePickerViewProps) {
-  const { theme } = useTheme();
-  const { bottomSpacing } = useWindowSafeAreaLayout();
-
   return (
-    <Modal
+    <ModalSurface
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={() => {
-        if (view !== 'MENU') setView('MENU');
-        else onClose();
-      }}
+      title={TITLE_BY_VIEW[view]}
+      onClose={onClose}
+      onRequestClose={view === 'MENU' ? onClose : () => setView('MENU')}
+      position="bottomSheet"
+      scrollable={false}
+      contentStyle={styles.body}
+      accessibilityCloseLabel={AppConfig.strings.common.close}
+      footer={
+        view === 'MENU' ? (
+          <AppButton onPress={handleApply} variant="primary" size="lg">
+            Apply Range
+          </AppButton>
+        ) : undefined
+      }
     >
-      <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
-        <Pressable
-          style={[
-            styles.content,
-            {
-              backgroundColor: theme.background,
-              paddingBottom: bottomSpacing.pickerSheet,
-              borderTopColor: withOpacity(theme.border, Opacity.medium),
-            },
-          ]}
-          onPress={event => event.stopPropagation()}
-        >
-          {view === 'MENU' ? (
-            <>
-              <View style={styles.dragHandleContainer}>
-                <View
-                  style={[
-                    styles.dragHandle,
-                    { backgroundColor: withOpacity(theme.textSecondary, Opacity.muted) },
-                  ]}
-                />
-              </View>
-
-              <View style={styles.header}>
-                <View style={styles.headerCopy}>
-                  <AppText variant="heading">Choose Range</AppText>
-                  <AppText variant="caption" color="secondary" style={styles.headerSubtitle}>
-                    Pick a month, custom dates, or a rolling window.
-                  </AppText>
-                </View>
-                <IconButton
-                  name={Icon.Close}
-                  onPress={onClose}
-                  accessibilityLabel={AppConfig.strings.common.close}
-                  variant="surface"
-                  iconColor={theme.textSecondary}
-                />
-              </View>
-            </>
-          ) : null}
-
-          <View style={{ flex: 1 }}>
-            {view === 'MENU' ? (
-              <DateRangeMenuContent
-                draftFilter={draftFilter}
-                customRange={customRange}
-                lastNValue={lastNValue}
-                lastNUnit={lastNUnit}
-                monthList={monthList}
-                onSelectMonth={handleSelectMonth}
-                onSelectCustom={handleSelectCustom}
-                onSelectAllTime={handleSelectAllTime}
-                onShowStartDate={() => setView('START_DATE')}
-                onShowEndDate={() => setView('END_DATE')}
-                onUpdateLastN={updateLastN}
-              />
-            ) : (
-              <DateRangeCalendarStep
-                mode={view}
-                date={view === 'START_DATE' ? customRange.startDate : customRange.endDate}
-                onBack={() => setView('MENU')}
-                onSelect={handleDateSelect}
-              />
-            )}
-          </View>
-
-          {view === 'MENU' ? (
-            <View
-              style={[styles.footer, { borderTopColor: withOpacity(theme.border, Opacity.heavy) }]}
-            >
-              <AppButton onPress={handleApply} variant="primary" size="lg">
-                Apply Range
-              </AppButton>
-            </View>
-          ) : null}
-        </Pressable>
-      </Pressable>
-    </Modal>
+      {view === 'MENU' ? (
+        <AppText variant="caption" color="secondary">
+          Pick a month, custom dates, or a rolling window.
+        </AppText>
+      ) : null}
+      {view === 'MENU' ? (
+        <DateRangeMenuContent
+          draftFilter={draftFilter}
+          customRange={customRange}
+          lastNValue={lastNValue}
+          lastNUnit={lastNUnit}
+          monthList={monthList}
+          onSelectMonth={handleSelectMonth}
+          onSelectCustom={handleSelectCustom}
+          onSelectAllTime={handleSelectAllTime}
+          onShowStartDate={() => setView('START_DATE')}
+          onShowEndDate={() => setView('END_DATE')}
+          onUpdateLastN={updateLastN}
+        />
+      ) : (
+        <DateRangeCalendarStep
+          mode={view}
+          date={view === 'START_DATE' ? customRange.startDate : customRange.endDate}
+          onBack={() => setView('MENU')}
+          onSelect={handleDateSelect}
+        />
+      )}
+    </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  body: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  content: {
-    borderTopLeftRadius: Shape.radius.xxl,
-    borderTopRightRadius: Shape.radius.xxl,
-    borderTopWidth: 1,
-    height: Layout.modal.defaultHeight,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-  },
-  dragHandleContainer: {
-    alignItems: 'center',
-    paddingBottom: Spacing.md,
-  },
-  dragHandle: {
-    width: Layout.modal.dragHandle.width + 16,
-    height: Layout.modal.dragHandle.height,
-    borderRadius: Layout.modal.dragHandle.borderRadius,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    gap: Spacing.md,
-  },
-  headerCopy: {
-    flex: 1,
-    paddingTop: Spacing.xs,
-  },
-  headerSubtitle: {
-    marginTop: Spacing.xs,
-    lineHeight: Typography.sizes.sm * 1.5,
-  },
-  footer: {
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
+    minHeight: 0,
   },
 });

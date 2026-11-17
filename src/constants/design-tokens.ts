@@ -934,12 +934,6 @@ export const Layout = {
     minHeight: 110,
   },
   modal: {
-    defaultHeight: '85%',
-    dragHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-    },
     /** Scrollable list body inside confirmation / cascade sheets. */
     listMaxHeight: 360,
   },

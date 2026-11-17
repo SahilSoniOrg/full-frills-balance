@@ -1,15 +1,13 @@
 import { DateView } from '@/src/components/filters/CustomDateTimePicker/DateView';
 import { TimeView } from '@/src/components/filters/CustomDateTimePicker/TimeView';
-import { Icon, AppButton, AppSegmentedControl, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { Separator } from '@/src/design-system';
+import { AppButton, AppSegmentedControl, AppText } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { AppConfig } from '@/src/constants';
+import { Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 interface DateTimePickerModalProps {
   visible: boolean;
@@ -23,6 +21,16 @@ interface DateTimePickerModalProps {
   weekday?: number;
 }
 
+const DAYS = [
+  { id: 1, label: 'S' },
+  { id: 2, label: 'M' },
+  { id: 3, label: 'T' },
+  { id: 4, label: 'W' },
+  { id: 5, label: 'T' },
+  { id: 6, label: 'F' },
+  { id: 7, label: 'S' },
+] as const;
+
 export function DateTimePickerModal({
   visible,
   date,
@@ -34,22 +42,10 @@ export function DateTimePickerModal({
   showWeekdayPicker = false,
   weekday = 1,
 }: DateTimePickerModalProps) {
-  const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
-  const { bottomSpacing } = useWindowSafeAreaLayout();
 
   const [selectedValue, setSelectedValue] = useState(() => dayjs(`${date}T${time}`));
   const [selectedWeekday, setSelectedWeekday] = useState(weekday);
-
-  const days = [
-    { id: 1, label: 'S' },
-    { id: 2, label: 'M' },
-    { id: 3, label: 'T' },
-    { id: 4, label: 'W' },
-    { id: 5, label: 'T' },
-    { id: 6, label: 'F' },
-    { id: 7, label: 'S' },
-  ] as const;
 
   useEffect(() => {
     if (!visible) return;
@@ -67,109 +63,41 @@ export function DateTimePickerModal({
     onClose();
   };
 
-  const handleDateChange = (newDate: dayjs.Dayjs) => {
-    setSelectedValue(newDate);
-  };
-
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
-        <Pressable
-          style={[
-            styles.content,
-            {
-              backgroundColor: theme.background,
-              paddingBottom: bottomSpacing.pickerSheet,
-            },
-          ]}
-          onPress={e => e.stopPropagation()}
-        >
-          <View style={styles.header}>
-            <IconButton
-              name={Icon.Close}
-              onPress={onClose}
-              accessibilityLabel={AppConfig.strings.common.close}
-            />
-            <View style={styles.headerTitle}>
-              <AppText variant="subheading" weight="bold">
-                {hideDate ? 'Select Time' : hideTime ? 'Select Date' : 'Date & Time'}
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                {hideDate
-                  ? formatClockTime(selectedValue, resolvedHourCycle)
-                  : formatDateKeepingPattern(selectedValue, 'DD MMM YYYY', resolvedHourCycle)}
-              </AppText>
-            </View>
-            <View style={{ width: Size.md + Spacing.md }} />
-          </View>
-
-          <View style={styles.pickerContainer}>
-            {!hideDate && <DateView date={selectedValue} onChange={handleDateChange} />}
-            {!hideTime && (
-              <View style={!hideDate ? { marginTop: Spacing.md } : null}>
-                <TimeView date={selectedValue} onChange={handleDateChange} />
-              </View>
-            )}
-          </View>
-
-          {showWeekdayPicker && (
-            <View style={{ paddingHorizontal: Spacing.md, paddingBottom: Spacing.md }}>
-              <AppText
-                variant="caption"
-                weight="semibold"
-                color="secondary"
-                style={{ marginBottom: Spacing.xs, marginLeft: Spacing.xs }}
-              >
-                Select Day of Week
-              </AppText>
-              <AppSegmentedControl
-                options={days.map(d => ({ id: d.id.toString(), label: d.label }))}
-                value={selectedWeekday.toString()}
-                onChange={(id: string) => setSelectedWeekday(parseInt(id, 10))}
-                minWidth={44}
-                flex={true}
-              />
-            </View>
-          )}
-
-          <Separator style={styles.divider} />
-
-          <View style={{ paddingHorizontal: Spacing.lg }}>
-            <AppButton variant="primary" onPress={handleApply}>
-              {hideDate ? 'Set Time' : hideTime ? 'Set Date' : 'Set Date & Time'}
-            </AppButton>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <ModalSurface
+      visible={visible}
+      title={hideDate ? 'Select Time' : hideTime ? 'Select Date' : 'Date & Time'}
+      onClose={onClose}
+      position="bottomSheet"
+      fixedHeight={false}
+      accessibilityCloseLabel={AppConfig.strings.common.close}
+      footer={
+        <AppButton variant="primary" onPress={handleApply}>
+          {hideDate ? 'Set Time' : hideTime ? 'Set Date' : 'Set Date & Time'}
+        </AppButton>
+      }
+    >
+      <AppText variant="caption" color="secondary">
+        {hideDate
+          ? formatClockTime(selectedValue, resolvedHourCycle)
+          : formatDateKeepingPattern(selectedValue, 'DD MMM YYYY', resolvedHourCycle)}
+      </AppText>
+      {!hideDate && <DateView date={selectedValue} onChange={setSelectedValue} />}
+      {!hideTime && <TimeView date={selectedValue} onChange={setSelectedValue} />}
+      {showWeekdayPicker && (
+        <Stack gap="xs">
+          <AppText variant="caption" weight="semibold" color="secondary">
+            Select Day of Week
+          </AppText>
+          <AppSegmentedControl
+            options={DAYS.map(d => ({ id: d.id.toString(), label: d.label }))}
+            value={selectedWeekday.toString()}
+            onChange={(id: string) => setSelectedWeekday(parseInt(id, 10))}
+            minWidth={44}
+            flex={true}
+          />
+        </Stack>
+      )}
+    </ModalSurface>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  content: {
-    borderTopLeftRadius: Shape.radius.xxl,
-    borderTopRightRadius: Shape.radius.xxl,
-    paddingTop: Spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  headerTitle: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  pickerContainer: {
-    paddingHorizontal: Spacing.md,
-  },
-  divider: {
-    marginVertical: Spacing.md,
-  },
-});

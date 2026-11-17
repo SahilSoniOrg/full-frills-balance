@@ -21,6 +21,8 @@ interface ModalSurfaceProps {
   visible: boolean;
   title: string;
   onClose: () => void;
+  /** Android back / iOS swipe-dismiss; defaults to `onClose`. */
+  onRequestClose?: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxHeightPercent?: number;
@@ -44,6 +46,7 @@ export function ModalSurface({
   visible,
   title,
   onClose,
+  onRequestClose,
   children,
   footer,
   maxHeightPercent = AppConfig.layout.popupModalHeightPercent,
@@ -173,7 +176,7 @@ export function ModalSurface({
         visible={visible}
         transparent
         animationType={reduceMotion ? 'none' : animationType}
-        onRequestClose={onClose}
+        onRequestClose={onRequestClose ?? onClose}
         onDismiss={onDismiss}
       >
         {content}
