@@ -21,6 +21,16 @@
  * - BANK_ENTRY: an SMS entry. `credit` is money in, so it is +.
  * - DELTA: a numeric change to a stored value. The sign follows the number.
  * - UNSIGNED: magnitudes only.
+ *
+ * Colours, by what the colour means:
+ * - Signed amounts: income for +, expense for −, neutral for zero. Use
+ *   `signColorKey`. Never success or error, which are status colours.
+ * - Status: error or warning for a state, such as a shortfall, an overdue
+ *   bill, or an over-budget category. This is not the sign of an amount.
+ * - Category: asset, liability, equity for account types, such as net worth
+ *   or an account's type colour.
+ * - Type: the semantic colour of a journal type, for badges and icons.
+ * - Neutral: text and secondary for unsigned magnitudes.
  */
 import { AccountType, JournalDisplayType, SemanticType, TransactionType } from '@/src/types/enums';
 import { balanceSign, type BalanceSign } from '@/src/domain/accounting/BalanceEffects';
