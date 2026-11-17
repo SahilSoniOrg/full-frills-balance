@@ -14,7 +14,7 @@ import {
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix, statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendChartProps {
   projection: SafeToSpendProjection;
@@ -236,7 +236,11 @@ export const SafeToSpendChart = ({
                     )}
                   </Inline>
 
-                  <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                  <AppText
+                    variant="body"
+                    weight="bold"
+                    color={point.y < 0 ? statusTone('overdrawn') : 'primary'}
+                  >
                     {formatSts(point.y, currencyCode)}
                   </AppText>
 
@@ -255,8 +259,8 @@ export const SafeToSpendChart = ({
                           }}
                         >
                           <Inline gap="xs" alignItems="center">
-                            <AppIcon name={Icon.Flame} size={12} color={theme.error} />
-                            <AppText variant="caption" weight="bold" color="error">
+                            <AppIcon name={Icon.Flame} size={12} color={theme.expense} />
+                            <AppText variant="caption" weight="bold" color={signColorKey(-1)}>
                               Daily Burn: {formatSts(point.dailyBurn!, currencyCode)}
                             </AppText>
                           </Inline>
@@ -276,8 +280,8 @@ export const SafeToSpendChart = ({
                         >
                           {plannedInflowTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name={Icon.Calendar} size={12} color={theme.success} />
-                              <AppText variant="caption" weight="bold" color="success">
+                              <AppIcon name={Icon.Calendar} size={12} color={theme.income} />
+                              <AppText variant="caption" weight="bold" color="income">
                                 Planned Inflow:{' '}
                                 {formatSts(plannedInflowTotal, currencyCode, {
                                   prefix: signPrefix(1),
@@ -287,8 +291,8 @@ export const SafeToSpendChart = ({
                           )}
                           {toBeSpentTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name={Icon.CreditCard} size={12} color={theme.error} />
-                              <AppText variant="caption" weight="bold" color="error">
+                              <AppIcon name={Icon.CreditCard} size={12} color={theme.expense} />
+                              <AppText variant="caption" weight="bold" color="expense">
                                 To Be Spent:{' '}
                                 {formatSts(toBeSpentTotal, currencyCode, {
                                   prefix: signPrefix(-1),
@@ -320,14 +324,14 @@ export const SafeToSpendChart = ({
                           else if (isCcDate) iconName = Icon.Calendar;
 
                           const color = isInflow
-                            ? theme.success
+                            ? theme.income
                             : detail.context === 'LIABILITY' ||
                                 detail.context === 'BUDGET' ||
                                 detail.context === 'RESOLVED' ||
                                 detail.context === 'PLANNED' ||
                                 detail.context === 'PLANNED_PAYMENT' ||
                                 detail.context === 'PLANNED_JOURNAL'
-                              ? theme.error
+                              ? theme.expense
                               : theme.textSecondary;
 
                           return (

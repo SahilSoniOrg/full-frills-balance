@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { findSafeToSpendChartPoint, type ClarityChartPoint } from './projectCashClarityDraft';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signPrefix, statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 export function ClarityChart({
   points,
@@ -103,7 +103,7 @@ export function ClarityChart({
                   formatStyle="compact"
                   variant="body"
                   weight="semibold"
-                  color={point.y < 0 ? 'error' : 'primary'}
+                  color={point.y < 0 ? statusTone('overdrawn') : 'primary'}
                 />
                 {point.events.map((event, eventIndex) => (
                   <Box key={`${event.name}-${eventIndex}`}>

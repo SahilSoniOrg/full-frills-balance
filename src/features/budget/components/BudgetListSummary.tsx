@@ -8,6 +8,7 @@ import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import dayjs from 'dayjs';
+import { statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 export function BudgetListSummary({
   summary,
@@ -50,7 +51,7 @@ export function BudgetListSummary({
               lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
               hug: true,
             }}
-            color={usage.remaining < 0 ? 'error' : 'text'}
+            color={usage.remaining < 0 ? statusTone('overBudget') : 'text'}
           />
           <AppText variant="caption" color="secondary">
             {usage.remaining < 0

@@ -7,7 +7,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
-import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix, statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 interface ReportSummaryCardProps {
   summary: ReportSummaryVm;
@@ -228,10 +228,10 @@ function getSignPrefix(amount: number): string | undefined {
 function getComparisonColor(
   amount: number,
   kind: 'income' | 'expense' | 'netFlow',
-): 'success' | 'error' | 'secondary' {
+): ComponentVariant {
   if (amount === 0) return 'secondary';
   const isFavorable = kind === 'expense' ? amount < 0 : amount > 0;
-  return isFavorable ? 'success' : 'error';
+  return statusTone(isFavorable ? 'favorable' : 'unfavorable');
 }
 
 const styles = StyleSheet.create({

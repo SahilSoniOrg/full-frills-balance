@@ -7,6 +7,7 @@ import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { IncomeStepBreakdown, TimingGroupedBreakdown } from './explanation';
+import { signColorKey } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendLegendModalProps {
   visible: boolean;
@@ -203,7 +204,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                       • Day {item.dayOffset}
                     </AppText>
                   </View>
-                  <AppText variant="body" weight="bold" color="error">
+                  <AppText variant="body" weight="bold" color={signColorKey(-1)}>
                     {formatSts(item.amount, currencyCode)}
                   </AppText>
                 </View>
@@ -219,7 +220,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               <AppText
                 variant="body"
                 weight="bold"
-                color="error"
+                color={signColorKey(-1)}
                 style={{ fontSize: Typography.sizes.lg }}
               >
                 {formatSts(committedLiabilities, currencyCode)}

@@ -8,6 +8,7 @@ import { AppConfig, JOURNAL_DETAILS_LIMITS, Spacing } from '@/src/constants';
 import { Inline, Stack } from '@/src/design-system';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import type { JournalBudgetModel } from '../../journalDetailsPresentation';
+import { statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 export function JournalBudgetImpact({
   budget: { budgets, error, onRetry },
@@ -61,7 +62,13 @@ export function JournalBudgetImpact({
                 </AppText>
                 <AppText
                   variant="caption"
-                  color={usage.hasUnvaluedEntries ? 'warning' : over ? 'error' : 'secondary'}
+                  color={
+                    usage.hasUnvaluedEntries
+                      ? statusTone('unvalued')
+                      : over
+                        ? statusTone('overBudget')
+                        : 'secondary'
+                  }
                   style={{ flexShrink: 1 }}
                 >
                   {budget.periodLabel ? `${budget.periodLabel} · ` : ''}
@@ -71,7 +78,7 @@ export function JournalBudgetImpact({
               {!usage.hasUnvaluedEntries ? (
                 <BudgetProgressBar
                   progress={privateMode ? 0 : usage.usagePercent * 100}
-                  statusColor={over ? 'error' : 'primary'}
+                  statusColor={over ? statusTone('overBudget') : 'primary'}
                   accessibilityLabel={headline}
                 />
               ) : null}

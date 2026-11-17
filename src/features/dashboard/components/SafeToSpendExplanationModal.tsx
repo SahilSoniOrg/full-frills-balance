@@ -22,7 +22,7 @@ import {
 } from './explanation';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
 import { SafeToSpendForecastDetails } from './SafeToSpendForecastDetails';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signPrefix, statusTone } from '@/src/domain/accounting/presentationPolicy';
 
 function parseFormulaItem(
   item: string | ((days: number) => string) | undefined,
@@ -229,7 +229,9 @@ export const SafeToSpendExplanationModal = ({
                     )
               }
               trailing={
-                <ListRow.Value color={explanation.minimumDatedBalance < 0 ? 'error' : undefined}>
+                <ListRow.Value
+                  color={explanation.minimumDatedBalance < 0 ? statusTone('shortfall') : undefined}
+                >
                   {money(explanation.minimumDatedBalance)}
                 </ListRow.Value>
               }
@@ -242,7 +244,9 @@ export const SafeToSpendExplanationModal = ({
               <ListRow
                 title={constraint.projectedShortfall}
                 trailing={
-                  <ListRow.Value color="error">{money(explanation.shortfall)}</ListRow.Value>
+                  <ListRow.Value color={statusTone('shortfall')}>
+                    {money(explanation.shortfall)}
+                  </ListRow.Value>
                 }
               />
             )}
@@ -382,7 +386,7 @@ export const SafeToSpendExplanationModal = ({
             variant="title"
             fontRole="numeric"
             weight="semibold"
-            color={isOverCommitted ? 'error' : 'primary'}
+            color={isOverCommitted ? statusTone('shortfall') : 'primary'}
             tabular
           >
             {isOverCommitted

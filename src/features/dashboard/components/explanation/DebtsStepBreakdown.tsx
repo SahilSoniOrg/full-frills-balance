@@ -5,7 +5,7 @@ import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpend
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { signColorKey, signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface DebtsStepBreakdownProps {
   debt: SafeToSpendViewModel['debt'];
@@ -70,7 +70,7 @@ export const DebtsStepBreakdown = ({
                 {acc.type === 'FALLBACK' ? labels.unplannedBalance : labels.scheduledCommitment}
               </AppText>
             </View>
-            <AppText variant="caption" weight="bold" color="error" tabular>
+            <AppText variant="caption" weight="bold" color={signColorKey(-1)} tabular>
               {formatSts(acc.amount, currencyCode, { prefix: signPrefix(-1) })}
             </AppText>
           </View>

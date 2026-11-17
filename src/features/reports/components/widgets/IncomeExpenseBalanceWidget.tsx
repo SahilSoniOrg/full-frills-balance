@@ -4,6 +4,7 @@ import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
+import { signColorKey } from '@/src/domain/accounting/presentationPolicy';
 
 const BAR_SPACER_WIDTH = Spacing.xs;
 const BALANCE_BAR_HEIGHT = Spacing.sm;
@@ -36,7 +37,7 @@ export function IncomeExpenseBalanceWidget({
             amount={income}
             currencyCode={currencyCode}
             variant="subheading"
-            style={{ color: theme.success }}
+            color={signColorKey(1)}
           />
         </View>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -48,14 +49,14 @@ export function IncomeExpenseBalanceWidget({
             amount={expense}
             currencyCode={currencyCode}
             variant="subheading"
-            style={{ color: theme.error }}
+            color={signColorKey(-1)}
           />
         </View>
       </View>
       <View style={styles.barContainer}>
-        <View style={[styles.bar, { flex: incomeBarFlex, backgroundColor: theme.success }]} />
+        <View style={[styles.bar, { flex: incomeBarFlex, backgroundColor: theme.income }]} />
         <View style={{ width: BAR_SPACER_WIDTH }} />
-        <View style={[styles.bar, { flex: expenseBarFlex, backgroundColor: theme.error }]} />
+        <View style={[styles.bar, { flex: expenseBarFlex, backgroundColor: theme.expense }]} />
       </View>
     </ReportChartCard>
   );
