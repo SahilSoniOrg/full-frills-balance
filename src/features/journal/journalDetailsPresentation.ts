@@ -1,5 +1,6 @@
 import { isValidIconName, type IconName, type ListRowItem } from '@/src/components/core';
 import { AppConfig, JOURNAL_DETAILS_DATE_PATTERN, Size, type ColorKey } from '@/src/constants';
+import type { FlowSign } from '@/src/domain/accounting/presentationPolicy';
 import {
   getValuationIssues,
   isJournalFullyValued,
@@ -20,6 +21,7 @@ import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 import dayjs from 'dayjs';
 import type { JournalHistoryEvent } from './journalHistoryPresentation';
 import type { JournalSourceInfo } from './journalSourcePresentation';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 export interface JournalSplitItemViewModel {
   id: string;
@@ -62,7 +64,8 @@ export interface JournalSummaryModel {
   statusVariant: 'income' | 'primary' | 'default';
   /** Undefined when some line could not be valued in the journal currency. */
   amount?: number;
-  amountPrefix: '+' | '-' | '';
+  /** Cash-flow prefix shared with the journal list rows: `+ `, `− ` or empty. */
+  amountPrefix: ReturnType<typeof signPrefix>;
   amountColor: 'income' | 'expense' | 'text';
   currencyCode: string;
   dateLine: string;
@@ -223,15 +226,15 @@ export function buildJournalSummary(
   journal: PlainJournal,
   context: {
     evaluation?: JournalBalanceEvaluation;
+    /** Cash-flow sign of the journal's income and expense lines. */
+    flowSign: FlowSign;
     entryCount: number;
     today: number;
     hourCycle: ResolvedHourCycle;
   },
 ): JournalSummaryModel {
   const strings = AppConfig.strings.journalDetails;
-  const { evaluation } = context;
-  const isIncome = journal.displayType === JournalDisplayType.INCOME;
-  const isExpense = journal.displayType === JournalDisplayType.EXPENSE;
+  const { evaluation, flowSign } = context;
   return {
     description: journal.description || strings.noDescription,
     statusLabel: strings.statuses[journal.status],
@@ -245,8 +248,8 @@ export function buildJournalSummary(
       evaluation && isJournalFullyValued(evaluation)
         ? fromMinorUnits(evaluation.debitTotalMinorUnits, evaluation.journalPrecision)
         : undefined,
-    amountPrefix: isIncome ? '+' : isExpense ? '-' : '',
-    amountColor: isIncome ? 'income' : isExpense ? 'expense' : 'text',
+    amountPrefix: flowSign > 0 ? '+ ' : flowSign < 0 ? '− ' : '',
+    amountColor: flowSign > 0 ? 'income' : flowSign < 0 ? 'expense' : 'text',
     currencyCode: journal.currencyCode,
     dateLine: formatJournalDateLine({
       journalDate: journal.journalDate,

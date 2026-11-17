@@ -42,7 +42,8 @@ const JournalEntryCardComponent = ({
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
   const typeIconBackground = blendColors(typeColor, theme.surface, Opacity.soft);
   const typeIconColor = getReadableColor(typeColor, typeIconBackground, 3);
-  const amountColor = getReadableColor(typeColor, theme.surface, 4.5);
+  const amountBaseColor = theme[presentation.amountColorKey ?? 'text'] as string;
+  const amountColor = getReadableColor(amountBaseColor, theme.surface, 4.5);
   const typeBadgeOpacity = themeMode === 'dark' ? Opacity.muted : Opacity.soft;
   const typeBadgeTextColor = getReadableColor(
     typeColor,

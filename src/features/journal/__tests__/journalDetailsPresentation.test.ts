@@ -1,7 +1,17 @@
-import { buildJournalEntries, nextJournalOccurrence } from '../journalDetailsPresentation';
+import {
+  buildJournalEntries,
+  buildJournalSummary,
+  nextJournalOccurrence,
+} from '../journalDetailsPresentation';
 import { journalDetailLeg, journalDetailEvaluation } from '../testing/journalDetailsFixtures';
-import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import { asAccountId, asPlannedPaymentId } from '@/src/types/ids';
+import {
+  AccountType,
+  JournalDisplayType,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+} from '@/src/types/enums';
+import type { PlainJournal } from '@/src/types/plainDtos';
+import { asAccountId, asPlannedPaymentId, type JournalId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 
 it('uses balances for same-currency one-to-one journals, excluding category lifetime totals', () => {
@@ -105,4 +115,29 @@ it('computes the occurrence after the journal independently of the current curso
   };
   expect(dayjs(nextJournalOccurrence(payment, date)).format('YYYY-MM-DD')).toBe('2023-10-12');
   expect(nextJournalOccurrence({ ...payment, endDate: date }, date)).toBeUndefined();
+});
+
+describe('buildJournalSummary sign', () => {
+  const journal = {
+    id: 'j1' as JournalId,
+    journalDate: 1,
+    currencyCode: 'INR',
+    status: 'POSTED',
+    totalAmount: 100,
+    transactionCount: 2,
+    displayType: JournalDisplayType.EXPENSE,
+  } as PlainJournal;
+  const context = { entryCount: 2, today: 1, hourCycle: '24-hour' as const };
+
+  it('uses the cash-flow prefix shared with the list rows', () => {
+    expect(buildJournalSummary(journal, { ...context, flowSign: -1 }).amountPrefix).toBe('− ');
+    expect(buildJournalSummary(journal, { ...context, flowSign: 1 }).amountPrefix).toBe('+ ');
+    expect(buildJournalSummary(journal, { ...context, flowSign: 0 }).amountPrefix).toBe('');
+  });
+
+  it('colours a refund as income even when the journal type is expense', () => {
+    const summary = buildJournalSummary(journal, { ...context, flowSign: 1 });
+    expect(summary.amountColor).toBe('income');
+    expect(summary.amountPrefix).toBe('+ ');
+  });
 });

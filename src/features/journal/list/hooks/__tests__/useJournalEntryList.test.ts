@@ -107,7 +107,10 @@ const mockEnrichedJournals: import('@/src/types/domainReadModels').EnrichedJourn
     description: 'Salary',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a1' as AccountId, name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }],
+    accounts: [
+      { id: 'a1' as AccountId, name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' },
+      { id: 'a4' as AccountId, name: 'Salary', role: 'SOURCE', accountType: 'INCOME' },
+    ],
   },
   {
     id: 'j2' as JournalId,
@@ -118,7 +121,10 @@ const mockEnrichedJournals: import('@/src/types/domainReadModels').EnrichedJourn
     description: 'Coffee',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a2' as AccountId, name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }],
+    accounts: [
+      { id: 'a2' as AccountId, name: 'Cash', role: 'SOURCE', accountType: 'ASSET' },
+      { id: 'a5' as AccountId, name: 'Coffee', role: 'DESTINATION', accountType: 'EXPENSE' },
+    ],
   },
   {
     id: 'j3' as JournalId,
@@ -129,7 +135,10 @@ const mockEnrichedJournals: import('@/src/types/domainReadModels').EnrichedJourn
     description: 'Lunch',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a3' as AccountId, name: 'Card', role: 'SOURCE', accountType: 'ASSET' }],
+    accounts: [
+      { id: 'a3' as AccountId, name: 'Card', role: 'SOURCE', accountType: 'ASSET' },
+      { id: 'a6' as AccountId, name: 'Lunch', role: 'DESTINATION', accountType: 'EXPENSE' },
+    ],
   },
 ];
 

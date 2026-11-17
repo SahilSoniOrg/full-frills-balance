@@ -26,7 +26,7 @@ describe('presentAccountPeriod', () => {
     });
 
     expect(period.heroAmount).toBe(750);
-    expect(period.heroSign).toBe('+');
+    expect(period.heroSign).toBe('+ ');
     expect(period.badge).toEqual({ label: 'Growing', variant: 'success' });
     expect(period.bar).toBeNull();
     expect(period.stats.map(stat => stat.label)).toEqual(['In', 'Out']);
@@ -40,14 +40,14 @@ describe('presentAccountPeriod', () => {
       previous: { label: 'vs 8 Sep', netChange: -300 },
     });
 
-    expect(period.heroSign).toBe('−');
+    expect(period.heroSign).toBe('− ');
     expect(period.badge?.label).toBe('Drawing down');
     expect(period.bar).toBeNull();
     expect(period.stats.map(stat => stat.label)).toEqual(['In', 'Out']);
-    expect(period.comparison).toEqual({ label: 'vs 8 Sep', amount: 300, sign: '−' });
+    expect(period.comparison).toEqual({ label: 'vs 8 Sep', amount: 300, sign: '− ' });
   });
 
-  it('signs a category comparison only when it went negative', () => {
+  it('signs expense comparisons as spending (−) and refunds (+)', () => {
     const present = (netChange: number) =>
       presentAccountPeriod({
         accountType: AccountType.EXPENSE,
@@ -56,8 +56,8 @@ describe('presentAccountPeriod', () => {
         previous: { label: 'Sep total', netChange },
       }).comparison;
 
-    expect(present(400)).toEqual({ label: 'Sep total', amount: 400, sign: undefined });
-    expect(present(-50)).toEqual({ label: 'Sep total', amount: 50, sign: '−' });
+    expect(present(400)).toEqual({ label: 'Sep total', amount: 400, sign: '− ' });
+    expect(present(-50)).toEqual({ label: 'Sep total', amount: 50, sign: '+ ' });
   });
 
   it('hides liability repayment ratios in privacy mode', () => {
@@ -190,5 +190,35 @@ describe('presentAccountPeriodRange', () => {
     );
 
     expect(presented).toEqual({ label: '8 Oct 2026', isCurrent: true });
+  });
+});
+
+describe('presentAccountPeriod flow signs', () => {
+  it('shows income as a gain (+) and an expense hero as spending (−)', () => {
+    const income = presentAccountPeriod({
+      accountType: AccountType.INCOME,
+      metrics: metrics(300, 0),
+      isPrivate: false,
+      previous: { label: 'Last month', netChange: 200 },
+    });
+    expect(income.heroSign).toBe('+ ');
+    expect(income.comparison?.sign).toBe('+ ');
+
+    const spent = presentAccountPeriod({
+      accountType: AccountType.EXPENSE,
+      metrics: metrics(500, 0),
+      isPrivate: false,
+    });
+    expect(spent.heroLabel).toBe('Spent');
+    expect(spent.heroSign).toBe('− ');
+  });
+
+  it('keeps balance direction for liabilities', () => {
+    const card = presentAccountPeriod({
+      accountType: AccountType.LIABILITY,
+      metrics: metrics(2000, 3000),
+      isPrivate: false,
+    });
+    expect(card.heroSign).toBe('− ');
   });
 });

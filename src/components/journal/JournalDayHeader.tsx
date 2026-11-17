@@ -6,6 +6,11 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
+import {
+  signColorKey,
+  signPrefix,
+  type FlowSign,
+} from '@/src/domain/accounting/presentationPolicy';
 
 export interface JournalDayHeaderProps {
   date: number;
@@ -32,8 +37,7 @@ export function JournalDayHeader({
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
-  const isPositive = (netAmount || 0) > 0;
-  const isNegative = (netAmount || 0) < 0;
+  const netSign: FlowSign = (netAmount || 0) > 0 ? 1 : (netAmount || 0) < 0 ? -1 : 0;
 
   return (
     <PressScaleTouchable
@@ -71,19 +75,15 @@ export function JournalDayHeader({
         <View style={styles.rightContent}>
           {hasStats && count > 1 && netAmount !== 0 && currencyCode && (
             <MoneyText
-              amount={netAmount}
+              amount={Math.abs(netAmount)}
               currencyCode={currencyCode}
-              prefix={isPositive ? '+' : undefined}
+              prefix={signPrefix(netSign) || undefined}
               variant="caption"
               weight="semibold"
               style={[
                 styles.netAmount,
                 {
-                  color: isPositive
-                    ? theme.success
-                    : isNegative
-                      ? theme.error
-                      : theme.textSecondary,
+                  color: netSign === 0 ? theme.textSecondary : theme[signColorKey(netSign)],
                 },
               ]}
             />

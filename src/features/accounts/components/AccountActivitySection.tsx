@@ -23,6 +23,11 @@ import { isCategoryAccountType } from '@/src/domain/accounts/accountClassificati
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
 import { getReadableColor } from '@/src/design-system/colorMath';
 import { AccountType } from '@/src/types/enums';
+import {
+  balanceIncreaseTransaction,
+  legSign,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -247,7 +252,11 @@ export function AccountActivitySection({
                         // A category period is already relative to its opening balance.
                         const changeFromStart =
                           point.y - (isCategory && dateRange ? 0 : startPoint.y);
-                        const isPositive = changeFromStart >= 0;
+                        // LEG rule: growth of the balance, signed by the account's leg sign.
+                        const flowChange =
+                          changeFromStart *
+                          legSign(accountType, balanceIncreaseTransaction(accountType));
+                        const isPositive = flowChange >= 0;
 
                         return (
                           <View style={{ width: '100%' }}>
@@ -276,7 +285,7 @@ export function AccountActivitySection({
                               <MoneyText
                                 amount={changeFromStart}
                                 currencyCode={currencyCode}
-                                prefix={isPositive ? '+' : undefined}
+                                prefix={isPositive ? signPrefix(1) : undefined}
                                 variant="body"
                                 weight="bold"
                                 style={{ color: isPositive ? theme.income : theme.expense }}

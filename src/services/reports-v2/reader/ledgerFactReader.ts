@@ -4,7 +4,8 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { balanceSign } from '@/src/domain/accounting/BalanceEffects';
+import { AccountType } from '@/src/types/enums';
 import type AccountModel from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
 import type Transaction from '@/src/data/models/Transaction';
@@ -177,14 +178,7 @@ function toReportingFact(
   parentIds: ReadonlySet<string>,
   accountById: ReadonlyMap<string, AccountModel>,
 ): ReportingFact {
-  const sign =
-    account.accountType === AccountType.ASSET || account.accountType === AccountType.EXPENSE
-      ? transaction.transactionType === TransactionType.DEBIT
-        ? 1
-        : -1
-      : transaction.transactionType === TransactionType.CREDIT
-        ? 1
-        : -1;
+  const sign = balanceSign(account.accountType, transaction.transactionType);
   return {
     workplaceId: query.workplaceId,
     journalId: journal.id,
