@@ -129,7 +129,7 @@ export function ReportsV2View({
   return (
     <>
       <ScreenWithChrome chrome={chrome} scrollable={false}>
-        <Box padding="md" paddingVertical="md" flex={1}>
+        <Box padding="lg" paddingVertical="md" flex={1}>
           <ScrollView
             contentContainerStyle={styles.content}
             refreshControl={

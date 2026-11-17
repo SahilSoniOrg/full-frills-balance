@@ -3,7 +3,7 @@ import { JournalEntryListView } from '@/src/components/journal/JournalEntryListV
 import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { Size, Spacing } from '@/src/constants';
+import { Layout, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import type {
@@ -272,6 +272,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     // Nav already separates title from content; keep a small breath only.
     paddingTop: Spacing.xs,
-    paddingBottom: Size.buttonLg + Spacing.xl,
+    paddingBottom: Layout.listBottomInset.tab,
   },
 });

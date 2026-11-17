@@ -5,7 +5,7 @@ import { JournalEntryListView } from '@/src/components/journal/JournalEntryListV
 import { EmptyStateView, Icon, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Layout, Spacing } from '@/src/constants';
 import { AccountDetailsListHeader } from '@/src/features/accounts/components/AccountDetailsListHeader';
 import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
@@ -238,6 +238,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Size.fab + Spacing.xxxxl + Spacing.lg,
+    paddingBottom: Layout.listBottomInset.fab,
   },
 });

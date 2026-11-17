@@ -77,7 +77,6 @@ function PlannedPaymentCardComponent({
       paddingSize="none"
       overflow="visible"
       elevation="sm"
-      radius="r2"
       background="surface"
       style={styles.card}
     >
@@ -188,7 +187,7 @@ function PlannedPaymentCardComponent({
 export const PlannedPaymentCard = PlannedPaymentCardComponent;
 
 const styles = StyleSheet.create({
-  card: { marginBottom: Spacing.lg },
+  card: { marginBottom: Spacing.md },
   dateBlock: {
     width: Size.buttonMd,
     minHeight: Size.buttonMd,

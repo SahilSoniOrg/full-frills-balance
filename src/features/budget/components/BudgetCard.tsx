@@ -87,9 +87,8 @@ export function BudgetCard({
       overflow="visible"
       elevation="sm"
       padding="sm"
-      radius="r3"
       background="surface"
-      style={{ marginBottom: Spacing.sm }}
+      style={{ marginBottom: Spacing.md }}
     >
       <PressScaleTouchable
         onPress={() => onPress(item)}

@@ -2,7 +2,7 @@ import { AppText, EmptyStateView, ErrorStateView, LoadingView } from '@/src/comp
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Layout, Spacing } from '@/src/constants';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 import { BudgetItem } from '../types';
@@ -74,7 +74,7 @@ export function BudgetListView({
               />
             )}
             {summary && <BudgetListSummary summary={summary} />}
-            <AppText variant="body" color="secondary" weight="semibold">
+            <AppText variant="bodySmall" color="secondary" weight="medium">
               {AppConfig.strings.commitmentsRedesign.thisMonth}
             </AppText>
           </Column>
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Size.fab + Spacing.xl + Spacing.xxxl * 2,
+    paddingBottom: Layout.listBottomInset.fab,
   },
   emptyState: {
     marginTop: Spacing.xxxl,

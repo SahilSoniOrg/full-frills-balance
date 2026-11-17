@@ -934,6 +934,13 @@ export const getContextualTokens = (theme: Theme): ContextualTokens => ({
 // === LAYOUT CONSTANTS ===
 // Interaction areas and component-specific dimensions
 export const Layout = {
+  /** Scroll content bottom padding so the last row clears what floats over it. */
+  listBottomInset: {
+    /** Tab pages: the bottom tab bar and its centre add button. */
+    tab: Size.buttonLg + Spacing.xl,
+    /** Screens with a floating action button above the content. */
+    fab: Size.fab + Spacing.xxxxl + Size.buttonMd,
+  },
   touchTarget: {
     minHeight: 110,
     minWidth: 44,

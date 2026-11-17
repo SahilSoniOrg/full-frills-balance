@@ -13,7 +13,7 @@ import {
   SelectionPickerSheet,
   type SelectionOption,
 } from '@/src/components/filters/SelectionPickerSheet';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
 import type {
@@ -380,14 +380,14 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   list: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
   },
   archiveActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
   },
   archiveHelp: {
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     paddingHorizontal: Spacing.md,
-    borderRadius: 999,
+    borderRadius: Shape.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },
   loadMore: {
@@ -407,26 +407,26 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   filters: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     gap: Spacing.xs,
   },
   sourceFilterLabel: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xs,
   },
   eventFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
   },
   operationFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
   },
   clearOperationFilter: {
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   filterOption: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: 999,
+    borderRadius: Shape.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },
 });

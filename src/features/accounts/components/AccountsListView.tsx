@@ -10,7 +10,7 @@ import {
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Layout, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Size.buttonLg + Spacing.xl,
+    paddingBottom: Layout.listBottomInset.tab,
   },
   header: {
     paddingTop: Spacing.lg,

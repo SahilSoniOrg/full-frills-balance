@@ -5,7 +5,7 @@ import type {
   ScreenFabChrome,
 } from '@/src/components/layout/screenChrome';
 import { FocusProvider } from '@/src/components/shared/FocusTarget';
-import { Size, Spacing } from '@/src/constants';
+import { Layout } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -71,7 +71,7 @@ export function SettingsLayout({
           },
           scrollEventThrottle: scrollViewProps?.scrollEventThrottle ?? 16,
           contentContainerStyle: [
-            fab ? { paddingBottom: Size.buttonLg + Spacing.xl } : null,
+            fab ? { paddingBottom: Layout.listBottomInset.tab } : null,
             scrollViewProps?.contentContainerStyle,
           ],
         }}

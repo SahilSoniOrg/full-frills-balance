@@ -9,7 +9,7 @@ import {
 } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { PlannedPaymentMonthSummary } from '@/src/features/planned-payments/components/PlannedPaymentMonthSummary';
 import type {
@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
-    paddingBottom: Size.fab + Spacing.xxxxl + Size.buttonMd,
+    paddingTop: Spacing.sm,
+    paddingBottom: Layout.listBottomInset.fab,
   },
   emptyState: { marginTop: Spacing.xxxl },
   sectionHeading: {
