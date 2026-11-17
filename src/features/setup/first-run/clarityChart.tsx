@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { findSafeToSpendChartPoint, type ClarityChartPoint } from './projectCashClarityDraft';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 export function ClarityChart({
   points,
@@ -110,7 +111,8 @@ export function ClarityChart({
                       variant="caption"
                       color={event.kind === 'INFLOW' ? 'income' : 'expense'}
                     >
-                      {event.kind === 'INFLOW' ? '+' : '−'} {event.name}
+                      {signPrefix(event.kind === 'INFLOW' ? 1 : -1)}
+                      {event.name}
                     </AppText>
                   </Box>
                 ))}

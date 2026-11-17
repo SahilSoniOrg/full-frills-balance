@@ -143,7 +143,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
     expect(
       screen.getByText(AppConfig.strings.dashboard.safeToSpendExplanation.bucketTitle),
     ).toBeTruthy();
-    expect(screen.getAllByText('–USD 800.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('− USD 800.00').length).toBeGreaterThan(0);
     // Salary (day 20) lands after rent (day 5): the result is the low point, not cash + income − bills.
     expect(screen.getAllByText('USD 200.00').length).toBeGreaterThan(0);
     expect(screen.queryByText('USD 1700.00')).toBeNull();
@@ -189,7 +189,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
     const viewModel = renderExplanation(500);
     expect(viewModel.shortfall).toBe(300);
     expect(screen.getByText(AppConfig.strings.dashboard.shortfall)).toBeTruthy();
-    expect(screen.getAllByText('–USD 300.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('− USD 300.00').length).toBeGreaterThan(0);
     expect(
       screen.getByText(AppConfig.strings.dashboard.safeToSpendConstraint.projectedShortfall),
     ).toBeTruthy();

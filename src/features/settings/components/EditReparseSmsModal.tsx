@@ -10,6 +10,11 @@ import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { InboxParseStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { showErrorAlert } from '@/src/services/feedback/alerts';
+import {
+  bankEntrySign,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 
 interface EditReparseSmsModalProps {
   visible: boolean;
@@ -213,11 +218,11 @@ function EditReparseModalContent({
                   <MoneyText
                     amount={parsedResult.amount}
                     currencyCode={parsedResult.currencyCode || defaultCurrencyCode}
-                    prefix={parsedResult.type === 'credit' ? '+ ' : '- '}
+                    prefix={signPrefix(bankEntrySign(parsedResult.type)) || undefined}
                     variant="body"
                     weight="bold"
                     style={{
-                      color: parsedResult.type === 'credit' ? theme.success : theme.text,
+                      color: theme[signColorKey(bankEntrySign(parsedResult.type))],
                     }}
                   />
                 ) : (

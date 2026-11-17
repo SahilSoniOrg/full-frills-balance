@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { incomeItemName, paymentItemName, type CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
+import type { FlowSign } from '@/src/domain/accounting/presentationPolicy';
 
 export type ClarityDetailGroupKey = 'cash' | 'income' | 'payments' | 'budgets';
 
@@ -20,7 +21,7 @@ export type ClarityDetailRow =
       readonly label: string;
       readonly detail: string;
       readonly amount: number;
-      readonly sign?: '+' | '-';
+      readonly sign?: FlowSign;
     };
 
 export interface ClarityDetailGroup {
@@ -28,7 +29,7 @@ export interface ClarityDetailGroup {
   readonly stage: string;
   readonly tint: ComponentVariant;
   readonly amount: number;
-  readonly sign?: '+' | '-';
+  readonly sign?: FlowSign;
   readonly rows: readonly ClarityDetailRow[];
 }
 
@@ -67,7 +68,7 @@ export function useClaritySceneViewModel(
         stage: copy.stageNext,
         tint: 'income',
         amount: income.reduce((sum, item) => sum + item.amount, 0),
-        sign: '+',
+        sign: 1,
         rows: income.map((item): ClarityDetailRow => {
           const row = {
             id: item.id,
@@ -75,7 +76,7 @@ export function useClaritySceneViewModel(
             detail: dayjs(item.nextDate).format('D MMM'),
           };
           return income.length > 1
-            ? { ...row, kind: 'figure', amount: item.amount, sign: '+' }
+            ? { ...row, kind: 'figure', amount: item.amount, sign: 1 }
             : { ...row, kind: 'label' };
         }),
       });
@@ -87,7 +88,7 @@ export function useClaritySceneViewModel(
         stage: copy.stageProtect,
         tint: 'expense',
         amount: payments.reduce((sum, item) => sum + item.amount, 0),
-        sign: '-',
+        sign: -1,
         rows: payments.map((item): ClarityDetailRow => {
           const row = {
             id: item.id,
@@ -95,7 +96,7 @@ export function useClaritySceneViewModel(
             detail: dayjs(item.dueDate).format('D MMM'),
           };
           return payments.length > 1
-            ? { ...row, kind: 'figure', amount: item.amount, sign: '-' }
+            ? { ...row, kind: 'figure', amount: item.amount, sign: -1 }
             : { ...row, kind: 'label' };
         }),
       });

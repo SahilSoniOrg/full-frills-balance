@@ -23,6 +23,11 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useInboxItemActions } from '@/src/features/settings/hooks/useInboxItemActions';
+import {
+  bankEntrySign,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 
 /** Android Modal does not fire onDismiss; wait for the More sheet to finish closing. */
 const MENU_CLOSE_BEFORE_ATTACH_MS = Platform.OS === 'android' ? 320 : 0;
@@ -142,9 +147,9 @@ export function TransactionInboxItemCardView({
             <MoneyText
               amount={item.parsedAmount}
               currencyCode={item.parsedCurrencyCode || currencyCode}
-              prefix={item.direction === 'credit' ? '+ ' : '- '}
+              prefix={signPrefix(bankEntrySign(item.direction)) || undefined}
               variant="subheading"
-              style={{ color: item.direction === 'credit' ? theme.success : theme.text }}
+              style={{ color: theme[signColorKey(bankEntrySign(item.direction))] }}
             />
           ) : (
             <AppText variant="subheading">No amount</AppText>

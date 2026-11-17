@@ -17,6 +17,7 @@ import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/types/enums';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 interface SafeToSpendLedgerProps {
   labels: SafeToSpendLabels;
@@ -144,7 +145,7 @@ export const SafeToSpendLedger = ({
                         color={isShortfall ? 'error' : 'primary'}
                         tabular
                       >
-                        {isShortfall ? '-' : ''}
+                        {isShortfall ? signPrefix(-1) : ''}
                         {formatSts(displayAmount, currencyCode)}
                       </AppText>
                       <AppText variant="overline" weight="regular" color="secondary" align="right">
@@ -223,7 +224,7 @@ export const SafeToSpendLedger = ({
                                 </View>
                               </PressScaleTouchable>
                               <AppText variant="caption" color="secondary" tabular>
-                                {formatSts(item.amount, currencyCode, { prefix: '-' })}
+                                {formatSts(item.amount, currencyCode, { prefix: signPrefix(-1) })}
                               </AppText>
                             </View>
                           );
@@ -263,7 +264,7 @@ export const SafeToSpendLedger = ({
                               </View>
                             </View>
                             <AppText variant="caption" color="secondary" tabular>
-                              {formatSts(item.amount, currencyCode, { prefix: '+' })}
+                              {formatSts(item.amount, currencyCode, { prefix: signPrefix(1) })}
                             </AppText>
                           </View>
                         ))}

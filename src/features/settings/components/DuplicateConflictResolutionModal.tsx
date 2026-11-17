@@ -8,6 +8,11 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
+import {
+  bankEntrySign,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 
 interface DuplicateConflictResolutionModalProps {
   visible: boolean;
@@ -162,10 +167,10 @@ export function DuplicateConflictResolutionModal({
                 <MoneyText
                   amount={item.parsedAmount}
                   currencyCode={item.parsedCurrencyCode || defaultCurrencyCode}
-                  prefix={item.direction === 'credit' ? '+ ' : '- '}
+                  prefix={signPrefix(bankEntrySign(item.direction)) || undefined}
                   variant="subheading"
                   weight="bold"
-                  style={{ color: item.direction === 'credit' ? theme.success : theme.text }}
+                  style={{ color: theme[signColorKey(bankEntrySign(item.direction))] }}
                 />
               ) : (
                 <AppText variant="body" color="secondary">

@@ -22,6 +22,7 @@ import {
 } from './explanation';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
 import { SafeToSpendForecastDetails } from './SafeToSpendForecastDetails';
+import { signPrefix } from '@/src/domain/accounting/presentationPolicy';
 
 function parseFormulaItem(
   item: string | ((days: number) => string) | undefined,
@@ -325,7 +326,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step3.title}
           detail={step3.detail}
-          amountText={formatSts(committedTotal, currencyCode, { prefix: '–' })}
+          amountText={formatSts(committedTotal, currencyCode, { prefix: signPrefix(-1) })}
           amountColor="warning"
           isExpanded={expandedSection === 'committed'}
           onToggle={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
@@ -347,7 +348,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step4.title}
           detail={step4.detail}
-          amountText={formatSts(committedLiabilities, currencyCode, { prefix: '–' })}
+          amountText={formatSts(committedLiabilities, currencyCode, { prefix: signPrefix(-1) })}
           amountColor="error"
           isExpanded={expandedSection === 'debts'}
           onToggle={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}
@@ -385,7 +386,7 @@ export const SafeToSpendExplanationModal = ({
             tabular
           >
             {isOverCommitted
-              ? formatSts(shortfall, currencyCode, { prefix: '–' })
+              ? formatSts(shortfall, currencyCode, { prefix: signPrefix(-1) })
               : formatSts(safeToSpend, currencyCode)}
           </AppText>
         </View>
