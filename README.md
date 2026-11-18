@@ -106,7 +106,8 @@ bun run ios                  # or: bun run android
 |---------|---------|
 | `bun run ios` / `android` | Native development |
 | `bun run android:preview` | Preview variant |
-| `bun run android:release` | Production release build |
+| `bun run android:release` | Production variant on a device (not a store build) |
+| `bun run android:publish` | Build and upload to Google Play. See [docs/operations/mobile-release.md](docs/operations/mobile-release.md) |
 | `npx expo start --web` | Web (limited; mobile is primary) |
 | `bun run verify` | CI gate: architecture + typecheck + tests + lint |
 

@@ -47,6 +47,10 @@ Reuse these before building your own:
 
 Don't add raw `Text`, `TouchableOpacity`, `Pressable`, `TextInput`, `Modal` or `ActivityIndicator` from `react-native` where one of these fits. If a shared component is missing a variant you need, extend it rather than copying it into a feature.
 
+## Releases
+
+Building, publishing, signing keys, store uploads, or Google Sign-In client IDs: read [`docs/operations/mobile-release.md`](docs/operations/mobile-release.md) first.
+
 ## Source of truth
 
 Prefer **code, tests, and types** over prose. Historical docs live in a separate archive repo and must not be treated as current.
