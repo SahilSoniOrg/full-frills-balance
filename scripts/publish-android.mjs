@@ -10,6 +10,9 @@ const USAGE = `Usage: bun run android:publish [--build local|cloud] [--submit lo
             cloud  build on EAS
   --submit  local  submit ./build-android.aab from this machine
             cloud  EAS submits its own build when it finishes (needs --build cloud)
+            direct upload ./build-android.aab from this machine straight to Google Play,
+                   using the service account key in ./google-services.json
+                   (or PLAY_SERVICE_ACCOUNT_KEY_PATH)
             Defaults to wherever the build runs.`;
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,8 +59,8 @@ if (flags.help) {
 
 const build = flags.build;
 const submit = flags.submit ?? build;
-for (const place of [build, submit]) {
-  if (place !== 'local' && place !== 'cloud') fail(USAGE);
+if (!['local', 'cloud'].includes(build) || !['local', 'cloud', 'direct'].includes(submit)) {
+  fail(USAGE);
 }
 if (build === 'local' && submit === 'cloud') {
   fail(
@@ -88,6 +91,11 @@ if (build === 'local') {
 
 if (spawnSync('unzip', ['-l', AAB, MAPPING], { cwd: projectRoot }).status !== 0) {
   fail(`${AAB} has no embedded R8 mapping (${MAPPING}); not submitting.`);
+}
+
+if (submit === 'direct') {
+  run('node', ['scripts/submit-android-local.mjs']);
+  process.exit(0);
 }
 
 run('eas', [

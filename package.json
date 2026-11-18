@@ -8,6 +8,7 @@
     "android:preview": "node scripts/run-android.mjs preview",
     "android:release": "node scripts/run-android.mjs production",
     "android:publish": "node scripts/publish-android.mjs",
+    "android:submit:local": "node scripts/submit-android-local.mjs",
     "ios": "expo run:ios",
     "ios:build:local": "rm -f ./build-ios.ipa ./build-ios.ipa.sha256 && eas build --platform ios --profile production --local --output ./build-ios.ipa && shasum -a 256 ./build-ios.ipa > ./build-ios.ipa.sha256",
     "ios:build:eas": "eas build --platform ios --profile production",
