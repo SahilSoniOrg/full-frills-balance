@@ -18,6 +18,11 @@
 
 A personal finance app for people who want to **know what they can spend**, keep books that actually balance, and leave their ledger on their own device — no bank login required for ordinary use.
 
+| | |
+|---|---|
+| **Landing & get the app** | [fullfrills.sahilsoni.in](https://fullfrills.sahilsoni.in) |
+| **Web app (ready to use)** | [fullfrillsapp.sahilsoni.in](https://fullfrillsapp.sahilsoni.in) |
+
 ---
 
 ## Who it’s for
