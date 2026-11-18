@@ -44,15 +44,40 @@ async function accessToken(serviceAccount) {
   return body.access_token;
 }
 
-async function play(token, method, url, { body, contentType = 'application/json' } = {}) {
+async function request(token, method, url, { body, headers = {} } = {}) {
   const response = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': contentType },
-    body: contentType === 'application/json' && body ? JSON.stringify(body) : body,
+    headers: { Authorization: `Bearer ${token}`, ...headers },
+    body,
+  });
+  if (!response.ok) {
+    throw new Error(`${method} ${url} failed (${response.status}): ${await response.text()}`);
+  }
+  return response;
+}
+
+async function play(token, method, url, body) {
+  const response = await request(token, method, url, {
+    body: body && JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`${method} ${url} failed (${response.status}): ${text}`);
   return text ? JSON.parse(text) : {};
+}
+
+// Google recommends resumable uploads for anything larger than a few megabytes.
+async function uploadBundle(token, url, bundle) {
+  const session = await request(token, 'POST', `${url}?uploadType=resumable`, {
+    headers: {
+      'X-Upload-Content-Type': 'application/octet-stream',
+      'X-Upload-Content-Length': String(bundle.length),
+    },
+  });
+  const response = await request(token, 'PUT', session.headers.get('location'), {
+    body: bundle,
+    headers: { 'Content-Type': 'application/octet-stream' },
+  });
+  return response.json();
 }
 
 const keyPath = resolve(
@@ -75,14 +100,19 @@ const serviceAccount = readJson(keyPath);
 const token = await accessToken(serviceAccount);
 const { id: editId } = await play(token, 'POST', `${API}/${packageName}/edits`);
 console.log(`Uploading ${aabPath} to ${packageName}…`);
-const { versionCode } = await play(
+const { versionCode } = await uploadBundle(
   token,
-  'POST',
-  `${UPLOAD_API}/${packageName}/edits/${editId}/bundles?uploadType=media`,
-  { body: readFileSync(aabPath), contentType: 'application/octet-stream' },
+  `${UPLOAD_API}/${packageName}/edits/${editId}/bundles`,
+  readFileSync(aabPath),
 );
 await play(token, 'PUT', `${API}/${packageName}/edits/${editId}/tracks/${track}`, {
-  body: { track, releases: [{ versionCodes: [String(versionCode)], status: 'completed' }] },
+  track,
+  releases: [{ versionCodes: [String(versionCode)], status: 'completed' }],
 });
-await play(token, 'POST', `${API}/${packageName}/edits/${editId}:commit`);
+// The API's default cancels whatever is already in review and resubmits it with this edit.
+await play(
+  token,
+  'POST',
+  `${API}/${packageName}/edits/${editId}:commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW`,
+);
 console.log(`Version code ${versionCode} is on the ${track} track.`);
