@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-const USAGE = `Usage: bun run android:publish [--build local|cloud] [--submit local|cloud]
+const USAGE = `Usage: bun run android:publish [--build local|cloud] [--submit local|cloud|direct]
 
   --build   local  build the AAB on this machine (default)
             cloud  build on EAS
