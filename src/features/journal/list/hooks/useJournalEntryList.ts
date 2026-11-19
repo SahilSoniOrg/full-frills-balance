@@ -16,9 +16,15 @@ import {
   type ShareableJournalEntry,
 } from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
+import {
+  journalFlowSignOf,
+  postingFlowSignOf,
+  viewerLegOf,
+} from '@/src/services/journal/journalTimelinePresentation';
+import type { FlowSign } from '@/src/domain/accounting/presentationPolicy';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
-import { JournalStatus } from '@/src/types/enums';
+import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { JournalTimelineViewer } from '@/src/types/journalTimeline';
 import { JournalListItem } from '@/src/types/ui';
 import { logger } from '@/src/services/observability/logger';
@@ -75,6 +81,37 @@ export interface JournalEntryListCore {
   exitSelectionMode: () => void;
   onShareSelected: () => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
+}
+
+/**
+ * Share rows use the sign the list row shows, not the stored journal type: a
+ * refund is stored as EXPENSE but is income flow, so sharing must not file it
+ * as spending. A zero sign (transfer, mixed) keeps its stored type.
+ */
+export function shareDisplayTypeFor(
+  sign: FlowSign,
+  fallback: JournalDisplayType,
+): JournalDisplayType {
+  if (sign > 0) return JournalDisplayType.INCOME;
+  if (sign < 0) return JournalDisplayType.EXPENSE;
+  return fallback;
+}
+
+/** Build a share row from the same amount and sign the selected list row shows. */
+export function toShareableJournalEntry(
+  journal: EnrichedJournal,
+  viewer?: JournalTimelineViewer,
+): ShareableJournalEntry {
+  const leg = viewerLegOf(journal, viewer);
+  const sign = leg ? postingFlowSignOf(leg) : journalFlowSignOf(journal);
+  return {
+    id: journal.id,
+    date: journal.journalDate,
+    description: journal.description || journal.semanticLabel || 'Journal entry',
+    amount: leg?.amount ?? journal.totalAmount,
+    currencyCode: leg?.currencyCode || journal.currencyCode,
+    displayType: shareDisplayTypeFor(sign, journal.displayType),
+  };
 }
 
 /**
@@ -186,18 +223,8 @@ export function useJournalEntryList({
   const { groupedItems: items } = useJournalListGrouping(groupingOptions);
 
   const selectedEntries = useMemo<ShareableJournalEntry[]>(
-    () =>
-      journals
-        .filter(j => selectedIds.has(j.id))
-        .map(j => ({
-          id: j.id,
-          date: j.journalDate,
-          description: j.description || j.semanticLabel || 'Journal entry',
-          amount: j.totalAmount,
-          currencyCode: j.currencyCode,
-          displayType: j.displayType,
-        })),
-    [journals, selectedIds],
+    () => journals.filter(j => selectedIds.has(j.id)).map(j => toShareableJournalEntry(j, viewer)),
+    [journals, selectedIds, viewer],
   );
   const selectedSource = useMemo(
     () =>

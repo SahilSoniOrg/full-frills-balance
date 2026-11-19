@@ -47,6 +47,19 @@ const ICON_BY_FLOW_KEY: Record<ReturnType<typeof flowIconKey>, JournalTimelineIc
   document: Icon.Document,
 };
 
+/** The leg a timeline view is scoped to, when the journal carries it. */
+export function viewerLegOf(
+  journal: EnrichedJournal,
+  viewer?: JournalTimelineViewer,
+): EnrichedJournal['accounts'][number] | undefined {
+  if (!viewer) return undefined;
+  return journal.accounts.find(
+    account =>
+      account.id === viewer.accountId &&
+      (!viewer.transactionId || account.transactionId === viewer.transactionId),
+  );
+}
+
 /**
  * Icon and prefix for a FLOW row. Balance-sheet-only rows get a neutral icon
  * and no prefix.
@@ -229,13 +242,7 @@ export function mapJournalToEntryCardProps(
       : AppConfig.strings.journal.transaction;
 
   // Missing account/posting scopes use the whole-journal presentation.
-  const viewerAccount = viewer
-    ? journal.accounts.find(
-        account =>
-          account.id === viewer.accountId &&
-          (!viewer.transactionId || account.transactionId === viewer.transactionId),
-      )
-    : undefined;
+  const viewerAccount = viewerLegOf(journal, viewer);
   // The same cash-flow sign for every view: the viewed leg in account views,
   // the journal's income and expense net otherwise.
   const sign = viewerAccount ? postingFlowSignOf(viewerAccount) : journalFlowSignOf(journal);

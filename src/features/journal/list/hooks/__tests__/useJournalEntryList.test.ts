@@ -3,7 +3,7 @@ import { logger } from '@/src/services/observability/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { JournalDisplayType } from '@/src/types/enums';
 import { WorkplaceId, AccountId, JournalId } from '@/src/types/ids';
-import { useJournalEntryList } from '../useJournalEntryList';
+import { toShareableJournalEntry, useJournalEntryList } from '../useJournalEntryList';
 
 jest.mock('@/src/hooks/useShareable', () => ({
   useShareable: () => ({
@@ -330,5 +330,82 @@ describe('useJournalEntryList', () => {
         journalIds: ['j1', 'j2'],
       }),
     );
+  });
+});
+
+describe('selected journal share entries', () => {
+  const shopping = {
+    id: 'a5' as AccountId,
+    name: 'Shopping',
+    accountType: 'EXPENSE',
+    role: 'SOURCE' as const,
+    amount: 100,
+  };
+  const bank = {
+    id: 'a1' as AccountId,
+    name: 'Bank',
+    accountType: 'ASSET',
+    role: 'DESTINATION' as const,
+    amount: 100,
+  };
+  const refund: import('@/src/types/domainReadModels').EnrichedJournal = {
+    id: 'refund' as JournalId,
+    journalDate: Date.now(),
+    description: 'Shopping refund',
+    currencyCode: 'INR',
+    status: 'POSTED',
+    totalAmount: 100,
+    transactionCount: 1,
+    displayType: JournalDisplayType.EXPENSE,
+    accounts: [shopping, bank],
+  };
+  const purchase: import('@/src/types/domainReadModels').EnrichedJournal = {
+    ...refund,
+    id: 'purchase' as JournalId,
+    description: 'Shopping trip',
+    accounts: [
+      { ...bank, role: 'SOURCE' as const },
+      { ...shopping, role: 'DESTINATION' as const },
+    ],
+  };
+
+  it('types a refund as income from an expense account listing', () => {
+    const entry = toShareableJournalEntry(refund, { accountId: 'a5' as AccountId });
+    expect(entry.displayType).toBe(JournalDisplayType.INCOME);
+    expect(entry.amount).toBe(100);
+  });
+
+  it('types a refund as income from the whole journal too', () => {
+    expect(toShareableJournalEntry(refund).displayType).toBe(JournalDisplayType.INCOME);
+  });
+
+  it('keeps a purchase as expense from the same expense account', () => {
+    expect(toShareableJournalEntry(purchase, { accountId: 'a5' as AccountId }).displayType).toBe(
+      JournalDisplayType.EXPENSE,
+    );
+  });
+
+  it('keeps a transfer unsigned instead of filing it as income or expense', () => {
+    const transfer = {
+      ...purchase,
+      displayType: JournalDisplayType.TRANSFER,
+      accounts: [
+        { ...bank, role: 'SOURCE' as const },
+        { ...bank, id: 'a7' as AccountId, role: 'DESTINATION' as const },
+      ],
+    };
+    expect(toShareableJournalEntry(transfer).displayType).toBe(JournalDisplayType.TRANSFER);
+  });
+
+  it('shares the viewed leg amount and currency, not the journal total', () => {
+    const multiCurrency = {
+      ...purchase,
+      totalAmount: 800,
+      currencyCode: 'INR',
+      accounts: [{ ...bank, amount: 10, currencyCode: 'USD' }, shopping],
+    };
+    const entry = toShareableJournalEntry(multiCurrency, { accountId: 'a1' as AccountId });
+    expect(entry.amount).toBe(10);
+    expect(entry.currencyCode).toBe('USD');
   });
 });

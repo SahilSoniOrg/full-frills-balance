@@ -287,7 +287,10 @@ export const SURFACE_RULES = {
   'inbox.reparse': { intent: 'BANK_ENTRY', source: 'parsed SMS direction' },
   'audit.diff': { intent: 'DELTA', source: 'numeric change of the field' },
   'export.csv': { intent: 'UNSIGNED', source: 'magnitude plus Transaction Type column' },
-  'share.text': { intent: 'UNSIGNED', source: 'magnitude; type shown as emoji and label' },
+  'share.text': {
+    intent: 'UNSIGNED',
+    source: 'magnitude from the viewed leg or journal total; emoji from its flow sign',
+  },
   'budget.usage': { intent: 'UNSIGNED', source: 'magnitude against budget' },
 } as const satisfies Record<string, SurfaceRule>;
 
