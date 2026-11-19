@@ -51,6 +51,7 @@
         "ascAppId": "6833898432"
       },
       "android": {
+        "applicationId": "in.sahilsoni.fullfrillsbalance",
         "track": "internal"
       }
     }
