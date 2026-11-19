@@ -5,6 +5,7 @@ import {
   AppSegmentedControl,
   AppText,
   ListGroup,
+  PressScaleTouchable,
 } from '@/src/components/core';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
@@ -15,7 +16,7 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime } from '@/src/utils/dateFormatting';
 import { useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface NotificationPreferenceViewProps {
   cadence: NotificationCadence;
@@ -83,7 +84,8 @@ export const NotificationPreferenceView = ({
             <AppText variant="caption" color="secondary">
               Reminder time
             </AppText>
-            <TouchableOpacity
+            <PressScaleTouchable
+              pressScale="subtle"
               onPress={() => cadence !== 'none' && setShowTimePicker(true)}
               activeOpacity={cadence === 'none' ? 1 : Opacity.heavy}
               disabled={cadence === 'none'}
@@ -107,11 +109,11 @@ export const NotificationPreferenceView = ({
                   style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}
                 />
               </Box>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </Box>
 
           {cadence !== 'none' && (
-            <TouchableOpacity onPress={onSendTest} style={styles.testButton}>
+            <PressScaleTouchable pressScale="subtle" onPress={onSendTest} style={styles.testButton}>
               <Box
                 paddingVertical="xs"
                 paddingHorizontal="md"
@@ -123,7 +125,7 @@ export const NotificationPreferenceView = ({
                   Send Test Notification (Now)
                 </AppText>
               </Box>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
         </Box>
 

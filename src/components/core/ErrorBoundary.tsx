@@ -13,7 +13,7 @@ import { analytics } from '@/src/services/analytics';
 import { BugReportService } from '@/src/services/BugReportService';
 import { logger } from '@/src/services/observability/logger';
 import React, { Component, ReactNode } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -60,23 +60,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           {__DEV__ && this.state.error && (
             <Text style={[styles.errorDetails]}>{this.state.error.message}</Text>
           )}
-          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
+          <Pressable style={styles.button} onPress={this.handleReset}>
             <Text style={[styles.buttonText]}>Try Again</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={[styles.button, styles.secondaryButton]}
             onPress={() => BugReportService.shareReport(this.state.error || undefined)}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>Report Bug</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={[styles.button, styles.secondaryButton]}
             onPress={() => BugReportService.saveReport(this.state.error || undefined)}
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>Save Report</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       );
     }

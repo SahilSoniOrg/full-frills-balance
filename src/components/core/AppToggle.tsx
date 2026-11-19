@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { ChromeMotion, Opacity, Shape } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, Pressable, StyleSheet } from 'react-native';
 
 export interface AppToggleProps {
   value: boolean;
@@ -50,8 +50,8 @@ export const AppToggle = ({
   });
 
   return (
-    <TouchableOpacity
-      activeOpacity={Opacity.heavy}
+    <Pressable
+      style={({ pressed }) => (pressed ? { opacity: Opacity.heavy } : undefined)}
       onPress={() => {
         if (disabled) return;
         triggerPressHaptic('selection');
@@ -82,7 +82,7 @@ export const AppToggle = ({
           ]}
         />
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

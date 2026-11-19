@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig } from '@/src/constants';
 import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -8,7 +9,7 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/services/feedback/alerts';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { Animated, PanResponder, StyleSheet, View, TouchableOpacity } from 'react-native';
+import { Animated, PanResponder, StyleSheet, View } from 'react-native';
 
 export function ToastContainer() {
   const { toasts } = useToastListener();
@@ -87,7 +88,8 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
         </View>
 
         {toast.action && (
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="none"
             style={styles.actionButton}
             accessibilityRole="button"
             accessibilityLabel={toast.action.label}
@@ -103,7 +105,7 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
             >
               {toast.action.label.toUpperCase()}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         )}
       </View>
     </Animated.View>

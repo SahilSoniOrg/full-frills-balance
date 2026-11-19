@@ -5,12 +5,6 @@ import { preferences } from '@/src/services/preferences';
 import { act, fireEvent, render, screen } from '@/src/testing/render';
 import type { ComponentProps } from 'react';
 
-// Keep disabled-button behavior without requiring native opacity animations.
-jest.mock('react-native/Libraries/Components/Touchable/TouchableOpacity', () => ({
-  __esModule: true,
-  default: jest.requireActual('react-native').Pressable,
-}));
-
 jest.mock('@/src/components/overlays/ModalSurface', () => {
   const { Text, View } = jest.requireActual('react-native');
   return {

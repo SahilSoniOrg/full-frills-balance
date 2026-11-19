@@ -1,18 +1,12 @@
 import { AppText } from './AppText';
-import { BorderWidth, ChromeMotion, Opacity, Size, Spacing } from '@/src/constants';
+import { PressScaleTouchable } from './PressScaleTouchable';
+import { BorderWidth, ChromeMotion, Size, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerPressHaptic } from '@/src/design-system/haptics';
 import React, { memo, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  LayoutChangeEvent,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, LayoutChangeEvent, ScrollView, StyleSheet, View } from 'react-native';
 import Reanimated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 export interface TabOption<T extends string | number = string> {
@@ -199,14 +193,14 @@ function AppTabsComponent<T extends string | number>({
           {options.map(option => {
             const isSelected = option.id === value;
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
                 key={option.id}
+                pressScale="none"
                 onPress={() => handlePress(option.id)}
                 onLayout={event => handleTabLayout(option.id, event)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isSelected }}
                 accessibilityLabel={option.label}
-                activeOpacity={Opacity.heavy}
                 testID={testID ? `${testID}-item-${option.id}` : `tab-item-${option.id}`}
                 style={styles.tab}
               >
@@ -240,7 +234,7 @@ function AppTabsComponent<T extends string | number>({
                     </Box>
                   )}
                 </Box>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
           {pageProgress ? (
