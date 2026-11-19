@@ -109,6 +109,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: appConfig.name,
   slug: 'full-frills-balance',
   version: '1.0.0',
+  // expo-updates is currently embedded-only (no updates.url and no EAS Update channel);
+  // runtimeVersion is therefore inert until EAS Update is configured.
+  // When enabling OTA, use `eas update:configure` rather than hand-editing this value.
   runtimeVersion: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',

@@ -31,19 +31,21 @@ Layout uses `Stack` / `Inline` / `Box` props (`@/src/design-system`); `StyleShee
 
 Reuse these before building your own:
 
-| Need                                | Use                                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Screen shell, header, back/close    | `ScreenWithChrome` + chrome builders. Close/Back comes from route presentation; don't pass `backIcon`. |
-| Header icon actions                 | `ScreenHeaderActions` / `DetailHeaderMenuActions`; `PrivacyToggleButton` is always last.               |
-| Loading / empty / error / not found | `LoadingView` (`variant="inline"` inside a page), `EmptyStateView`, `ErrorStateView`                   |
-| Rows, groups, section titles        | `ListRow` (rows with chevrons), `ListGroup`, `ScreenSectionHeader`, `SectionLabel`                     |
-| Cards                               | `AppCard` (single `padding` prop, default `lg`)                                                        |
-| Filter chips                        | `FilterChipButton`                                                                                     |
-| Search input                        | `SearchField` (`InlineSearchField` for expanding header search)                                        |
-| Show/hide toggles                   | `DisclosureToggle` in a section, `DetailDisclosure` for a titled block                                 |
-| Sheets and dialogs                  | `ModalSurface` (`position="bottomSheet"`), `SelectionPickerSheet`                                      |
-| Inline notices                      | `NoticeBanner` (`title`, `action` optional)                                                            |
-| Icon-only buttons                   | `IconButton` (`accessibilityLabel` is required)                                                        |
+| Need                                | Use                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Screen shell, header, back/close    | `ScreenWithChrome` + chrome builders. Close/Back comes from route presentation; don't pass `backIcon`.                                                                                                                                                           |
+| Header icon actions                 | `ScreenHeaderActions` / `DetailHeaderMenuActions`; `PrivacyToggleButton` is always last.                                                                                                                                                                         |
+| Loading / empty / error / not found | `LoadingView` (`variant="inline"` inside a page), `EmptyStateView`, `ErrorStateView`                                                                                                                                                                             |
+| Rows, groups, section titles        | `ListRow` (rows with chevrons), `ListGroup`, `ScreenSectionHeader`, `SectionLabel`                                                                                                                                                                               |
+| Cards                               | `AppCard` (single `padding` prop, default `lg`)                                                                                                                                                                                                                  |
+| Press handling                      | `PressScaleTouchable` (or an approved shared control). `AppToggle` and `ErrorBoundary` may use native `Pressable` directly; `ErrorBoundary` must stay dependency-free.                                                                                           |
+| Filter chips                        | `FilterChipButton`                                                                                                                                                                                                                                               |
+| Search input                        | `SearchField` (`InlineSearchField` for expanding header search)                                                                                                                                                                                                  |
+| Show/hide toggles                   | `DisclosureToggle` in a section, `DetailDisclosure` for a titled block                                                                                                                                                                                           |
+| Sheets and dialogs                  | `presentation: 'formSheet'` for a compose/pick destination that is its own screen; in-screen sheets (filters, date pickers, action sheets, calculators, confirmations) stay on `ModalSurface` (`position="bottomSheet"`); centered confirmations remain dialogs. |
+| Inline notices                      | `NoticeBanner` (`title`, `action` optional)                                                                                                                                                                                                                      |
+| Icon-only buttons                   | `IconButton` (`accessibilityLabel` is required)                                                                                                                                                                                                                  |
+| Headers                             | All routes set `headerShown: false` and render custom chrome so iOS, Android, and web layouts match; no native stack headers.                                                                                                                                    |
 
 Don't add raw `Text`, `TouchableOpacity`, `Pressable`, `TextInput`, `Modal` or `ActivityIndicator` from `react-native` where one of these fits. If a shared component is missing a variant you need, extend it rather than copying it into a feature.
 
