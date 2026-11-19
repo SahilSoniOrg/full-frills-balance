@@ -2,9 +2,10 @@ import { Opacity, Scale } from '@/src/constants/design-tokens';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { triggerPressHaptic, type PressHaptic } from '@/src/design-system/haptics';
 import { MotiView } from 'moti';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
+  StyleSheet,
   type GestureResponderEvent,
   type PressableProps,
   type StyleProp,
@@ -89,10 +90,25 @@ export function PressScaleTouchable({
   const { reduceMotion, animate, pressed, transition, handlePressIn, handlePressOut } =
     usePressScale(pressScale);
   const wrapped = surfaceStyle !== undefined;
+  // TouchableOpacity seeded its animated opacity from the flattened style, so a
+  // dimmed caller (archived row, disabled pill) kept its rest opacity. Preserve
+  // that contract: the animated opacity runs between the caller's opacity and
+  // activeOpacity instead of between 1 and activeOpacity.
+  const flattenedOpacity = StyleSheet.flatten(style)?.opacity;
+  const baseOpacity = typeof flattenedOpacity === 'number' ? flattenedOpacity : 1;
   const scale = useSharedValue<number>(Scale.identity);
-  const opacity = useSharedValue<number>(1);
+  const opacity = useSharedValue<number>(baseOpacity);
+  const previousBaseOpacity = useRef(baseOpacity);
   const animateScale = !wrapped && pressScale !== 'none' && !reduceMotion;
   const animateOpacity = !wrapped && activeOpacity !== 1;
+
+  useEffect(() => {
+    if (previousBaseOpacity.current === baseOpacity) return;
+    previousBaseOpacity.current = baseOpacity;
+    if (!animateOpacity) return;
+    opacity.set(withTiming(baseOpacity, { duration: PRESS_OUT_DURATION_MS }));
+  }, [animateOpacity, baseOpacity, opacity]);
+
   const pressStyle = useAnimatedStyle(() => {
     const animatedStyle: ViewStyle = {};
     if (animateScale) animatedStyle.transform = [{ scale: scale.get() }];
@@ -131,7 +147,7 @@ export function PressScaleTouchable({
         scale.set(withTiming(Scale.identity, { duration: PRESS_OUT_DURATION_MS }));
       }
       if (animateOpacity) {
-        opacity.set(withTiming(1, { duration: PRESS_OUT_DURATION_MS }));
+        opacity.set(withTiming(baseOpacity, { duration: PRESS_OUT_DURATION_MS }));
       }
     },
   };

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import { withTiming } from 'react-native-reanimated';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { triggerPressHaptic } from '@/src/design-system/haptics';
 
@@ -82,5 +83,27 @@ describe('PressScaleTouchable', () => {
     );
     fireEvent.press(screen.getByTestId('opaque'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a static style opacity at rest', () => {
+    render(
+      <PressScaleTouchable testID="dimmed" style={{ opacity: 0.5 }} onPress={() => {}}>
+        <Text>Archived</Text>
+      </PressScaleTouchable>,
+    );
+    expect(screen.getByTestId('dimmed')).toHaveStyle({ opacity: 0.5 });
+  });
+
+  it('dims to activeOpacity and restores the static style opacity', () => {
+    render(
+      <PressScaleTouchable testID="dimmed" style={{ opacity: 0.4 }} onPress={() => {}}>
+        <Text>Disabled</Text>
+      </PressScaleTouchable>,
+    );
+    const row = screen.getByTestId('dimmed');
+    fireEvent(row, 'pressIn');
+    expect(withTiming).toHaveBeenLastCalledWith(0.7, expect.any(Object));
+    fireEvent(row, 'pressOut');
+    expect(withTiming).toHaveBeenLastCalledWith(0.4, expect.any(Object));
   });
 });
