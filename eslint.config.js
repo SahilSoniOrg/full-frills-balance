@@ -49,6 +49,18 @@ const featureRules = features.map(feature => ({
   },
 }));
 
+// Touchable* imports bypass the shared PressScaleTouchable press primitive.
+// Keep this array shared: a later flat-config object replaces the whole
+// no-restricted-syntax rule for matching files.
+const touchableImportRestrictions = [
+  {
+    selector:
+      "ImportDeclaration[source.value='react-native'] > ImportSpecifier[imported.name=/^Touchable/]",
+    message:
+      'Use PressScaleTouchable for press feedback (or Pressable for components that own their own animation) instead of react-native Touchable components.',
+  },
+];
+
 module.exports = defineConfig([
   expoConfig,
   {
@@ -93,6 +105,18 @@ module.exports = defineConfig([
           patterns: ['app/*', 'app/**', '@/app', '@/app/*', '@/app/**'],
         },
       ],
+    },
+  },
+  {
+    files: ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}'],
+    ignores: [
+      '**/__tests__/**',
+      'src/components/core/PressScaleTouchable.tsx',
+      'src/components/core/AppToggle.tsx',
+      'src/components/core/ErrorBoundary.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': ['error', ...touchableImportRestrictions],
     },
   },
   {
@@ -153,6 +177,7 @@ module.exports = defineConfig([
     rules: {
       'no-restricted-syntax': [
         'error',
+        ...touchableImportRestrictions,
         {
           selector:
             'CallExpression[callee.type="MemberExpression"][callee.property.name="create"][callee.object.type="Identifier"][callee.object.name=/Repository$/]',
