@@ -16,16 +16,19 @@ describe('usePressScale', () => {
     const { result } = renderHook(() => usePressScale());
 
     expect(result.current.animate.scale).toBe(1);
+    expect(result.current.pressed).toBe(false);
 
     act(() => {
       result.current.handlePressIn();
     });
+    expect(result.current.pressed).toBe(true);
     expect(result.current.animate.scale).toBe(Scale.press);
     expect(result.current.transition.duration).toBe(100);
 
     act(() => {
       result.current.handlePressOut();
     });
+    expect(result.current.pressed).toBe(false);
     expect(result.current.animate.scale).toBe(1);
     expect(result.current.transition.duration).toBe(150);
   });
@@ -38,6 +41,7 @@ describe('usePressScale', () => {
       result.current.handlePressIn();
     });
 
+    expect(result.current.pressed).toBe(true);
     expect(result.current.animate.scale).toBe(1);
   });
 });

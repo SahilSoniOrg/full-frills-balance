@@ -7,15 +7,16 @@ import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
+  type PressableProps,
   type StyleProp,
-  type TouchableOpacityProps,
   type ViewStyle,
 } from 'react-native';
 
-export type AppButtonProps = TouchableOpacityProps & {
+export type AppButtonProps = Omit<PressableProps, 'style'> & {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  style?: StyleProp<ViewStyle>;
   /** Styles applied to the animated visual surface inside the touchable container. */
   buttonStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;

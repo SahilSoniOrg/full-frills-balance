@@ -3,11 +3,18 @@ import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { IconName } from '@/src/types/domainIcons';
-import { Keyboard, StyleSheet, type TouchableOpacityProps, type ViewStyle } from 'react-native';
+import {
+  Keyboard,
+  StyleSheet,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 export type IconButtonVariant = 'primary' | 'surface' | 'clear' | 'error' | 'success';
 
-export type IconButtonProps = Omit<TouchableOpacityProps, 'children' | 'accessibilityLabel'> & {
+export type IconButtonProps = Omit<PressableProps, 'children' | 'accessibilityLabel' | 'style'> & {
+  style?: StyleProp<ViewStyle>;
   /** Icon-only control: screen readers have nothing else to announce. */
   accessibilityLabel: string;
   name: IconName;
@@ -76,7 +83,7 @@ export function IconButton({
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
       accessibilityRole={props.accessibilityRole ?? 'button'}
-      accessibilityState={{ ...props.accessibilityState, disabled }}
+      accessibilityState={{ ...props.accessibilityState, disabled: disabled ?? undefined }}
     >
       <AppIcon name={name} size={size} color={finalIconColor} />
     </PressScaleTouchable>

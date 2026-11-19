@@ -4,10 +4,10 @@ import { triggerPressHaptic, type PressHaptic } from '@/src/design-system/haptic
 import { MotiView } from 'moti';
 import { useState, type ReactNode } from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   type GestureResponderEvent,
+  type PressableProps,
   type StyleProp,
-  type TouchableOpacityProps,
   type ViewStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -34,31 +34,30 @@ export function usePressScale(amount: PressScaleAmount = 'default') {
 
   return {
     reduceMotion,
+    pressed,
     animate: { scale: reduceMotion || !pressed ? Scale.identity : pressedScale },
     transition: {
       type: 'timing' as const,
       duration: pressed ? PRESS_IN_DURATION_MS : PRESS_OUT_DURATION_MS,
     },
-    handlePressIn: () => {
-      if (!reduceMotion) setPressed(true);
-    },
-    handlePressOut: () => {
-      if (!reduceMotion) setPressed(false);
-    },
+    handlePressIn: () => setPressed(true),
+    handlePressOut: () => setPressed(false),
   };
 }
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export type PressScaleTouchableProps = Omit<TouchableOpacityProps, 'activeOpacity'> & {
+export type PressScaleTouchableProps = Omit<PressableProps, 'activeOpacity' | 'style'> & {
   children?: ReactNode;
   /** Stable DOM/native identifier for focus restoration and automation. */
   nativeID?: string;
+  /** Layout on the touchable; the animated surface owns visuals in wrapped mode. */
+  style?: StyleProp<ViewStyle>;
   /**
-   * Styles on an inner animated Moti surface (under the outer touchable).
-   * When set, `style` sizes/positions the touchable and `surfaceStyle` owns
-   * layout among children. When omitted, the touchable itself scales and
-   * `style` lays out children directly (drop-in for TouchableOpacity).
+   * Styles on an inner animated Moti surface (under the outer pressable).
+   * When set, `style` sizes/positions the pressable and `surfaceStyle` owns
+   * layout among children. When omitted, the pressable itself scales and
+   * `style` lays out children directly (drop-in for a plain pressable).
    */
   surfaceStyle?: StyleProp<ViewStyle>;
   /**
@@ -87,12 +86,19 @@ export function PressScaleTouchable({
   activeOpacity = Opacity.heavy,
   ...props
 }: PressScaleTouchableProps) {
-  const { reduceMotion, animate, transition, handlePressIn, handlePressOut } =
+  const { reduceMotion, animate, pressed, transition, handlePressIn, handlePressOut } =
     usePressScale(pressScale);
-  const scale = useSharedValue<number>(Scale.identity);
-  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const wrapped = surfaceStyle !== undefined;
-  const animateSelf = !wrapped && pressScale !== 'none' && !reduceMotion;
+  const scale = useSharedValue<number>(Scale.identity);
+  const opacity = useSharedValue<number>(1);
+  const animateScale = !wrapped && pressScale !== 'none' && !reduceMotion;
+  const animateOpacity = !wrapped && activeOpacity !== 1;
+  const pressStyle = useAnimatedStyle(() => {
+    const animatedStyle: ViewStyle = {};
+    if (animateScale) animatedStyle.transform = [{ scale: scale.get() }];
+    if (animateOpacity) animatedStyle.opacity = opacity.get();
+    return animatedStyle;
+  });
 
   const pressHandlers = {
     onPress:
@@ -104,36 +110,51 @@ export function PressScaleTouchable({
         : onPress,
     onPressIn: (event: GestureResponderEvent) => {
       onPressIn?.(event);
-      if (wrapped) handlePressIn();
-      else if (animateSelf)
+      if (wrapped) {
+        handlePressIn();
+        return;
+      }
+      if (animateScale) {
         scale.set(withTiming(SCALE_BY_AMOUNT[pressScale], { duration: PRESS_IN_DURATION_MS }));
+      }
+      if (animateOpacity) {
+        opacity.set(withTiming(activeOpacity, { duration: PRESS_IN_DURATION_MS }));
+      }
     },
     onPressOut: (event: GestureResponderEvent) => {
       onPressOut?.(event);
-      if (wrapped) handlePressOut();
-      else if (animateSelf)
+      if (wrapped) {
+        handlePressOut();
+        return;
+      }
+      if (animateScale) {
         scale.set(withTiming(Scale.identity, { duration: PRESS_OUT_DURATION_MS }));
+      }
+      if (animateOpacity) {
+        opacity.set(withTiming(1, { duration: PRESS_OUT_DURATION_MS }));
+      }
     },
   };
 
   if (wrapped) {
     return (
-      <TouchableOpacity {...props} {...pressHandlers} style={style} activeOpacity={activeOpacity}>
-        <MotiView animate={animate} transition={transition} style={surfaceStyle}>
+      <Pressable {...props} {...pressHandlers} style={style}>
+        <MotiView
+          animate={
+            activeOpacity === 1 ? animate : { ...animate, opacity: pressed ? activeOpacity : 1 }
+          }
+          transition={transition}
+          style={surfaceStyle}
+        >
           {children}
         </MotiView>
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
   return (
-    <AnimatedTouchable
-      {...props}
-      {...pressHandlers}
-      style={animateSelf ? [style, scaleStyle] : style}
-      activeOpacity={activeOpacity}
-    >
+    <AnimatedPressable {...props} {...pressHandlers} style={[style, pressStyle]}>
       {children}
-    </AnimatedTouchable>
+    </AnimatedPressable>
   );
 }

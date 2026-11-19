@@ -57,4 +57,30 @@ describe('PressScaleTouchable', () => {
     expect(onPress).not.toHaveBeenCalled();
     expect(triggerPressHaptic).not.toHaveBeenCalled();
   });
+
+  it('forwards onPressIn and onPressOut to the caller', () => {
+    const onPressIn = jest.fn();
+    const onPressOut = jest.fn();
+    render(
+      <PressScaleTouchable testID="row" onPressIn={onPressIn} onPressOut={onPressOut}>
+        <Text>Row</Text>
+      </PressScaleTouchable>,
+    );
+    const row = screen.getByTestId('row');
+    fireEvent(row, 'pressIn');
+    fireEvent(row, 'pressOut');
+    expect(onPressIn).toHaveBeenCalledTimes(1);
+    expect(onPressOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('still fires onPress when activeOpacity is 1', () => {
+    const onPress = jest.fn();
+    render(
+      <PressScaleTouchable testID="opaque" activeOpacity={1} onPress={onPress}>
+        <Text>Opaque</Text>
+      </PressScaleTouchable>,
+    );
+    fireEvent.press(screen.getByTestId('opaque'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });

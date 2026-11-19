@@ -14,7 +14,7 @@ import {
   StyleSheet,
   View,
   type AccessibilityState,
-  type TouchableOpacityProps,
+  type PressableProps,
 } from 'react-native';
 
 export type ListVariant = 'card' | 'plain';
@@ -95,11 +95,11 @@ function RowChevron() {
 
 type ListRowPressProps = {
   onPress?: () => void;
-  onLongPress?: TouchableOpacityProps['onLongPress'];
+  onLongPress?: PressableProps['onLongPress'];
   disabled?: boolean;
   testID?: string;
   accessibilityLabel?: string;
-  accessibilityRole?: TouchableOpacityProps['accessibilityRole'];
+  accessibilityRole?: PressableProps['accessibilityRole'];
   accessibilityState?: AccessibilityState;
   pointerEvents?: BoxViewProps['pointerEvents'];
   trailingMaxWidth?: BoxViewProps['maxWidth'];
