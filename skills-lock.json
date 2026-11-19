@@ -1,0 +1,68 @@
+{
+  "version": 2,
+  "skills": {
+    "eas-app-stores": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-app-stores/SKILL.md",
+      "computedHash": "720f43dcfae249de10df2169a9f48843558e09bc7d9afff80902a227fdd87fe5"
+    },
+    "eas-update": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/eas-update/SKILL.md",
+      "computedHash": "c09f10dbadbc8799f868a8782e158a7853d60efe438a9822bd6639bdae863950"
+    },
+    "expo-animation": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-animation/SKILL.md",
+      "computedHash": "7f28a298611a9440484836c2d02366bff5cdbe4c1c4cc2a1965ffe2eb075ffae"
+    },
+    "expo-data-fetching": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-data-fetching/SKILL.md",
+      "computedHash": "5566b445229ee4751aca90f0f08e06af0c53aa16d2227f20e9137c264cb9bc6e"
+    },
+    "expo-design-system": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
+      "computedHash": "e2fe37e041433e6f73702cc7dd8e8f2736c5e6fa62ce32cccc630c5f4ce76309"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "500813b2c531ea88b2cc72206ff395c4453a15cc679b14cd78bf5116923ad541"
+    },
+    "expo-router": {
+      "source": "expo/skills",
+      "commit": "dfdebcc6c4c1bf7a9471cefd6b6f39c7ba6c884d",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
+      "computedHash": "9c3a05a145ceec25ccca5c733b9403b03c7174c60c48c017009c2c5a1a68c8cb"
+    },
+    "react-native-best-practices": {
+      "source": "callstackincubator/agent-skills",
+      "commit": "59e9d17446a248b21d86f078fcd0bd2d36db1ca4",
+      "sourceType": "github",
+      "skillPath": "skills/react-native-best-practices/SKILL.md",
+      "computedHash": "03a527a04426ca72763396170997a51d6d07600100a549f09915a6b4e8dc10c1"
+    },
+    "upgrading-react-native": {
+      "source": "callstackincubator/agent-skills",
+      "commit": "59e9d17446a248b21d86f078fcd0bd2d36db1ca4",
+      "sourceType": "github",
+      "skillPath": "skills/upgrading-react-native/SKILL.md",
+      "computedHash": "c35cbd36fed8075e657160bee9cc7f06c839a008595a5b2f5b65480b865cfbf6"
+    }
+  }
+}
