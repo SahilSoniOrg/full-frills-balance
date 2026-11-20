@@ -14,6 +14,12 @@ export function useAppForegroundMaintenance() {
   const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const stopRebuildWorker = rebuildQueueService.start();
+    // App bootstrap mounts this hook after the database adapter is ready; drain
+    // durable rebuild requests once on cold launch as well as on later resumes.
+    rebuildQueueService.flush().catch(error => {
+      logger.warn('[ForegroundMaintenance] Startup rebuild queue flush failed', { error });
+    });
     const scheduleFlush = () => {
       if (flushTimeoutRef.current) {
         clearTimeout(flushTimeoutRef.current);
@@ -53,6 +59,7 @@ export function useAppForegroundMaintenance() {
 
     return () => {
       subscription.remove();
+      stopRebuildWorker();
       if (flushTimeoutRef.current) {
         clearTimeout(flushTimeoutRef.current);
       }

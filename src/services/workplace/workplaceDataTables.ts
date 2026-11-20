@@ -5,6 +5,7 @@
 export type WorkplaceDataTableTask = {
   name: string;
   table: string;
+  purgeOnly?: true;
 };
 
 export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
@@ -20,6 +21,7 @@ export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Journal Metadata', table: 'journal_metadata' },
   { name: 'Inbox', table: 'transaction_inbox_records' },
   { name: 'Balance Snapshots', table: 'balance_snapshots' },
+  { name: 'Pending Balance Rebuilds', table: 'balance_rebuild_intents', purgeOnly: true },
 ] as const;
 
 /** Tables with workplace_id — used for workplace purge and replacement. */

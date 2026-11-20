@@ -4,7 +4,10 @@ import { act, renderHook } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 
 jest.mock('@/src/services/RebuildQueueService', () => ({
-  rebuildQueueService: { flush: jest.fn().mockResolvedValue(undefined) },
+  rebuildQueueService: {
+    start: jest.fn(() => jest.fn()),
+    flush: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 jest.mock('@/src/services/sms/AutomaticSmsImportService', () => ({
   automaticSmsImportService: { processPending: jest.fn().mockResolvedValue(undefined) },
@@ -35,12 +38,12 @@ describe('useAppForegroundMaintenance', () => {
       changeHandler('active');
     });
 
-    expect(rebuildQueueService.flush).not.toHaveBeenCalled();
+    expect(rebuildQueueService.flush).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       jest.advanceTimersByTime(500);
     });
 
-    expect(rebuildQueueService.flush).toHaveBeenCalledTimes(1);
+    expect(rebuildQueueService.flush).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,267 +1,151 @@
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { RebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/services/observability/logger';
+import { balanceRebuildIntentRepository } from '@/src/data/repositories/BalanceRebuildIntentRepository';
+import { accountWriteRepository } from '@/src/data/repositories/account';
+import {
+  runAccountingWriteSession,
+  stageBalanceRebuildIntents,
+} from '@/src/data/repositories/AccountingWriteSession';
 import { storage } from '@/src/data/storage/storage';
+import { RebuildQueueService } from '@/src/services/RebuildQueueService';
+import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
+import { AccountType } from '@/src/types/enums';
+import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/services/AccountingRebuildService', () => ({
-  accountingRebuildService: {
-    rebuildAccountBalances: jest.fn(),
-  },
-}));
+const workplaceId = asWorkplaceId('rebuild-workplace');
+const accountId = asAccountId('rebuild-account');
+const legacyQueue = 'rebuild_queue_v1';
+const legacyProcessing = 'rebuild_processing_batch_v1';
 
-jest.mock('@/src/data/storage/storage', () => ({
-  storage: {
-    getString: jest.fn(),
-    set: jest.fn(),
-    remove: jest.fn(),
-  },
-}));
-
-jest.mock('@/src/services/observability/logger', () => ({
-  logger: {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
-const accountId = 'account-1' as AccountId;
-const workplaceId = 'workplace-1' as WorkplaceId;
-const rebuildAccountBalances = accountingRebuildService.rebuildAccountBalances as jest.Mock;
-const storageSet = storage.set as jest.Mock;
-const storageGetString = storage.getString as jest.Mock;
-const storageRemove = storage.remove as jest.Mock;
-
-function createQueue(config: { retryLimit?: number } = {}): RebuildQueueService {
-  return new RebuildQueueService({
-    debounceMs: 100,
-    maxBatchSize: 10,
-    retryLimit: config.retryLimit ?? 2,
-    retryDelayMs: 1_000,
+async function stage(fromDate: number): Promise<void> {
+  await runAccountingWriteSession(async session => {
+    stageBalanceRebuildIntents(session, workplaceId, [accountId], fromDate);
   });
 }
 
-describe('RebuildQueueService lifecycle', () => {
-  let queue: RebuildQueueService;
+describe('durable balance rebuild queue', () => {
+  const queue = new RebuildQueueService();
 
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.clearAllMocks();
-    queue = createQueue();
+  beforeEach(async () => {
+    await resetDatabase();
+    storage.remove(legacyQueue);
+    storage.remove(legacyProcessing);
   });
 
   afterEach(() => {
     queue.stop();
     jest.useRealTimers();
+    jest.restoreAllMocks();
+    storage.remove(legacyQueue);
+    storage.remove(legacyProcessing);
   });
 
-  it('retries a transient failure and flushes retry-delayed work before resolving', async () => {
-    rebuildAccountBalances
-      .mockRejectedValueOnce(new Error('transient'))
-      .mockResolvedValueOnce(null);
-    queue.enqueue(accountId, 123, workplaceId);
+  it('retains the earliest date and discards the entire intent on rollback', async () => {
+    await stage(300);
+    await stage(100);
+    await expect(
+      runAccountingWriteSession(async session => {
+        stageBalanceRebuildIntents(session, workplaceId, [accountId], 50);
+        throw new Error('abort');
+      }),
+    ).rejects.toThrow('abort');
 
-    await queue.flush();
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
-    expect(rebuildAccountBalances).toHaveBeenNthCalledWith(1, workplaceId, accountId, 123);
-    expect(rebuildAccountBalances).toHaveBeenNthCalledWith(2, workplaceId, accountId, 123);
-    expect(jest.getTimerCount()).toBe(0);
+    const pending = await balanceRebuildIntentRepository.listPending();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({ workplaceId, accountId, fromDate: 100 });
   });
 
-  it('waits for active processing and drains the retry it schedules', async () => {
-    let rejectFirstAttempt: ((error: Error) => void) | undefined;
-    rebuildAccountBalances
-      .mockImplementationOnce(
-        () =>
-          new Promise((_resolve, reject) => {
-            rejectFirstAttempt = reject;
-          }),
-      )
-      .mockResolvedValueOnce(null);
-    queue.enqueue(accountId, 456, workplaceId);
-    await jest.advanceTimersByTimeAsync(100);
-
-    const flushPromise = queue.flush();
-    let flushResolved = false;
-    void flushPromise.then(() => {
-      flushResolved = true;
-    });
-    await Promise.resolve();
-    expect(flushResolved).toBe(false);
-
-    rejectFirstAttempt?.(new Error('transient'));
-    await flushPromise;
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
-  });
-
-  it('stop cancels retry timers and prevents stopped work from returning', async () => {
-    rebuildAccountBalances.mockRejectedValue(new Error('transient'));
-    queue.enqueue(accountId, 789, workplaceId);
-
-    await jest.advanceTimersByTimeAsync(100);
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-
-    queue.stop();
-    await jest.advanceTimersByTimeAsync(5_000);
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(jest.getTimerCount()).toBe(0);
-  });
-
-  it('stop invalidates an in-flight failure before it can schedule a retry', async () => {
-    let rejectAttempt: ((error: Error) => void) | undefined;
-    rebuildAccountBalances.mockImplementation(
-      () =>
-        new Promise((_resolve, reject) => {
-          rejectAttempt = reject;
-        }),
+  it('retains a newer revision when a stale claim finishes', async () => {
+    await stage(300);
+    const [claimed] = await balanceRebuildIntentRepository.listPending();
+    await stage(100);
+    await expect(accountingRebuildService.rebuildIntent(claimed, () => true)).resolves.toBe(
+      'superseded',
     );
-    queue.enqueue(accountId, 321, workplaceId);
-    await jest.advanceTimersByTimeAsync(100);
+    const [pending] = await balanceRebuildIntentRepository.listPending();
+    expect(pending).toMatchObject({ fromDate: 100 });
+    expect(pending.revision).not.toBe(claimed.revision);
 
-    queue.stop();
-    const stoppedFlush = queue.flush();
-    rejectAttempt?.(new Error('late failure'));
-    await stoppedFlush;
-    await jest.advanceTimersByTimeAsync(5_000);
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(jest.getTimerCount()).toBe(0);
+    await queue.flush();
+    expect(await balanceRebuildIntentRepository.listPending()).toEqual([]);
   });
 
-  it('stop prevents later items in an in-flight batch from starting', async () => {
-    let resolveFirst: (() => void) | undefined;
-    rebuildAccountBalances.mockImplementationOnce(
-      () =>
-        new Promise<void>(resolve => {
-          resolveFirst = resolve;
-        }),
+  it('keeps the claim pending if projection preparation observes cancellation', async () => {
+    await accountWriteRepository.create({
+      id: accountId,
+      name: 'Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+    await stage(100);
+    const [claim] = await balanceRebuildIntentRepository.listPending();
+    const findCurrent = balanceRebuildIntentRepository.findCurrent;
+    let commitChecks = 0;
+    let checkingCommit = false;
+    jest
+      .spyOn(balanceRebuildIntentRepository, 'findCurrent')
+      .mockImplementationOnce(async request => {
+        const row = await findCurrent(request);
+        checkingCommit = true;
+        return row;
+      });
+
+    // Let the writer's first check pass, then cancel as it prepares the projection.
+    const isCurrent = () => {
+      if (!checkingCommit) return true;
+      commitChecks += 1;
+      return commitChecks === 1;
+    };
+    await expect(accountingRebuildService.rebuildIntent(claim, isCurrent)).resolves.toBe(
+      'deferred',
     );
-    queue.enqueueMany([accountId, 'account-2' as AccountId], 654, workplaceId);
+    expect(await balanceRebuildIntentRepository.listPending()).toEqual([claim]);
 
-    await jest.advanceTimersByTimeAsync(100);
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-
-    queue.stop();
-    resolveFirst?.();
-    await Promise.resolve();
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
+    await queue.flush();
+    expect(await balanceRebuildIntentRepository.listPending()).toEqual([]);
   });
 
-  it('does not replay a deliberately stopped batch, but recovers a crashed batch on restart', async () => {
-    let processingMarker: string | undefined;
-    storageSet.mockImplementation((key: string, value: string) => {
-      if (key === 'rebuild_processing_batch_v1') {
-        processingMarker = value;
-      }
-    });
-    storageGetString.mockImplementation((key: string) => {
-      if (key === 'rebuild_processing_batch_v1') {
-        return processingMarker;
-      }
-      return undefined;
-    });
-    storageRemove.mockImplementation((key: string) => {
-      if (key === 'rebuild_processing_batch_v1') {
-        processingMarker = undefined;
-      }
-    });
+  it('continues retrying deferred work at the capped delay', async () => {
+    await stage(100);
+    const pending = await balanceRebuildIntentRepository.listPending();
+    jest.useFakeTimers();
+    jest.spyOn(balanceRebuildIntentRepository, 'listPending').mockResolvedValue(pending);
+    const rebuild = jest
+      .spyOn(accountingRebuildService, 'rebuildIntent')
+      .mockResolvedValue('deferred');
 
-    let resolveInFlight: (() => void) | undefined;
-    rebuildAccountBalances.mockImplementation(
-      () =>
-        new Promise<void>(resolve => {
-          resolveInFlight = resolve;
-        }),
+    await queue.flush();
+    let attempts = 1;
+    for (const delay of [2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]) {
+      await jest.advanceTimersByTimeAsync(delay - 1);
+      expect(rebuild).toHaveBeenCalledTimes(attempts);
+      await jest.advanceTimersByTimeAsync(1);
+      attempts += 1;
+      expect(rebuild).toHaveBeenCalledTimes(attempts);
+    }
+  });
+
+  it('replays both legacy records without clearing them before a successful import', async () => {
+    const key = `${workplaceId}__${accountId}`;
+    storage.set(legacyQueue, JSON.stringify([[key, 300]]));
+    storage.set(legacyProcessing, JSON.stringify([[key, 100]]));
+    jest
+      .spyOn(balanceRebuildIntentRepository, 'importPending')
+      .mockRejectedValueOnce(new Error('unavailable'));
+    await queue.flush();
+    expect(storage.getString(legacyQueue)).toBeDefined();
+    expect(storage.getString(legacyProcessing)).toBeDefined();
+
+    const rebuild = jest
+      .spyOn(accountingRebuildService, 'rebuildIntent')
+      .mockResolvedValue('deferred');
+    await queue.flush();
+    expect(rebuild).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId, fromDate: 100 }),
+      expect.any(Function),
     );
-    queue.enqueue(accountId, 111, workplaceId);
-    await jest.advanceTimersByTimeAsync(100);
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(processingMarker).toBe(JSON.stringify([['workplace-1__account-1', 111]]));
-
-    queue.stop();
-    expect(storageRemove).toHaveBeenCalledWith('rebuild_processing_batch_v1');
-    resolveInFlight?.();
-    await queue.flush();
-
-    const restartedAfterStop = createQueue();
-    await restartedAfterStop.flush();
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-
-    rebuildAccountBalances.mockResolvedValue(null);
-    processingMarker = JSON.stringify([['workplace-1__account-1', 222]]);
-    const restartedAfterCrash = createQueue();
-    await restartedAfterCrash.flush();
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
-    expect(rebuildAccountBalances).toHaveBeenLastCalledWith(workplaceId, accountId, 222);
-    restartedAfterStop.stop();
-    restartedAfterCrash.stop();
-  });
-
-  it('coalesces a fresh enqueue with an existing delayed retry', async () => {
-    rebuildAccountBalances.mockRejectedValueOnce(new Error('transient')).mockResolvedValue(null);
-    queue.enqueue(accountId, 500, workplaceId);
-    await jest.advanceTimersByTimeAsync(100);
-
-    queue.enqueue(accountId, 100, workplaceId);
-    await queue.flush();
-    await jest.advanceTimersByTimeAsync(5_000);
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(2);
-    expect(rebuildAccountBalances).toHaveBeenLastCalledWith(workplaceId, accountId, 100);
-  });
-
-  it('stops retrying after the configured terminal failure limit', async () => {
-    queue = createQueue({ retryLimit: 2 });
-    rebuildAccountBalances.mockRejectedValue(new Error('permanent'));
-    queue.enqueue(accountId, 999, workplaceId);
-
-    await queue.flush();
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(3);
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('Giving up on account workplace-1__account-1 after 3 attempts'),
-    );
-    expect(jest.getTimerCount()).toBe(0);
-  });
-
-  it('keeps the earliest batch boundary after a processing transition error', async () => {
-    rebuildAccountBalances.mockResolvedValue(null);
-    let shouldFailProcessingWrite = true;
-    storageSet.mockImplementation((key: string) => {
-      if (key === 'rebuild_processing_batch_v1' && shouldFailProcessingWrite) {
-        shouldFailProcessingWrite = false;
-        queue.enqueue(accountId, 100, workplaceId);
-        throw new Error('processing storage unavailable');
-      }
-    });
-    queue.enqueue(accountId, 777, workplaceId);
-
-    await queue.flush();
-
-    expect(rebuildAccountBalances).toHaveBeenCalledTimes(1);
-    expect(rebuildAccountBalances).toHaveBeenCalledWith(workplaceId, accountId, 100);
-  });
-
-  it('persists retry-delayed work in the durable queue snapshot', async () => {
-    rebuildAccountBalances.mockRejectedValueOnce(new Error('transient')).mockResolvedValue(null);
-    queue.enqueue(accountId, 777, workplaceId);
-    storageSet.mockClear();
-
-    await jest.advanceTimersByTimeAsync(100);
-
-    const durableWrites = storageSet.mock.calls.filter(([key]) => key === 'rebuild_queue_v1');
-    expect(durableWrites).not.toHaveLength(0);
-    expect(JSON.parse(durableWrites.at(-1)?.[1] ?? '[]')).toEqual([
-      ['workplace-1__account-1', 777],
-    ]);
-
-    await queue.flush();
+    expect(storage.getString(legacyQueue)).toBeUndefined();
+    expect(storage.getString(legacyProcessing)).toBeUndefined();
+    expect(await balanceRebuildIntentRepository.listPending()).toHaveLength(1);
   });
 });

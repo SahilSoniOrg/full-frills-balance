@@ -356,7 +356,7 @@ export function registerAuditHandlers(): void {
       const before = changes.before;
       if (changes.eventType === 'journal.reversed') return false;
       if (changes.eventType === 'journal.planned_payment_attached') {
-        const undoResult = await runAccountingWriteSession(session =>
+        await runAccountingWriteSession(session =>
           journalPersistenceRepository.undoPlanAttachInSession(
             session,
             workplaceId,
@@ -368,7 +368,6 @@ export function registerAuditHandlers(): void {
             { source: 'app', revertsLogId: context?.auditLogId },
           ),
         );
-        journalPersistenceService.afterAtomicWriteCommit([undoResult], workplaceId);
         return true;
       }
       const currentJournal = await journalQueryRepository.find(workplaceId, journalId);

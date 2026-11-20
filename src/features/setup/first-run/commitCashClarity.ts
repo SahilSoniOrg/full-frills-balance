@@ -3,6 +3,7 @@ import { cashClarityPublicationRepository } from '@/src/data/repositories/CashCl
 import {
   runAccountingWriteSession,
   stageModelWrite,
+  stageBalanceRebuildIntents,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -27,7 +28,6 @@ import {
 } from '@/src/types/ids';
 import dayjs from 'dayjs';
 import { generateWorkplaceName } from '@/src/services/setup/workplaceName';
-import { logger } from '@/src/services/observability/logger';
 import type { CashClarityDraft } from './draft';
 import {
   invalid,
@@ -77,7 +77,6 @@ type PublicationManifest = {
 type AtomicPublicationResult = {
   readonly status: CashClarityPublicationOutcome['status'];
   readonly workplaceId: WorkplaceId;
-  readonly balanceRebuild: JournalRebuildImpact;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -385,11 +384,16 @@ export async function publishCashClarity(
             'The setup receipt exists without its Workplace. Keep this setup for recovery.',
           );
         }
-        const balanceRebuild = await verifyCompletedPublication(submitted.operationId, receipt);
+        const impact = await verifyCompletedPublication(submitted.operationId, receipt);
+        stageBalanceRebuildIntents(
+          session,
+          submitted.operationId,
+          impact.affectedAccountIds,
+          impact.rebuildFromDate,
+        );
         return {
           status: 'already_published' as const,
           workplaceId: submitted.operationId,
-          balanceRebuild,
         };
       }
 
@@ -555,11 +559,6 @@ export async function publishCashClarity(
         : null;
       manifest.balanceRebuildAccountIds = [...affectedAccountIds];
       manifest.balanceRebuildFromDate = rebuildFromDate;
-      const balanceRebuild: JournalRebuildImpact = {
-        affectedAccountIds,
-        rebuildFromDate: rebuildFromDate ?? Date.now(),
-      };
-
       stageModelWrite(session, [
         auditRepository.prepareLog(
           {
@@ -579,7 +578,6 @@ export async function publishCashClarity(
       return {
         status: 'published' as const,
         workplaceId: submitted.operationId,
-        balanceRebuild,
       };
     });
   } catch (cause) {
@@ -587,14 +585,6 @@ export async function publishCashClarity(
     throw new CashClarityPublicationError('save_failed', 'Could not save setup.', { cause });
   }
 
-  try {
-    journalPersistenceService.afterAtomicWriteCommit(result.balanceRebuild, result.workplaceId);
-  } catch {
-    // The receipt proves books committed; retry can re-enqueue the persisted impact.
-    logger.error('[CashClarity] Opening balance rebuild enqueue failed after publication', {
-      operationId: result.workplaceId,
-    });
-  }
   return { workplaceId: result.workplaceId, status: result.status };
 }
 
@@ -603,7 +593,7 @@ export async function recoverCashClarityPublication(
   workplaceId: WorkplaceId,
 ): Promise<CashClarityPublicationOutcome> {
   try {
-    const impact = await runAccountingWriteSession(async () => {
+    await runAccountingWriteSession(async session => {
       const receipt = await auditRepository.find(receiptId(workplaceId), workplaceId);
       const workplace = await workplaceRepository.find(workplaceId);
       if (!receipt || !workplace) {
@@ -612,9 +602,14 @@ export async function recoverCashClarityPublication(
           'Saved setup needs recovery before it can be opened.',
         );
       }
-      return verifyCompletedPublication(workplaceId, receipt);
+      const impact = await verifyCompletedPublication(workplaceId, receipt);
+      stageBalanceRebuildIntents(
+        session,
+        workplaceId,
+        impact.affectedAccountIds,
+        impact.rebuildFromDate,
+      );
     });
-    journalPersistenceService.afterAtomicWriteCommit(impact, workplaceId);
     return { workplaceId, status: 'already_published' };
   } catch (cause) {
     if (cause instanceof CashClarityPublicationError) throw cause;

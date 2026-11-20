@@ -1,11 +1,9 @@
 import { preparePlannedPaymentFxQuote } from './plannedPaymentFx';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   settlePlannedOccurrence,
   type PlannedOccurrenceSettlement,
 } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
-import { JournalStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 
 /**
@@ -29,7 +27,7 @@ export async function generatePlannedOccurrence(
     asOf,
   });
   assertNotCancelled();
-  const settlement = await runAccountingWriteSession(async session => {
+  return runAccountingWriteSession(async session => {
     assertNotCancelled();
     const result = await settlePlannedOccurrence(
       session,
@@ -42,9 +40,4 @@ export async function generatePlannedOccurrence(
     assertNotCancelled();
     return result;
   });
-
-  if (settlement.journal?.status === JournalStatus.POSTED) {
-    journalPersistenceService.afterAtomicWriteCommit([settlement.journal], workplaceId);
-  }
-  return settlement;
 }

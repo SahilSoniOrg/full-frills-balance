@@ -62,7 +62,7 @@ export async function repairAccountBalance(
   try {
     if (signal?.aborted || isCurrent?.() === false) return false;
 
-    await accountingRebuildService.rebuildAccountBalances(
+    const rebuilt = await accountingRebuildService.rebuildAccountBalances(
       workplaceId,
       accountId,
       undefined,
@@ -70,7 +70,7 @@ export async function repairAccountBalance(
       signal,
       isCurrent,
     );
-    if (signal?.aborted || isCurrent?.() === false) return false;
+    if (!rebuilt || signal?.aborted || isCurrent?.() === false) return false;
     logger.info(`[IntegrityRepair] Repaired running balances for account ${accountId}`);
     return true;
   } catch (error) {

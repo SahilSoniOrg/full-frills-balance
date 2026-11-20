@@ -20,7 +20,7 @@ describe('rebuildAllAccountBalancesAfterImport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    rebuildMock.mockResolvedValue(undefined);
+    rebuildMock.mockResolvedValue(true);
   });
 
   it('rebuilds each account in the workplace', async () => {
@@ -41,6 +41,7 @@ describe('rebuildAllAccountBalancesAfterImport', () => {
       maxInFlight = Math.max(maxInFlight, inFlight);
       await new Promise(resolve => setTimeout(resolve, 25));
       inFlight -= 1;
+      return true;
     });
 
     await rebuildAllAccountBalancesAfterImport(workplaceId, accounts, concurrency);

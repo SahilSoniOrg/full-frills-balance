@@ -39,13 +39,9 @@ async function settleManualOccurrence(
     occurrenceDate,
     action,
   );
-  const settlement = await runAccountingWriteSession(async session =>
+  return runAccountingWriteSession(session =>
     settlePlannedOccurrence(session, workplaceId, plannedPaymentId, occurrenceDate, action, quote),
   );
-  if (settlement.journal?.status === JournalStatus.POSTED) {
-    journalPersistenceService.afterAtomicWriteCommit([settlement.journal], workplaceId);
-  }
-  return settlement;
 }
 
 async function postOccurrence(
@@ -178,9 +174,9 @@ async function processDuePlannedPaymentsNow(
           occurrenceDate,
           action,
         );
-        const posted = await runAccountingWriteSession(async session => {
-          if (isCancelled()) return null;
-          const settlement = await settlePlannedOccurrence(
+        await runAccountingWriteSession(async session => {
+          if (isCancelled()) return;
+          await settlePlannedOccurrence(
             session,
             workplaceId,
             payment.id,
@@ -190,11 +186,7 @@ async function processDuePlannedPaymentsNow(
           );
           if (isCancelled())
             throw new Error('Planned occurrence settlement cancelled before commit.');
-          return settlement.journal;
         });
-        if (posted?.status === JournalStatus.POSTED) {
-          journalPersistenceService.afterAtomicWriteCommit([posted], workplaceId);
-        }
       }
     } catch (error) {
       if (isCancelled()) break;

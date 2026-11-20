@@ -23,7 +23,7 @@ export async function adjustAccountBalance(
   targetBalance: number,
   counterparty: BalanceChangeCounterparty = { kind: 'adjustment' },
 ): Promise<void> {
-  const outcome = await runAccountingWriteSession(async session => {
+  await runAccountingWriteSession(async session => {
     const targetAccount = await accountQueryRepository.find(workplaceId, account.id);
     if (!targetAccount) {
       throw new Error(`Account ${account.id} not found or deleted`);
@@ -42,7 +42,7 @@ export async function adjustAccountBalance(
     const discrepancy = roundToPrecision(targetBalance - currentBalance, precision);
 
     if (!isBalanceAdjustmentNeeded(discrepancy, precision)) {
-      return { targetAccount, currentBalance, discrepancy, journal: undefined };
+      return;
     }
 
     const balancingAccount =
@@ -66,7 +66,7 @@ export async function adjustAccountBalance(
       targetAccount.accountType,
       discrepancy,
     );
-    const journal = await journalPersistenceService.putInSession(
+    await journalPersistenceService.putInSession(
       session,
       {
         journalDate: Date.now(),
@@ -83,13 +83,5 @@ export async function adjustAccountBalance(
       },
       workplaceId,
     );
-
-    return { targetAccount, currentBalance, discrepancy, journal };
   });
-
-  if (!outcome.journal) {
-    return;
-  }
-
-  journalPersistenceService.afterAtomicWriteCommit([outcome.journal], workplaceId);
 }

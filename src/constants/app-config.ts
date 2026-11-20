@@ -94,9 +94,8 @@ export const AppConfig = {
       batchSize: 500,
       queue: {
         debounceMs: 500,
-        maxBatchSize: 50,
-        retryLimit: 3,
         retryDelayMs: 2000,
+        maxRetryDelayMs: 60_000,
       },
     },
     import: {

@@ -21,7 +21,6 @@ import {
   assertMergeDoesNotCreateHierarchyCycle,
   dedupeMergeSourceAccountIds,
 } from '@/src/services/accounts/accountRules';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/services/observability/logger';
 import { generator } from '@/src/utils/idGenerator';
 import { preferences } from '@/src/services/preferences';
@@ -231,8 +230,6 @@ async function mergeAccountsCore(
       targetAccountId,
     });
   }
-
-  rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
 
   try {
     await assertNoLiveAccountReferences(workplaceId, filteredSourceIds);

@@ -6,7 +6,6 @@ import {
 } from '@/src/data/repositories/journal/CaptureReferenceMatchQueries';
 import { stageLinkedCaptureSource } from '@/src/data/repositories/journal/captureSourceLinkStaging';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { SmsMessage } from '@/modules/expo-sms-inbox';
 import type Journal from '@/src/data/models/Journal';
 import { analytics } from '@/src/services/analytics';
@@ -15,7 +14,6 @@ import {
   SmsParser,
   toTransactionDirection,
 } from '@/src/services/ledger/SmsParser';
-import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   coalesceActionableDuplicate,
   findManyDuplicateCandidates,
@@ -182,10 +180,9 @@ export class SmsSyncPipeline {
       const reservedFuzzy: SmsFuzzyReservation[] = [];
 
       let stagedImportedCount = 0;
-      let journalResults: JournalPersistenceResult[] = [];
       let committed = false;
       try {
-        journalResults = await runAccountingWriteSession(async session => {
+        await runAccountingWriteSession(async session => {
           // Decide once inside the serialized writer, using the current capture permission and matchers,
           // disposition, and duplicate state for both review hints and auto-posting.
           const [
@@ -471,12 +468,8 @@ export class SmsSyncPipeline {
               });
             }
             if (item.autoPosted || evidenceSettlement?.kind === 'settled') stagedImportedCount += 1;
-            if (evidenceSettlement?.kind === 'settled')
-              journalResults.push(evidenceSettlement.journalResult);
-            if (item.journalResult) journalResults.push(item.journalResult);
           }
           if (signal?.aborted) throw new SmsScanCancelledError();
-          return journalResults;
         });
         committed = true;
       } catch (error) {
@@ -485,7 +478,6 @@ export class SmsSyncPipeline {
 
       if (committed) {
         importedCount = stagedImportedCount;
-        journalPersistenceService.afterAtomicWriteCommit(journalResults, workplaceId);
         if (importedCount > 0)
           analytics.trackFeatureUsage('transaction_capture', 'captured', {
             count: importedCount,

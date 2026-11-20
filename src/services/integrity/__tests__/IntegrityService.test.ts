@@ -253,6 +253,7 @@ describe('Integrity checks', () => {
         .spyOn(accountingRebuildService, 'rebuildAccountBalances')
         .mockImplementation(async () => {
           controller.abort();
+          return false;
         });
 
       await expect(
@@ -447,7 +448,7 @@ describe('Integrity checks', () => {
       });
       const scanSpy = jest
         .spyOn(integrityVerification, 'scanForNullAccountTransactions')
-        .mockResolvedValue();
+        .mockResolvedValue(undefined);
       const verifyAllSpy = jest
         .spyOn(integrityVerification, 'verifyAllAccountBalances')
         .mockResolvedValue([
@@ -478,7 +479,7 @@ describe('Integrity checks', () => {
         ]);
       const rebuildSpy = jest
         .spyOn(accountingRebuildService, 'rebuildAccountBalances')
-        .mockResolvedValue();
+        .mockResolvedValue(true);
       const batchSpy = jest.spyOn(database, 'batch');
 
       try {
@@ -542,7 +543,9 @@ describe('Integrity checks', () => {
             }),
           );
         });
-      jest.spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal').mockResolvedValue();
+      jest
+        .spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal')
+        .mockResolvedValue(true);
 
       await forceRunCheck('wp-1' as WorkplaceId);
 

@@ -25,24 +25,29 @@ export async function backfillAccountSnapshotsIfNeeded(
   }
 
   let completed = 0;
+  let incomplete = false;
   await runTasksWithBoundedConcurrency(
     accounts,
     AppConfig.performance.import.postImportAccountRebuildConcurrency,
     async account => {
       if (signal?.aborted) return;
-      await accountingRebuildService.rebuildAccountBalances(
+      const rebuilt = await accountingRebuildService.rebuildAccountBalances(
         workplaceId,
         account.id,
         undefined,
         [],
         signal,
       );
+      if (!rebuilt) {
+        incomplete = true;
+        return;
+      }
       completed += 1;
       onProgress?.(completed, accounts.length);
     },
   );
 
-  if (!signal?.aborted) {
+  if (!signal?.aborted && !incomplete) {
     storage.set(key, ACCOUNT_SNAPSHOT_BACKFILL_VERSION);
     return true;
   }

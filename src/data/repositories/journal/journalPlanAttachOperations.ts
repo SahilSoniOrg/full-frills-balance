@@ -49,6 +49,8 @@ export interface PlanAttachInput {
   captureJournalId: JournalId;
   plannedPaymentId: PlannedPaymentId;
   plannedJournalId: JournalId;
+  /** A PLANNED twin staged earlier in this same accounting session. */
+  stagedPlannedJournal?: Journal;
   /** Occurrence day written as ORIGINAL_PLANNED_DATE. */
   occurrenceDay: number;
   /** Required when the plan counter-account is an asset/liability. */
@@ -123,9 +125,13 @@ export async function stagePlanAttach(
     throw new Error('Capture journal is already linked to a planned payment.');
   }
 
-  const plannedJournal = await findActiveJournal(input.plannedJournalId, workplaceId);
+  const plannedJournal =
+    input.stagedPlannedJournal ?? (await findActiveJournal(input.plannedJournalId, workplaceId));
   if (!plannedJournal) throw new Error('Planned occurrence journal not found');
-  if (plannedJournal.status !== JournalStatus.PLANNED) {
+  if (
+    plannedJournal.workplaceId !== workplaceId ||
+    plannedJournal.status !== JournalStatus.PLANNED
+  ) {
     throw new Error('Occurrence journal must be PLANNED to retire during plan attach.');
   }
   if (plannedJournal.plannedPaymentId !== input.plannedPaymentId) {
@@ -137,9 +143,20 @@ export async function stagePlanAttach(
     throw new Error('Planned payment not found');
   }
 
+  if (input.stagedPlannedJournal) {
+    if (
+      plannedJournal.id !== input.plannedJournalId ||
+      !plannedJournal.deletedAt ||
+      plannedJournal.journalDate !== input.occurrenceDay
+    ) {
+      throw new Error('Staged planned occurrence identity, day, or retirement changed.');
+    }
+  }
   const [captureTransactions, plannedTransactions, metadataRows, accounts] = await Promise.all([
     fetchJournalTransactions(workplaceId, [captureJournal.id]),
-    fetchJournalTransactions(workplaceId, [plannedJournal.id], { includeDeleted: true }),
+    input.stagedPlannedJournal
+      ? Promise.resolve([])
+      : fetchJournalTransactions(workplaceId, [plannedJournal.id], { includeDeleted: true }),
     journalTables.metadata
       .query(Q.where('journal_id', captureJournal.id), Q.where('workplace_id', workplaceId))
       .fetch(),
@@ -237,7 +254,9 @@ export async function stagePlanAttach(
   const activePlannedTransactions = plannedTransactions.filter(
     transaction => !transaction.deletedAt,
   );
-  const deletedAt = nextDeletionTimestamp([plannedJournal, ...plannedTransactions]);
+  const deletedAt =
+    input.stagedPlannedJournal?.deletedAt ??
+    nextDeletionTimestamp([plannedJournal, ...plannedTransactions]);
   const correlationId = auditMetadata?.correlationId;
 
   stageJournalCaptureMetadataWrite(
@@ -323,16 +342,22 @@ export async function stagePlanAttach(
             ),
           ]
         : []),
-      prepareDeletedAt(plannedJournal, deletedAt, deletedAt),
+      ...(input.stagedPlannedJournal
+        ? []
+        : [prepareDeletedAt(plannedJournal, deletedAt, deletedAt)]),
       ...activePlannedTransactions.map(transaction =>
         prepareDeletedAt(transaction, deletedAt, deletedAt),
       ),
-      prepareDeleteAudit(plannedJournal, activePlannedTransactions, deletedAt, workplaceId, {
-        source: auditMetadata?.source ?? PLAN_ATTACH_AUDIT_SOURCE,
-        correlationId,
-        undoable: false,
-        eventType: 'journal.deleted',
-      }),
+      ...(input.stagedPlannedJournal
+        ? []
+        : [
+            prepareDeleteAudit(plannedJournal, activePlannedTransactions, deletedAt, workplaceId, {
+              source: auditMetadata?.source ?? PLAN_ATTACH_AUDIT_SOURCE,
+              correlationId,
+              undoable: false,
+              eventType: 'journal.deleted',
+            }),
+          ]),
       auditRepository.prepareLog(
         {
           entityType: 'journal',

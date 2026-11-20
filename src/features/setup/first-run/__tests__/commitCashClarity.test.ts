@@ -12,7 +12,7 @@ const mockCreateSetup = jest.fn();
 const mockFindWorkplace = jest.fn();
 const mockGetPrecision = jest.fn();
 const mockPutJournal = jest.fn();
-const mockAfterCommit = jest.fn();
+const mockStageRebuild = jest.fn();
 const mockCreatePayment = jest.fn();
 const mockCreateBudget = jest.fn();
 const mockHasCompletePublication = jest.fn();
@@ -20,10 +20,14 @@ const mockFindBalanceRebuildImpact = jest.fn();
 
 jest.mock('@/src/data/repositories/AccountingWriteSession', () => ({
   runAccountingWriteSession: (...args: unknown[]) => mockRunSession(...args),
+  stageBalanceRebuildIntents: (...args: unknown[]) => mockStageRebuild(...args),
   stageModelWrite: (...args: unknown[]) => mockStageModelWrite(...args),
 }));
 jest.mock('@/src/data/repositories/AuditRepository', () => ({
-  auditRepository: { find: (...args: unknown[]) => mockAuditFind(...args), prepareLog: (...args: unknown[]) => mockPrepareLog(...args) },
+  auditRepository: {
+    find: (...args: unknown[]) => mockAuditFind(...args),
+    prepareLog: (...args: unknown[]) => mockPrepareLog(...args),
+  },
 }));
 jest.mock('@/src/data/repositories/CashClarityPublicationRepository', () => ({
   cashClarityPublicationRepository: {
@@ -52,7 +56,6 @@ jest.mock('@/src/services/currency-read-service', () => ({
 jest.mock('@/src/services/journal/JournalPersistenceService', () => ({
   journalPersistenceService: {
     putInSession: (...args: unknown[]) => mockPutJournal(...args),
-    afterAtomicWriteCommit: (...args: unknown[]) => mockAfterCommit(...args),
   },
 }));
 
@@ -63,14 +66,16 @@ describe('publishCashClarity', () => {
     mockFindWorkplace.mockResolvedValue(undefined);
     mockGetPrecision.mockResolvedValue(2);
     mockRunSession.mockImplementation((work: (session: object) => Promise<unknown>) => work({}));
-    mockPutJournal.mockImplementation(async (_session: unknown, input: Record<string, unknown>) => ({
-      journal: { id: input.createJournalId },
-      status: 'POSTED',
-      affectedAccountIds: new Set(
-        (input.transactions as { accountId: string }[]).map(line => line.accountId),
-      ),
-      rebuildFromDate: input.journalDate,
-    }));
+    mockPutJournal.mockImplementation(
+      async (_session: unknown, input: Record<string, unknown>) => ({
+        journal: { id: input.createJournalId },
+        status: 'POSTED',
+        affectedAccountIds: new Set(
+          (input.transactions as { accountId: string }[]).map(line => line.accountId),
+        ),
+        rebuildFromDate: input.journalDate,
+      }),
+    );
     mockCreatePayment.mockResolvedValue(undefined);
     mockCreateBudget.mockResolvedValue(undefined);
     mockHasCompletePublication.mockResolvedValue(true);
@@ -89,7 +94,9 @@ describe('publishCashClarity', () => {
 
   it('rejects planned money without an eligible spendable account before writes', async () => {
     const invalid = cashClarityDraft({
-      accounts: [{ id: 'reserve', kind: 'savings', name: 'Reserve', balance: 100, spendable: false }],
+      accounts: [
+        { id: 'reserve', kind: 'savings', name: 'Reserve', balance: 100, spendable: false },
+      ],
       income: { kind: 'recurring', items: [cashClaritySalaryIncome] },
     });
 
@@ -134,14 +141,30 @@ describe('publishCashClarity', () => {
     const bankInput = calls[0][1];
     expect(bankInput.createJournalId).toBe(`cash-clarity:${draft.operationId}:journal:main`);
     expect(bankInput.currencyCode).toBe('INR');
-    const bankLines = bankInput.transactions as { accountId: string; amount: number; transactionType: TransactionType }[];
+    const bankLines = bankInput.transactions as {
+      accountId: string;
+      amount: number;
+      transactionType: TransactionType;
+    }[];
     expect(bankLines).toEqual([
-      expect.objectContaining({ accountId: `${draft.operationId}:onboarding-account:main`, amount: 1234.56, transactionType: TransactionType.DEBIT }),
-      expect.objectContaining({ accountId: `${draft.operationId}:system:opening-balances`, amount: 1234.56, transactionType: TransactionType.CREDIT }),
+      expect.objectContaining({
+        accountId: `${draft.operationId}:onboarding-account:main`,
+        amount: 1234.56,
+        transactionType: TransactionType.DEBIT,
+      }),
+      expect.objectContaining({
+        accountId: `${draft.operationId}:system:opening-balances`,
+        amount: 1234.56,
+        transactionType: TransactionType.CREDIT,
+      }),
     ]);
     const cardInput = calls[1][1];
     expect(cardInput.createJournalId).toBe(`cash-clarity:${draft.operationId}:journal:card`);
-    const cardLines = cardInput.transactions as { accountId: string; amount: number; transactionType: TransactionType }[];
+    const cardLines = cardInput.transactions as {
+      accountId: string;
+      amount: number;
+      transactionType: TransactionType;
+    }[];
     expect(cardLines.map(line => line.amount)).toEqual([99.12, 99.12]);
     expect(cardLines[0].transactionType).toBe(TransactionType.CREDIT);
     expect(cardLines[1].transactionType).toBe(TransactionType.DEBIT);
@@ -170,7 +193,10 @@ describe('publishCashClarity', () => {
       accounts: [{ id: 'main', kind: 'bank', name: 'Bank', balance: 10 }],
       preservedStarterAccounts: [preservedAccount, preservedBank],
       preservedStarterCategories: [preservedCategory],
-      budget: { kind: 'set', items: [{ id: 'food-limit', name: 'Food', amount: 50, category: 'Food' }] },
+      budget: {
+        kind: 'set',
+        items: [{ id: 'food-limit', name: 'Food', amount: 50, category: 'Food' }],
+      },
     });
 
     await publishCashClarity(draft);
@@ -187,11 +213,13 @@ describe('publishCashClarity', () => {
     const bank = setup.accounts.find(account => account.id === preservedBank.id)!;
     expect(bank).toMatchObject({ id: preservedBank.id, accountType: AccountType.ASSET });
     expect(bank.accountSubtype).toBe('BANK_CHECKING');
-    expect(setup.accounts).toContainEqual(expect.objectContaining({
-      id: preservedCategory.id,
-      name: 'Food',
-      accountType: AccountType.EXPENSE,
-    }));
+    expect(setup.accounts).toContainEqual(
+      expect.objectContaining({
+        id: preservedCategory.id,
+        name: 'Food',
+        accountType: AccountType.EXPENSE,
+      }),
+    );
     expect(mockPutJournal).toHaveBeenCalledTimes(1);
     expect(mockPutJournal.mock.calls[0][1].transactions).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ accountId: preservedAccount.id })]),
@@ -200,7 +228,9 @@ describe('publishCashClarity', () => {
       expect.arrayContaining([expect.objectContaining({ accountId: preservedBank.id })]),
     );
     expect(mockCreateBudget.mock.calls[0][4]).toEqual([preservedCategory.id]);
-    const receipt = mockStageModelWrite.mock.calls[0][1][0] as { changes: { after: { accountIds: string[] } } };
+    const receipt = mockStageModelWrite.mock.calls[0][1][0] as {
+      changes: { after: { accountIds: string[] } };
+    };
     expect(receipt.changes.after.accountIds).toContain(preservedAccount.id);
     expect(receipt.changes.after.accountIds).toContain(preservedBank.id);
     expect(receipt.changes.after.accountIds).toContain(preservedCategory.id);
@@ -211,7 +241,15 @@ describe('publishCashClarity', () => {
       income: { kind: 'recurring', items: [cashClaritySalaryIncome] },
       commitment: {
         kind: 'payment',
-        items: [{ id: 'rent-row', name: 'Rent', type: 'rent', amount: 1500, dueDate: Date.parse('2026-10-01') }],
+        items: [
+          {
+            id: 'rent-row',
+            name: 'Rent',
+            type: 'rent',
+            amount: 1500,
+            dueDate: Date.parse('2026-10-01'),
+          },
+        ],
       },
       budget: {
         kind: 'set',
@@ -229,7 +267,9 @@ describe('publishCashClarity', () => {
     );
     expect(mockPutJournal).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ createJournalId: `cash-clarity:${draft.operationId}:journal:main` }),
+      expect.objectContaining({
+        createJournalId: `cash-clarity:${draft.operationId}:journal:main`,
+      }),
       draft.operationId,
       expect.objectContaining({ eventType: 'journal.opening_balance_created' }),
     );
@@ -247,12 +287,16 @@ describe('publishCashClarity', () => {
       draft.operationId,
     );
     expect(mockStageModelWrite).toHaveBeenCalledTimes(1);
-    expect(mockAfterCommit).toHaveBeenCalledTimes(1);
-    const receipt = mockStageModelWrite.mock.calls[0][1][0] as { changes: { after: Record<string, unknown> } };
-    expect(receipt.changes.after.balanceRebuildAccountIds).toEqual(expect.arrayContaining([
-      `${draft.operationId}:onboarding-account:main`,
-      `${draft.operationId}:system:opening-balances`,
-    ]));
+    expect(mockStageRebuild).not.toHaveBeenCalled();
+    const receipt = mockStageModelWrite.mock.calls[0][1][0] as {
+      changes: { after: Record<string, unknown> };
+    };
+    expect(receipt.changes.after.balanceRebuildAccountIds).toEqual(
+      expect.arrayContaining([
+        `${draft.operationId}:onboarding-account:main`,
+        `${draft.operationId}:system:opening-balances`,
+      ]),
+    );
   });
 
   it('preserves an old partial Workplace instead of treating it as complete or deleting it', async () => {
@@ -265,10 +309,8 @@ describe('publishCashClarity', () => {
     expect(mockStageModelWrite).not.toHaveBeenCalled();
   });
 
-  it('re-enqueues persisted balance impact after an interrupted post-commit enqueue', async () => {
+  it('stages persisted balance impact when resuming an interrupted publication', async () => {
     const draft = cashClarityDraft();
-    mockAfterCommit.mockImplementationOnce(() => { throw new Error('queue unavailable'); });
-
     await expect(publishCashClarity(draft)).resolves.toEqual({
       workplaceId: draft.operationId,
       status: 'published',
@@ -292,13 +334,15 @@ describe('publishCashClarity', () => {
       status: 'already_published',
     });
 
-    expect(mockAfterCommit).toHaveBeenCalledTimes(2);
-    expect(mockAfterCommit.mock.calls[1][0]).toMatchObject({
-      affectedAccountIds: new Set([
+    expect(mockStageRebuild).toHaveBeenCalledWith(
+      expect.anything(),
+      draft.operationId,
+      new Set([
         `${draft.operationId}:onboarding-account:main`,
         `${draft.operationId}:system:opening-balances`,
       ]),
-    });
+      expect.any(Number),
+    );
     expect(mockHasCompletePublication).toHaveBeenCalledWith(
       draft.operationId,
       stagedReceipt.changes.after,
@@ -306,7 +350,9 @@ describe('publishCashClarity', () => {
     expect(mockCreateSetup).toHaveBeenCalledTimes(1);
     expect(mockPutJournal).toHaveBeenCalledTimes(1);
     expect(mockStageModelWrite).toHaveBeenCalledTimes(1);
-    mockAfterCommit.mockImplementationOnce(() => { throw new Error('queue unavailable'); });
+    mockStageRebuild.mockImplementationOnce(() => {
+      throw new Error('queue unavailable');
+    });
     await expect(recoverCashClarityPublication(draft.operationId)).rejects.toMatchObject({
       code: 'finalization_failed',
     });
@@ -333,8 +379,10 @@ describe('publishCashClarity', () => {
     mockFindWorkplace.mockResolvedValue({ id: draft.operationId });
     mockHasCompletePublication.mockResolvedValue(false);
 
-    await expect(publishCashClarity(draft)).rejects.toMatchObject({ code: 'incomplete_publication' });
-    expect(mockAfterCommit).not.toHaveBeenCalled();
+    await expect(publishCashClarity(draft)).rejects.toMatchObject({
+      code: 'incomplete_publication',
+    });
+    expect(mockStageRebuild).not.toHaveBeenCalled();
     expect(mockCreateSetup).not.toHaveBeenCalled();
     expect(mockStageModelWrite).not.toHaveBeenCalled();
   });
@@ -369,19 +417,20 @@ describe('publishCashClarity', () => {
 
     await expect(publishCashClarity(draft)).resolves.toMatchObject({ status: 'already_published' });
 
-    expect(mockFindBalanceRebuildImpact).toHaveBeenCalledWith(draft.operationId, manifest.journalIds);
-    expect(mockAfterCommit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        affectedAccountIds: new Set([
-          `${draft.operationId}:system:opening-balances`,
-          `${draft.operationId}:onboarding-account:main`,
-        ]),
-        rebuildFromDate: Date.parse('2026-11-01'),
-      }),
+    expect(mockFindBalanceRebuildImpact).toHaveBeenCalledWith(
       draft.operationId,
+      manifest.journalIds,
+    );
+    expect(mockStageRebuild).toHaveBeenCalledWith(
+      expect.anything(),
+      draft.operationId,
+      new Set([
+        `${draft.operationId}:system:opening-balances`,
+        `${draft.operationId}:onboarding-account:main`,
+      ]),
+      Date.parse('2026-11-01'),
     );
     expect(mockCreateSetup).not.toHaveBeenCalled();
     expect(mockPutJournal).not.toHaveBeenCalled();
   });
-
 });

@@ -9,14 +9,13 @@ import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { resolveRequiredExchangeRate } from '@/src/services/currencyConversion';
 import { requirePlannedPayment } from './plannedPaymentWorkplace';
-import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
+import { endOfLocalDay, normalizeToStartOfDay } from './plannedPaymentRecurrence';
 import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
 import { normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import type { JournalWriteLine, JournalWriteMetadata } from '@/src/types/journalWrite';
 import { parseJSONRecord } from '@/src/utils/serialization';
-import { AppConfig } from '@/src/constants';
 
 export interface PlannedPaymentFxReview {
   sourceAmount: number;
@@ -252,7 +251,7 @@ export async function preparePlannedPaymentFxQuote(
       workplaceId,
       plannedPaymentId,
       start,
-      start + AppConfig.time.msPerDay - 1,
+      endOfLocalDay(start),
     );
     journal = occurrence.kind === 'planned' ? occurrence.journals[0] : undefined;
   }

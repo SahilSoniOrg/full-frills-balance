@@ -10,6 +10,7 @@ import AccountMatcher from '@/src/data/models/AccountMatcher';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import AuditLog from '@/src/data/models/AuditLog';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+import BalanceRebuildIntent from '@/src/data/models/BalanceRebuildIntent';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
@@ -38,6 +39,7 @@ export const database = new WatermelonDB({
     AccountMetadata,
     AuditLog,
     BalanceSnapshot,
+    BalanceRebuildIntent,
     Budget,
     BudgetScope,
     Currency,

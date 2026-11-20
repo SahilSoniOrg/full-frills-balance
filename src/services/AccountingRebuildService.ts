@@ -1,3 +1,9 @@
+import { database } from '@/src/data/database/Database';
+import {
+  balanceRebuildIntentRepository,
+  balanceRebuildKey,
+  type BalanceRebuildClaim,
+} from '@/src/data/repositories/BalanceRebuildIntentRepository';
 import { AppConfig } from '@/src/constants';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
@@ -17,18 +23,47 @@ import type Transaction from '@/src/data/models/Transaction';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 
-import { storage } from '@/src/data/storage/storage';
-
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
-const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
 
 type RebuildCurrentCheck = () => boolean;
+/** An empty projection may commit. Undefined means preparation was cancelled. */
+type CommitProjection = (prepare: () => Model[] | undefined) => Promise<void>;
 
 function isRebuildCancelled(signal?: AbortSignal, isCurrent?: RebuildCurrentCheck): boolean {
   return signal?.aborted === true || isCurrent?.() === false;
 }
 
 export class AccountingRebuildService {
+  private static readonly activeRebuilds = new Set<string>();
+  async rebuildIntent(
+    claim: BalanceRebuildClaim,
+    isCurrent: RebuildCurrentCheck,
+  ): Promise<'rebuilt' | 'superseded' | 'deferred'> {
+    let outcome: 'rebuilt' | 'superseded' | 'deferred' = 'deferred';
+    await this.rebuildAccountBalances(
+      claim.workplaceId,
+      claim.accountId,
+      claim.fromDate,
+      [],
+      undefined,
+      isCurrent,
+      prepare =>
+        database.write(async () => {
+          const row = await balanceRebuildIntentRepository.findCurrent(claim);
+          if (!isCurrent()) return;
+          if (!row) {
+            outcome = 'superseded';
+            return;
+          }
+          const projectionOps = prepare();
+          if (projectionOps === undefined) return;
+          await database.batch([...projectionOps, row.prepareDestroyPermanently()]);
+          outcome = 'rebuilt';
+        }),
+    );
+    return outcome;
+  }
+
   /**
    * Rebuilds running balances for an account using a segmented snapshot strategy.
    * @param accountId The account ID to rebuild balances for
@@ -41,26 +76,24 @@ export class AccountingRebuildService {
     extraOps: Model[] = [],
     signal?: AbortSignal,
     isCurrent?: RebuildCurrentCheck,
-  ): Promise<void> {
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    commitProjection?: CommitProjection,
+  ): Promise<boolean> {
+    if (isRebuildCancelled(signal, isCurrent)) return false;
 
-    const lockKey = `${REBUILD_LOCK_PREFIX}${workplaceId}__${accountId}`;
-
-    // Atomic-ish check and set for RN/single-threaded JS
-    // Since storage calls are synchronous, this prevents race conditions in the same event loop.
-    if (storage.getString(lockKey)) {
-      logger.warn(
-        `[AccountingRebuildService] Rebuild already in progress for ${accountId}, skipping.`,
-      );
+    const lockKey = balanceRebuildKey(workplaceId, accountId);
+    // In-memory ownership is enough for the single JS runtime and cannot become
+    // a permanent lock after a process crash.
+    if (AccountingRebuildService.activeRebuilds.has(lockKey)) {
+      logger.warn(`[AccountingRebuildService] Rebuild already in progress for ${accountId}.`);
       if (extraOps.length > 0) {
         throw new Error(`Rebuild already in progress for ${accountId}; cannot attach extraOps`);
       }
-      return;
+      return false;
     }
 
-    storage.set(lockKey, String(Date.now()));
+    AccountingRebuildService.activeRebuilds.add(lockKey);
     try {
-      await this.rebuildAccountBalancesInternal(
+      return await this.rebuildAccountBalancesInternal(
         workplaceId,
         accountId,
         fromDate,
@@ -68,15 +101,15 @@ export class AccountingRebuildService {
         extraOps,
         signal,
         isCurrent,
+        commitProjection,
       );
     } finally {
-      storage.remove(lockKey);
+      AccountingRebuildService.activeRebuilds.delete(lockKey);
     }
   }
 
   /**
-   * Internal version that DOES NOT perform its own database.write.
-   * Use this when calling from an existing transaction (e.g. an integrity batch).
+   * Calculates balances, then publishes the projection through the chosen writer.
    */
   async rebuildAccountBalancesInternal(
     workplaceId: WorkplaceId,
@@ -86,31 +119,33 @@ export class AccountingRebuildService {
     extraOps: Model[] = [],
     signal?: AbortSignal,
     isCurrent?: RebuildCurrentCheck,
-  ): Promise<void> {
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    commitProjection?: CommitProjection,
+  ): Promise<boolean> {
+    if (isRebuildCancelled(signal, isCurrent)) return false;
 
     logger.debug(
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
     const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    if (isRebuildCancelled(signal, isCurrent)) return false;
     if (!account) {
       logger.warn(
         `[AccountingRebuildService] Account ${accountId} not found during running balance rebuild, skipping.`,
       );
-      return;
+      await commitProjection?.(() => []);
+      return true;
     }
 
     const precision = await currencyReadService.getPrecision(account.currencyCode);
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    if (isRebuildCancelled(signal, isCurrent)) return false;
 
     // 1. Find the latest checkpoint strictly before the change
     const snapshot = fromDate
       ? await balanceSnapshotRepository.findLatestForAccount(workplaceId, accountId, fromDate - 1)
       : null;
 
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    if (isRebuildCancelled(signal, isCurrent)) return false;
 
     let runningBalance = snapshot?.absoluteBalance || 0;
     let runningCount = snapshot?.transactionCount || 0;
@@ -120,7 +155,7 @@ export class AccountingRebuildService {
     // This is significantly faster than fetching full models (O(1) memory per row vs O(Model))
     let rawTransactions: RebuildTransaction[] =
       await transactionRawRebuildQueries.getRebuildDataRaw(workplaceId, accountId, startDate);
-    if (isRebuildCancelled(signal, isCurrent)) return;
+    if (isRebuildCancelled(signal, isCurrent)) return false;
 
     // Precise Anchor: If we have a snapshot, find its transaction and skip everything up to it.
     if (snapshot) {
@@ -176,34 +211,41 @@ export class AccountingRebuildService {
       }
     }
 
+    // Fetch invalidated snapshots even when the checkpoint transaction itself
+    // was deleted and there are no surviving transaction updates.
+    const invalidatedSnapshots = await balanceSnapshotRepository.findAfterDate(
+      workplaceId,
+      accountId,
+      startDate,
+    );
+    if (isRebuildCancelled(signal, isCurrent)) return false;
+
     // 4. Fetch all data needed for rebuilding asynchronously first
-    if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0 || extraOps.length > 0) {
+    if (
+      idsNeedingUpdate.size > 0 ||
+      snapshotsToCreate.length > 0 ||
+      invalidatedSnapshots.length > 0 ||
+      extraOps.length > 0 ||
+      commitProjection
+    ) {
       const idsArray = Array.from(idsNeedingUpdate.keys());
       const BATCH_SIZE = AppConfig.performance.rebuild.batchSize;
       const allModelsToUpdate: Transaction[] = [];
 
       for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
-        if (isRebuildCancelled(signal, isCurrent)) return;
+        if (isRebuildCancelled(signal, isCurrent)) return false;
         const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
         const models = await transactionQueryRepository.findByIds(workplaceId, chunkIds);
         allModelsToUpdate.push(...models);
       }
 
-      if (isRebuildCancelled(signal, isCurrent)) return;
-
-      // Fetch invalidated snapshots after the starting point
-      const invalidatedSnapshots =
-        idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0
-          ? await balanceSnapshotRepository.findAfterDate(workplaceId, accountId, startDate)
-          : [];
-
-      if (isRebuildCancelled(signal, isCurrent)) return;
+      if (isRebuildCancelled(signal, isCurrent)) return false;
 
       // 5. Finalize inside database.write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
-      await persistBatch(() => {
+      const prepareProjection = () => {
         // The write may have waited behind another database transaction. Re-check inside the
         // write owner immediately before preparing any durable operations.
-        if (isRebuildCancelled(signal, isCurrent)) return [];
+        if (isRebuildCancelled(signal, isCurrent)) return undefined;
 
         const finalBatch: Model[] = [...extraOps];
 
@@ -248,8 +290,11 @@ export class AccountingRebuildService {
         }
 
         return finalBatch;
-      });
+      };
+      if (commitProjection) await commitProjection(prepareProjection);
+      else await persistBatch(() => prepareProjection() ?? []);
     }
+    return !isRebuildCancelled(signal, isCurrent);
   }
 }
 

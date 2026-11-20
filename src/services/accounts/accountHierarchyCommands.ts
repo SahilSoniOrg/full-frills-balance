@@ -11,7 +11,6 @@ import {
   accountTreeTransactionCoordinator,
   accountWriteRepository,
 } from '@/src/data/repositories/account';
-import type { AccountMutationCommitFacts } from '@/src/data/repositories/account/AccountWriteRepository';
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -23,7 +22,6 @@ import {
   assertParentMatchesChildType,
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import type { PlainAccountMetadata } from '@/src/types/plainDtos';
 import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { isValidHexColor } from '@/src/design-system/colorMath';
@@ -214,22 +212,16 @@ export async function prepareAccountFieldUpdate(
   return { account, updatePayload, beforeState, beforeMetadata };
 }
 
-/** Analytics + type-change rebuild after a successful field persist. */
+/** Record analytics after a successful field update. */
 export function emitAccountUpdateSideEffects(
   ctx: AccountFieldUpdateContext,
   updates: AccountPersistedFieldUpdate,
-  workplaceId: WorkplaceId,
-  commitFacts: AccountMutationCommitFacts,
 ): void {
   analytics.trackFeatureUsage('account', 'update', {
     account_type: ctx.beforeState.accountType,
     has_parent: !!updates.parentAccountId,
     fields_updated: Object.keys(updates),
   });
-
-  for (const accountId of commitFacts.balanceRebuildAccountIds) {
-    rebuildQueueService.enqueue(accountId, 0, workplaceId);
-  }
 }
 
 /**
@@ -256,7 +248,7 @@ async function updateAccountCore(
     },
   );
 
-  emitAccountUpdateSideEffects(ctx, updates, workplaceId, mutation.commitFacts);
+  emitAccountUpdateSideEffects(ctx, updates);
   return mutation.account;
 }
 
@@ -272,7 +264,6 @@ async function saveAccountCore(
 ): Promise<Account> {
   let sideEffectContext: AccountFieldUpdateContext | undefined;
   let sideEffectUpdates: AccountPersistedFieldUpdate = updates;
-  let sideEffectCommitFacts: AccountMutationCommitFacts | undefined;
 
   const saved = await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const snapshot = createAccountTreeSnapshot(accounts);
@@ -432,18 +423,18 @@ async function saveAccountCore(
 
     sideEffectContext = context;
     sideEffectUpdates = auditAfter;
-    sideEffectCommitFacts = plannedDetail.commitFacts;
-    return { prepareOps, result: account };
+    return {
+      prepareOps,
+      result: account,
+      rebuildRequest: {
+        workplaceId,
+        accountIds: plannedDetail.commitFacts.balanceRebuildAccountIds,
+        fromDate: 0,
+      },
+    };
   });
 
-  if (sideEffectContext && sideEffectCommitFacts) {
-    emitAccountUpdateSideEffects(
-      sideEffectContext,
-      sideEffectUpdates,
-      workplaceId,
-      sideEffectCommitFacts,
-    );
-  }
+  if (sideEffectContext) emitAccountUpdateSideEffects(sideEffectContext, sideEffectUpdates);
   return saved;
 }
 
@@ -491,6 +482,11 @@ async function updateAccountsCore(
       })),
     );
     return {
+      rebuildRequest: {
+        workplaceId,
+        accountIds: updates.flatMap(({ update }) => update.commitFacts.balanceRebuildAccountIds),
+        fromDate: 0,
+      },
       prepareOps: () => [
         ...updates.flatMap(({ context, update }) =>
           accountWriteRepository.prepareUpdateBatchOps(
@@ -516,14 +512,9 @@ async function updateAccountsCore(
     };
   });
 
-  planned.forEach(({ context, update }) => {
-    emitAccountUpdateSideEffects(
-      context,
-      update.normalizedUpdates,
-      workplaceId,
-      update.commitFacts,
-    );
-  });
+  planned.forEach(({ context, update }) =>
+    emitAccountUpdateSideEffects(context, update.normalizedUpdates),
+  );
 
   return planned.map(({ context }) => context.account);
 }

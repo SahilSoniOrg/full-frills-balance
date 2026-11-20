@@ -1,12 +1,13 @@
 import { accountQueryRepository } from './AccountQueryRepository';
 import { accountWriteRepository } from './AccountWriteRepository';
 import type Account from '@/src/data/models/Account';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 
 type AccountTreeTransactionPlan<T> = {
   prepareOps: () => readonly Model[];
   result: T;
+  rebuildRequest?: { workplaceId: WorkplaceId; accountIds: readonly AccountId[]; fromDate: number };
 };
 
 export class AccountTreeTransactionCoordinator {

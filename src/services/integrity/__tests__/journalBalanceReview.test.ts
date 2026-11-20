@@ -1,3 +1,4 @@
+import { balanceRebuildIntentRepository } from '@/src/data/repositories/BalanceRebuildIntentRepository';
 import { database } from '@/src/data/database/Database';
 import type Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
@@ -88,10 +89,15 @@ describe('journal balance review', () => {
 
   it('applies implied FX rates without changing account amounts', async () => {
     const fx = await createMissingRateJournal();
-    const enqueueSpy = jest.spyOn(rebuildQueueService, 'enqueueMany');
 
     await expect(applyJournalBalanceFxSuggestions(workplaceId, [fx.id])).resolves.toBe(1);
-    expect(enqueueSpy).toHaveBeenCalledWith(new Set([eurCashId, equityId]), 1_000, workplaceId);
+    expect(await balanceRebuildIntentRepository.listPending()).toEqual(
+      expect.arrayContaining(
+        [eurCashId, equityId].map(accountId =>
+          expect.objectContaining({ accountId, fromDate: 1_000, workplaceId }),
+        ),
+      ),
+    );
     await rebuildQueueService.flush();
 
     await expect(findUnbalancedJournals(workplaceId)).resolves.toMatchObject({ unbalanced: [] });
@@ -107,7 +113,6 @@ describe('journal balance review', () => {
   it('saves edits that balance the journal and rejects edits that do not', async () => {
     const short = await createShortJournal();
     const [entry] = await loadJournalBalanceReview(workplaceId, 'review');
-    const enqueueSpy = jest.spyOn(rebuildQueueService, 'enqueueMany');
     const edits = (credit: string) =>
       entry!.lines.map(line => ({
         transactionId: line.id,
@@ -118,7 +123,13 @@ describe('journal balance review', () => {
       /differ by 2.00 USD/,
     );
     await saveJournalBalanceEdits(workplaceId, short.id, edits('50'));
-    expect(enqueueSpy).toHaveBeenCalledWith(new Set([cashId, equityId]), 2_000, workplaceId);
+    expect(await balanceRebuildIntentRepository.listPending()).toEqual(
+      expect.arrayContaining(
+        [cashId, equityId].map(accountId =>
+          expect.objectContaining({ accountId, fromDate: 2_000, workplaceId }),
+        ),
+      ),
+    );
     await rebuildQueueService.flush();
 
     await expect(loadJournalBalanceReview(workplaceId, 'review')).resolves.toEqual([]);

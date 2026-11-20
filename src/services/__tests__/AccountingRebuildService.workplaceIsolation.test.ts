@@ -13,7 +13,6 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { storage } from '@/src/data/storage/storage';
 import { Q, Model } from '@nozbe/watermelondb';
 
 const WORKPLACE_ONE = 'wp-rebuild-isolation-1' as WorkplaceId;
@@ -192,39 +191,43 @@ describe('AccountingRebuildService lock vs extraOps', () => {
     jest.restoreAllMocks();
   });
 
-  it('throws when extraOps are attached while a rebuild lock is held', async () => {
-    jest.spyOn(storage, 'getString').mockReturnValue(String(Date.now()));
-    await expect(
-      accountingRebuildService.rebuildAccountBalances(
-        WORKPLACE_ONE,
-        'acc-locked' as AccountId,
-        undefined,
-        [{} as Model],
-      ),
-    ).rejects.toThrow(/cannot attach extraOps/);
+  it('rejects audit operations on a rebuild already in progress', async () => {
+    let finish!: (result: boolean) => void;
+    jest.spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal').mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        }),
+    );
+    const accountId = 'acc-locked' as AccountId;
+    const active = accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, accountId);
+    try {
+      await expect(
+        accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, accountId, undefined, [
+          {} as Model,
+        ]),
+      ).rejects.toThrow(/cannot attach extraOps/);
+      await expect(
+        accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, accountId),
+      ).resolves.toBe(false);
+    } finally {
+      finish(true);
+      await active;
+    }
   });
 
-  it('skips silently when a rebuild lock is held without extraOps', async () => {
-    jest.spyOn(storage, 'getString').mockReturnValue(String(Date.now()));
+  it('scopes simultaneous rebuild locks by Workplace as well as account', async () => {
+    const rebuild = jest
+      .spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal')
+      .mockResolvedValue(true);
+    const accountId = 'same-account' as AccountId;
+
     await expect(
-      accountingRebuildService.rebuildAccountBalances(
-        WORKPLACE_ONE,
-        'acc-locked-empty' as AccountId,
-      ),
-    ).resolves.toBeUndefined();
-  });
-
-  it('scopes concurrent rebuild locks by workplace as well as account', async () => {
-    const getString = jest.spyOn(storage, 'getString').mockReturnValue(undefined);
-    jest.spyOn(storage, 'set').mockImplementation(() => undefined);
-    jest.spyOn(storage, 'remove').mockImplementation(() => true);
-
-    await Promise.all([
-      accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, 'same-account' as AccountId),
-      accountingRebuildService.rebuildAccountBalances(WORKPLACE_TWO, 'same-account' as AccountId),
-    ]);
-
-    expect(getString).toHaveBeenCalledWith(`rebuild_lock_${WORKPLACE_ONE}__same-account`);
-    expect(getString).toHaveBeenCalledWith(`rebuild_lock_${WORKPLACE_TWO}__same-account`);
+      Promise.all([
+        accountingRebuildService.rebuildAccountBalances(WORKPLACE_ONE, accountId),
+        accountingRebuildService.rebuildAccountBalances(WORKPLACE_TWO, accountId),
+      ]),
+    ).resolves.toEqual([true, true]);
+    expect(rebuild).toHaveBeenCalledTimes(2);
   });
 });

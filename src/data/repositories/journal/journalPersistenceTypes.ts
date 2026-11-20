@@ -10,6 +10,8 @@ import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 
 export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
+  /** Internal: create a historical/retired row in the same atomic batch. */
+  initialDeletedAt?: number;
   /** Stable ID for a new journal staged by a publication operation. */
   createJournalId?: JournalId;
   displayType?: JournalDisplayType;

@@ -7,7 +7,6 @@ import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWri
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { withCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
-import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { settlePlannedOccurrence } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { resetDatabase } from '@/src/testing/resetDatabase';
@@ -142,11 +141,6 @@ describe('planned occurrence settlement plan wire', () => {
         journalId: planned.id,
       }),
     );
-    journalPersistenceService.afterAtomicWriteCommit(
-      settlement.journal ? [settlement.journal] : [],
-      WP,
-    );
-
     expect(settlement.journal?.journal.id).toBe(capture.id);
     expect(capture.plannedPaymentId).toBe(payment.id);
 

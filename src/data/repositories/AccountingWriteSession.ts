@@ -1,7 +1,12 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { Model } from '@nozbe/watermelondb';
+import type { Model } from '@nozbe/watermelondb';
+import {
+  balanceRebuildIntentRepository,
+  balanceRebuildKey,
+  type BalanceRebuildRequest,
+} from './BalanceRebuildIntentRepository';
 import type { CaptureSourceObservation } from '@/src/domain/transaction-intelligence/captureMetadata';
 import {
   mergeCaptureSources,
@@ -19,6 +24,7 @@ interface SessionState {
   operations: (Model | (() => readonly Model[]))[];
   createdAccounts: Account[];
   captureMetadata: Map<JournalId, CaptureMetadataMutation>;
+  rebuildIntents: Map<string, BalanceRebuildRequest>;
   closed: boolean;
 }
 
@@ -58,12 +64,16 @@ export async function runAccountingWriteSession<T>(
       operations: [],
       createdAccounts: [],
       captureMetadata: new Map(),
+      rebuildIntents: new Map(),
       closed: false,
     };
     sessionStates.set(session, state);
 
     try {
       const result = await work(session);
+      const prepareIntents = state.rebuildIntents.size
+        ? await balanceRebuildIntentRepository.prepareUpserts([...state.rebuildIntents.values()])
+        : undefined;
       const operations = state.operations.flatMap(operation =>
         typeof operation === 'function' ? operation() : [operation],
       );
@@ -73,13 +83,30 @@ export async function runAccountingWriteSession<T>(
             ...writer.write(withCaptureSources(writer.metadataJson, mutation.sources)),
           );
       }
-      if (operations.length > 0) await database.batch(...operations);
+      if (prepareIntents) operations.push(...prepareIntents());
+      if (operations.length) await database.batch(...operations);
       return result;
     } finally {
       state.closed = true;
       sessionStates.delete(session);
     }
   });
+}
+
+/** Stage durable projection work in the same batch as the accounting mutation. */
+export function stageBalanceRebuildIntents(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  accountIds: Iterable<AccountId>,
+  fromDate: number,
+): void {
+  const state = getOpenState(session);
+  for (const accountId of accountIds) {
+    const key = balanceRebuildKey(workplaceId, accountId);
+    const current = state.rebuildIntents.get(key);
+    if (!current || fromDate < current.fromDate)
+      state.rebuildIntents.set(key, { workplaceId, accountId, fromDate });
+  }
 }
 
 function captureMutationFor(

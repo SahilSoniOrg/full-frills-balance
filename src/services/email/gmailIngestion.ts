@@ -374,6 +374,5 @@ export async function ingestGmailObservation(
     if (signal?.aborted || shouldContinue?.() === false) throw new Error('Gmail sync cancelled.');
     return result;
   });
-  if (journalResult) journalPersistenceService.afterAtomicWriteCommit([journalResult], workplaceId);
   return !!journalResult;
 }

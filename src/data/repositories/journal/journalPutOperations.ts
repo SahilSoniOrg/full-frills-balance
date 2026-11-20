@@ -179,6 +179,19 @@ export async function preparePutOperations(
 ): Promise<PreparedJournalWrite> {
   const put = await resolvePut(input, workplaceId);
   const { existing, oldTransactions, journalDate, status } = put;
+  const initialDeletedAt =
+    'initialDeletedAt' in input && input.initialDeletedAt !== undefined
+      ? new Date(input.initialDeletedAt)
+      : undefined;
+  if (
+    initialDeletedAt &&
+    (existing ||
+      status !== JournalStatus.PLANNED ||
+      !input.plannedPaymentId ||
+      !Number.isFinite(initialDeletedAt.getTime()))
+  ) {
+    throw new Error('Only a new planned payment occurrence can be created retired.');
+  }
   if (expectedCurrent) {
     if (!existing) {
       throw new Error(
@@ -229,6 +242,7 @@ export async function preparePutOperations(
       record.displayType = displayType;
       record.createdAt = now;
       record.updatedAt = now;
+      if (initialDeletedAt) record.deletedAt = initialDeletedAt;
     });
 
   const existingMetadata = existing
@@ -413,6 +427,7 @@ export async function preparePutOperations(
               record.runningBalance = runningBalanceByAccountId?.get(line.accountId) ?? null;
               record.createdAt = now;
               record.updatedAt = now;
+              if (initialDeletedAt) record.deletedAt = initialDeletedAt;
             }),
           ),
         ]

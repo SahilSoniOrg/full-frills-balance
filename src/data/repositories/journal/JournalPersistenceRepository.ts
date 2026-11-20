@@ -1,5 +1,6 @@
 import {
   runAccountingWriteSession,
+  stageBalanceRebuildIntents,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import {
@@ -39,11 +40,40 @@ import {
   stageReverse,
 } from '@/src/data/repositories/journal/journalPutOperations';
 import { JournalStatus } from '@/src/types/enums';
+import { isRebuildEligibleJournalStatus } from '@/src/domain/journal/journalStatus';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import type { AuditEventMetadata, AuditJsonObject } from '@/src/types/auditEvents';
 
 export type { BulkDeleteResult, PlanAttachInput, PlanAttachResult };
+
+function stageImpact<T extends JournalRebuildImpact>(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  result: T,
+): T {
+  if (Number.isFinite(result.rebuildFromDate) && result.affectedAccountIds.size > 0)
+    stageBalanceRebuildIntents(
+      session,
+      workplaceId,
+      result.affectedAccountIds,
+      result.rebuildFromDate,
+    );
+  return result;
+}
+
+function stageJournalImpact<T extends JournalPersistenceResult>(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  result: T,
+): T {
+  if (
+    isRebuildEligibleJournalStatus(result.status) ||
+    (result.previousStatus !== undefined && isRebuildEligibleJournalStatus(result.previousStatus))
+  )
+    return stageImpact(session, workplaceId, result);
+  return result;
+}
 
 /**
  * Persistence boundary for journal create/update/post and lifecycle commands.
@@ -70,7 +100,11 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return stagePut(session, input, workplaceId, auditMetadata, expectedCurrent);
+    return stageJournalImpact(
+      session,
+      workplaceId,
+      await stagePut(session, input, workplaceId, auditMetadata, expectedCurrent),
+    );
   }
 
   async putMany(
@@ -85,7 +119,8 @@ export class JournalPersistenceRepository {
 
     return runAccountingWriteSession(async session => {
       const results: JournalPersistenceResult[] = [];
-      for (const input of inputs) results.push(await stagePut(session, input, workplaceId));
+      for (const input of inputs)
+        results.push(await this.putInSession(session, input, workplaceId));
       return results;
     });
   }
@@ -119,7 +154,11 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return stagePost(session, journalId, workplaceId, postedAt, auditMetadata, expectedCurrent);
+    return stageJournalImpact(
+      session,
+      workplaceId,
+      await stagePost(session, journalId, workplaceId, postedAt, auditMetadata, expectedCurrent),
+    );
   }
 
   async reverse(
@@ -141,7 +180,11 @@ export class JournalPersistenceRepository {
     workplaceId: WorkplaceId,
     options?: ReverseJournalOptions,
   ): Promise<JournalPersistenceResult> {
-    return stageReverse(session, originalJournalId, reason, workplaceId, options);
+    return stageJournalImpact(
+      session,
+      workplaceId,
+      await stageReverse(session, originalJournalId, reason, workplaceId, options),
+    );
   }
 
   /**
@@ -156,7 +199,9 @@ export class JournalPersistenceRepository {
     if (distinctCount < 2 || distinctCount !== input.sourceJournalIds.length) {
       throw new Error('Select at least 2 distinct journals to merge');
     }
-    return runAccountingWriteSession(session => stageMerge(session, input, workplaceId));
+    return runAccountingWriteSession(async session =>
+      stageJournalImpact(session, workplaceId, await stageMerge(session, input, workplaceId)),
+    );
   }
 
   /** Reassigns transaction accounts after reloading and validating affected journals in-session. */
@@ -165,7 +210,9 @@ export class JournalPersistenceRepository {
     workplaceId: WorkplaceId,
   ): Promise<JournalRebuildImpact> {
     if (input.accountIdByTransactionId.size === 0) return emptyRebuildImpact();
-    return runAccountingWriteSession(session => stageReassignAccounts(session, input, workplaceId));
+    return runAccountingWriteSession(async session =>
+      stageImpact(session, workplaceId, await stageReassignAccounts(session, input, workplaceId)),
+    );
   }
 
   async retargetAccountsForMergeInSession(
@@ -175,13 +222,14 @@ export class JournalPersistenceRepository {
     targetAccountId: AccountId,
     correlationId?: string,
   ): Promise<void> {
-    return stageRetargetAccountsForMerge(
+    await stageRetargetAccountsForMerge(
       session,
       workplaceId,
       sourceAccountIds,
       targetAccountId,
       correlationId,
     );
+    stageBalanceRebuildIntents(session, workplaceId, [...sourceAccountIds, targetAccountId], 0);
   }
 
   /** Soft-deletes a journal and its currently active lines as one repository command. */
@@ -191,8 +239,12 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalRebuildImpact> {
-    return runAccountingWriteSession(session =>
-      stageDelete(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+    return runAccountingWriteSession(async session =>
+      stageImpact(
+        session,
+        workplaceId,
+        await stageDelete(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+      ),
     );
   }
 
@@ -204,7 +256,9 @@ export class JournalPersistenceRepository {
     if (journalIds.length === 0) {
       return { ...emptyRebuildImpact(), undoToken: { journals: [], transactions: [] } };
     }
-    return runAccountingWriteSession(session => stageBulkDelete(session, workplaceId, journalIds));
+    return runAccountingWriteSession(async session =>
+      stageImpact(session, workplaceId, await stageBulkDelete(session, workplaceId, journalIds)),
+    );
   }
 
   /** Stages the unposted cascade, or only upcoming scheduled entries during a schedule edit. */
@@ -229,8 +283,12 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return runAccountingWriteSession(session =>
-      stageRecover(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+    return runAccountingWriteSession(async session =>
+      stageJournalImpact(
+        session,
+        workplaceId,
+        await stageRecover(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+      ),
     );
   }
 
@@ -242,7 +300,9 @@ export class JournalPersistenceRepository {
     if (token.journals.length === 0 && token.transactions.length === 0) {
       return emptyRebuildImpact();
     }
-    return runAccountingWriteSession(session => stageBulkRestore(session, workplaceId, token));
+    return runAccountingWriteSession(async session =>
+      stageImpact(session, workplaceId, await stageBulkRestore(session, workplaceId, token)),
+    );
   }
 
   /** Reverts a posted or skipped journal to its planned state atomically. */
@@ -252,8 +312,12 @@ export class JournalPersistenceRepository {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return runAccountingWriteSession(session =>
-      stageRevertToPlanned(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+    return runAccountingWriteSession(async session =>
+      stageJournalImpact(
+        session,
+        workplaceId,
+        await stageRevertToPlanned(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+      ),
     );
   }
 
@@ -277,7 +341,11 @@ export class JournalPersistenceRepository {
     input: PlanAttachInput,
     auditMetadata?: AuditEventMetadata,
   ): Promise<PlanAttachResult> {
-    return stagePlanAttach(session, workplaceId, input, auditMetadata);
+    return stageJournalImpact(
+      session,
+      workplaceId,
+      await stagePlanAttach(session, workplaceId, input, auditMetadata),
+    );
   }
 
   async undoPlanAttachInSession(
@@ -287,7 +355,11 @@ export class JournalPersistenceRepository {
     changes: { before?: AuditJsonObject; after?: AuditJsonObject },
     auditMetadata?: AuditEventMetadata,
   ): Promise<JournalPersistenceResult> {
-    return stageUndoPlanAttach(session, workplaceId, captureJournalId, changes, auditMetadata);
+    return stageJournalImpact(
+      session,
+      workplaceId,
+      await stageUndoPlanAttach(session, workplaceId, captureJournalId, changes, auditMetadata),
+    );
   }
 }
 

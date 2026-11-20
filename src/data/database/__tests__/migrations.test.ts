@@ -17,7 +17,7 @@ import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 38;
+const EXPECTED_SCHEMA_VERSION = 39;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);

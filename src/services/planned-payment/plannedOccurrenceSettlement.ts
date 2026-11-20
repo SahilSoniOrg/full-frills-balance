@@ -29,9 +29,13 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import {
   calculateNextOccurrence,
+  endOfLocalDay,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { attachCaptureJournalToPlannedOccurrenceInSession } from '@/src/services/planned-payment/plannedPaymentPlanAttach';
+import {
+  attachCaptureJournalToPlannedOccurrenceInSession,
+  stageRetiredPlannedOccurrenceTwin,
+} from '@/src/services/planned-payment/plannedPaymentPlanAttach';
 import { classifyPlannedPaymentDirection } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import {
@@ -91,7 +95,7 @@ interface OccurrenceDay {
 
 function occurrenceDay(occurrenceDate: number): OccurrenceDay {
   const dayStart = normalizeToStartOfDay(occurrenceDate);
-  return { dayStart, dayEnd: dayStart + (AppConfig.time.msPerDay - 1) };
+  return { dayStart, dayEnd: endOfLocalDay(dayStart) };
 }
 
 function intervalDaysForPayment(payment: PlannedPayment): number {
@@ -319,6 +323,7 @@ async function attachCaptureUsingPlanService(
   plannedJournalId: JournalId,
   occurrenceDayStart: number,
   correlationId: string,
+  stagedPlannedJournal?: Journal,
 ): Promise<JournalPersistenceResult> {
   return attachCaptureJournalToPlannedOccurrenceInSession(
     session,
@@ -328,6 +333,7 @@ async function attachCaptureUsingPlanService(
       plannedPaymentId: payment.id,
       plannedJournalId,
       occurrenceDay: occurrenceDayStart,
+      stagedPlannedJournal,
     },
     { correlationId },
   );
@@ -374,13 +380,16 @@ export async function settlePlannedOccurrence(
     day.dayStart,
     day.dayEnd,
   );
+  const transition = resolveOccurrenceTransition(action, occurrence);
+  if (transition.kind === 'autoPostNoop') {
+    return { journal: null, nextOccurrence: payment.nextOccurrence, completed: false };
+  }
   const correlationId = generator();
   const applied = await applyOccurrenceAction(
     session,
     payment,
     day,
-    occurrence,
-    action,
+    transition,
     correlationId,
     fxQuote,
   );
@@ -392,7 +401,8 @@ export async function settlePlannedOccurrence(
       attachCandidate: applied.attachCandidate,
     };
   }
-  if (action.kind === 'autoPostDue' && !applied.journal && plannedPaymentFxMode(payment))
+  // An automatic request that did not post or attach cannot consume the cursor.
+  if (action.kind === 'autoPostDue' && !applied.journal)
     return { journal: null, nextOccurrence: payment.nextOccurrence, completed: false };
   return {
     journal: applied.journal,
@@ -405,6 +415,67 @@ type AppliedOccurrenceAction = {
   attachCandidate?: PlanCaptureAttachCandidate;
 };
 
+type OccurrenceTransition =
+  | { kind: 'generateClaimed' }
+  | { kind: 'generateNew'; action: Extract<PlannedOccurrenceAction, { kind: 'generate' }> }
+  | {
+      kind: 'generateExisting';
+      action: Extract<PlannedOccurrenceAction, { kind: 'generate' }>;
+      journals: Journal[];
+    }
+  | { kind: 'autoPostNoop' }
+  | {
+      kind: 'autoPost';
+      action: Extract<PlannedOccurrenceAction, { kind: 'autoPostDue' }>;
+      journal: Journal;
+    }
+  | { kind: 'settled'; journalId: JournalId }
+  | { kind: 'skipNew'; action: Extract<PlannedOccurrenceAction, { kind: 'skip' }> }
+  | {
+      kind: 'skipExisting';
+      action: Extract<PlannedOccurrenceAction, { kind: 'skip' }>;
+      journals: Journal[];
+    }
+  | { kind: 'postNew'; action: Extract<PlannedOccurrenceAction, { kind: 'post' }> }
+  | {
+      kind: 'postExisting';
+      action: Extract<PlannedOccurrenceAction, { kind: 'post' }>;
+      journals: Journal[];
+    };
+
+type PlanAttachTransition =
+  { kind: 'none' } | { kind: 'hold' } | { kind: 'attached'; journal: JournalPersistenceResult };
+
+/** Selects the occurrence transition from its current journal facts and requested action. */
+function resolveOccurrenceTransition(
+  action: PlannedOccurrenceAction,
+  occurrence: PlannedOccurrenceJournals,
+): OccurrenceTransition {
+  if (action.kind === 'generate') {
+    if (occurrence.kind === 'settled') return { kind: 'generateClaimed' };
+    return occurrence.kind === 'planned'
+      ? { kind: 'generateExisting', action, journals: occurrence.journals }
+      : { kind: 'generateNew', action };
+  }
+  if (action.kind === 'autoPostDue') {
+    const journal =
+      occurrence.kind === 'planned'
+        ? occurrence.journals.find(candidate => candidate.id === action.journalId)
+        : undefined;
+    return journal ? { kind: 'autoPost', action, journal } : { kind: 'autoPostNoop' };
+  }
+  if (occurrence.kind === 'settled') return { kind: 'settled', journalId: occurrence.journalId };
+  const journals = occurrence.kind === 'planned' ? occurrence.journals : [];
+  if (action.kind === 'skip') {
+    return journals.length > 0
+      ? { kind: 'skipExisting', action, journals }
+      : { kind: 'skipNew', action };
+  }
+  return journals.length > 0
+    ? { kind: 'postExisting', action, journals }
+    : { kind: 'postNew', action };
+}
+
 async function tryStrictPlanAttach(
   session: AccountingWriteSession,
   payment: PlannedPayment,
@@ -412,90 +483,93 @@ async function tryStrictPlanAttach(
   asOf: number,
   plannedJournalId: JournalId | undefined,
   correlationId: string,
-): Promise<'attached' | 'hold' | 'none' | JournalPersistenceResult> {
+): Promise<PlanAttachTransition> {
   const capture = await findCaptureMatchForOccurrence(payment, dayStart, asOf);
-  if (capture.kind === 'soft' || capture.kind === 'ambiguous') return 'hold';
-  if (capture.kind !== 'strict') return 'none';
+  if (capture.kind === 'soft' || capture.kind === 'ambiguous') return { kind: 'hold' };
+  if (capture.kind !== 'strict') return { kind: 'none' };
   if (!plannedJournalId) {
-    // Mint a PLANNED twin then attach so upgrade/undo/audit stay on the real attach path.
-    if (!payment.toAccountId) return 'hold';
-    const minted = await journalPersistenceService.putInSession(
-      session,
-      {
-        journalDate: dayStart,
-        description: payment.name,
-        currencyCode: payment.currencyCode,
-        transactions: buildPlannedPaymentTransferLines(payment),
-        status: JournalStatus.PLANNED,
-        plannedPaymentId: payment.id,
-      },
-      payment.workplaceId,
-      { source: 'system', correlationId, undoable: false },
-    );
-    return attachCaptureUsingPlanService(
+    // Stage a retired twin in this batch so attach undo can restore the occurrence.
+    if (!payment.toAccountId) return { kind: 'hold' };
+    const stagedTwin = await stageRetiredPlannedOccurrenceTwin(
       session,
       payment,
-      capture.captureJournalId,
-      minted.journal.id,
       dayStart,
       correlationId,
     );
+    return {
+      kind: 'attached',
+      journal: await attachCaptureUsingPlanService(
+        session,
+        payment,
+        capture.captureJournalId,
+        stagedTwin.id,
+        dayStart,
+        correlationId,
+        stagedTwin,
+      ),
+    };
   }
-  return attachCaptureUsingPlanService(
-    session,
-    payment,
-    capture.captureJournalId,
-    plannedJournalId,
-    dayStart,
-    correlationId,
-  );
+  return {
+    kind: 'attached',
+    journal: await attachCaptureUsingPlanService(
+      session,
+      payment,
+      capture.captureJournalId,
+      plannedJournalId,
+      dayStart,
+      correlationId,
+    ),
+  };
 }
 
 async function applyOccurrenceAction(
   session: AccountingWriteSession,
   payment: PlannedPayment,
   { dayStart }: OccurrenceDay,
-  occurrence: PlannedOccurrenceJournals,
-  action: PlannedOccurrenceAction,
+  transition: OccurrenceTransition,
   correlationId: string,
   fxQuote?: PlannedPaymentFxQuote,
 ): Promise<AppliedOccurrenceAction> {
-  if (action.kind === 'generate') {
-    if (occurrence.kind !== 'none') {
-      if (occurrence.kind === 'planned') {
-        const attached = await tryStrictPlanAttach(
-          session,
-          payment,
-          dayStart,
-          action.asOf,
-          occurrence.journals[0]?.id,
-          correlationId,
-        );
-        if (attached === 'hold') return { journal: null };
-        if (attached !== 'none' && attached !== 'attached') return { journal: attached };
-        if (payment.isAutoPost && dayStart <= action.asOf) {
-          const due = occurrence.journals[0];
-          const context = await readPlannedPaymentFxContext(payment, dayStart, due);
-          if (context && context.mode !== 'manual') {
-            if (occurrence.journals.length !== 1)
-              throw new Error('Multiple planned journals for this occurrence');
-            return {
-              journal: await postScheduledJournal(
-                session,
-                payment,
-                due,
-                dayStart,
-                due.journalDate,
-                correlationId,
-                'system',
-                fxQuote,
-              ),
-            };
-          }
-        }
+  if (transition.kind === 'generateClaimed' || transition.kind === 'autoPostNoop') {
+    return { journal: null };
+  }
+  if (transition.kind === 'generateExisting') {
+    const action = transition.action;
+    const plannedJournals = transition.journals;
+    const attached = await tryStrictPlanAttach(
+      session,
+      payment,
+      dayStart,
+      action.asOf,
+      plannedJournals[0]?.id,
+      correlationId,
+    );
+    if (attached.kind === 'hold') return { journal: null };
+    if (attached.kind === 'attached') return { journal: attached.journal };
+    if (payment.isAutoPost && dayStart <= action.asOf) {
+      const due = plannedJournals[0];
+      const context = await readPlannedPaymentFxContext(payment, dayStart, due);
+      if (context && context.mode !== 'manual') {
+        if (plannedJournals.length !== 1)
+          throw new Error('Multiple planned journals for this occurrence');
+        return {
+          journal: await postScheduledJournal(
+            session,
+            payment,
+            due,
+            dayStart,
+            due.journalDate,
+            correlationId,
+            'system',
+            fxQuote,
+          ),
+        };
       }
-      return { journal: null };
     }
+    return { journal: null };
+  }
+  if (transition.kind === 'generateNew') {
+    const action = transition.action;
     // mint path
     const attached = await tryStrictPlanAttach(
       session,
@@ -505,8 +579,8 @@ async function applyOccurrenceAction(
       undefined,
       correlationId,
     );
-    if (attached === 'hold') return { journal: null };
-    if (attached !== 'none' && attached !== 'attached') return { journal: attached };
+    if (attached.kind === 'hold') return { journal: null };
+    if (attached.kind === 'attached') return { journal: attached.journal };
     if (!payment.toAccountId) {
       if (plannedPaymentFxMode(payment))
         throw new Error('Explicit planned FX requires exactly two distinct accounts');
@@ -560,24 +634,21 @@ async function applyOccurrenceAction(
     };
   }
 
-  if (action.kind === 'autoPostDue') {
+  if (transition.kind === 'autoPost') {
+    const action = transition.action;
     if (!payment.isAutoPost || dayStart > normalizeToStartOfDay(action.asOf))
       return { journal: null };
-    const due =
-      occurrence.kind === 'planned'
-        ? occurrence.journals.find(journal => journal.id === action.journalId)
-        : undefined;
+    const due = transition.journal;
     const attached = await tryStrictPlanAttach(
       session,
       payment,
       dayStart,
       action.asOf,
-      due?.id ?? action.journalId,
+      due.id,
       correlationId,
     );
-    if (attached === 'hold') return { journal: null };
-    if (attached !== 'none' && attached !== 'attached') return { journal: attached };
-    if (!due) return { journal: null };
+    if (attached.kind === 'hold') return { journal: null };
+    if (attached.kind === 'attached') return { journal: attached.journal };
     const context = await readPlannedPaymentFxContext(payment, dayStart, due);
     if (context?.mode === 'manual') return { journal: null };
     return {
@@ -594,13 +665,16 @@ async function applyOccurrenceAction(
     };
   }
 
-  if (occurrence.kind === 'settled') {
-    throw occurrenceSettledError(payment.id, occurrence.journalId);
+  if (transition.kind === 'settled') {
+    throw occurrenceSettledError(payment.id, transition.journalId);
   }
-  const planned = occurrence.kind === 'planned' ? occurrence.journals : [];
+  const planned =
+    transition.kind === 'skipExisting' || transition.kind === 'postExisting'
+      ? transition.journals
+      : [];
   if (planned.length === 0) assertActive(payment);
 
-  if (action.kind === 'skip') {
+  if (transition.kind === 'skipNew' || transition.kind === 'skipExisting') {
     if (planned.length > 0) {
       await journalPersistenceRepository.setNonPostedStatusesInSession(
         session,
@@ -661,97 +735,100 @@ async function applyOccurrenceAction(
     };
   }
 
-  // User-initiated post: never silent-attach; surface a candidate unless the user
-  // already confirmed Post over "link instead?".
-  if (!action.confirmPostDespiteCandidate) {
-    const capture = await findCaptureMatchForOccurrence(payment, dayStart, action.postedAt);
-    if (capture.kind !== 'none') {
+  if (transition.kind === 'postNew' || transition.kind === 'postExisting') {
+    const action = transition.action;
+    // User post surfaces capture candidates unless the User confirmed posting.
+    if (!action.confirmPostDespiteCandidate) {
+      const capture = await findCaptureMatchForOccurrence(payment, dayStart, action.postedAt);
+      if (capture.kind !== 'none') {
+        return {
+          journal: null,
+          attachCandidate: {
+            captureJournalId: capture.captureJournalId,
+            plannedJournalId: planned[0]?.id,
+            matchKind: capture.kind,
+            occurrenceDay: dayStart,
+            amount: capture.amount,
+            currencyCode: capture.currencyCode,
+          },
+        };
+      }
+    }
+
+    if (planned.length > 1) {
+      throw new Error(
+        `Planned payment ${payment.id} has multiple planned journals for this occurrence`,
+      );
+    }
+    if (action.journalId && planned[0]?.id !== action.journalId) {
+      throw new Error(`Planned journal ${action.journalId} is not scheduled for this occurrence`);
+    }
+    if (planned.length === 1) {
       return {
-        journal: null,
-        attachCandidate: {
-          captureJournalId: capture.captureJournalId,
-          plannedJournalId: planned[0]?.id,
-          matchKind: capture.kind,
-          occurrenceDay: dayStart,
-          amount: capture.amount,
-          currencyCode: capture.currencyCode,
-        },
+        journal: await postScheduledJournal(
+          session,
+          payment,
+          planned[0],
+          dayStart,
+          action.postedAt,
+          correlationId,
+          'app',
+          fxQuote,
+          action.review,
+          action.auditMetadata,
+          action.expectedCurrent,
+        ),
       };
     }
-  }
-
-  if (planned.length > 1) {
-    throw new Error(
-      `Planned payment ${payment.id} has multiple planned journals for this occurrence`,
-    );
-  }
-  if (action.journalId && planned[0]?.id !== action.journalId) {
-    throw new Error(`Planned journal ${action.journalId} is not scheduled for this occurrence`);
-  }
-  if (planned.length === 1) {
+    if (!payment.toAccountId) {
+      throw new Error(`Planned payment ${payment.id} is missing toAccountId.`);
+    }
+    const context = await readPlannedPaymentFxContext(payment, dayStart);
+    const amounts = context
+      ? await resolvePlannedPaymentFxAmounts(context, {
+          posting: true,
+          postedAt: action.postedAt,
+          quote: fxQuote,
+          review: action.review,
+        })
+      : undefined;
     return {
-      journal: await postScheduledJournal(
+      journal: await journalPersistenceService.putInSession(
         session,
-        payment,
-        planned[0],
-        dayStart,
-        action.postedAt,
-        correlationId,
-        'app',
-        fxQuote,
-        action.review,
-        action.auditMetadata,
-        action.expectedCurrent,
+        {
+          journalDate: action.postedAt,
+          description: payment.name,
+          currencyCode: context?.review.sourceCurrency ?? payment.currencyCode,
+          transactions:
+            context && amounts
+              ? buildPlannedPaymentFxLines(
+                  context.lines,
+                  context.review.sourceCurrency,
+                  context.review.destinationCurrency,
+                  amounts.sourceAmount,
+                  amounts.destinationAmount,
+                )
+              : buildPlannedPaymentTransferLines(payment),
+          status: JournalStatus.POSTED,
+          plannedPaymentId: payment.id,
+          metadata: context
+            ? {
+                ...plannedPaymentFxMetadata(context, {
+                  [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart,
+                }),
+                importSource: MetadataSources.MANUAL_POST,
+              }
+            : {
+                importSource: MetadataSources.MANUAL_POST,
+                metadataJson: JSON.stringify({ [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart }),
+              },
+        },
+        payment.workplaceId,
+        { source: 'app', correlationId },
       ),
     };
   }
-  if (!payment.toAccountId) {
-    throw new Error(`Planned payment ${payment.id} is missing toAccountId.`);
-  }
-  const context = await readPlannedPaymentFxContext(payment, dayStart);
-  const amounts = context
-    ? await resolvePlannedPaymentFxAmounts(context, {
-        posting: true,
-        postedAt: action.postedAt,
-        quote: fxQuote,
-        review: action.review,
-      })
-    : undefined;
-  return {
-    journal: await journalPersistenceService.putInSession(
-      session,
-      {
-        journalDate: action.postedAt,
-        description: payment.name,
-        currencyCode: context?.review.sourceCurrency ?? payment.currencyCode,
-        transactions:
-          context && amounts
-            ? buildPlannedPaymentFxLines(
-                context.lines,
-                context.review.sourceCurrency,
-                context.review.destinationCurrency,
-                amounts.sourceAmount,
-                amounts.destinationAmount,
-              )
-            : buildPlannedPaymentTransferLines(payment),
-        status: JournalStatus.POSTED,
-        plannedPaymentId: payment.id,
-        metadata: context
-          ? {
-              ...plannedPaymentFxMetadata(context, {
-                [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart,
-              }),
-              importSource: MetadataSources.MANUAL_POST,
-            }
-          : {
-              importSource: MetadataSources.MANUAL_POST,
-              metadataJson: JSON.stringify({ [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart }),
-            },
-      },
-      payment.workplaceId,
-      { source: 'app', correlationId },
-    ),
-  };
+  return { journal: null };
 }
 
 /** Patch and post in one put: staged puts are not visible to a subsequent status-only post. */

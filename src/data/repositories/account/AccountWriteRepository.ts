@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import {
   getStagedAccounts,
   runAccountingWriteSession,
+  stageBalanceRebuildIntents,
   stageAccountCreation,
   stageModelWrite,
   type AccountingWriteSession,
@@ -45,6 +46,7 @@ export interface AccountMutationResult {
 interface PreparedAccountMutation<T> {
   prepareOps: () => readonly Model[];
   result: T;
+  rebuildRequest?: { workplaceId: WorkplaceId; accountIds: readonly AccountId[]; fromDate: number };
 }
 
 type AccountMergeRecords = {
@@ -92,6 +94,13 @@ export class AccountWriteRepository {
     return runAccountingWriteSession(async session => {
       const plan = await prepare();
       stageModelWrite(session, plan.prepareOps);
+      if (plan.rebuildRequest)
+        stageBalanceRebuildIntents(
+          session,
+          plan.rebuildRequest.workplaceId,
+          plan.rebuildRequest.accountIds,
+          plan.rebuildRequest.fromDate,
+        );
       return plan.result;
     });
   }
@@ -454,6 +463,11 @@ export class AccountWriteRepository {
       await options.validateCurrent?.(currentAccount, currentMetadata);
 
       return {
+        rebuildRequest: {
+          workplaceId: plan.workplaceId,
+          accountIds: plan.commitFacts.balanceRebuildAccountIds,
+          fromDate: 0,
+        },
         prepareOps: () => [
           ...this.prepareUpdateBatchOps(
             currentAccount,

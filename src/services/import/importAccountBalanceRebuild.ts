@@ -24,7 +24,8 @@ export async function rebuildAllAccountBalancesAfterImport(
 
   let completed = 0;
   await runTasksWithBoundedConcurrency(accounts, concurrency, async account => {
-    await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
+    const rebuilt = await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
+    if (!rebuilt) throw new Error(`Balance rebuild did not complete for account ${account.id}`);
     completed += 1;
     onProgress?.(account, completed, accounts.length);
   });

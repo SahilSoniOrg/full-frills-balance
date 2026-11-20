@@ -6,6 +6,13 @@ import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export { normalizeToStartOfDay };
 
+/** Last millisecond of the occurrence's local calendar day (DST-safe). */
+export function endOfLocalDay(timestamp: number): number {
+  const nextDay = new Date(normalizeToStartOfDay(timestamp));
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.getTime() - 1;
+}
+
 export type PlannedPaymentRecurrenceRule = {
   intervalN: number;
   intervalType: PlannedPaymentInterval;

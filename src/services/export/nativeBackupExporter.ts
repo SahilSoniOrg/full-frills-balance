@@ -42,7 +42,7 @@ export async function exportWorkplacesToJSON(
     const data: Record<string, readonly unknown[]> = {};
     const exportedTransactionIds = new Set<string>();
     const exportedJournalIds = new Set<string>();
-    const exportTasks = WORKPLACE_DATA_TABLES;
+    const exportTasks = WORKPLACE_DATA_TABLES.filter(task => !task.purgeOnly);
     for (const [taskIndex, task] of exportTasks.entries()) {
       let rows = await fetchAndTransformTable<Record<string, unknown>>(workplaceId, task.table);
       if (task.table === 'journals') {

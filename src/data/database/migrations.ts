@@ -1152,5 +1152,28 @@ END;`),
         `),
       ],
     },
+    {
+      toVersion: 39,
+      steps: [
+        createTable({
+          name: 'balance_rebuild_intents',
+          columns: [
+            { name: 'account_id', type: 'string', isIndexed: true },
+            { name: 'from_date', type: 'number' },
+            { name: 'revision', type: 'string' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+CREATE UNIQUE INDEX IF NOT EXISTS balance_rebuild_intents_workplace_account
+ON balance_rebuild_intents (workplace_id, account_id);
+CREATE TRIGGER IF NOT EXISTS trg_balance_rebuild_intents_workplace_id_check
+BEFORE INSERT ON balance_rebuild_intents FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_rebuild_intents'); END;`),
+      ],
+    },
   ],
 });

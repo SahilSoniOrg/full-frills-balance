@@ -7,7 +7,6 @@ import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
@@ -86,12 +85,11 @@ async function createAccountCore(
     metadata: input.metadata,
   };
 
-  const { account, openingJournal } = await runAccountingWriteSession(async session => {
+  const account = await runAccountingWriteSession(async session => {
     const created = await accountWriteRepository.createInSession(session, payload, {
       appendWithinSiblingList: true,
       audit: { initialBalance: input.initialBalance },
     });
-    let openingJournal: JournalPersistenceResult | undefined;
 
     if (postOpening) {
       const openingInput = getOpeningBalancesAccountInput(currencyCode, input.workplaceId);
@@ -106,7 +104,7 @@ async function createAccountCore(
         input.accountType,
         input.initialBalance!,
       );
-      openingJournal = await journalPersistenceService.putInSession(
+      await journalPersistenceService.putInSession(
         session,
         {
           journalDate: Date.now(),
@@ -131,12 +129,8 @@ async function createAccountCore(
       );
     }
 
-    return { account: created, openingJournal };
+    return created;
   });
-
-  if (openingJournal) {
-    journalPersistenceService.afterAtomicWriteCommit([openingJournal], workplaceId);
-  }
 
   analytics.trackFeatureUsage('account', 'create', {
     account_type: account.accountType,

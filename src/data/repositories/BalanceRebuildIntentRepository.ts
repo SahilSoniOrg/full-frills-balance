@@ -1,0 +1,103 @@
+import { database } from '@/src/data/database/Database';
+import BalanceRebuildIntent from '@/src/data/models/BalanceRebuildIntent';
+import { fetchSequentiallyInChunks } from './fetchSequentiallyInChunks';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
+import { type Model, Q } from '@nozbe/watermelondb';
+import { filter } from 'rxjs';
+import { generator } from '@/src/utils/idGenerator';
+
+export interface BalanceRebuildRequest {
+  workplaceId: WorkplaceId;
+  accountId: AccountId;
+  fromDate: number;
+}
+
+export interface BalanceRebuildClaim extends BalanceRebuildRequest {
+  id: string;
+  revision: string;
+}
+
+export function balanceRebuildKey(workplaceId: WorkplaceId, accountId: AccountId): string {
+  return JSON.stringify([workplaceId, accountId]);
+}
+
+function intents() {
+  return database.collections.get<BalanceRebuildIntent>('balance_rebuild_intents');
+}
+
+export const balanceRebuildIntentRepository = {
+  /** Resolve upserts under the accounting writer, before any model factories run. */
+  async prepareUpserts(requests: readonly BalanceRebuildRequest[]): Promise<() => Model[]> {
+    const byWorkplace = new Map<WorkplaceId, Map<AccountId, number>>();
+    for (const { workplaceId, accountId, fromDate } of requests) {
+      const accounts = byWorkplace.get(workplaceId) ?? new Map<AccountId, number>();
+      accounts.set(accountId, Math.min(accounts.get(accountId) ?? fromDate, fromDate));
+      byWorkplace.set(workplaceId, accounts);
+    }
+    const existing = new Map<string, BalanceRebuildIntent>();
+    for (const [workplaceId, accounts] of byWorkplace) {
+      const rows = await fetchSequentiallyInChunks([...accounts.keys()], ids =>
+        intents()
+          .query(Q.where('workplace_id', workplaceId), Q.where('account_id', Q.oneOf([...ids])))
+          .fetch(),
+      );
+      for (const row of rows) existing.set(balanceRebuildKey(row.workplaceId, row.accountId), row);
+    }
+
+    return () => {
+      const operations: Model[] = [];
+      for (const [workplaceId, accounts] of byWorkplace) {
+        for (const [accountId, fromDate] of accounts) {
+          const key = balanceRebuildKey(workplaceId, accountId);
+          const row = existing.get(key);
+          operations.push(
+            row
+              ? row.prepareUpdate(record => {
+                  record.fromDate = Math.min(record.fromDate, fromDate);
+                  record.revision = generator();
+                })
+              : intents().prepareCreate(record => {
+                  record._raw.id = key;
+                  record.workplaceId = workplaceId;
+                  record.accountId = accountId;
+                  record.fromDate = fromDate;
+                  record.revision = generator();
+                }),
+          );
+        }
+      }
+      return operations;
+    };
+  },
+
+  async importPending(requests: readonly BalanceRebuildRequest[]): Promise<void> {
+    if (!requests.length) return;
+    await database.write(async () => {
+      const prepare = await this.prepareUpserts(requests);
+      await database.batch(prepare());
+    });
+  },
+
+  changes() {
+    return intents().changes.pipe(
+      filter(changes => changes.some(change => change.type !== 'destroyed')),
+    );
+  },
+
+  async listPending(): Promise<BalanceRebuildClaim[]> {
+    const rows = await intents().query(Q.sortBy('created_at', Q.asc)).fetch();
+    return rows.map(({ id, revision, workplaceId, accountId, fromDate }) => ({
+      id,
+      revision,
+      workplaceId,
+      accountId,
+      fromDate,
+    }));
+  },
+
+  /** Call under the same writer that will publish the calculated balances. */
+  async findCurrent(claim: BalanceRebuildClaim): Promise<BalanceRebuildIntent | undefined> {
+    const [row] = await intents().query(Q.where('id', claim.id)).fetch();
+    if (row?.revision === claim.revision) return row;
+  },
+};

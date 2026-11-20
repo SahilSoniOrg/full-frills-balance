@@ -1,3 +1,4 @@
+import { balanceRebuildIntentRepository } from '@/src/data/repositories/BalanceRebuildIntentRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
@@ -85,18 +86,26 @@ describe('JournalPersistenceService write paths', () => {
     expect(result).toEqual([]);
   });
 
-  it('re-enqueues a persisted committed balance impact during publication recovery', () => {
-    const enqueueMany = jest.spyOn(rebuildQueueService, 'enqueueMany').mockImplementation(() => {});
-    const fromDate = Date.UTC(2026, 10, 1);
-    const affectedAccountIds = new Set([cashAccountId, expenseAccountId]);
-
-    journalPersistenceService.afterAtomicWriteCommit(
-      { affectedAccountIds, rebuildFromDate: fromDate },
+  it('records rebuild work before a posted write returns', async () => {
+    const journalDate = Date.UTC(2026, 10, 1);
+    await journalPersistenceService.put(
+      {
+        description: 'Posted',
+        journalDate,
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
       workplaceId,
     );
 
-    expect(enqueueMany).toHaveBeenCalledWith(affectedAccountIds, fromDate, workplaceId);
-    enqueueMany.mockRestore();
+    const pending = await balanceRebuildIntentRepository.listPending();
+    expect(pending).toEqual(
+      expect.arrayContaining(
+        [cashAccountId, expenseAccountId].map(accountId =>
+          expect.objectContaining({ workplaceId, accountId, fromDate: journalDate }),
+        ),
+      ),
+    );
   });
 
   it('putMany saves multiple journals in one write', async () => {

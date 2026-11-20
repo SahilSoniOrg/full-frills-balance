@@ -6,18 +6,15 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import type {
   JournalPersistenceResult,
-  JournalRebuildImpact,
   MergeJournalsInput,
   PutJournalInput,
   PutJournalPatchInput,
   ReassignJournalAccountsInput,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { isRebuildEligibleJournalStatus } from '@/src/domain/journal/journalStatus';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 
 /** Display type is always derived by the repository from the lines it persists. */
@@ -38,7 +35,6 @@ export class JournalPersistenceService {
       auditMetadata,
       expectedCurrent,
     );
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
@@ -66,14 +62,10 @@ export class JournalPersistenceService {
       );
       return journalResult;
     });
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
-  /**
-   * Stages a journal write in a caller-owned accounting session. Pair with
-   * `afterAtomicWriteCommit` once the session commits.
-   */
+  /** Stages a journal and any required balance rebuild in the caller’s session. */
   putInSession(
     session: AccountingWriteSession,
     input: JournalPersistenceServiceInput,
@@ -88,7 +80,6 @@ export class JournalPersistenceService {
     workplaceId: WorkplaceId,
   ): Promise<Journal[]> {
     const results = await journalPersistenceRepository.putMany(inputs, workplaceId);
-    this.enqueueRebuilds(results, workplaceId);
     return results.map(result => result.journal);
   }
 
@@ -106,7 +97,6 @@ export class JournalPersistenceService {
       auditMetadata,
       expectedCurrent,
     );
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
@@ -116,13 +106,12 @@ export class JournalPersistenceService {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<void> {
-    const impact = await journalPersistenceRepository.delete(
+    await journalPersistenceRepository.delete(
       journalId,
       workplaceId,
       auditMetadata,
       expectedCurrent,
     );
-    this.enqueueImpacts([impact], workplaceId);
   }
 
   async bulkDelete(
@@ -130,7 +119,6 @@ export class JournalPersistenceService {
     journalIds: readonly JournalId[],
   ): Promise<BulkDeleteUndoToken> {
     const result = await journalPersistenceRepository.bulkDelete(workplaceId, journalIds);
-    this.enqueueImpacts([result], workplaceId);
     return result.undoToken;
   }
 
@@ -150,7 +138,6 @@ export class JournalPersistenceService {
 
   async merge(input: MergeJournalsInput, workplaceId: WorkplaceId): Promise<Journal> {
     const result = await journalPersistenceRepository.merge(input, workplaceId);
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
@@ -158,8 +145,7 @@ export class JournalPersistenceService {
     input: ReassignJournalAccountsInput,
     workplaceId: WorkplaceId,
   ): Promise<void> {
-    const impact = await journalPersistenceRepository.reassignAccounts(input, workplaceId);
-    this.enqueueImpacts([impact], workplaceId);
+    await journalPersistenceRepository.reassignAccounts(input, workplaceId);
   }
 
   async recover(
@@ -174,13 +160,11 @@ export class JournalPersistenceService {
       auditMetadata,
       expectedCurrent,
     );
-    this.enqueueImpacts([result], workplaceId);
     return result.journal;
   }
 
   async bulkRestore(workplaceId: WorkplaceId, token: BulkDeleteUndoToken): Promise<void> {
-    const impact = await journalPersistenceRepository.bulkRestore(workplaceId, token);
-    this.enqueueImpacts([impact], workplaceId);
+    await journalPersistenceRepository.bulkRestore(workplaceId, token);
   }
 
   async revertToPlanned(
@@ -195,7 +179,6 @@ export class JournalPersistenceService {
       auditMetadata,
       expectedCurrent,
     );
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
@@ -215,18 +198,6 @@ export class JournalPersistenceService {
     );
   }
 
-  /** Enqueue derived-balance rebuilds only after the enclosing session has committed. */
-  afterAtomicWriteCommit(
-    committed: readonly JournalPersistenceResult[] | JournalRebuildImpact,
-    workplaceId: WorkplaceId,
-  ): void {
-    if (Array.isArray(committed)) {
-      this.enqueueRebuilds(committed as readonly JournalPersistenceResult[], workplaceId);
-      return;
-    }
-    this.enqueueImpacts([committed as JournalRebuildImpact], workplaceId);
-  }
-
   async reverse(
     originalJournalId: JournalId,
     reason: string,
@@ -237,32 +208,7 @@ export class JournalPersistenceService {
       reason,
       workplaceId,
     );
-    this.enqueueRebuilds([result], workplaceId);
     return result.journal;
-  }
-
-  /** Enqueues only results whose journal was or became balance-affecting. */
-  private enqueueRebuilds(
-    results: readonly JournalPersistenceResult[],
-    workplaceId: WorkplaceId,
-  ): void {
-    this.enqueueImpacts(
-      results.filter(
-        result =>
-          (result.previousStatus !== undefined &&
-            isRebuildEligibleJournalStatus(result.previousStatus)) ||
-          isRebuildEligibleJournalStatus(result.status),
-      ),
-      workplaceId,
-    );
-  }
-
-  private enqueueImpacts(impacts: readonly JournalRebuildImpact[], workplaceId: WorkplaceId): void {
-    const affectedAccountIds = new Set(impacts.flatMap(impact => [...impact.affectedAccountIds]));
-    if (affectedAccountIds.size === 0) return;
-
-    const rebuildFromDate = Math.min(...impacts.map(impact => impact.rebuildFromDate));
-    rebuildQueueService.enqueueMany(affectedAccountIds, rebuildFromDate, workplaceId);
   }
 }
 
