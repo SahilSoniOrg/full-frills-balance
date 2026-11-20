@@ -9,6 +9,7 @@ import { ChartInteractionProvider } from '@/src/components/charts/ChartInteracti
 import { PlannedPaymentFxReviewContainer } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
 import { AlertContainer } from '@/src/components/overlays/AlertContainer';
 import { IncompleteFxDetailsContainer } from '@/src/components/overlays/IncompleteFxDetailsContainer';
+import { AppearancePickerHost } from '@/src/components/overlays/AppearancePickerHost';
 import { ToastContainer } from '@/src/components/overlays/Toast';
 import { JournalCsvExportBusyHost } from '@/src/components/journal/JournalCsvExportButton';
 import { ErrorBoundary } from '@/src/components/core';
@@ -103,6 +104,7 @@ function RootLayout() {
                       <LaunchCoordinatorProvider setupDraft={setupDraft}>
                         <SplashOrchestrator />
                         <ToastContainer />
+                        <AppearancePickerHost />
                         <SharingProvider>
                           <SharingLifecycle />
                           <AppLockInterceptor>
