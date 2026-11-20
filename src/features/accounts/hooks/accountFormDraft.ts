@@ -39,7 +39,6 @@ export interface AccountFormCoreDraft {
 }
 
 export interface AccountFormPickersDraft {
-  isAppearancePickerVisible: boolean;
   isParentPickerVisible: boolean;
   isPayFromPickerVisible: boolean;
 }
@@ -93,7 +92,6 @@ export type AccountFormDraftAction =
   | { type: 'SET_LOCAL_ERROR'; error: string | null };
 
 const EMPTY_PICKERS: AccountFormPickersDraft = {
-  isAppearancePickerVisible: false,
   isParentPickerVisible: false,
   isPayFromPickerVisible: false,
 };

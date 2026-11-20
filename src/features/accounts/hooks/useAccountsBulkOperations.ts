@@ -1,5 +1,6 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
 import { Icon, IconName } from '@/src/components/core';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import {
   getBulkHierarchyCandidates,
   type HierarchyCandidateAccount,
@@ -288,7 +289,15 @@ export function useAccountsBulkOperations({
         action: {
           name: Icon.Palette,
           label: 'Change Color',
-          onPress: () => openModal({ type: 'bulkAppearance', mode: 'color' }),
+          onPress: () => {
+            void (async () => {
+              const result = await openAppearancePicker({
+                mode: 'color',
+                title: 'Change Color for Selected Accounts',
+              });
+              if (result) await handleBulkAppearanceSelect({ color: result.color });
+            })();
+          },
           accessibilityLabel: 'Change account color',
         },
         isEnabled: (selectedCount: number) => selectedCount > 0,
@@ -297,7 +306,15 @@ export function useAccountsBulkOperations({
         action: {
           name: Icon.Tag,
           label: 'Change Icon',
-          onPress: () => openModal({ type: 'bulkAppearance', mode: 'icon' }),
+          onPress: () => {
+            void (async () => {
+              const result = await openAppearancePicker({
+                mode: 'icon',
+                title: 'Change Icon for Selected Accounts',
+              });
+              if (result) await handleBulkAppearanceSelect({ icon: result.icon });
+            })();
+          },
           accessibilityLabel: 'Change account icon',
         },
         isEnabled: (selectedCount: number) => selectedCount > 0,
@@ -325,7 +342,13 @@ export function useAccountsBulkOperations({
     ];
 
     return buildListSelectionActions(definitions, count);
-  }, [handleBulkArchive, isMixedAccountTypes, openModal, selection.selectedIds.size]);
+  }, [
+    handleBulkArchive,
+    handleBulkAppearanceSelect,
+    isMixedAccountTypes,
+    openModal,
+    selection.selectedIds.size,
+  ]);
 
   return {
     selectedAccountsList,

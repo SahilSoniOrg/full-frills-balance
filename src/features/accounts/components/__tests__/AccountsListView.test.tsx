@@ -65,14 +65,12 @@ const requiredViewProps = {
     bulkParentCandidates: [],
     onBulkRenameSave: jest.fn().mockResolvedValue(undefined),
     onBulkHierarchyMoveAssign: jest.fn().mockResolvedValue(undefined),
-    onBulkAppearanceSelect: jest.fn().mockResolvedValue(undefined),
     onViewDetails: jest.fn(),
     onEditAccount: jest.fn(),
     onRecolorAccount: jest.fn(),
     onReconcileAccount: jest.fn(),
     onToggleArchiveAccount: jest.fn(),
     onDeleteAccount: jest.fn(),
-    onAppearanceUpdate: jest.fn().mockResolvedValue(undefined),
   },
 };
 
@@ -321,53 +319,5 @@ describe('AccountsListView', () => {
 
     expect(getByText('Edit Account Names')).toBeTruthy();
     expect(getByDisplayValue('Checking Account')).toBeTruthy();
-  });
-
-  it('renders AppearancePickerModal when activeModal is appearance and calls onAppearanceUpdate on save', () => {
-    const onAppearanceUpdate = jest.fn().mockResolvedValue(undefined);
-    const { getByText } = render(
-      <AccountsListView
-        sections={mockSections}
-        onToggleSection={jest.fn()}
-        onAccountPress={jest.fn()}
-        onAccountLongPress={jest.fn()}
-        onCollapseAccount={jest.fn()}
-        onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
-        isLoading={false}
-        version={1}
-        netWorth={1500}
-        totalAssets={1500}
-        totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
-        inflowPeriod="overall"
-        setInflowPeriod={jest.fn()}
-        inflowIncome={0}
-        inflowExpense={0}
-        isPeriodLoading={false}
-        currencyCode="USD"
-        activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
-        {...requiredViewProps}
-        modals={{
-          ...requiredViewProps.modals,
-          activeModal: { type: 'appearance', account: mockAccount },
-          onAppearanceUpdate,
-        }}
-      />,
-    );
-
-    expect(getByText('Account appearance')).toBeTruthy();
-    expect(getByText('Done')).toBeTruthy();
-    fireEvent.press(getByText('Done'));
-    expect(onAppearanceUpdate).toHaveBeenCalledWith({
-      icon: Icon.Wallet,
-      color: '#EEF2FF',
-    });
   });
 });

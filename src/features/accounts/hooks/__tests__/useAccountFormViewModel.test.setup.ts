@@ -24,6 +24,30 @@ jest.mock('expo-router', () => ({
   useIsFocused: () => true,
   useLocalSearchParams: () => mockAccountFormVmState.mockParams,
   usePathname: () => mockAccountFormVmState.mockPathname,
+  router: {
+    push: jest.fn(),
+    back: jest.fn(),
+    canGoBack: jest.fn(() => true),
+  },
+}));
+
+jest.mock('@/src/components/overlays/appearancePickerSession', () => ({
+  openAppearancePicker: jest.fn(
+    async (request: {
+      selectedIcon?: string;
+      selectedColor?: string;
+      onIconSelect?: (icon: string) => void;
+      onColorSelect?: (color: string) => void;
+    }) => {
+      const { Icon } =
+        jest.requireActual<typeof import('@/src/types/domainIcons')>('@/src/types/domainIcons');
+      request.onIconSelect?.(Icon.Bank);
+      return {
+        icon: Icon.Bank,
+        color: request.selectedColor ?? '',
+      };
+    },
+  ),
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'workplace', defaultCurrencyCode: 'USD' }),

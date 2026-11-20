@@ -1,7 +1,6 @@
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import { WorkplaceBasicInfoStep } from '@/src/features/setup/components/workplace-setup/WorkplaceBasicInfoStep';
 import { IconName } from '@/src/components/core';
-import { useState } from 'react';
 
 interface WorkplaceIdentityStepProps {
   name: string;
@@ -24,30 +23,25 @@ export function WorkplaceIdentityStep({
   onBack,
   isCompleting,
 }: WorkplaceIdentityStepProps) {
-  const [iconPickerVisible, setIconPickerVisible] = useState(false);
   return (
-    <>
-      <WorkplaceBasicInfoStep
-        title="Name your workplace"
-        subtitle="Choose a name and icon for this workplace, such as personal spending or household bills."
-        name={name}
-        onNameChange={onNameChange}
-        onGenerateName={onGenerateName}
-        icon={icon}
-        onIconPress={() => setIconPickerVisible(true)}
-        onContinue={onContinue}
-        onCancel={onBack}
-        cancelLabel="Back"
-        continueLabel="Continue"
-        isCreating={isCompleting}
-      />
-      <AppearancePickerModal
-        mode="icon"
-        visible={iconPickerVisible}
-        onClose={() => setIconPickerVisible(false)}
-        onIconSelect={onIconChange}
-        selectedIcon={icon}
-      />
-    </>
+    <WorkplaceBasicInfoStep
+      title="Name your workplace"
+      subtitle="Choose a name and icon for this workplace, such as personal spending or household bills."
+      name={name}
+      onNameChange={onNameChange}
+      onGenerateName={onGenerateName}
+      icon={icon}
+      onIconPress={() => {
+        void (async () => {
+          const result = await openAppearancePicker({ mode: 'icon', selectedIcon: icon });
+          if (result) onIconChange(result.icon);
+        })();
+      }}
+      onContinue={onContinue}
+      onCancel={onBack}
+      cancelLabel="Back"
+      continueLabel="Continue"
+      isCreating={isCompleting}
+    />
   );
 }

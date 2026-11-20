@@ -3,7 +3,7 @@ import { AccountsListModals } from '../AccountsListModals';
 import { AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
-import { fireEvent, render } from '@/src/testing/render';
+import { render } from '@/src/testing/render';
 
 const mockAccount: AccountCardViewModel = {
   id: 'acc-1' as AccountId,
@@ -32,14 +32,12 @@ describe('AccountsListModals', () => {
     bulkParentCandidates: [],
     onBulkRenameSave: jest.fn(),
     onBulkHierarchyMoveAssign: jest.fn(),
-    onBulkAppearanceSelect: jest.fn(),
     onViewDetails: jest.fn(),
     onEditAccount: jest.fn(),
     onRecolorAccount: jest.fn(),
     onReconcileAccount: jest.fn(),
     onToggleArchiveAccount: jest.fn(),
     onDeleteAccount: jest.fn(),
-    onAppearanceUpdate: jest.fn(),
   };
 
   it('renders nothing when activeModal is null', () => {
@@ -58,35 +56,6 @@ describe('AccountsListModals', () => {
     );
     expect(getByText('View Details')).toBeTruthy();
     expect(getByText('Edit Account')).toBeTruthy();
-  });
-
-  it('renders AppearancePickerModal when activeModal is appearance', () => {
-    const onAppearanceUpdate = jest.fn();
-    const { getByText } = render(
-      <AccountsListModals
-        activeModal={{ type: 'appearance', account: mockAccount }}
-        {...defaultProps}
-        onAppearanceUpdate={onAppearanceUpdate}
-      />,
-    );
-    expect(getByText('Account appearance')).toBeTruthy();
-    fireEvent.press(getByText('Done'));
-    expect(onAppearanceUpdate).toHaveBeenCalledWith({
-      icon: Icon.Wallet,
-      color: '#EEF2FF',
-    });
-  });
-
-  it('renders AppearancePickerModal for bulk color update', () => {
-    const onBulkAppearanceSelect = jest.fn();
-    const { getByText } = render(
-      <AccountsListModals
-        activeModal={{ type: 'bulkAppearance', mode: 'color' }}
-        {...defaultProps}
-        onBulkAppearanceSelect={onBulkAppearanceSelect}
-      />,
-    );
-    expect(getByText('Change Color for Selected Accounts')).toBeTruthy();
   });
 
   it('renders BulkRenameAccountsModal when activeModal is bulkRename', () => {

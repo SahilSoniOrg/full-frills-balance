@@ -1,5 +1,4 @@
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
-import type { IconName } from '@/src/components/core';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type {
   AccountCardViewModel,
@@ -9,9 +8,7 @@ import { AccountId } from '@/src/types/ids';
 
 export type AccountsListActiveModal =
   | { type: 'actionSheet'; account: AccountCardViewModel }
-  | { type: 'appearance'; account: AccountCardViewModel }
   | { type: 'bulkRename' }
-  | { type: 'bulkAppearance'; mode: 'icon' | 'color' }
   | { type: 'bulkHierarchy' }
   | null;
 
@@ -23,14 +20,12 @@ export interface AccountsListModalsProps {
   bulkParentCandidates: HierarchyCandidateAccount[];
   onBulkRenameSave: (namesByAccountId: Record<AccountId, string>) => Promise<void> | void;
   onBulkHierarchyMoveAssign: (parentId: AccountId | null) => Promise<void> | void;
-  onBulkAppearanceSelect: (updates: { icon?: IconName; color?: string }) => Promise<void> | void;
   onViewDetails?: (account: AccountCardViewModel) => void;
   onEditAccount?: (account: AccountCardViewModel) => void;
   onRecolorAccount?: (account: AccountCardViewModel) => void;
   onReconcileAccount?: (account: AccountCardViewModel) => void;
   onToggleArchiveAccount?: (account: AccountCardViewModel) => void;
   onDeleteAccount?: (account: AccountCardViewModel) => void;
-  onAppearanceUpdate: (updates: { icon?: IconName; color?: string }) => Promise<void> | void;
 }
 
 export interface AccountsListViewModel {

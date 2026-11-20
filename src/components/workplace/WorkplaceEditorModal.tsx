@@ -6,7 +6,7 @@ import {
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants';
 import type { IconName } from '@/src/types/domainIcons';
@@ -33,97 +33,95 @@ export function WorkplaceEditorModal({
   const { theme } = useTheme();
   const [pendingName, setPendingName] = useState(name);
   const [pendingIcon, setPendingIcon] = useState(icon);
-  const [iconPickerVisible, setIconPickerVisible] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const save = () => {
     const trimmedName = pendingName.trim();
     if (trimmedName) onSave(trimmedName, pendingIcon);
   };
 
+  const openIconPicker = async () => {
+    setIconPickerOpen(true);
+    const result = await openAppearancePicker({
+      mode: 'icon',
+      selectedIcon: pendingIcon,
+    });
+    setIconPickerOpen(false);
+    if (result) setPendingIcon(result.icon);
+  };
+
   return (
-    <>
-      <ModalSurface
-        keyboardAvoiding
-        visible={visible && !iconPickerVisible}
-        title="Edit workplace"
-        onClose={onClose}
-        fixedHeight={false}
-        scrollable
-        contentStyle={styles.content}
-        footer={
-          <Stack gap="sm" style={styles.footer}>
-            <AppButton
-              variant="primary"
-              onPress={save}
-              disabled={!pendingName.trim()}
-              testID="workplace-editor-save-button"
-            >
-              Save
-            </AppButton>
-            <AppButton variant="ghost" onPress={onClose}>
-              Cancel
-            </AppButton>
-          </Stack>
-        }
-      >
-        <AppInput
-          label="Name"
-          value={pendingName}
-          onChangeText={setPendingName}
-          autoFocus
-          testID="workplace-editor-name-input"
-        />
-        <Stack gap="xs">
-          <AppText variant="body" weight="medium">
-            Icon
-          </AppText>
-          <PressScaleTouchable
-            onPress={() => setIconPickerVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Change workplace icon"
-            testID="workplace-editor-icon-button"
+    <ModalSurface
+      keyboardAvoiding
+      visible={visible && !iconPickerOpen}
+      title="Edit workplace"
+      onClose={onClose}
+      fixedHeight={false}
+      scrollable
+      contentStyle={styles.content}
+      footer={
+        <Stack gap="sm" style={styles.footer}>
+          <AppButton
+            variant="primary"
+            onPress={save}
+            disabled={!pendingName.trim()}
+            testID="workplace-editor-save-button"
           >
-            <Stack gap="xs" align="center">
-              <Box
-                background="surfaceSecondary"
-                borderWidth={1}
-                borderColor="border"
-                width={72}
-                height={72}
-                borderRadius="full"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <AppIcon name={pendingIcon} size={Size.xl} color="primary" />
-                <Box
-                  position="absolute"
-                  right={-Spacing.xs}
-                  bottom={-Spacing.xs}
-                  background="primary"
-                  borderRadius="full"
-                  padding="xs"
-                >
-                  <AppIcon name={Icon.Edit} size={Size.xs} color={theme.surface} />
-                </Box>
-              </Box>
-              <AppText variant="caption" color="secondary">
-                Change icon
-              </AppText>
-            </Stack>
-          </PressScaleTouchable>
+            Save
+          </AppButton>
+          <AppButton variant="ghost" onPress={onClose}>
+            Cancel
+          </AppButton>
         </Stack>
-      </ModalSurface>
-      <AppearancePickerModal
-        mode="icon"
-        visible={iconPickerVisible}
-        onClose={() => setIconPickerVisible(false)}
-        onIconSelect={selectedIcon => {
-          setPendingIcon(selectedIcon);
-          setIconPickerVisible(false);
-        }}
-        selectedIcon={pendingIcon}
+      }
+    >
+      <AppInput
+        label="Name"
+        value={pendingName}
+        onChangeText={setPendingName}
+        autoFocus
+        testID="workplace-editor-name-input"
       />
-    </>
+      <Stack gap="xs">
+        <AppText variant="body" weight="medium">
+          Icon
+        </AppText>
+        <PressScaleTouchable
+          onPress={() => void openIconPicker()}
+          accessibilityRole="button"
+          accessibilityLabel="Change workplace icon"
+          testID="workplace-editor-icon-button"
+        >
+          <Stack gap="xs" align="center">
+            <Box
+              background="surfaceSecondary"
+              borderWidth={1}
+              borderColor="border"
+              width={72}
+              height={72}
+              borderRadius="full"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <AppIcon name={pendingIcon} size={Size.xl} color="primary" />
+              <Box
+                position="absolute"
+                right={-Spacing.xs}
+                bottom={-Spacing.xs}
+                background="primary"
+                borderRadius="full"
+                padding="xs"
+              >
+                <AppIcon name={Icon.Edit} size={Size.xs} color={theme.surface} />
+              </Box>
+            </Box>
+            <AppText variant="caption" color="secondary">
+              Change icon
+            </AppText>
+          </Stack>
+        </PressScaleTouchable>
+      </Stack>
+    </ModalSurface>
   );
 }
 

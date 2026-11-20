@@ -1,8 +1,6 @@
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { AccountActionSheet } from '@/src/features/accounts/components/AccountActionSheet';
 import { BulkRenameAccountsModal } from '@/src/features/accounts/components/BulkRenameAccountsModal';
 import { BulkHierarchyMoveModal } from '@/src/features/accounts/components/hierarchy/BulkHierarchyMoveModal';
-import { AccountType } from '@/src/types/enums';
 import type { AccountsListModalsProps } from '@/src/features/accounts/hooks/accountsListTypes';
 
 export type { AccountsListModalsProps };
@@ -15,14 +13,12 @@ export function AccountsListModals({
   bulkParentCandidates,
   onBulkRenameSave,
   onBulkHierarchyMoveAssign,
-  onBulkAppearanceSelect,
   onViewDetails,
   onEditAccount,
   onRecolorAccount,
   onReconcileAccount,
   onToggleArchiveAccount,
   onDeleteAccount,
-  onAppearanceUpdate,
 }: AccountsListModalsProps) {
   if (!activeModal) return null;
 
@@ -38,37 +34,6 @@ export function AccountsListModals({
         onReconcile={onReconcileAccount}
         onToggleArchive={onToggleArchiveAccount}
         onDelete={onDeleteAccount}
-      />
-    );
-  }
-
-  if (activeModal.type === 'appearance') {
-    return (
-      <AppearancePickerModal
-        visible
-        mode="both"
-        onClose={onCloseModal}
-        onSave={updates => onAppearanceUpdate(updates)}
-        selectedIcon={activeModal.account.icon}
-        selectedColor={activeModal.account.accountColor}
-        accountType={activeModal.account.accountType ?? AccountType.ASSET}
-      />
-    );
-  }
-
-  if (activeModal.type === 'bulkAppearance') {
-    return (
-      <AppearancePickerModal
-        visible
-        mode={activeModal.mode}
-        title={
-          activeModal.mode === 'color'
-            ? 'Change Color for Selected Accounts'
-            : 'Change Icon for Selected Accounts'
-        }
-        onClose={onCloseModal}
-        onIconSelect={icon => void onBulkAppearanceSelect({ icon })}
-        onColorSelect={color => void onBulkAppearanceSelect({ color })}
       />
     );
   }

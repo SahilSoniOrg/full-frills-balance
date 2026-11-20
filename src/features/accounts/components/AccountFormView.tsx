@@ -81,7 +81,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               styles.appearanceButton,
               { backgroundColor: withOpacity(accentColor, Opacity.soft) },
             ]}
-            onPress={() => vm.setIsAppearancePickerVisible(true)}
+            onPress={vm.openAppearancePicker}
             accessibilityRole="button"
             accessibilityLabel={vm.isCategory ? copy.categoryAppearance : copy.appearance}
             testID={`${entity}-appearance`}

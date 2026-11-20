@@ -44,6 +44,7 @@ import { createAccountTreeSnapshot } from '@/src/domain/accounts/accountTree';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Keyboard } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import {
   useAccountFormKind,
@@ -77,8 +78,7 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   setSelectedIcon: (value: IconName) => void;
   selectedColor: string;
   setSelectedColor: (value: string) => void;
-  isAppearancePickerVisible: boolean;
-  setIsAppearancePickerVisible: (value: boolean) => void;
+  openAppearancePicker: () => void;
   initialBalance: string;
   onInitialBalanceChange: (value: string) => void;
   isCreating: boolean;
@@ -318,6 +318,23 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const showBalance = !core.isCategory && !isParent;
   const formError = validation.formError || draft.localFormError;
 
+  const openAppearancePickerSheet = useCallback(() => {
+    void openAppearancePicker({
+      mode: 'both',
+      selectedIcon: core.selectedIcon,
+      selectedColor: core.selectedColor,
+      accountType: core.accountType,
+      onIconSelect: core.setSelectedIcon,
+      onColorSelect: core.setSelectedColor,
+    });
+  }, [
+    core.accountType,
+    core.selectedColor,
+    core.selectedIcon,
+    core.setSelectedColor,
+    core.setSelectedIcon,
+  ]);
+
   return {
     ...kind,
     activeSheet,
@@ -344,8 +361,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setSelectedIcon: core.setSelectedIcon,
     selectedColor: core.selectedColor,
     setSelectedColor: core.setSelectedColor,
-    isAppearancePickerVisible: pickers.isAppearancePickerVisible,
-    setIsAppearancePickerVisible: pickers.setIsAppearancePickerVisible,
+    openAppearancePicker: openAppearancePickerSheet,
     initialBalance: core.initialBalance,
     onInitialBalanceChange: core.onInitialBalanceChange,
     isCreating: persistence.isCreating,

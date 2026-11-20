@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import {
   resolveAccountListPressAction,
   type AccountsListTab,
@@ -8,6 +8,7 @@ import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAcc
 import { deleteAccount as deleteAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
 import { updateAccounts as updateAccountsCommand } from '@/src/services/accounts/accountHierarchyCommands';
 import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountIcon } from '@/src/design-system/accountIcon';
@@ -38,9 +39,6 @@ export function useAccountsListActions({
   expandedAccountIds,
   setExpandedAccountIds,
   activeTab,
-  activeModal,
-  openModal,
-  closeModal,
   applyArchiveChanges,
 }: UseAccountsListActionsInput) {
   const onAccountPress = useCallback(
@@ -146,23 +144,25 @@ export function useAccountsListActions({
 
   const onRecolorAccount = useCallback(
     (account: AccountCardViewModel) => {
-      openModal?.({ type: 'appearance', account });
+      void (async () => {
+        if (!workplaceId) return;
+        const result = await openAppearancePicker({
+          mode: 'both',
+          selectedIcon: account.icon,
+          selectedColor: account.accountColor,
+          accountType: account.accountType ?? AccountType.ASSET,
+        });
+        if (!result) return;
+        try {
+          await updateAccountsCommand(workplaceId, [
+            { accountId: account.id, updates: { icon: result.icon, color: result.color } },
+          ]);
+        } catch (error) {
+          showErrorAlert(error, 'Failed to update account appearance');
+        }
+      })();
     },
-    [openModal],
-  );
-
-  const onAppearanceUpdate = useCallback(
-    async (updates: { icon?: IconName; color?: string }) => {
-      if (!workplaceId || activeModal?.type !== 'appearance') return;
-      const accountId = activeModal.account.id;
-      try {
-        await updateAccountsCommand(workplaceId, [{ accountId, updates }]);
-        closeModal?.();
-      } catch (error) {
-        showErrorAlert(error, 'Failed to update account appearance');
-      }
-    },
-    [activeModal, workplaceId, closeModal],
+    [workplaceId],
   );
 
   return {
@@ -175,6 +175,5 @@ export function useAccountsListActions({
     onToggleArchiveAccount,
     onDeleteAccount,
     onRecolorAccount,
-    onAppearanceUpdate,
   };
 }

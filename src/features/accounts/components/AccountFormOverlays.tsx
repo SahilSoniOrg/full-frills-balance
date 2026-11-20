@@ -1,6 +1,5 @@
 import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
 import { AppInput, AppText } from '@/src/components/core';
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { FormBottomSheet } from '@/src/components/overlays/FormBottomSheet';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig } from '@/src/constants/app-config';
@@ -37,16 +36,6 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
         selectedSubtype={vm.accountSubtype}
         onSelect={subtype => vm.setAccountKind({ type: vm.accountType, subtype })}
         onClose={close}
-      />
-      <AppearancePickerModal
-        key={vm.isAppearancePickerVisible ? 'appearance-open' : 'appearance-closed'}
-        visible={vm.isAppearancePickerVisible}
-        onClose={() => vm.setIsAppearancePickerVisible(false)}
-        onIconSelect={vm.setSelectedIcon}
-        onColorSelect={vm.setSelectedColor}
-        selectedIcon={vm.selectedIcon}
-        selectedColor={vm.selectedColor}
-        accountType={vm.accountType}
       />
       <CurrencyPickerSheet
         visible={vm.activeSheet === 'currency'}

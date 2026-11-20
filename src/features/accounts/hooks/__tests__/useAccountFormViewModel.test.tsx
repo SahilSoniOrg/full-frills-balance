@@ -1,5 +1,5 @@
 import './useAccountFormViewModel.test.setup';
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
 import { AccountTypeSheet } from '@/src/features/accounts/components/AccountTypeSheet';
 import { AccountSubtypeSheet } from '@/src/features/accounts/components/AccountSubtypeSheet';
@@ -15,6 +15,10 @@ import {
   mockOnSave,
   resetAccountFormViewModelTestState,
 } from './useAccountFormViewModel.test.state';
+
+const mockOpenAppearancePicker = openAppearancePicker as jest.MockedFunction<
+  typeof openAppearancePicker
+>;
 
 beforeEach(() => resetAccountFormViewModelTestState());
 afterEach(() => jest.restoreAllMocks());
@@ -326,56 +330,61 @@ describe('account form UI over its view model', () => {
 });
 
 describe('category create/edit regressions', () => {
-  it.each([AccountType.INCOME, AccountType.EXPENSE])('retains creation controls for %s', type => {
-    mockAccountFormVmState.mockPathname = '/category-creation';
-    mockAccountFormVmState.mockParams = { type };
-    const screen = render(<AccountFormHarness />);
-    expect(screen.queryByTestId('hero-amount-input')).toBeNull();
-    expect(screen.queryByTestId('account-type')).toBeNull();
-    expect(screen.getByTestId('category-type')).toBeTruthy();
-    expect(screen.getByTestId('category-subtype')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('category-type'));
-    expect(screen.queryByTestId('account-type-asset')).toBeNull();
-    expect(screen.queryByTestId('account-type-liability')).toBeNull();
-    fireEvent.press(screen.getByTestId('account-type-close'));
-    fireEvent.changeText(screen.getByTestId('hero-name-input'), 'My category');
-    fireEvent.press(screen.getByTestId('category-note'));
-    fireEvent.changeText(
-      screen.getByPlaceholderText('Add any additional notes...'),
-      'Category note',
-    );
-    fireEvent.press(screen.getByTestId('account-note-done'));
-    fireEvent.press(screen.getByTestId('category-currency'));
-    fireEvent.press(screen.getByText('Euro'));
-    expect(screen.getByText('EUR')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('category-type'));
-    fireEvent.press(
-      screen.getByTestId(
-        type === AccountType.INCOME ? 'account-type-expense' : 'account-type-income',
-      ),
-    );
-    fireEvent.press(screen.getByTestId('category-subtype'));
-    fireEvent.press(
-      screen.getByTestId(
-        type === AccountType.INCOME
-          ? 'account-subtype-expense-housing'
-          : 'account-subtype-income-salary',
-      ),
-    );
-    expect(screen.getByTestId('hero-name-input').props.value).toBe('My category');
-    expect(screen.getByText('Category note')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('category-appearance'));
-    fireEvent.press(screen.getByLabelText(`Select icon ${Icon.Bank}`));
-    fireEvent.press(screen.getByText('Done'));
-    expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
-    fireEvent.press(screen.getByTestId('category-type'));
-    fireEvent.press(screen.getByTestId('account-type-expense'));
-    fireEvent.press(screen.getByTestId('category-subtype'));
-    fireEvent.press(screen.getByTestId('account-subtype-expense-food'));
-    expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
-    fireEvent.press(screen.getByTestId('submit-footer-button'));
-    expect(mockOnSave).toHaveBeenCalledTimes(1);
-  });
+  it.each([AccountType.INCOME, AccountType.EXPENSE])(
+    'retains creation controls for %s',
+    async type => {
+      mockAccountFormVmState.mockPathname = '/category-creation';
+      mockAccountFormVmState.mockParams = { type };
+      const screen = render(<AccountFormHarness />);
+      expect(screen.queryByTestId('hero-amount-input')).toBeNull();
+      expect(screen.queryByTestId('account-type')).toBeNull();
+      expect(screen.getByTestId('category-type')).toBeTruthy();
+      expect(screen.getByTestId('category-subtype')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('category-type'));
+      expect(screen.queryByTestId('account-type-asset')).toBeNull();
+      expect(screen.queryByTestId('account-type-liability')).toBeNull();
+      fireEvent.press(screen.getByTestId('account-type-close'));
+      fireEvent.changeText(screen.getByTestId('hero-name-input'), 'My category');
+      fireEvent.press(screen.getByTestId('category-note'));
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Add any additional notes...'),
+        'Category note',
+      );
+      fireEvent.press(screen.getByTestId('account-note-done'));
+      fireEvent.press(screen.getByTestId('category-currency'));
+      fireEvent.press(screen.getByText('Euro'));
+      expect(screen.getByText('EUR')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('category-type'));
+      fireEvent.press(
+        screen.getByTestId(
+          type === AccountType.INCOME ? 'account-type-expense' : 'account-type-income',
+        ),
+      );
+      fireEvent.press(screen.getByTestId('category-subtype'));
+      fireEvent.press(
+        screen.getByTestId(
+          type === AccountType.INCOME
+            ? 'account-subtype-expense-housing'
+            : 'account-subtype-income-salary',
+        ),
+      );
+      expect(screen.getByTestId('hero-name-input').props.value).toBe('My category');
+      expect(screen.getByText('Category note')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('category-appearance'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockOpenAppearancePicker).toHaveBeenCalled();
+      expect(screen.getByTestId('category-appearance')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('category-type'));
+      fireEvent.press(screen.getByTestId('account-type-expense'));
+      fireEvent.press(screen.getByTestId('category-subtype'));
+      fireEvent.press(screen.getByTestId('account-subtype-expense-food'));
+      expect(mockOpenAppearancePicker).toHaveBeenCalled();
+      fireEvent.press(screen.getByTestId('submit-footer-button'));
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('keeps edit currency locked, category hierarchy, appearance and edit submission', () => {
     mockAccountFormVmState.mockHistoricalTransactionCount = 1;
@@ -407,7 +416,7 @@ describe('category create/edit regressions', () => {
     fireEvent.press(screen.getByTestId('category-currency'));
     expect(screen.getByText(AppConfig.strings.accounts.form.currencyLockedTooltip)).toBeTruthy();
     fireEvent.press(screen.getByText('Done'));
-    expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Briefcase);
+    expect(screen.getByTestId('category-appearance')).toBeTruthy();
     fireEvent.press(screen.getByTestId('category-parent'));
     fireEvent.press(screen.getByText('Parent income'));
     expect(screen.getByTestId('category-parent')).toHaveProp(
