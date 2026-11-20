@@ -1,4 +1,5 @@
-import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing } from '@/src/constants';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
@@ -32,14 +33,12 @@ export function BulkSaveSummaryModal({
       maxHeightPercent={85}
       accessibilityCloseLabel="Close save summary"
       footer={
-        <View style={styles.modalActions}>
-          <AppButton variant="outline" onPress={onContinueBulk} style={styles.modalButton}>
-            Keep Adding
-          </AppButton>
-          <AppButton variant="primary" onPress={onDone} style={styles.modalButton}>
-            Done
-          </AppButton>
-        </View>
+        <ModalActions
+          actions={[
+            { label: 'Keep Adding', role: 'secondary', onPress: onContinueBulk },
+            { label: 'Done', role: 'primary', onPress: onDone },
+          ]}
+        />
       }
     >
       <View style={styles.successHeader}>
@@ -89,14 +88,5 @@ const styles = StyleSheet.create({
   itemDesc: {
     flex: 1,
     marginRight: Spacing.md,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    width: '100%',
-    marginTop: Spacing.sm,
-  },
-  modalButton: {
-    flex: 1,
   },
 });

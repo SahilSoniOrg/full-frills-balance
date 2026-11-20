@@ -1,4 +1,5 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig } from '@/src/constants';
 import { PeriodFilter } from '@/src/domain/calendar/dateRanges';
@@ -62,9 +63,7 @@ export function DateRangePickerView({
       accessibilityCloseLabel={AppConfig.strings.common.close}
       footer={
         view === 'MENU' ? (
-          <AppButton onPress={handleApply} variant="primary" size="lg">
-            Apply Range
-          </AppButton>
+          <ModalActions actions={[{ label: 'Apply Range', onPress: handleApply }]} />
         ) : undefined
       }
     >

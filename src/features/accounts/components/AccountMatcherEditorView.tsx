@@ -9,6 +9,7 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
@@ -398,34 +399,35 @@ export function AccountMatcherEditorView({
               <AppText variant="bodySmall" color="secondary">
                 {copy.overlapMessage}
               </AppText>
-              <AppButton
-                variant="secondary"
-                onPress={() => onResolveOverlap({})}
-                disabled={vm.isSaving}
-                testID="refine-account-matcher"
-              >
-                {copy.refine}
-              </AppButton>
-              {movableMatchers.map(matcher => (
-                <AppButton
-                  key={matcher.id}
-                  variant="ghost"
-                  onPress={() => onResolveOverlap({ moveMatcherId: matcher.id })}
-                  disabled={vm.isSaving}
-                  testID={`move-account-matcher-${matcher.id}`}
-                >
-                  {copy.moveMatcher(matcher.accountName)}
-                </AppButton>
-              ))}
-              <AppButton
-                variant="primary"
-                loading={vm.isSaving}
-                disabled={vm.isSaving}
-                onPress={() => onResolveOverlap({ keepBoth: true })}
-                testID="keep-both-account-matchers"
-              >
-                {copy.keepBoth}
-              </AppButton>
+              <ModalActions
+                layout="stacked"
+                actions={[
+                  {
+                    label: copy.refine,
+                    variant: 'secondary',
+                    role: 'secondary',
+                    onPress: () => onResolveOverlap({}),
+                    disabled: vm.isSaving,
+                    testID: 'refine-account-matcher',
+                  },
+                  ...movableMatchers.map(matcher => ({
+                    label: copy.moveMatcher(matcher.accountName),
+                    variant: 'ghost' as const,
+                    role: 'secondary' as const,
+                    onPress: () => onResolveOverlap({ moveMatcherId: matcher.id }),
+                    disabled: vm.isSaving,
+                    testID: `move-account-matcher-${matcher.id}`,
+                  })),
+                  {
+                    label: copy.keepBoth,
+                    role: 'primary' as const,
+                    onPress: () => onResolveOverlap({ keepBoth: true }),
+                    disabled: vm.isSaving,
+                    loading: vm.isSaving,
+                    testID: 'keep-both-account-matchers',
+                  },
+                ]}
+              />
               {vm.saveError ? (
                 <AppText variant="bodySmall" color="error" accessibilityRole="alert">
                   {vm.saveError}

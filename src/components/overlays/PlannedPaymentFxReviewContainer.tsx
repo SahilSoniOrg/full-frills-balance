@@ -1,4 +1,5 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
@@ -102,16 +103,24 @@ export function PlannedPaymentFxReviewSheet({
       keyboardAvoiding
       closeTestID="planned-payment-review-close"
       footer={
-        <AppButton
-          disabled={!valid}
-          testID="planned-payment-review-post"
-          onPress={() => {
-            if (valid && received != null)
-              onFinish({ ...request, sourceAmount: Number(amount), destinationAmount: received });
-          }}
-        >
-          {copy.postPayment}
-        </AppButton>
+        <ModalActions
+          layout="stacked"
+          actions={[
+            {
+              label: copy.postPayment,
+              disabled: !valid,
+              testID: 'planned-payment-review-post',
+              onPress: () => {
+                if (valid && received != null)
+                  onFinish({
+                    ...request,
+                    sourceAmount: Number(amount),
+                    destinationAmount: received,
+                  });
+              },
+            },
+          ]}
+        />
       }
     >
       <View style={styles.content}>

@@ -1,7 +1,8 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { AppButton, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Size, Spacing } from '@/src/constants/design-tokens';
+import { Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { View } from 'react-native';
@@ -34,15 +35,17 @@ export function DayOfMonthSheet({
       fixedHeight={false}
       maxHeightPercent={75}
       footer={
-        <View style={{ paddingTop: Spacing.md }}>
-          <AppButton
-            variant="secondary"
-            onPress={onClose}
-            accessibilityLabel={copy.doneAccessibility}
-          >
-            {copy.done}
-          </AppButton>
-        </View>
+        <ModalActions
+          actions={[
+            {
+              label: copy.done,
+              role: 'secondary',
+              variant: 'secondary',
+              onPress: onClose,
+              accessibilityLabel: copy.doneAccessibility,
+            },
+          ]}
+        />
       }
     >
       <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>

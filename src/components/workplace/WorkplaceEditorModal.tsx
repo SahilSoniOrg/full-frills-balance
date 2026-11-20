@@ -1,11 +1,5 @@
-import {
-  Icon,
-  AppButton,
-  AppInput,
-  AppIcon,
-  AppText,
-  PressScaleTouchable,
-} from '@/src/components/core';
+import { Icon, AppInput, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants';
@@ -60,19 +54,17 @@ export function WorkplaceEditorModal({
       scrollable
       contentStyle={styles.content}
       footer={
-        <Stack gap="sm" style={styles.footer}>
-          <AppButton
-            variant="primary"
-            onPress={save}
-            disabled={!pendingName.trim()}
-            testID="workplace-editor-save-button"
-          >
-            Save
-          </AppButton>
-          <AppButton variant="ghost" onPress={onClose}>
-            Cancel
-          </AppButton>
-        </Stack>
+        <ModalActions
+          actions={[
+            { label: 'Cancel', role: 'secondary', variant: 'ghost', onPress: onClose },
+            {
+              label: 'Save',
+              onPress: save,
+              disabled: !pendingName.trim(),
+              testID: 'workplace-editor-save-button',
+            },
+          ]}
+        />
       }
     >
       <AppInput
@@ -127,5 +119,4 @@ export function WorkplaceEditorModal({
 
 const styles = StyleSheet.create({
   content: { gap: Spacing.md },
-  footer: { paddingTop: Spacing.md },
 });

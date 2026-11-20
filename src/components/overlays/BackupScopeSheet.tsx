@@ -1,4 +1,5 @@
-import { Icon, AppButton, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
@@ -57,6 +58,17 @@ export function BackupScopeSheet({
       fixedHeight={false}
       maxHeightPercent={82}
       accessibilityCloseLabel="Close backup scope"
+      footer={
+        <ModalActions
+          actions={[
+            {
+              label: confirmLabel,
+              onPress: onConfirm,
+              disabled: scope === 'selected' && selectedWorkplaceIds.length === 0,
+            },
+          ]}
+        />
+      }
     >
       <Stack gap="sm">
         {options.map(option => (
@@ -118,14 +130,6 @@ export function BackupScopeSheet({
             })}
           </Stack>
         )}
-
-        <AppButton
-          onPress={onConfirm}
-          disabled={scope === 'selected' && selectedWorkplaceIds.length === 0}
-          style={{ marginTop: Spacing.md }}
-        >
-          {confirmLabel}
-        </AppButton>
       </Stack>
     </ModalSurface>
   );

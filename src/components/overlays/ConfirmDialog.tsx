@@ -1,7 +1,8 @@
-import { AppButton, AppInput, AppText } from '@/src/components/core';
+import { AppInput, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import React from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
+import { ModalActions } from './ModalActions';
 import { ModalSurface } from './ModalSurface';
 
 type ConfirmDialogAction = {
@@ -73,27 +74,18 @@ export function ConfirmDialog({
       keyboardAvoiding={Boolean(requiredConfirmationValue)}
       useNativeModal={useNativeModal}
       footer={
-        <View style={styles.footer}>
-          {secondaryAction ? (
-            <AppButton
-              variant={secondaryAction.variant || 'outline'}
-              onPress={secondaryAction.onPress}
-              style={styles.actionButton}
-              disabled={secondaryAction.disabled}
-            >
-              {secondaryAction.label}
-            </AppButton>
-          ) : null}
-          <AppButton
-            variant={primaryAction.variant || 'primary'}
-            onPress={handleConfirm}
-            style={styles.actionButton}
-            disabled={!isConfirmed || primaryAction.disabled}
-            testID="confirmation-primary-action"
-          >
-            {primaryAction.label}
-          </AppButton>
-        </View>
+        <ModalActions
+          actions={[
+            ...(secondaryAction ? [{ ...secondaryAction, role: 'secondary' as const }] : []),
+            {
+              ...primaryAction,
+              role: 'primary',
+              onPress: handleConfirm,
+              disabled: !isConfirmed || primaryAction.disabled,
+              testID: 'confirmation-primary-action',
+            },
+          ]}
+        />
       }
     >
       <View style={styles.content}>
@@ -144,17 +136,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  footer: {
-    width: '100%',
-    paddingTop: Spacing.md,
-    borderTopWidth: 0,
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    flexShrink: 0,
-  },
-  actionButton: {
-    flex: 1,
   },
   confirmationContainer: {
     marginTop: Spacing.sm,

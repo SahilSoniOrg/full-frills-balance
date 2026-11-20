@@ -42,6 +42,7 @@ interface ModalSurfaceProps {
   keyboardAvoiding?: boolean;
 }
 
+/** Canonical card, dialog, and bottom-sheet frame for app-owned popup surfaces. */
 export function ModalSurface({
   visible,
   title,
@@ -79,13 +80,15 @@ export function ModalSurface({
   const sheetBody = (
     <AppCard
       elevation="lg"
-      padding="xl"
+      padding="lg"
       radius="xxl"
       style={[
         styles.modalCard,
         isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
         fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
-        isBottomSheet && { paddingBottom: bottomSpacing.sheet },
+        footer
+          ? styles.modalCardFooterFlush
+          : isBottomSheet && { paddingBottom: bottomSpacing.sheet },
         { backgroundColor: theme.surface },
       ]}
     >
@@ -123,7 +126,17 @@ export function ModalSurface({
         </View>
       )}
 
-      {footer ? <View style={styles.footerSlot}>{footer}</View> : null}
+      {footer ? (
+        <View
+          style={[
+            styles.footerSlot,
+            { borderTopColor: theme.border },
+            isBottomSheet && { paddingBottom: bottomSpacing.sheet },
+          ]}
+        >
+          {footer}
+        </View>
+      ) : null}
     </AppCard>
   );
 
@@ -216,6 +229,9 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
   },
+  modalCardFooterFlush: {
+    paddingBottom: 0,
+  },
   modalCardCenter: {
     borderRadius: Shape.radius.lg,
   },
@@ -266,5 +282,10 @@ const styles = StyleSheet.create({
   },
   footerSlot: {
     flexShrink: 0,
+    marginHorizontal: -Spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
   },
 });

@@ -1,5 +1,6 @@
 import { FitText } from '@/src/components/shared/FitText';
-import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
+import { AppText, PressScaleTouchable } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -254,6 +255,20 @@ export function AmountCalculatorSheet({
       accessibilityCloseLabel="Close amount calculator"
       closeTestID="amount-calculator-close"
       onDismiss={handleDismiss}
+      footer={
+        <ModalActions
+          actions={[
+            {
+              label: 'Done',
+              variant: evaluation.canSubmit ? 'primary' : 'secondary',
+              onPress: handleDone,
+              disabled: !evaluation.canSubmit,
+              accessibilityLabel: 'Done',
+              testID: 'amount-calculator-done',
+            },
+          ]}
+        />
+      }
     >
       <View style={styles.display} testID="amount-calculator-display">
         <TextInput
@@ -413,18 +428,6 @@ export function AmountCalculatorSheet({
           </View>
         ))}
       </View>
-
-      <AppButton
-        variant={evaluation.canSubmit ? 'primary' : 'secondary'}
-        size="lg"
-        style={styles.doneButton}
-        onPress={handleDone}
-        disabled={!evaluation.canSubmit}
-        accessibilityLabel="Done"
-        testID="amount-calculator-done"
-      >
-        Done
-      </AppButton>
     </ModalSurface>
   );
 }
@@ -476,9 +479,6 @@ const styles = StyleSheet.create({
   },
   keypad: {
     gap: Spacing.sm,
-  },
-  doneButton: {
-    width: '100%',
   },
   keyRow: {
     flexDirection: 'row',

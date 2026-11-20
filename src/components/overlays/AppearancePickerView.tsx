@@ -1,12 +1,12 @@
 import {
   Icon,
-  AppButton,
   AppIcon,
   AppText,
   IconName,
   IvyIcon,
   PressScaleTouchable,
 } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import {
   ACCOUNT_COLOR_PALETTE,
   ACCOUNT_ICON_PALETTE,
@@ -263,13 +263,18 @@ export function AppearancePickerView({
         )}
       </ScrollView>
 
-      <AppButton
-        variant={mode === 'both' ? 'primary' : 'ghost'}
-        onPress={() => void handleDone()}
-        style={styles.doneButton}
-      >
-        {mode === 'both' ? 'Done' : AppConfig.strings.common.cancel}
-      </AppButton>
+      <ModalActions
+        actions={[
+          {
+            label: mode === 'both' ? 'Done' : AppConfig.strings.common.cancel,
+            role: mode === 'both' ? 'primary' : 'secondary',
+            variant: mode === 'both' ? 'primary' : 'ghost',
+            onPress: () => void handleDone(),
+            disabled: isSaving,
+            loading: isSaving,
+          },
+        ]}
+      />
     </View>
   );
 }
@@ -338,5 +343,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   autoSwatch: { borderWidth: BorderWidth.thin },
-  doneButton: { marginTop: Spacing.md, marginBottom: Spacing.md },
 });

@@ -1,8 +1,6 @@
-import { AppButton } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Spacing } from '@/src/constants';
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ModalActions } from './ModalActions';
 
 type FormBottomSheetProps = {
   visible: boolean;
@@ -43,20 +41,10 @@ export function FormBottomSheet({
       accessibilityCloseLabel={accessibilityCloseLabel}
       closeTestID={closeTestID}
       footer={
-        <View style={styles.footer}>
-          <AppButton onPress={onClose} testID={doneTestID}>
-            {doneLabel}
-          </AppButton>
-        </View>
+        <ModalActions actions={[{ label: doneLabel, onPress: onClose, testID: doneTestID }]} />
       }
     >
       {children}
     </ModalSurface>
   );
 }
-
-const styles = StyleSheet.create({
-  footer: {
-    paddingTop: Spacing.md,
-  },
-});

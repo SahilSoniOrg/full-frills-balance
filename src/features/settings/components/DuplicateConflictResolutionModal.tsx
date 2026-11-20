@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -61,48 +62,35 @@ export function DuplicateConflictResolutionModal({
       maxHeightPercent={90}
       fixedHeight={false}
       footer={
-        <View style={styles.footerActions}>
-          <View style={styles.buttonRow}>
-            <AppButton
-              variant="outline"
-              size="sm"
-              style={styles.actionBtn}
-              onPress={() => executeAction(onMerge)}
-              testID="duplicate-modal-merge-btn"
-            >
-              Merge into Journal
-            </AppButton>
-            <AppButton
-              variant="secondary"
-              size="sm"
-              style={styles.actionBtn}
-              onPress={() => executeAction(onMarkDuplicateAndDismiss)}
-              testID="duplicate-modal-dismiss-btn"
-            >
-              Mark Duplicate & Dismiss
-            </AppButton>
-          </View>
-          <View style={styles.buttonRow}>
-            <AppButton
-              variant="outline"
-              size="sm"
-              style={styles.actionBtn}
-              onPress={() => executeAction(onPostAnyway)}
-              testID="duplicate-modal-post-anyway-btn"
-            >
-              Post as Separate Entry
-            </AppButton>
-            <AppButton
-              variant="ghost"
-              size="sm"
-              style={styles.actionBtn}
-              onPress={() => executeAction(onViewJournal)}
-              testID="duplicate-modal-view-journal-btn"
-            >
-              View Existing Journal
-            </AppButton>
-          </View>
-        </View>
+        <ModalActions
+          layout="grid"
+          actions={[
+            {
+              label: 'Merge into Journal',
+              variant: 'outline',
+              onPress: () => executeAction(onMerge),
+              testID: 'duplicate-modal-merge-btn',
+            },
+            {
+              label: 'Mark Duplicate & Dismiss',
+              variant: 'secondary',
+              onPress: () => executeAction(onMarkDuplicateAndDismiss),
+              testID: 'duplicate-modal-dismiss-btn',
+            },
+            {
+              label: 'Post as Separate Entry',
+              variant: 'outline',
+              onPress: () => executeAction(onPostAnyway),
+              testID: 'duplicate-modal-post-anyway-btn',
+            },
+            {
+              label: 'View Existing Journal',
+              variant: 'ghost',
+              onPress: () => executeAction(onViewJournal),
+              testID: 'duplicate-modal-view-journal-btn',
+            },
+          ]}
+        />
       }
     >
       <View style={styles.container}>
@@ -309,16 +297,5 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginBottom: Spacing.xs,
-  },
-  footerActions: {
-    marginTop: Spacing.md,
-    gap: Spacing.xs,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  actionBtn: {
-    flex: 1,
   },
 });

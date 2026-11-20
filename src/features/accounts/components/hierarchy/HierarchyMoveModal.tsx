@@ -1,13 +1,12 @@
-import { AppButton, AppIcon, AppText, Icon, ListGroup, ListRow } from '@/src/components/core';
+import { AppIcon, AppText, Icon, ListGroup, ListRow } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
-import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
-import { StyleSheet } from 'react-native';
 
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
@@ -46,9 +45,16 @@ export function HierarchyMoveModal({
       fixedHeight={false}
       accessibilityCloseLabel="Close move account dialog"
       footer={
-        <AppButton onPress={close} variant="ghost" style={styles.cancelButton}>
-          {AppConfig.strings.common.cancel}
-        </AppButton>
+        <ModalActions
+          actions={[
+            {
+              label: AppConfig.strings.common.cancel,
+              role: 'secondary',
+              variant: 'ghost',
+              onPress: close,
+            },
+          ]}
+        />
       }
     >
       <AppText variant="caption" color="secondary">
@@ -104,9 +110,3 @@ export function HierarchyMoveModal({
     </ModalSurface>
   );
 }
-
-const styles = StyleSheet.create({
-  cancelButton: {
-    marginTop: Spacing.sm,
-  },
-});

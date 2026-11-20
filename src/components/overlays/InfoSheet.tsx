@@ -1,7 +1,5 @@
-import { AppButton } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ModalActions } from './ModalActions';
 import { ModalSurface } from './ModalSurface';
 
 type InfoSheetAction = {
@@ -49,32 +47,20 @@ export function InfoSheet({
 }: InfoSheetProps) {
   const footer =
     primaryAction || secondaryAction ? (
-      <View style={styles.footer}>
-        {secondaryAction ? (
-          <AppButton
-            variant={secondaryAction.variant || 'secondary'}
-            onPress={secondaryAction.onPress}
-            disabled={secondaryAction.disabled}
-            testID={secondaryAction.testID}
-            style={styles.actionButtonContainer}
-            buttonStyle={styles.actionButton}
-          >
-            {secondaryAction.label}
-          </AppButton>
-        ) : null}
-        {primaryAction ? (
-          <AppButton
-            variant={primaryAction.variant || 'primary'}
-            onPress={primaryAction.onPress}
-            disabled={primaryAction.disabled}
-            testID={primaryAction.testID}
-            style={styles.actionButtonContainer}
-            buttonStyle={styles.actionButton}
-          >
-            {primaryAction.label}
-          </AppButton>
-        ) : null}
-      </View>
+      <ModalActions
+        actions={[
+          ...(secondaryAction
+            ? [
+                {
+                  ...secondaryAction,
+                  role: 'secondary' as const,
+                  variant: secondaryAction.variant ?? 'secondary',
+                },
+              ]
+            : []),
+          ...(primaryAction ? [{ ...primaryAction, role: 'primary' as const }] : []),
+        ]}
+      />
     ) : undefined;
 
   return (
@@ -97,19 +83,3 @@ export function InfoSheet({
     </ModalSurface>
   );
 }
-
-const styles = StyleSheet.create({
-  footer: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  actionButtonContainer: {
-    flex: 1,
-  },
-  actionButton: {
-    borderRadius: Shape.radius.full,
-  },
-});

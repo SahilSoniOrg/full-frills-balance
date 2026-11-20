@@ -1,9 +1,10 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppButton, Badge } from '@/src/components/core';
+import { Badge } from '@/src/components/core';
 import type { AppButtonProps } from '@/src/components/core/AppButton';
 import { Spacing } from '@/src/constants/design-tokens';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { ModalActions } from './ModalActions';
 
 export interface BulkActionModalSurfaceProps {
   visible: boolean;
@@ -58,35 +59,32 @@ export function BulkActionModalSurface({
       fixedHeight={false}
       scrollable={true}
       footer={
-        <View style={styles.footerRow}>
-          <View style={styles.cancelSlot}>
-            <AppButton
-              variant="outline"
-              onPress={onClose}
-              style={styles.button}
-              disabled={isSubmitting}
-              accessibilityLabel={cancelAccessibilityLabel ?? cancelLabel}
-              testID={`${testID ?? 'bulk-modal'}-cancel`}
-            >
-              {cancelLabel}
-            </AppButton>
-          </View>
-          {onConfirm && (
-            <View style={styles.confirmSlot}>
-              <AppButton
-                variant={confirmVariant}
-                onPress={onConfirm}
-                style={styles.button}
-                disabled={isConfirmDisabled || isSubmitting}
-                loading={isSubmitting}
-                accessibilityLabel={confirmAccessibilityLabel ?? confirmLabel}
-                testID={`${testID ?? 'bulk-modal'}-confirm`}
-              >
-                {confirmLabel}
-              </AppButton>
-            </View>
-          )}
-        </View>
+        <ModalActions
+          actions={[
+            {
+              label: cancelLabel,
+              role: 'secondary',
+              onPress: onClose,
+              disabled: isSubmitting,
+              accessibilityLabel: cancelAccessibilityLabel ?? cancelLabel,
+              testID: `${testID ?? 'bulk-modal'}-cancel`,
+            },
+            ...(onConfirm
+              ? [
+                  {
+                    label: confirmLabel,
+                    role: 'primary' as const,
+                    variant: confirmVariant,
+                    onPress: onConfirm,
+                    disabled: isConfirmDisabled || isSubmitting,
+                    loading: isSubmitting,
+                    accessibilityLabel: confirmAccessibilityLabel ?? confirmLabel,
+                    testID: `${testID ?? 'bulk-modal'}-confirm`,
+                  },
+                ]
+              : []),
+          ]}
+        />
       }
     >
       <View style={styles.contentContainer} testID={testID}>
@@ -104,26 +102,5 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingVertical: Spacing.xs,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    width: '100%',
-    paddingTop: Spacing.md,
-  },
-  button: {
-    width: '100%',
-  },
-  cancelSlot: {
-    flexGrow: 0.8,
-    flexShrink: 1,
-    flexBasis: 0,
-    width: 0,
-  },
-  confirmSlot: {
-    flexGrow: 1.2,
-    flexShrink: 1,
-    flexBasis: 0,
-    width: 0,
   },
 });

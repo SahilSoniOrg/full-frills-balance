@@ -1,6 +1,7 @@
 import { DateView } from '@/src/components/filters/CustomDateTimePicker/DateView';
 import { TimeView } from '@/src/components/filters/CustomDateTimePicker/TimeView';
-import { AppButton, AppSegmentedControl, AppText } from '@/src/components/core';
+import { AppSegmentedControl, AppText } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
@@ -72,9 +73,14 @@ export function DateTimePickerModal({
       fixedHeight={false}
       accessibilityCloseLabel={AppConfig.strings.common.close}
       footer={
-        <AppButton variant="primary" onPress={handleApply}>
-          {hideDate ? 'Set Time' : hideTime ? 'Set Date' : 'Set Date & Time'}
-        </AppButton>
+        <ModalActions
+          actions={[
+            {
+              label: hideDate ? 'Set Time' : hideTime ? 'Set Date' : 'Set Date & Time',
+              onPress: handleApply,
+            },
+          ]}
+        />
       }
     >
       <AppText variant="caption" color="secondary">

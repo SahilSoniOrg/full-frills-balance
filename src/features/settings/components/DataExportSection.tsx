@@ -1,6 +1,6 @@
 import { ListGroup, ListRow, Icon, AppInput } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
 import { AppConfig } from '@/src/constants';
 import { formPrimitivesStrings as formCopy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Stack } from '@/src/design-system';
@@ -61,17 +61,22 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         keyboardAvoiding
         accessibilityCloseLabel="Close export filename"
         footer={
-          <ActionButtonPair
-            disabled={vm.isExporting}
-            primary={{
-              label: AppConfig.strings.settings.data.exportBtn,
-              onPress: vm.onConfirmExport,
-              loading: vm.isExporting,
-            }}
-            secondary={{
-              label: AppConfig.strings.common.cancel,
-              onPress: () => vm.setIsNamingExport(false),
-            }}
+          <ModalActions
+            actions={[
+              {
+                label: AppConfig.strings.common.cancel,
+                role: 'secondary',
+                variant: 'secondary',
+                onPress: () => vm.setIsNamingExport(false),
+                disabled: vm.isExporting,
+              },
+              {
+                label: AppConfig.strings.settings.data.exportBtn,
+                onPress: vm.onConfirmExport,
+                loading: vm.isExporting,
+                disabled: vm.isExporting,
+              },
+            ]}
           />
         }
       >

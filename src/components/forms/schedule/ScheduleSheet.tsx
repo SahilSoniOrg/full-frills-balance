@@ -1,5 +1,6 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { AppButton, AppInputField, AppText, Icon, AppIcon } from '@/src/components/core';
+import { AppInputField, AppText, Icon, AppIcon } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { getReadableColor } from '@/src/design-system/colorMath';
@@ -152,16 +153,18 @@ export function ScheduleSheet({
       maxHeightPercent={90}
       scrollable
       footer={
-        <View style={{ paddingTop: Spacing.md }}>
-          <AppButton
-            onPress={() => valid && onDone(draft)}
-            disabled={!valid}
-            accessibilityLabel={copy.doneAccessibility}
-            testID="schedule-sheet-done"
-          >
-            {copy.done}
-          </AppButton>
-        </View>
+        <ModalActions
+          layout="stacked"
+          actions={[
+            {
+              label: copy.done,
+              onPress: () => valid && onDone(draft),
+              disabled: !valid,
+              accessibilityLabel: copy.doneAccessibility,
+              testID: 'schedule-sheet-done',
+            },
+          ]}
+        />
       }
     >
       <View>

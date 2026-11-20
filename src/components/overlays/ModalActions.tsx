@@ -1,0 +1,177 @@
+import { AppButton } from '@/src/components/core';
+import type { AppButtonProps } from '@/src/components/core/AppButton';
+import { Shape, Size, Spacing } from '@/src/constants';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+
+export type ModalActionsLayout = 'inline' | 'primary' | 'stacked' | 'grid';
+
+export interface ModalAction {
+  label: string;
+  onPress: () => void;
+  role?: 'primary' | 'secondary';
+  variant?: AppButtonProps['variant'];
+  disabled?: boolean;
+  loading?: boolean;
+  accessibilityLabel?: string;
+  testID?: string;
+}
+
+const isDestructive = (action: ModalAction) =>
+  action.variant === 'destructive' || action.variant === 'destructive-outline';
+
+/**
+ * Picks a footer shape when the caller does not name one.
+ * Irreversibility gets the full-width target, because a mis-tap is expensive.
+ * Everything else keeps the compact right-aligned row.
+ */
+function defaultLayout(actions: ModalAction[]): 'inline' | 'primary' {
+  const hasSecondary = actions.some(action => action.role === 'secondary');
+  const hasDestructivePrimary = actions.some(
+    action => action.role !== 'secondary' && isDestructive(action),
+  );
+  return hasSecondary && hasDestructivePrimary ? 'primary' : 'inline';
+}
+
+/** Shared action footer for app-owned modal surfaces. */
+export function ModalActions({
+  actions,
+  layout,
+}: {
+  actions: ModalAction[];
+  layout?: ModalActionsLayout;
+}) {
+  const { fontScale } = useWindowDimensions();
+  const resolvedLayout: ModalActionsLayout =
+    fontScale > 1.3 ? 'stacked' : (layout ?? defaultLayout(actions));
+
+  const primaryAction = actions.find(action => action.role !== 'secondary');
+  const isCompact = resolvedLayout === 'inline' || resolvedLayout === 'primary';
+
+  // Keep a full platform-sized hit area around the compact visual surface.
+  const minimumHeight = Platform.OS === 'android' ? Size.touchTargetLg : Size.touchTarget;
+
+  const renderAction = (action: ModalAction, index: number, width: 'content' | 'full' | 'half') => {
+    const secondary = action.role === 'secondary';
+    const variant = action.variant ?? (secondary ? (isCompact ? 'ghost' : 'outline') : 'primary');
+
+    return (
+      <AppButton
+        key={`${action.testID ?? action.label}-${index}`}
+        variant={variant}
+        size="sm"
+        onPress={action.onPress}
+        disabled={action.disabled}
+        loading={action.loading}
+        accessibilityLabel={action.accessibilityLabel ?? action.label}
+        testID={action.testID}
+        style={[
+          width === 'full' && styles.fullWidth,
+          width === 'half' && styles.halfWidth,
+          width === 'content' && styles.inlineButton,
+          styles.hitTarget,
+          { minHeight: minimumHeight },
+        ]}
+        buttonStyle={[
+          isCompact ? styles.compactSurface : styles.stackedSurface,
+          !secondary && resolvedLayout !== 'inline' && styles.primarySurface,
+        ]}
+      >
+        {action.label}
+      </AppButton>
+    );
+  };
+
+  if (resolvedLayout === 'primary') {
+    const secondaryActions = actions.filter(action => action !== primaryAction);
+    return (
+      <View style={styles.primaryGroup}>
+        {primaryAction ? renderAction(primaryAction, 0, 'full') : null}
+        {secondaryActions.map((action, index) => (
+          <View key={`${action.testID ?? action.label}-${index}`} style={styles.dismissRow}>
+            {renderAction(action, index + 1, 'content')}
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.actions,
+        resolvedLayout === 'inline' && styles.inline,
+        resolvedLayout === 'stacked' && styles.stacked,
+        resolvedLayout === 'grid' && styles.grid,
+      ]}
+    >
+      {actions.map((action, index) =>
+        renderAction(
+          action,
+          index,
+          resolvedLayout === 'inline' ? 'content' : resolvedLayout === 'grid' ? 'half' : 'full',
+        ),
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  actions: {
+    width: '100%',
+    gap: Spacing.sm,
+  },
+  inline: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  stacked: {
+    flexDirection: 'column',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  primaryGroup: {
+    width: '100%',
+    gap: Spacing.xs,
+  },
+  dismissRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineButton: {
+    maxWidth: '100%',
+    flexShrink: 1,
+  },
+  fullWidth: {
+    width: '100%',
+  },
+  halfWidth: {
+    width: 0,
+    minWidth: 0,
+    flexBasis: '48%',
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  hitTarget: {
+    justifyContent: 'center',
+  },
+  compactSurface: {
+    minHeight: 30,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 0,
+  },
+  stackedSurface: {
+    minHeight: Size.buttonSm,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  primarySurface: {
+    minHeight: 40,
+    borderRadius: Shape.radius.lg,
+  },
+});

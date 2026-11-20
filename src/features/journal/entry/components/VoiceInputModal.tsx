@@ -1,11 +1,5 @@
-import {
-  Icon,
-  AppButton,
-  AppIcon,
-  AppInput,
-  AppText,
-  PressScaleTouchable,
-} from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, PressScaleTouchable } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
@@ -74,15 +68,15 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
       maxHeightPercent={85}
       accessibilityCloseLabel="Close voice input"
       footer={
-        <View style={styles.footerActions}>
-          <AppButton
-            variant="primary"
-            disabled={!parserOutput?.transactions.length || isParsing}
-            onPress={applyParsedResult}
-          >
-            Confirm & Apply
-          </AppButton>
-        </View>
+        <ModalActions
+          actions={[
+            {
+              label: 'Confirm & Apply',
+              disabled: !parserOutput?.transactions.length || isParsing,
+              onPress: applyParsedResult,
+            },
+          ]}
+        />
       }
     >
       <AppText variant="caption" color="secondary" style={styles.intro}>
@@ -441,8 +435,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  footerActions: {
-    width: '100%',
   },
 });
