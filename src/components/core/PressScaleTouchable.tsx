@@ -99,10 +99,15 @@ export function PressScaleTouchable({
   const scale = useSharedValue<number>(Scale.identity);
   const opacity = useSharedValue<number>(baseOpacity);
   const previousBaseOpacity = useRef(baseOpacity);
+  // Pressable delays onPressOut to guarantee a minimum press duration (130ms),
+  // so a quick tap's release can run after a selection re-render. Read the
+  // latest rest opacity instead of the one captured by the stale handler.
+  const baseOpacityRef = useRef(baseOpacity);
   const animateScale = !wrapped && pressScale !== 'none' && !reduceMotion;
   const animateOpacity = !wrapped && activeOpacity !== 1;
 
   useEffect(() => {
+    baseOpacityRef.current = baseOpacity;
     if (previousBaseOpacity.current === baseOpacity) return;
     previousBaseOpacity.current = baseOpacity;
     if (!animateOpacity) return;
@@ -147,7 +152,7 @@ export function PressScaleTouchable({
         scale.set(withTiming(Scale.identity, { duration: PRESS_OUT_DURATION_MS }));
       }
       if (animateOpacity) {
-        opacity.set(withTiming(baseOpacity, { duration: PRESS_OUT_DURATION_MS }));
+        opacity.set(withTiming(baseOpacityRef.current, { duration: PRESS_OUT_DURATION_MS }));
       }
     },
   };

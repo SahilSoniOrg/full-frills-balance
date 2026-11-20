@@ -106,4 +106,26 @@ describe('PressScaleTouchable', () => {
     fireEvent(row, 'pressOut');
     expect(withTiming).toHaveBeenLastCalledWith(0.4, expect.any(Object));
   });
+
+  it('restores the latest style opacity when a delayed press-out runs after a re-render', () => {
+    const { rerender } = render(
+      <PressScaleTouchable testID="dimmed" style={{ opacity: 1 }} onPress={() => {}}>
+        <Text>Pinned</Text>
+      </PressScaleTouchable>,
+    );
+    // Pressable delays onPressOut (130ms min press duration), so a quick tap can
+    // release through the handler from the previous render.
+    const delayedPressOut = screen
+      .getByTestId('dimmed')
+      .props.onStartShouldSetResponder.testOnly_pressabilityConfig().onPressOut;
+
+    rerender(
+      <PressScaleTouchable testID="dimmed" style={{ opacity: 0.5 }} onPress={() => {}}>
+        <Text>Unpinned</Text>
+      </PressScaleTouchable>,
+    );
+
+    delayedPressOut({});
+    expect(withTiming).toHaveBeenLastCalledWith(0.5, expect.any(Object));
+  });
 });
