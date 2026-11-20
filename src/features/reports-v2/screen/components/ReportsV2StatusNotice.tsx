@@ -6,9 +6,11 @@ import { ActivityIndicator } from 'react-native';
 export function ReportsV2StatusNotice({
   state,
   onRetry,
+  message,
 }: {
   state: 'refreshing' | 'error';
   onRetry: () => void;
+  message?: string;
 }) {
   const { theme } = useTheme();
   const isError = state === 'error';
@@ -19,9 +21,10 @@ export function ReportsV2StatusNotice({
       icon={isError ? Icon.Alert : Icon.Refresh}
       title={isError ? 'Report update failed' : 'Updating report'}
       message={
-        isError
+        message ??
+        (isError
           ? 'Showing the previous results. Try again.'
-          : 'Your current results stay visible while we update.'
+          : 'Your current results stay visible while we update.')
       }
       action={
         isError ? (

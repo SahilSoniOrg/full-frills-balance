@@ -22,7 +22,7 @@ import { RefreshControl, ScrollView } from 'react-native';
 import type { Observable } from 'rxjs';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
-import { REPORTS_V2_SECTIONS } from '../helpers';
+import { formatPeriodLabel, REPORTS_V2_SECTIONS } from '../helpers';
 import { useReportsV2ViewModel } from '../hooks/useReportsV2ViewModel';
 import type { ReportsV2SectionId } from '../types';
 import { ReportsV2Filters } from './components/ReportsV2Filters';
@@ -123,7 +123,21 @@ export function ReportsV2View({
     [],
   );
   const warnings = useMemo(() => vm.result?.warnings ?? [], [vm.result?.warnings]);
-  const explanationContext = useMemo(() => explanationContextFromFilters(vm.filters), [vm.filters]);
+  const explanationContext = useMemo(() => {
+    if (vm.resultIsCurrent || !vm.result) return explanationContextFromFilters(vm.filters);
+    const query = vm.result.query;
+    const accountCount = query.accountIds?.length ?? 0;
+    return explanationContextFromFilters({
+      periodLabel: formatPeriodLabel(query.period.startDate, query.period.endDate, 'custom'),
+      accountScopeLabel: accountCount
+        ? `${accountCount} selected account${accountCount === 1 ? '' : 's'}`
+        : 'All accounts',
+      basis: query.basis,
+      comparison: query.comparison,
+      includeArchivedAccounts: query.includeArchivedAccounts !== false,
+      targetCurrency: query.targetCurrency,
+    });
+  }, [vm.filters, vm.result, vm.resultIsCurrent]);
   const explanationDataNotes = useMemo(() => reportExplanationDataNotes(warnings), [warnings]);
 
   return (
@@ -142,7 +156,25 @@ export function ReportsV2View({
           >
             <ReportsV2Filters vm={vm} isExpanded={areFiltersExpanded} onToggle={toggleFilters} />
             {vm.result && (vm.state === 'refreshing' || vm.state === 'error') ? (
-              <ReportsV2StatusNotice state={vm.state} onRetry={vm.onRetry} />
+              <ReportsV2StatusNotice
+                state={vm.state}
+                onRetry={vm.onRetry}
+                message={
+                  !vm.resultIsCurrent
+                    ? AppConfig.strings.reportsV2.previousFilterResults
+                    : undefined
+                }
+              />
+            ) : null}
+            {vm.result &&
+            !vm.resultIsCurrent &&
+            vm.state !== 'error' &&
+            vm.state !== 'refreshing' ? (
+              <ReportsV2StatusNotice
+                state="refreshing"
+                onRetry={vm.onRetry}
+                message={AppConfig.strings.reportsV2.previousFilterResults}
+              />
             ) : null}
             <AppTabs
               options={sectionOptions}
@@ -150,17 +182,18 @@ export function ReportsV2View({
               onChange={vm.setActiveSection}
               testID="reports-v2-section-tabs"
             />
-            {vm.result ? (
+            {vm.result && vm.resultIsCurrent ? (
               <ReportsV2QualityBanner
                 warnings={warnings}
-                onPress={() => vm.setActiveSection('health')}
+                onPress={() => vm.resultIsCurrent && vm.setActiveSection('health')}
               />
             ) : null}
-            {vm.missingRateQuotes.length > 0 ? (
+            {vm.resultIsCurrent && vm.missingRateQuotes.length > 0 ? (
               <IncompleteFxWarning
                 testID="reports-v2-incomplete-fx-warning"
                 message={AppConfig.strings.reportsV2.incompleteFxWarning}
                 onPress={() =>
+                  vm.resultIsCurrent &&
                   showIncompleteFxDetails({
                     context: 'reports',
                     currencyCode: targetCurrency,
@@ -177,7 +210,7 @@ export function ReportsV2View({
                 onPrimaryAction={vm.onRetry}
               />
             ) : null}
-            {vm.state === 'loading' && !vm.result ? (
+            {(vm.state === 'loading' || vm.state === 'refreshing') && !vm.result ? (
               <LoadingView loading text="Building your report…" />
             ) : null}
             {vm.renderedSection ? (
@@ -186,7 +219,9 @@ export function ReportsV2View({
                 explanationContext={explanationContext}
                 dataNotes={explanationDataNotes}
                 onDrilldown={vm.onDrilldown}
-                interactive={vm.state !== 'refreshing' && vm.state !== 'error'}
+                interactive={
+                  vm.resultIsCurrent && vm.state !== 'refreshing' && vm.state !== 'error'
+                }
               />
             ) : null}
             {vm.activeSection === 'health' && vm.canFetchMissingRates ? (
@@ -195,7 +230,10 @@ export function ReportsV2View({
                 onPress={vm.onFetchMissingRates}
                 loading={vm.isFetchingMissingRates}
                 disabled={
-                  vm.state === 'refreshing' || vm.state === 'error' || vm.isFetchingMissingRates
+                  !vm.resultIsCurrent ||
+                  vm.state === 'refreshing' ||
+                  vm.state === 'error' ||
+                  vm.isFetchingMissingRates
                 }
                 accessibilityLabel={AppConfig.strings.reportsV2.fetchMissingRates}
               >

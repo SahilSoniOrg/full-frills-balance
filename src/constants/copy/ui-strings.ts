@@ -419,6 +419,8 @@ export const UI_STRINGS = {
   },
   reportsV2: {
     title: 'Money overview',
+    previousFilterResults:
+      'Showing results from the previous filters while this report updates. Drilldowns and data actions are paused until matching results arrive.',
     incompleteFxWarning:
       'Some cross-currency activity was omitted because no historical exchange rate was available.',
     fetchMissingRates: 'Fetch missing rates',

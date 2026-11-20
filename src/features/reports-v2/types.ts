@@ -65,6 +65,7 @@ export interface ReportsV2ViewModel {
   setActiveSection: (section: ReportsV2SectionId) => void;
   state: ReportsV2LoadState;
   result: ReportsV2Result | null;
+  resultIsCurrent: boolean;
   missingRateQuotes: NonNullable<ReportsV2Result['warnings'][number]['missingRateQuotes']>;
   renderedSection: ReportsV2Result['sections'][number] | null;
   error: Error | null;

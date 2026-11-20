@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Observable } from 'rxjs';
 import { asAccountId, asWorkplaceId, type AccountId } from '@/src/types/ids';
 import { formatPeriodLabel, periodRangeForPreset } from '@/src/features/reports-v2/helpers';
@@ -84,11 +84,15 @@ export function useReportsV2ViewModel({
   const [granularity, setGranularity] = useState<ReportsV2Granularity>(initialGranularity);
   const [activeSection, setActiveSection] = useState<ReportsV2SectionId>(initialSection);
   const [state, setState] = useState<ReportsV2LoadState>('idle');
-  const [result, setResult] = useState<ReportsV2Result | null>(null);
+  const [successfulRun, setSuccessfulRun] = useState<{
+    query: ReportsV2Query;
+    result: ReportsV2Result;
+  } | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isFetchingMissingRates, setIsFetchingMissingRates] = useState(false);
   const [inputRevision, setInputRevision] = useState(0);
   const runSequence = useRef(0);
+  const pendingFxConfirmation = useRef<ReportsV2Query | null>(null);
   const hasLoaded = useRef(false);
   const scheduledRun = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialPeriodRange = useRef(periodRange);
@@ -176,22 +180,33 @@ export function useReportsV2ViewModel({
       workplaceId,
     ],
   );
+  const visibleRun = successfulRun?.query.workplaceId === workplaceId ? successfulRun : null;
+  const result = visibleRun?.result ?? null;
+  const resultIsCurrent = visibleRun?.query === query;
+  const currentQuery = useRef<ReportsV2Query | null>(null);
+  useLayoutEffect(() => {
+    currentQuery.current = query;
+    return () => {
+      currentQuery.current = null;
+      pendingFxConfirmation.current = null;
+    };
+  }, [query]);
 
   const runQuery = useCallback(
-    async (
-      nextState: 'loading' | 'refreshing',
-      queryToRun: ReportsV2Query = query,
-      sequence = ++runSequence.current,
-    ) => {
+    async (nextState: 'loading' | 'refreshing', scheduledSequence?: number) => {
+      if (currentQuery.current !== query) return;
+      const sequence = scheduledSequence ?? ++runSequence.current;
+      const isCurrent = () => currentQuery.current === query && sequence === runSequence.current;
+      if (!isCurrent()) return;
       setState(nextState);
       setError(null);
       try {
-        const nextResult = await engine.run(queryToRun);
-        if (sequence !== runSequence.current) return;
-        setResult(nextResult);
+        const nextResult = await engine.run(query);
+        if (!isCurrent()) return;
+        setSuccessfulRun({ query, result: nextResult });
         setState('success');
       } catch (cause) {
-        if (sequence !== runSequence.current) return;
+        if (!isCurrent()) return;
         setError(cause instanceof Error ? cause : new Error('Unable to load this report.'));
         setState('error');
       }
@@ -218,7 +233,7 @@ export function useReportsV2ViewModel({
     const timer = setTimeout(
       () => {
         scheduledRun.current = null;
-        void runQuery(nextState, query, sequence);
+        void runQuery(nextState, sequence);
       },
       nextState === 'loading' ? 0 : FILTER_SETTLE_DELAY_MS,
     );
@@ -233,10 +248,11 @@ export function useReportsV2ViewModel({
 
   const runImmediately = useCallback(
     (nextState: 'loading' | 'refreshing') => {
+      if (currentQuery.current !== query) return;
       cancelScheduledRun();
       void runQuery(nextState);
     },
-    [cancelScheduledRun, runQuery],
+    [cancelScheduledRun, query, runQuery],
   );
 
   const onPeriodPresetChange = useCallback(
@@ -265,9 +281,10 @@ export function useReportsV2ViewModel({
   }, []);
   const onDrilldown = useCallback(
     (input: ReportsV2DrilldownInput) => {
+      if (currentQuery.current !== query || (visibleRun && !resultIsCurrent)) return;
+      const hasDirectScope = Boolean(input.accountIds?.length || input.journalIds?.length);
       const startDate = input.startDate ?? query.period.startDate;
       const endDate = input.endDate ?? query.period.endDate;
-      const hasDirectScope = Boolean(input.accountIds?.length || input.journalIds?.length);
       if (onJournalDrilldown && hasDirectScope) {
         onJournalDrilldown({
           label: input.label,
@@ -290,18 +307,20 @@ export function useReportsV2ViewModel({
           ...(input.semanticTypes ? { semanticTypes: input.semanticTypes as never } : {}),
           ...(input.flowClassifications ? { flowClassifications: input.flowClassifications } : {}),
         })
-        .then(journalIds =>
-          onJournalDrilldown?.({
-            label: input.label,
-            journalIds,
-            ...(input.accountIds ? { accountIds: input.accountIds } : {}),
-            startDate,
-            endDate,
-          }),
+        .then(
+          journalIds =>
+            currentQuery.current === query &&
+            onJournalDrilldown?.({
+              label: input.label,
+              journalIds,
+              ...(input.accountIds ? { accountIds: input.accountIds } : {}),
+              startDate,
+              endDate,
+            }),
         )
         .catch(() => undefined);
     },
-    [engine, onJournalDrilldown, query],
+    [engine, onJournalDrilldown, query, resultIsCurrent, visibleRun],
   );
   const filters = useMemo<ReportsV2FiltersViewModel>(
     () => ({
@@ -351,9 +370,10 @@ export function useReportsV2ViewModel({
     if (!result) return null;
     const requestedSection = result.sections.find(section => section.id === activeSection);
     if (requestedSection) return requestedSection;
-    if (state === 'refreshing' || state === 'error') return result.sections[0] ?? null;
+    if (!resultIsCurrent || state === 'refreshing' || state === 'error')
+      return result.sections[0] ?? null;
     return null;
-  }, [activeSection, result, state]);
+  }, [activeSection, result, resultIsCurrent, state]);
   const missingRateQuotes = useMemo(
     () =>
       result?.warnings.find(warning => warning.code === 'MISSING_EXCHANGE_RATE')
@@ -361,17 +381,32 @@ export function useReportsV2ViewModel({
     [result],
   );
   const onFetchMissingRates = useCallback(() => {
-    if (missingRateQuotes.length === 0 || isFetchingMissingRates) return;
+    const isCurrent = () => currentQuery.current === query;
+    if (
+      !isCurrent() ||
+      !resultIsCurrent ||
+      missingRateQuotes.length === 0 ||
+      isFetchingMissingRates ||
+      pendingFxConfirmation.current
+    )
+      return;
+
     const copy = AppConfig.strings.reportsV2;
+    const releaseConfirmation = () => {
+      if (pendingFxConfirmation.current === query) pendingFxConfirmation.current = null;
+    };
+    pendingFxConfirmation.current = query;
     confirm.show({
       title: copy.fetchMissingRatesTitle,
       message: copy.fetchMissingRatesMessage,
       confirmText: copy.fetchMissingRatesConfirm,
       onConfirm: () => {
+        if (!isCurrent() || pendingFxConfirmation.current !== query) return;
         void (async () => {
           setIsFetchingMissingRates(true);
           try {
             const fetchResult = await fetchMissingHistoricalRates(missingRateQuotes);
+            if (!isCurrent()) return;
             if (fetchResult.attempted === 0) toast.info(copy.fetchMissingRatesNone);
             else if (fetchResult.fetched === 0) toast.warning(copy.fetchMissingRatesUnavailable);
             else if (fetchResult.failed > 0)
@@ -379,14 +414,16 @@ export function useReportsV2ViewModel({
             else toast.success(copy.fetchMissingRatesSuccess(fetchResult.fetched));
             runImmediately('refreshing');
           } catch {
-            toast.error(copy.fetchMissingRatesFailed);
+            if (isCurrent()) toast.error(copy.fetchMissingRatesFailed);
           } finally {
-            setIsFetchingMissingRates(false);
+            releaseConfirmation();
+            if (currentQuery.current) setIsFetchingMissingRates(false);
           }
         })();
       },
+      onCancel: releaseConfirmation,
     });
-  }, [isFetchingMissingRates, missingRateQuotes, runImmediately]);
+  }, [isFetchingMissingRates, missingRateQuotes, query, resultIsCurrent, runImmediately]);
   return {
     query,
     filters,
@@ -394,13 +431,14 @@ export function useReportsV2ViewModel({
     setActiveSection,
     state,
     result,
+    resultIsCurrent,
     missingRateQuotes,
     renderedSection,
     error,
     onRefresh: () => runImmediately('refreshing'),
     onRetry: () => runImmediately('loading'),
     onDrilldown,
-    canFetchMissingRates: missingRateQuotes.length > 0,
+    canFetchMissingRates: resultIsCurrent && missingRateQuotes.length > 0,
     isFetchingMissingRates,
     onFetchMissingRates,
     onRequestCustomRange,
