@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { Icon, type IconName } from '@/src/components/core';
 import { Platform } from 'react-native';
+import { gmailCaptureStrings } from '@/src/constants/copy/domains/gmailCaptureStrings';
 import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 
@@ -36,14 +37,33 @@ export type SettingsEntry = {
   section: string;
   keywords: string[];
   action: keyof SettingsActions;
-  platform?: 'android';
+  /** Limit to one OS, or every native mobile OS (excludes web). */
+  platform?: 'android' | 'native';
+  /** Runtime gate; omitted entries are always eligible once the platform matches. */
+  gate?: keyof SettingsSearchCapabilities;
   /** Hub-only rows are not indexed by search. */
   searchable?: false;
   /** Row on the main settings screen; icon/title/description default to the search copy. */
   hub?: { testID: string; icon?: IconName; title?: string; description?: string };
 };
 
-export type SettingsSearchItem = Omit<SettingsEntry, 'focusId' | 'action' | 'hub'> & {
+/** Runtime availability for gated search rows (feature flags, connection state, etc.). */
+export type SettingsSearchCapabilities = {
+  /** Matches Capture & review: feature flag on, or Gmail already connected. */
+  gmailCapture: boolean;
+  /** Nested Gmail toggles that require an active connection. */
+  gmailCaptureConnected: boolean;
+  /** Account recognition help: flag on and Gmail connected. */
+  gmailCaptureAccountHelp: boolean;
+};
+
+export const DEFAULT_SETTINGS_SEARCH_CAPABILITIES: SettingsSearchCapabilities = {
+  gmailCapture: false,
+  gmailCaptureConnected: false,
+  gmailCaptureAccountHelp: false,
+};
+
+export type SettingsSearchItem = Omit<SettingsEntry, 'focusId' | 'action' | 'hub' | 'gate'> & {
   focusId: string;
   navigate: (target: string) => void;
   searchableText: string;
@@ -72,7 +92,9 @@ const screen = (
 const s = AppConfig.strings.settings;
 const { sections: sec, hub, personalization: me, appearance: look, privacy, data } = s;
 const DISPLAY = 'Preferences · Display Options';
+const CAPTURE = transactionCaptureStrings.title;
 const ANDROID = { platform: 'android' } as const;
+const NATIVE = { platform: 'native' } as const;
 // prettier-ignore
 export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...screen('Your Account', 'onProfile', [
@@ -87,6 +109,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     }),
     row('currency', Icon.Bank, s.currency.title, s.currency.description, ['workplace', 'money', 'currency code', 'default currency']),
     row('safe-to-spend-forecast', Icon.Safe, me.forecastTitle, me.forecastDesc, ['workplace', 'money', 'safe to spend', 'forecast', 'horizon', '30 days', '60 days', '90 days']),
+    row('delete-workplace', Icon.Delete, 'Delete workplace', 'Permanently delete this workplace and its books', ['workplace', 'delete', 'remove', 'danger']),
   ]),
   ...screen('Transactions', 'onCaptureWorkspace', [
     row('capture-review', Icon.Zap, transactionCaptureStrings.title, transactionCaptureStrings.description, ['capture', 'review', 'transactions', 'automatic', 'matching'], {
@@ -100,9 +123,46 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
       hub: { testID: 'settings-spending-reminders' },
     }),
   ]),
-  ...screen('Transactions', 'onCaptureWorkspace', [
+  ...screen(CAPTURE, 'onCaptureWorkspace', [
     row('transaction-capture-enabled', Icon.Zap, transactionCaptureStrings.captureTitle, transactionCaptureStrings.captureDescription, ['capture', 'categorization', 'automatic', 'transactions', 'automation']),
-    row('transaction-capture-inbox', Icon.MessageSquare, transactionCaptureStrings.inboxTitle, transactionCaptureStrings.inboxDescription, ['capture', 'review', 'inbox', 'transactions']),
+    row('transaction-capture-review-queue', Icon.Tag, transactionCaptureStrings.reviewOpenTitle, transactionCaptureStrings.reviewHint, ['capture', 'review', 'categorize', 'uncategorized', 'transactions', 'category']),
+    row('transaction-capture-inbox', Icon.MessageSquare, transactionCaptureStrings.inboxTitle, transactionCaptureStrings.inboxDescription, ['capture', 'review', 'inbox', 'transactions', 'import', 'messages']),
+    row('transaction-capture-suggestions', Icon.Zap, transactionCaptureStrings.suggestionsTitle, transactionCaptureStrings.suggestionsOverviewDescription, ['capture', 'matching', 'suggestions', 'defaults', 'merchant', 'category', 'rules']),
+  ]),
+  ...screen(CAPTURE, 'onCaptureWorkspace', [
+    row('sms-settings', Icon.MessageSquare, transactionCaptureStrings.smsTitle, transactionCaptureStrings.smsDescription, ['sms', 'settings', 'import', 'messages', 'android', 'capture'], ANDROID),
+    row(
+      'transaction-capture-gmail',
+      Icon.Mail,
+      gmailCaptureStrings.title,
+      gmailCaptureStrings.disconnected,
+      ['gmail', 'email', 'google', 'mail', 'capture', 'inbox', 'connect'],
+      { ...NATIVE, gate: 'gmailCapture' },
+    ),
+    row(
+      'transaction-capture-gmail-background',
+      Icon.History,
+      gmailCaptureStrings.backgroundSetting,
+      gmailCaptureStrings.backgroundDescription,
+      ['gmail', 'email', 'background', 'checks', 'sync', 'capture'],
+      { ...NATIVE, gate: 'gmailCaptureConnected' },
+    ),
+    row(
+      'transaction-capture-gmail-auto',
+      Icon.Zap,
+      gmailCaptureStrings.automaticSetting,
+      gmailCaptureStrings.automaticDescription,
+      ['gmail', 'email', 'automatic', 'verified', 'capture', 'dns'],
+      { ...NATIVE, gate: 'gmailCaptureConnected' },
+    ),
+    row(
+      'transaction-capture-gmail-accounts',
+      Icon.Document,
+      gmailCaptureStrings.accountHelp,
+      gmailCaptureStrings.accountHelpDescription,
+      ['gmail', 'email', 'account', 'sender', 'recognition', 'matcher'],
+      { ...NATIVE, gate: 'gmailCaptureAccountHelp' },
+    ),
   ]),
   ...screen('Preferences', 'onAppearance', [
     row('appearance', Icon.Palette, look.themeTitle, look.themeDesc, ['appearance', 'theme', 'dark mode', 'light mode', 'color'], {
@@ -148,7 +208,11 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ]),
   ...screen('Support', 'onAbout', [
     row('about-support', Icon.Info, sec.aboutAndSupport, hub.aboutSupportDescription, ['about', 'support', 'help', 'community', 'github', 'version', 'bug'], { hub: { testID: 'settings-about-support' } }),
+    row('telegram', Icon.MessageCircle, s.community.telegramTitle, s.community.telegramDesc, ['about', 'support', 'telegram', 'community', 'chat']),
     row('release-notes', Icon.Document, s.community.releaseNotesTitle, s.community.releaseNotesDesc, ['release', 'changelog', 'updates', 'what changed', 'telegram']),
+    row('play-store', Icon.Star, s.community.playStoreTitle, s.community.playStoreDesc, ['about', 'support', 'play store', 'rate', 'review']),
+    row('github', Icon.Github, s.community.githubTitle, s.community.githubDesc, ['about', 'support', 'github', 'source', 'issues']),
+    row('report-bug', Icon.Bug, 'Report a Bug', 'Share app logs and device info to help fix issues', ['about', 'support', 'bug', 'report', 'logs', 'crash']),
   ]),
   ...screen(
     'Notifications & Automation',
@@ -170,8 +234,14 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ),
 ];
 
-const isOnPlatform = (entry: SettingsEntry) =>
-  entry.platform === undefined || entry.platform === Platform.OS;
+const isOnPlatform = (entry: SettingsEntry) => {
+  if (entry.platform === undefined) return true;
+  if (entry.platform === 'native') return Platform.OS === 'ios' || Platform.OS === 'android';
+  return entry.platform === Platform.OS;
+};
+
+const isGateOpen = (entry: SettingsEntry, capabilities: SettingsSearchCapabilities) =>
+  entry.gate === undefined || capabilities[entry.gate];
 
 export type SettingsHubRow = Pick<SettingsEntry, 'id' | 'action'> &
   Required<Pick<SettingsEntry, 'icon' | 'title' | 'description'>> & { testID: string };
@@ -194,17 +264,20 @@ for (const entry of SETTINGS_ENTRIES) {
   else SETTINGS_HUB_SECTIONS.push({ header, rows: [hubRow] });
 }
 
-export function createSettingsSearchCatalog(actions: SettingsActions): SettingsSearchItem[] {
-  return SETTINGS_ENTRIES.filter(entry => entry.searchable !== false && isOnPlatform(entry)).map(
-    ({ action, hub: _hub, focusId, ...entry }) => ({
-      ...entry,
-      focusId: focusId ?? entry.id,
-      navigate: actions[action],
-      searchableText: [entry.title, entry.description, entry.section, ...entry.keywords]
-        .join(' ')
-        .toLocaleLowerCase(),
-    }),
-  );
+export function createSettingsSearchCatalog(
+  actions: SettingsActions,
+  capabilities: SettingsSearchCapabilities = DEFAULT_SETTINGS_SEARCH_CAPABILITIES,
+): SettingsSearchItem[] {
+  return SETTINGS_ENTRIES.filter(
+    entry => entry.searchable !== false && isOnPlatform(entry) && isGateOpen(entry, capabilities),
+  ).map(({ action, hub: _hub, focusId, gate: _gate, ...entry }) => ({
+    ...entry,
+    focusId: focusId ?? entry.id,
+    navigate: actions[action],
+    searchableText: [entry.title, entry.description, entry.section, ...entry.keywords]
+      .join(' ')
+      .toLocaleLowerCase(),
+  }));
 }
 
 export function filterSettingsSearchItems(

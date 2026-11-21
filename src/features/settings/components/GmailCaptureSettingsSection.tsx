@@ -2,8 +2,8 @@ import { AppButton, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { gmailCaptureStrings as strings } from '@/src/constants/copy/domains/gmailCaptureStrings';
 import type { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
+import { isGmailCaptureSectionVisible } from '@/src/features/settings/utils/gmailCaptureVisibility';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { Platform } from 'react-native';
 
 export function GmailCaptureSettingsSection({
   gmail,
@@ -12,7 +12,7 @@ export function GmailCaptureSettingsSection({
   gmail: ReturnType<typeof useGmailCaptureViewModel>;
   featureEnabled: boolean;
 }) {
-  if (Platform.OS === 'web' || (!featureEnabled && !gmail.connected)) return null;
+  if (!isGmailCaptureSectionVisible(featureEnabled, gmail.connected)) return null;
 
   return (
     <ListGroup variant="plain">

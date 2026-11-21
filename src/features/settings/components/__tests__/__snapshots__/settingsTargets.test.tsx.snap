@@ -45,6 +45,8 @@ exports[`settings screens keep their e2e testIDs and search focus targets automa
     "transaction-capture-enabled",
     "transaction-capture-gmail",
     "transaction-capture-inbox",
+    "transaction-capture-review-queue",
+    "transaction-capture-suggestions",
   ],
   "testIDs": [
     "nav-back-button",

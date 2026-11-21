@@ -23,6 +23,7 @@ import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
+import { isGmailCaptureSectionVisible } from '@/src/features/settings/utils/gmailCaptureVisibility';
 import { Platform } from 'react-native';
 import type { ReactNode } from 'react';
 
@@ -147,6 +148,7 @@ export function CaptureWorkspaceView({
 
       <ListGroup variant="plain" header={strings.attentionHeader}>
         <ListRow
+          focusId="transaction-capture-review-queue"
           icon={Icon.Tag}
           title={strings.reviewOpenTitle}
           subtitle={
@@ -193,6 +195,7 @@ export function CaptureWorkspaceView({
 
       <ListGroup variant="plain" header={strings.matchingHeader}>
         <ListRow
+          focusId="transaction-capture-suggestions"
           icon={Icon.Zap}
           title={strings.suggestionsTitle}
           subtitle={strings.suggestionsOverviewDescription}
@@ -273,7 +276,7 @@ function NativeCaptureWorkspaceView({ capture }: { capture: TransactionCaptureVi
       onOpenSmsSettings={AppNavigation.toSmsSettings}
       capture={capture}
       gmailSection={
-        gmail.featureEnabled || gmail.connected ? (
+        isGmailCaptureSectionVisible(gmail.featureEnabled, gmail.connected) ? (
           <GmailCaptureSettingsSection gmail={gmail} featureEnabled={gmail.featureEnabled} />
         ) : null
       }

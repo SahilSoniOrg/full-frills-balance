@@ -8,14 +8,51 @@ import {
   createSettingsSearchCatalog,
   SETTINGS_HUB_SECTIONS,
   type SettingsActions,
+  type SettingsSearchCapabilities,
 } from '@/src/features/settings/components/settingsSections';
+import {
+  isGmailCaptureAccountHelpVisible,
+  isGmailCaptureConnectedControlsVisible,
+  isGmailCaptureSectionVisible,
+} from '@/src/features/settings/utils/gmailCaptureVisibility';
+import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
+import { usePostHogFeatureFlag } from '@/src/hooks/usePostHogFeatureFlag';
+import { POSTHOG_FEATURE_FLAGS } from '@/src/services/analytics/featureFlags';
+import { gmailBinding } from '@/src/services/email/gmailConnection';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { useIsFocused } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 
 export function SettingsView({ actions }: { actions: SettingsActions }) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
-  const searchItems = useMemo(() => createSettingsSearchCatalog(actions), [actions]);
+  const isFocused = useIsFocused();
+  const workplaceId = useOptionalWorkplace()?.workplaceId;
+  const gmailFeatureEnabled = usePostHogFeatureFlag(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings);
+  // Re-read when this screen is focused again (e.g. after connecting Gmail).
+  const gmailConnected = useMemo(
+    () => !!workplaceId && !!gmailBinding(workplaceId),
+    [isFocused, workplaceId],
+  );
+
+  const searchCapabilities = useMemo<SettingsSearchCapabilities>(
+    () => ({
+      gmailCapture: isGmailCaptureSectionVisible(gmailFeatureEnabled, gmailConnected),
+      gmailCaptureConnected: isGmailCaptureConnectedControlsVisible(
+        gmailFeatureEnabled,
+        gmailConnected,
+      ),
+      gmailCaptureAccountHelp: isGmailCaptureAccountHelpVisible(
+        gmailFeatureEnabled,
+        gmailConnected,
+      ),
+    }),
+    [gmailConnected, gmailFeatureEnabled],
+  );
+  const searchItems = useMemo(
+    () => createSettingsSearchCatalog(actions, searchCapabilities),
+    [actions, searchCapabilities],
+  );
 
   return (
     <SettingsLayout
