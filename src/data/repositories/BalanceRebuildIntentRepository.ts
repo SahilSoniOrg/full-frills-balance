@@ -100,4 +100,29 @@ export const balanceRebuildIntentRepository = {
     const [row] = await intents().query(Q.where('id', claim.id)).fetch();
     if (row?.revision === claim.revision) return row;
   },
+
+  /**
+   * Atomically publish a rebuild projection and retire the claim when it is still current.
+   * Owns the database.write seam so services stay outside direct persistence writes.
+   */
+  async commitClaimWithProjection(
+    claim: BalanceRebuildClaim,
+    isCurrent: () => boolean,
+    prepare: () => Model[] | undefined,
+  ): Promise<'rebuilt' | 'superseded' | 'deferred'> {
+    let outcome: 'rebuilt' | 'superseded' | 'deferred' = 'deferred';
+    await database.write(async () => {
+      const row = await this.findCurrent(claim);
+      if (!isCurrent()) return;
+      if (!row) {
+        outcome = 'superseded';
+        return;
+      }
+      const projectionOps = prepare();
+      if (projectionOps === undefined) return;
+      await database.batch([...projectionOps, row.prepareDestroyPermanently()]);
+      outcome = 'rebuilt';
+    });
+    return outcome;
+  },
 };

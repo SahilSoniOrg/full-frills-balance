@@ -42,24 +42,43 @@ jest.mock('react-native-launch-arguments', () => ({
   },
 }));
 
-// Mock MMKV
+// Mock MMKV with an in-memory store so tests that round-trip keys actually work.
 jest.mock('react-native-mmkv', () => {
-  const mmkvMock = {
-    set: jest.fn(),
-    getString: jest.fn(),
-    getNumber: jest.fn(),
-    getBoolean: jest.fn(),
-    getBuffer: jest.fn(),
-    contains: jest.fn(),
-    delete: jest.fn(),
-    remove: jest.fn(),
-    getAllKeys: jest.fn().mockReturnValue([]),
-    clearAll: jest.fn(),
-    recrypt: jest.fn(),
-    onValueChanged: jest.fn(),
+  const createMemoryMMKV = () => {
+    const store = new Map();
+    return {
+      set: jest.fn((key, value) => {
+        store.set(key, value);
+      }),
+      getString: jest.fn(key => {
+        const value = store.get(key);
+        return typeof value === 'string' ? value : undefined;
+      }),
+      getNumber: jest.fn(key => {
+        const value = store.get(key);
+        return typeof value === 'number' ? value : undefined;
+      }),
+      getBoolean: jest.fn(key => {
+        const value = store.get(key);
+        return typeof value === 'boolean' ? value : undefined;
+      }),
+      getBuffer: jest.fn(key => {
+        const value = store.get(key);
+        return value instanceof ArrayBuffer ? value : undefined;
+      }),
+      contains: jest.fn(key => store.has(key)),
+      delete: jest.fn(key => store.delete(key)),
+      remove: jest.fn(key => store.delete(key)),
+      getAllKeys: jest.fn(() => [...store.keys()]),
+      clearAll: jest.fn(() => {
+        store.clear();
+      }),
+      recrypt: jest.fn(),
+      onValueChanged: jest.fn(),
+    };
   };
   return {
-    createMMKV: jest.fn().mockImplementation(() => mmkvMock),
+    createMMKV: jest.fn().mockImplementation(() => createMemoryMMKV()),
   };
 });
 

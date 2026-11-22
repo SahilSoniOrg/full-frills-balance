@@ -26,14 +26,11 @@ import { useMemo, useRef, useState } from 'react';
 export function SettingsView({ actions }: { actions: SettingsActions }) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
-  const isFocused = useIsFocused();
+  // Re-render when this screen is focused again (e.g. after connecting Gmail).
+  useIsFocused();
   const workplaceId = useOptionalWorkplace()?.workplaceId;
   const gmailFeatureEnabled = usePostHogFeatureFlag(POSTHOG_FEATURE_FLAGS.gmailCaptureSettings);
-  // Re-read when this screen is focused again (e.g. after connecting Gmail).
-  const gmailConnected = useMemo(
-    () => !!workplaceId && !!gmailBinding(workplaceId),
-    [isFocused, workplaceId],
-  );
+  const gmailConnected = !!workplaceId && !!gmailBinding(workplaceId);
 
   const searchCapabilities = useMemo<SettingsSearchCapabilities>(
     () => ({

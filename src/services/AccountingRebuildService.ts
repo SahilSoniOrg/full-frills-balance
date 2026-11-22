@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import {
   balanceRebuildIntentRepository,
   balanceRebuildKey,
@@ -47,19 +46,13 @@ export class AccountingRebuildService {
       [],
       undefined,
       isCurrent,
-      prepare =>
-        database.write(async () => {
-          const row = await balanceRebuildIntentRepository.findCurrent(claim);
-          if (!isCurrent()) return;
-          if (!row) {
-            outcome = 'superseded';
-            return;
-          }
-          const projectionOps = prepare();
-          if (projectionOps === undefined) return;
-          await database.batch([...projectionOps, row.prepareDestroyPermanently()]);
-          outcome = 'rebuilt';
-        }),
+      async prepare => {
+        outcome = await balanceRebuildIntentRepository.commitClaimWithProjection(
+          claim,
+          isCurrent,
+          prepare,
+        );
+      },
     );
     return outcome;
   }
