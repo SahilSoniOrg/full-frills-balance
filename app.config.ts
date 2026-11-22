@@ -20,6 +20,13 @@ const getGitCommit = () => {
 
 const gitCommit = getGitCommit();
 
+// Both OAuth clients are used by different EAS environments. Keep both callback
+// schemes in generated iOS projects so prebuild cannot drop the inactive client.
+const googleIosUrlSchemes = [
+  'com.googleusercontent.apps.151156364497-tc8lss33d0mlqf38fdpb2d7eeaftojh0',
+  'com.googleusercontent.apps.151156364497-oi7vgrbq7eh3cmnhohcl2dr17os3soto',
+];
+
 type AppVariant = keyof typeof appVariants;
 
 const variant = (process.env.APP_VARIANT ?? 'production') as AppVariant;
@@ -120,6 +127,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: appConfig.iosBundleIdentifier,
+    infoPlist: {
+      CFBundleURLTypes: [{ CFBundleURLSchemes: googleIosUrlSchemes }],
+    },
   },
   android: {
     adaptiveIcon: {

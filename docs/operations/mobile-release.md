@@ -76,5 +76,5 @@ The production OAuth clients are the ones under Google verification. Don't chang
 | development, preview | `…-g7o1p78v41s70nip1a32mltq41gg9df3` | iOS Dev `…-oi7vgrbq7eh3cmnhohcl2dr17os3soto` |
 
 - Both platforms use the web client ID. Android clients are matched by package name and SHA-1, so the app doesn't need their IDs.
-- `ios/` is committed, so EAS doesn't run prebuild and `Info.plist` isn't regenerated from `app.config.ts`. `ios/FullFrillsBalance/Info.plist` lists **both** reversed iOS client IDs (`com.googleusercontent.apps.<id>`) as URL schemes so every variant can complete sign-in. If you add or change an iOS client, update `Info.plist` too.
+- `ios/` is committed, so EAS doesn't run prebuild. Both reversed iOS client IDs (`com.googleusercontent.apps.<id>`) are declared in `app.config.ts` for prebuild and kept in `ios/FullFrillsBalance/Info.plist` for builds from the committed native project. Keep both lists in sync when adding or changing an iOS client.
 - The Android preview package (`.preview`) has no OAuth client, so Gmail sign-in doesn't work on preview builds.
