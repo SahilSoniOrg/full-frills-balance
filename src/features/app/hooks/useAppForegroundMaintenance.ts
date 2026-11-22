@@ -3,6 +3,7 @@ import { logger } from '@/src/services/observability/logger';
 import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import { analytics } from '@/src/services/analytics';
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
@@ -44,6 +45,11 @@ export function useAppForegroundMaintenance() {
               logger.warn('[ForegroundMaintenance] SMS inbox catch-up failed', { error }),
             );
         }
+        void shortcutSmsIntakeService
+          .process()
+          .catch(error =>
+            logger.warn('[ForegroundMaintenance] Shortcut SMS intake failed', { error }),
+          );
       }, RESUME_FLUSH_DEBOUNCE_MS);
     };
 

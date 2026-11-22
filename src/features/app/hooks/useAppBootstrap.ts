@@ -27,6 +27,7 @@ import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 
 /**
  * Bootstraps app-wide side effects and data hydration.
@@ -196,6 +197,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               ),
             ),
             runTask('SMS setup', () => automaticSmsImportService.synchronizeOnAppStart()),
+            runTask('Shortcut SMS intake', () => shortcutSmsIntakeService.process(workplaceId)),
             (async () => {
               // Serialize expensive maintenance and yield between tasks. Writes
               // precede optional cache warming to avoid immediately rebuilding it.

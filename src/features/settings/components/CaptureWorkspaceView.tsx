@@ -24,8 +24,9 @@ import { formatDate } from '@/src/utils/dateFormatting';
 import { GmailCaptureSettingsSection } from '@/src/features/settings/components/GmailCaptureSettingsSection';
 import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmailCaptureViewModel';
 import { isGmailCaptureSectionVisible } from '@/src/features/settings/utils/gmailCaptureVisibility';
-import { Platform } from 'react-native';
-import type { ReactNode } from 'react';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
+import { AppState, Platform } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
 
 interface CaptureWorkspaceViewProps {
   onOpenSmsSettings: () => void;
@@ -209,6 +210,68 @@ export function CaptureWorkspaceView({
   );
 }
 
+function ShortcutSmsSetup() {
+  const [firstReceivedAt, setFirstReceivedAt] = useState<number | null | 'loading' | 'unavailable'>(
+    'loading',
+  );
+  const { resolvedHourCycle } = useHourCyclePrefs();
+  const copy = strings.shortcutSms;
+
+  useEffect(() => {
+    let active = true;
+    const refreshStatus = () => {
+      void shortcutSmsIntakeService.getFirstReceivedAt().then(
+        date => {
+          if (active) setFirstReceivedAt(date);
+        },
+        () => {
+          if (active) setFirstReceivedAt('unavailable');
+        },
+      );
+    };
+    refreshStatus();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') refreshStatus();
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+
+  return (
+    <ListGroup
+      variant="plain"
+      header={copy.title}
+      footer={
+        firstReceivedAt === 'unavailable'
+          ? copy.unavailable
+          : firstReceivedAt === 'loading'
+            ? copy.loading
+            : firstReceivedAt === null
+              ? copy.waiting
+              : copy.firstReceived(
+                  formatDate(firstReceivedAt, { includeTime: true, hourCycle: resolvedHourCycle }),
+                )
+      }
+    >
+      <Stack gap="sm" padding="md">
+        {copy.steps.map((step, index) => (
+          <AppText key={step} variant="bodySmall" color="secondary">
+            {`${index + 1}. ${step}`}
+          </AppText>
+        ))}
+        <AppText variant="bodySmall" color="secondary">
+          {copy.privacy}
+        </AppText>
+        <AppText variant="bodySmall" color="secondary">
+          {copy.replayHint}
+        </AppText>
+      </Stack>
+    </ListGroup>
+  );
+}
+
 function ConnectedSourcesSection({
   onOpenSmsSettings,
   gmailSection,
@@ -218,7 +281,8 @@ function ConnectedSourcesSection({
 }) {
   const showSms = Platform.OS === 'android';
   const showGmail = Platform.OS !== 'web' && gmailSection !== null;
-  if (!showSms && !showGmail) return null;
+  const showShortcutSms = shortcutSmsIntakeService.canSetUp;
+  if (!showSms && !showGmail && !showShortcutSms) return null;
   return (
     <Stack gap="sm">
       <Box paddingHorizontal="md">
@@ -240,6 +304,7 @@ function ConnectedSourcesSection({
         </ListGroup>
       ) : null}
       {showGmail ? gmailSection : null}
+      {showShortcutSms ? <ShortcutSmsSetup /> : null}
     </Stack>
   );
 }

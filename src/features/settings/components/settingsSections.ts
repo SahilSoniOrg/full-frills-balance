@@ -221,17 +221,12 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
       row('sms-automation-import', Icon.Zap, me.smsImportTitle, hub.smsAutoImportSearchDescription, ['sms', 'import', 'automatic', 'messages']),
       row('sms-review-notifications', Icon.Notifications, me.smsReviewNotificationsTitle, me.smsReviewNotificationsDesc, ['sms', 'notification', 'review', 'alert']),
       row('sms-notification-details', Icon.Notifications, hub.smsNotificationDetailsTitle, hub.smsNotificationDetailsSearchDescription, ['sms', 'privacy', 'preview', 'amount']),
-      row(
-        'sms-inbox',
-        Icon.MessageSquare,
-        me.transactionInboxTitle,
-        me.transactionInboxDesc,
-        ['sms', 'inbox', 'messages', 'transactions'],
-        { action: 'onSmsInbox' },
-      ),
     ],
     ANDROID,
   ),
+  ...screen('Notifications & Automation', 'onSmsInbox', [
+    row('sms-inbox', Icon.MessageSquare, me.transactionInboxTitle, me.transactionInboxDesc, ['sms', 'inbox', 'messages', 'transactions']),
+  ], NATIVE),
 ];
 
 const isOnPlatform = (entry: SettingsEntry) => {

@@ -6,7 +6,7 @@ import type {
   TransactionDirection,
 } from '@/src/types/enums';
 
-export type SmsScanOrigin = 'arrival' | 'catch_up' | 'initial' | 'manual';
+export type SmsScanOrigin = 'arrival' | 'catch_up' | 'initial' | 'manual' | 'shortcut';
 export type SmsNotificationState = 'none' | 'pending' | 'delivered' | 'suppressed';
 export interface SmsInboxCursor {
   date: number;

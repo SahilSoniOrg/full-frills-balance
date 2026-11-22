@@ -28,6 +28,7 @@
 		C9E11D1C4D8EEBFB24E82BDE /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0DA2BAE180979272F1DE67 /* ExpoModulesProvider.swift */; };
 		CE1C928965344165AFBB6CB6 /* InstrumentSans_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9133E98153DF419CA3C4B2A2 /* InstrumentSans_600SemiBold.ttf */; };
 		D0C5FFC97FE457652212EE56 /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2716E700AEB8B704EABEFD86 /* libPods-FullFrillsBalance.a */; };
+		D10000000000000000000001 /* ShortcutSmsCaptureIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10000000000000000000002 /* ShortcutSmsCaptureIntent.swift */; };
 		D38CDA29A8D2481782EC9D1B /* Raleway_600SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5BE737B824B849EEB98C33B2 /* Raleway_600SemiBold.ttf */; };
 		DE4083E59B624826B499ECA6 /* Inter_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 42BD531BC4D248109A31D7D5 /* Inter_400Regular.ttf */; };
 		EBD0D24886FC494A857FCD9E /* DMSerifDisplay_400Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DC215A2A69AB45EE8725D55E /* DMSerifDisplay_400Regular.ttf */; };
@@ -86,6 +87,7 @@
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		CADF16A6317C4913A9B8779B /* Raleway_500Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Raleway_500Medium.ttf; path = "../node_modules/@expo-google-fonts/raleway/500Medium/Raleway_500Medium.ttf"; sourceTree = "<group>"; };
 		CE7435F1F2CE4C1D92915890 /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		D10000000000000000000002 /* ShortcutSmsCaptureIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullFrillsBalance/ShortcutSmsCaptureIntent.swift; sourceTree = "<group>"; };
 		DC215A2A69AB45EE8725D55E /* DMSerifDisplay_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = DMSerifDisplay_400Regular.ttf; path = "../node_modules/@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf"; sourceTree = "<group>"; };
 		E465B272A0104010A64F6248 /* CrimsonText_400Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = CrimsonText_400Regular.ttf; path = "../node_modules/@expo-google-fonts/crimson-text/400Regular/CrimsonText_400Regular.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -120,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+				D10000000000000000000002 /* ShortcutSmsCaptureIntent.swift */,
 				F11748432D0307B40044C1D9 /* SceneDelegate.swift */,
 				F11748442D0722820044C1D9 /* FullFrillsBalance-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
@@ -557,6 +560,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				D10000000000000000000001 /* ShortcutSmsCaptureIntent.swift in Sources */,
 				F11748442D0307B40044C1D9 /* SceneDelegate.swift in Sources */,
 				C9E11D1C4D8EEBFB24E82BDE /* ExpoModulesProvider.swift in Sources */,
 			);

@@ -18,6 +18,7 @@ import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheC
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/data/cache/SnapshotService';
 import { notifySetupDraftChanged } from '@/src/services/setup/launchProjection';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 
 function runPostResetCleanup(
   warnings: string[],
@@ -98,13 +99,24 @@ export async function resetDatabase(): Promise<{
   warnings: string[];
 }> {
   logger.warn('[IntegrityMaintenance] STARTING FACTORY RESET...');
+  const warnings: string[] = [];
   try {
-    await databaseRepository.resetDatabase();
+    await shortcutSmsIntakeService.pauseDuring(async () => {
+      await shortcutSmsIntakeService.invalidate();
+      await databaseRepository.resetDatabase();
+      try {
+        await shortcutSmsIntakeService.purgeRetired();
+      } catch (error) {
+        logger.warn('[IntegrityMaintenance] Shortcut SMS cleanup failed after reset', {
+          error,
+        });
+        warnings.push('Shortcut SMS queue cleanup');
+      }
+    });
   } catch (error) {
     logger.error('[IntegrityMaintenance] CRITICAL: Factory reset failed:', error);
     throw error;
   }
-  const warnings: string[] = [];
   runPostResetCleanup(warnings, [
     {
       label: 'Local storage cleanup',

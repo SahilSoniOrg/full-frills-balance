@@ -65,7 +65,7 @@ function DashboardScreen() {
   const insightCount = (insights?.length || 0) + supplementalInsights.length;
 
   const onSmsPress =
-    Platform.OS === 'android' && (isAutomaticSmsImportEnabled || (unreadSmsCount || 0) > 0)
+    (unreadSmsCount ?? 0) > 0 || (Platform.OS === 'android' && isAutomaticSmsImportEnabled)
       ? AppNavigation.toTransactionInbox
       : undefined;
 

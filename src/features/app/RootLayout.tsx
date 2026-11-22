@@ -19,6 +19,7 @@ import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
 import { logger } from '@/src/services/observability/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
@@ -153,6 +154,9 @@ function EarlyBootstrap() {
           logger.warn('[EarlyBootstrap] Snapshot cleanup retry remains pending');
       })
       .catch(error => logger.warn('[EarlyBootstrap] Projection cleanup retry failed', { error }));
+    void shortcutSmsIntakeService.purgeRetired().catch(error => {
+      logger.warn('[EarlyBootstrap] Retired Shortcut SMS cleanup failed', { error });
+    });
   }, []);
   return null;
 }

@@ -3,6 +3,7 @@ import { analytics } from '@/src/services/analytics';
 import { smsService } from '@/src/services/sms-service';
 import { preferences } from '@/src/services/preferences';
 import { syncGmailForWorkplace } from '@/src/services/email/gmailSyncService';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import type { SmsInboxCursor } from '@/src/types/smsInbox';
 import type { WorkplaceId } from '@/src/types/ids';
 import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
@@ -73,7 +74,12 @@ export function useInboxScanActions(args: {
         setScanCursor(result.cursor);
         setHasOlderMessages(result.hasMore);
       }
-      if (Platform.OS !== 'web') await syncGmailForWorkplace(requestWorkplaceId);
+      if (Platform.OS !== 'web') {
+        await Promise.all([
+          shortcutSmsIntakeService.process(requestWorkplaceId),
+          syncGmailForWorkplace(requestWorkplaceId),
+        ]);
+      }
       if (workplaceRef.current !== requestWorkplaceId) return;
       toast.success('Transaction inbox refreshed');
     } catch (error) {

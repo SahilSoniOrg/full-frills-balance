@@ -274,6 +274,22 @@ export const transactionCaptureStrings = {
   inboxDescription: 'Messages waiting to be imported, duplicates, and messages with import errors.',
   smsTitle: 'SMS settings',
   smsDescription: 'Manage SMS access, automatic import, and review alerts on this device.',
+  shortcutSms: {
+    title: 'Bank texts via Shortcuts',
+    loading: 'Checking setup status…',
+    unavailable: 'Couldn’t check Shortcuts status.',
+    waiting: 'Waiting for first alert.',
+    firstReceived: (date: string) => `First alert received ${date}.`,
+    steps: [
+      'In Shortcuts, create a Message automation. Under Message Contains, enter a phrase from a real bank alert. Sender is optional.',
+      'Add Capture bank alert. For Message, pick the incoming message’s Content on iOS 27 or Shortcut Input on earlier versions. If offered, pass the Sender and set Received at to the message’s original receipt time.',
+      'Choose Run Immediately, or turn off Confirm Before Run. Turn on Allow Running When Locked if shown. After your next bank text, open the Transaction inbox to check it.',
+    ],
+    privacy:
+      'Matching texts are checked on this device. Bank alerts go to review. To stop receiving them, turn the automation off in Shortcuts.',
+    replayHint:
+      'Replaying a text without its original receipt time can create another review item. Check the Transaction inbox and your books before importing it.',
+  },
   captureUnavailable: 'Automatic capture is available in the mobile app.',
   loading: 'Loading capture settings and review…',
   loadError: 'Capture settings or review could not be loaded.',
@@ -286,8 +302,7 @@ export const transactionCaptureStrings = {
     'Connect Gmail and enable Gmail capture under Message sources to use automatic capture for this workplace.',
   captureSourceRequiredAndroidWithoutGmail:
     'Enable automatic SMS import under Message sources to use automatic capture for this workplace.',
-  captureSourceUnavailableWithoutGmail:
-    'Automatic capture has no available message source on this device.',
+  captureSourceUnavailableWithoutGmail: 'Automatic posting is unavailable on this device.',
   noAutomaticSourceEnabled: 'No message source is enabled for automatic capture.',
   retry: 'Try again',
   inboxChannelSpoken: 'Spoken',

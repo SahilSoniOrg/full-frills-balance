@@ -49,6 +49,32 @@ export interface SmsScanOptions {
   promptForPermission?: boolean;
 }
 
+interface SmsScanPolicy {
+  reconcileExisting: boolean;
+  allowAutomaticCapture: boolean;
+  queueReview: boolean;
+}
+
+const MANUAL_SCAN: SmsScanPolicy = {
+  reconcileExisting: true,
+  allowAutomaticCapture: false,
+  queueReview: false,
+};
+const INCOMING_SCAN: SmsScanPolicy = {
+  reconcileExisting: true,
+  allowAutomaticCapture: true,
+  queueReview: true,
+};
+
+const SCAN_POLICIES: Record<SmsScanOrigin, SmsScanPolicy> = {
+  arrival: INCOMING_SCAN,
+  catch_up: INCOMING_SCAN,
+  initial: MANUAL_SCAN,
+  manual: MANUAL_SCAN,
+  // Inbox intake still preserves exact links and detects possible duplicates for review.
+  shortcut: { ...MANUAL_SCAN, reconcileExisting: false },
+};
+
 class SmsScanCancelledError extends Error {}
 
 async function findRedeliveredJournals(
@@ -138,6 +164,7 @@ export class SmsSyncPipeline {
     if (messages.length === 0 || signal?.aborted) {
       return 0;
     }
+    const policy = SCAN_POLICIES[origin];
 
     const parsedMessages = await Promise.all(
       messages.map(async msg => {
@@ -196,7 +223,9 @@ export class SmsSyncPipeline {
             loadCaptureContext(workplaceId),
             transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
             smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-            findRedeliveredJournals(analysisResults, workplaceId),
+            policy.reconcileExisting
+              ? findRedeliveredJournals(analysisResults, workplaceId)
+              : undefined,
             smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
             findManyDuplicateCandidates(parsedForFuzzy, workplaceId),
           ]);
@@ -221,10 +250,11 @@ export class SmsSyncPipeline {
               ));
             const latestJournal =
               latestJournalsById.get(result.message.id) ??
-              latestRedeliveredJournals.get(result.message.id) ??
+              latestRedeliveredJournals?.get(result.message.id) ??
               null;
             let crossSourceJournal: Journal | undefined;
             if (
+              policy.reconcileExisting &&
               !latestJournal &&
               !latestRecord?.linkedJournalId &&
               (!latestRecord || latestRecord.processingStatus === InboxProcessingStatus.PENDING) &&
@@ -286,8 +316,8 @@ export class SmsSyncPipeline {
             let evidenceJournal: Journal | undefined;
             let evidenceSettlement: EvidenceDrivenObservationDisposition | undefined;
             let blockCaptureAutoPost = false;
-            const allowArrivalCapture = origin === 'arrival' || origin === 'catch_up';
             if (
+              policy.reconcileExisting &&
               !latestJournal &&
               !crossSourceJournal &&
               !latestRecord?.linkedJournalId &&
@@ -359,7 +389,7 @@ export class SmsSyncPipeline {
                       enabled: decisionContext.captureEnabled === true,
                       enabledAt: decisionContext.captureEnabledAt,
                       allowAutomaticCapture:
-                        allowArrivalCapture &&
+                        policy.allowAutomaticCapture &&
                         !latestRecord?.consumedWorkplaces?.length &&
                         !alreadyHeldForReview &&
                         result.parsed.amountReliableForCapture === true,
@@ -401,7 +431,7 @@ export class SmsSyncPipeline {
               reservedReferences,
               reservedFuzzy,
               workplaceId,
-              allowAutomaticCapture: allowArrivalCapture && !blockCaptureAutoPost,
+              allowAutomaticCapture: policy.allowAutomaticCapture && !blockCaptureAutoPost,
             });
             if (
               evidenceSettlement?.kind === 'review' &&
@@ -439,7 +469,7 @@ export class SmsSyncPipeline {
                 origin,
                 source: { senderAddress: result.message.address, rawBody: result.message.body },
                 queueReview:
-                  (origin === 'arrival' || origin === 'catch_up') &&
+                  policy.queueReview &&
                   [InboxProcessingStatus.PENDING, InboxProcessingStatus.PARSE_FAILED].includes(
                     item.inboxRecord.processingStatus,
                   ),

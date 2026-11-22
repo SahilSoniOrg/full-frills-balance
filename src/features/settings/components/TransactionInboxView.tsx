@@ -16,6 +16,7 @@ import { TransactionInboxItemCardView } from '@/src/features/settings/components
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useTheme } from '@/src/hooks/use-theme';
+import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -62,6 +63,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
   } = vm;
 
   const isAndroid = Platform.OS === 'android';
+  const showSmsPlatformNotice = !isAndroid && !shortcutSmsIntakeService.canSetUp;
   const loadFailure = error ? (
     <EmptyStateView
       title={AppConfig.strings.common.listLoadError}
@@ -80,7 +82,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
         hideFooter
       >
         <View style={styles.container}>
-          {!isAndroid && filter === 'pending' ? (
+          {showSmsPlatformNotice && filter === 'pending' ? (
             <View style={styles.platformNoticeWrap}>
               <AppCard variant="secondary" padding="md">
                 <AppText variant="caption" color="secondary">

@@ -80,6 +80,7 @@ const IOS_FOCUS_TARGET_IDS = [
   'play-store',
   'github',
   'report-bug',
+  'sms-inbox',
 ];
 
 const ANDROID_FOCUS_TARGET_IDS = [
@@ -88,7 +89,6 @@ const ANDROID_FOCUS_TARGET_IDS = [
   'sms-automation-import',
   'sms-review-notifications',
   'sms-notification-details',
-  'sms-inbox',
 ];
 
 describe('settings search catalog', () => {
