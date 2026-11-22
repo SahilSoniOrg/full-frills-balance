@@ -3,6 +3,8 @@ import { AccountType } from '@/src/types/enums';
 import { WorkplaceId, AccountId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   calculateCalendarHeatmapFromHistory,
   calculateSpendingHeatmapFromTransactions,
@@ -55,6 +57,18 @@ export type {
 };
 
 export class ReportService {
+  /** Newest active journal date for initial report-range anchoring. */
+  async findLatestActiveJournalDate(workplaceId: WorkplaceId): Promise<number | null> {
+    const [latest] = await journalQueryRepository.findRecentActive(workplaceId, 1);
+    return latest?.journalDate ?? null;
+  }
+
+  /** Earliest transaction date for all-time report ranges. */
+  async findEarliestTransactionDate(workplaceId: WorkplaceId): Promise<number | null> {
+    const earliest = await transactionQueryRepository.findEarliest(workplaceId);
+    return earliest?.transactionDate ?? null;
+  }
+
   /**
    * Period income vs expense totals for dashboard surfaces (e.g. accounts list rolling inflow).
    * Uses the same account-period delta loader as {@link getReportSnapshot} so totals stay aligned.

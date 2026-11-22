@@ -1,5 +1,6 @@
 import { toPlainJournal } from '@/src/data/models/Journal';
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -19,6 +20,9 @@ export interface JournalEditorLoadData {
   forceAdvancedMode: boolean;
 }
 
+/** Plain journal plus soft-delete marker for link/status presentation. */
+export type JournalWithDeleted = PlainJournal & { deletedAt?: number | null };
+
 /** Read boundary for journal feature consumers. */
 export class JournalReadService {
   observeById(
@@ -34,6 +38,21 @@ export class JournalReadService {
   async find(workplaceId: WorkplaceId, journalId: JournalId): Promise<PlainJournal | null> {
     const journal = await journalQueryRepository.find(workplaceId, journalId);
     return journal ? toPlainJournal(journal) : null;
+  }
+
+  async findWithDeletedByIds(
+    workplaceId: WorkplaceId,
+    ids: JournalId[],
+  ): Promise<JournalWithDeleted[]> {
+    const journals = await journalQueryRepository.findWithDeletedByIds(workplaceId, ids);
+    return journals.map(journal => ({
+      ...toPlainJournal(journal),
+      deletedAt: journal.deletedAt?.getTime() ?? null,
+    }));
+  }
+
+  findMetadataByJournalId(journalId: JournalId, workplaceId: WorkplaceId) {
+    return findJournalMetadataByJournalId(journalId, workplaceId);
   }
 
   /**
