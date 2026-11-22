@@ -13,13 +13,17 @@ import { isJournalBalanced } from '@/src/services/accounting/JournalCalculator';
  * Journal-balance parity fixtures.
  *
  * Every fixture below is one journal. It is fed, unchanged, into the three
- * balance engines that coexist in Phase 0 of FUL-112:
+ * balance engines that coexist after Phase 1 of FUL-112:
  *
  *  1. `checkJournal` — numeric aggregate check (tolerance-based).
  *  2. `JournalCalculator.isJournalBalanced` — production form wrapper around
- *     `checkJournal` that normalizes currency/rate input.
+ *     `evaluateJournalBalance` (ADR 0007) that normalizes currency/rate input.
  *  3. `journalBalanceEvaluator.evaluateJournalBalance` — minor-unit ledger
  *     evaluation with per-line issue reporting.
+ *
+ * Remaining divergences vs `checkJournal` stay intentional. Any remaining
+ * form (`isJournalBalanced`) vs evaluator diffs are only input-normalization
+ * artifacts.
  *
  * Intentional differences (documented again next to the fixtures that prove
  * them):
@@ -27,21 +31,23 @@ import { isJournalBalanced } from '@/src/services/accounting/JournalCalculator';
  *  - **Tolerance.** `checkJournal` rounds the *aggregate* difference to the
  *    journal precision and accepts anything inside `10^-(precision+1)`; with
  *    `allowExchangeRateRounding` it widens that to at least one minor unit,
- *    scaled by the exchange rates. `evaluateJournalBalance` rounds *each line*
- *    to its native precision, converts to journal minor units, and requires an
- *    exact zero difference. So a one-minor-unit FX drift can pass the form
- *    check and fail the evaluator, while line-level rounding can make the
- *    evaluator pass where aggregate rounding fails the form check.
+ *    scaled by the exchange rates. `evaluateJournalBalance` (and therefore
+ *    `isJournalBalanced`) rounds *each line* to its native precision, converts
+ *    to journal minor units, and requires an exact zero difference. So a
+ *    one-minor-unit FX drift can pass `checkJournal` and fail the form and
+ *    evaluator together, while line-level rounding can make the form and
+ *    evaluator pass where aggregate rounding fails `checkJournal`.
  *  - **Issue detail.** `checkJournal` returns only `isValid`, `imbalance`,
  *    `totalDebits`, `totalCredits`. The evaluator returns per-line values plus
  *    issue codes/messages (`unbalanced`, `missing_exchange_rate`, …).
  *  - **Structural validation.** `checkJournal` does not enforce a minimum line
- *    count, positive amounts, or currencies. The evaluator does.
- *  - **Input normalization.** `isJournalBalanced` only applies an exchange
- *    rate to lines whose account currency differs from the base currency, and
- *    sanitizes string amounts at the base precision (2) before checking.
- *    `checkJournal` applies any supplied rate, and the evaluator sanitizes
- *    string amounts at the account currency's precision.
+ *    count, positive amounts, or currencies. The evaluator (and form) does.
+ *  - **Input normalization.** `isJournalBalanced` defaults missing line
+ *    currencies to the journal base, and sanitizes string amounts at the base
+ *    precision (2) before calling the evaluator. `checkJournal` applies any
+ *    supplied rate with no currency concept, and a direct evaluator call
+ *    sanitizes string amounts at the account currency's precision and leaves
+ *    missing currencies as missing.
  */
 
 type FixtureLine = {
@@ -173,7 +179,7 @@ const FIXTURES: BalanceFixture[] = [
       debit('cash', 0, { accountCurrency: 'USD' }),
       credit('revenue', 0, { accountCurrency: 'USD' }),
     ],
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
     name: 'negative amounts that cancel numerically',
@@ -182,7 +188,7 @@ const FIXTURES: BalanceFixture[] = [
       debit('cash', -100, { accountCurrency: 'USD' }),
       credit('revenue', -100, { accountCurrency: 'USD' }),
     ],
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
     name: 'missing foreign exchange rate',
@@ -191,16 +197,16 @@ const FIXTURES: BalanceFixture[] = [
       debit('eur-expense', 10, { accountCurrency: 'EUR' }),
       credit('usd-bank', 10, { accountCurrency: 'USD' }),
     ],
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
-    name: 'one-minor-unit FX drift (inside form tolerance)',
+    name: 'one-minor-unit FX drift (inside checkJournal tolerance)',
     journalCurrency: 'USD',
     lines: [
       debit('eur-expense', 10, { accountCurrency: 'EUR', exchangeRate: 1.2 }),
       credit('usd-bank', 12.01, { accountCurrency: 'USD' }),
     ],
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
     name: 'real-world FX rounding (THB → INR)',
@@ -209,7 +215,7 @@ const FIXTURES: BalanceFixture[] = [
       debit('thb-cash', 76.82, { accountCurrency: 'THB', exchangeRate: 2.89 }),
       credit('inr-bank', 222, { accountCurrency: 'INR' }),
     ],
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
     name: 'line-level rounding passes where aggregate rounding fails',
@@ -219,7 +225,7 @@ const FIXTURES: BalanceFixture[] = [
       debit('cash-b', 50.004, { accountCurrency: 'USD' }),
       credit('revenue', 100, { accountCurrency: 'USD' }),
     ],
-    expected: { checkJournal: false, isJournalBalanced: false, evaluator: true },
+    expected: { checkJournal: false, isJournalBalanced: true, evaluator: true },
   },
   {
     name: 'base-currency exchange rate is ignored by isJournalBalanced',
@@ -237,6 +243,8 @@ const FIXTURES: BalanceFixture[] = [
       debit('jpy-cash', '123.9', { accountCurrency: 'JPY', exchangeRate: 0.005 }),
       credit('jod-bank', '0.615', { accountCurrency: 'JOD' }),
     ],
+    // Form sanitizes the string at base precision before the evaluator; a
+    // direct evaluator call sanitizes at JPY precision — normalization only.
     expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
   },
   {
@@ -249,6 +257,8 @@ const FIXTURES: BalanceFixture[] = [
     name: 'missing line currencies with amounts that cancel',
     journalCurrency: 'USD',
     lines: [debit('cash', 100), credit('revenue', 100)],
+    // Form defaults missing currencies to the journal base; the evaluator does
+    // not — normalization only.
     expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
   },
   {
@@ -276,9 +286,9 @@ function precisionMapFor(fixture: BalanceFixture): Map<string, number> {
 }
 
 /**
- * Mirrors the FX-tolerance decision `isJournalBalanced` makes: a journal gets
- * `allowExchangeRateRounding` when any line's account currency differs from
- * the base and carries a finite rate other than 1.
+ * Mirrors the FX-tolerance decision `checkJournal` still makes when fed through
+ * these fixtures: a journal gets `allowExchangeRateRounding` when any line's
+ * account currency differs from the base and carries a finite rate other than 1.
  */
 function hasForeignCurrencyLine(fixture: BalanceFixture): boolean {
   const baseCurrency = fixture.journalCurrency.trim().toUpperCase();
@@ -378,48 +388,60 @@ describe('documented parity differences', () => {
     return found;
   };
 
-  it('tolerance: aggregate rounding lets a one-minor-unit FX drift pass the form check', () => {
+  it('tolerance: one-minor-unit FX drift fails form and evaluator together', () => {
     // checkJournal rounds the difference (12 - 12.01 → -0.01) and widens its
-    // tolerance to 0.02 for the 1.2 rate, so the form accepts it. The evaluator
-    // works in minor units and sees 1200 vs 1201, so it rejects.
-    const oneCentDrift = fixture('one-minor-unit FX drift (inside form tolerance)');
+    // tolerance to 0.02 for the 1.2 rate, so it still accepts. The form wraps
+    // the evaluator, which works in minor units and sees 1200 vs 1201 — both
+    // reject.
+    const oneCentDrift = fixture('one-minor-unit FX drift (inside checkJournal tolerance)');
     const check = runCheckJournal(oneCentDrift);
+    const form = runIsJournalBalanced(oneCentDrift);
     const evaluation = runEvaluator(oneCentDrift);
 
     expect(check.isValid).toBe(true);
     expect(check.imbalance).toBe(-0.01);
+    expect(form).toBe(false);
     expect(evaluation.isBalanced).toBe(false);
+    expect(form).toBe(evaluation.isBalanced);
     expect(evaluation.differenceMinorUnits).toBe(-1);
   });
 
-  it('tolerance: scaled FX rounding tolerance accepts a full cent of drift', () => {
+  it('tolerance: real-world FX rounding fails form and evaluator together', () => {
     // THB 76.82 × 2.89 = 222.0098 INR. checkJournal rounds to 222.01 and allows
-    // 0.02 (rate-scaled), so it passes. The evaluator quantizes the converted
-    // journal amount to 222.01 and sees one minor unit of difference.
+    // 0.02 (rate-scaled), so it still passes. The form wraps the evaluator,
+    // which quantizes the converted journal amount to 222.01 and sees one
+    // minor unit of difference — both reject.
     const thbToInr = fixture('real-world FX rounding (THB → INR)');
     const check = runCheckJournal(thbToInr);
+    const form = runIsJournalBalanced(thbToInr);
     const evaluation = runEvaluator(thbToInr);
 
     expect(check.isValid).toBe(true);
+    expect(form).toBe(false);
     expect(evaluation.isBalanced).toBe(false);
+    expect(form).toBe(evaluation.isBalanced);
     expect(evaluation.differenceMinorUnits).toBe(1);
   });
 
-  it('tolerance: line-level rounding passes where aggregate rounding fails', () => {
+  it('tolerance: line-level rounding passes form and evaluator where aggregate rounding fails', () => {
     // The evaluator rounds each 50.004 line to 50.00 (total 100.00). checkJournal
-    // sums raw values first (100.008), rounds to 100.01, and rejects.
+    // sums raw values first (100.008), rounds to 100.01, and rejects. The form
+    // wraps the evaluator, so it passes with it.
     const lineRounding = fixture('line-level rounding passes where aggregate rounding fails');
     const check = runCheckJournal(lineRounding);
+    const form = runIsJournalBalanced(lineRounding);
     const evaluation = runEvaluator(lineRounding);
 
     expect(check.isValid).toBe(false);
     expect(check.imbalance).toBe(0.01);
+    expect(form).toBe(true);
     expect(evaluation.isBalanced).toBe(true);
+    expect(form).toBe(evaluation.isBalanced);
     expect(evaluation.differenceMinorUnits).toBe(0);
   });
 
   it('issue detail: the evaluator reports per-line values and coded issues', () => {
-    const oneCentDrift = fixture('one-minor-unit FX drift (inside form tolerance)');
+    const oneCentDrift = fixture('one-minor-unit FX drift (inside checkJournal tolerance)');
     const check = runCheckJournal(oneCentDrift);
     const evaluation = runEvaluator(oneCentDrift);
 
@@ -455,6 +477,7 @@ describe('documented parity differences', () => {
   it('structure: zero and negative amounts balance numerically but fail evaluation', () => {
     const zero = fixture('zero-amount lines (structurally invalid for the evaluator)');
     expect(runCheckJournal(zero).isValid).toBe(true);
+    expect(runIsJournalBalanced(zero)).toBe(false);
     expect(runEvaluator(zero).issues.map(issue => issue.code)).toEqual([
       'invalid_amount',
       'invalid_amount',
@@ -462,6 +485,7 @@ describe('documented parity differences', () => {
 
     const negative = fixture('negative amounts that cancel numerically');
     expect(runCheckJournal(negative).isValid).toBe(true);
+    expect(runIsJournalBalanced(negative)).toBe(false);
     expect(runEvaluator(negative).issues.map(issue => issue.code)).toEqual([
       'invalid_amount',
       'invalid_amount',
@@ -471,6 +495,7 @@ describe('documented parity differences', () => {
   it('structure: a single line is only rejected by the evaluator', () => {
     const singleLine = fixture('single line cannot balance');
     expect(runCheckJournal(singleLine).isValid).toBe(false);
+    expect(runIsJournalBalanced(singleLine)).toBe(false);
     expect(runEvaluator(singleLine).issues).toEqual([
       {
         code: 'invalid_structure',
@@ -479,14 +504,17 @@ describe('documented parity differences', () => {
     ]);
   });
 
-  it('FX: a missing rate is assumed to be 1 by the form and rejected by the evaluator', () => {
+  it('FX: a missing rate is assumed to be 1 by checkJournal and rejected by form and evaluator', () => {
     const missingRate = fixture('missing foreign exchange rate');
     const check = runCheckJournal(missingRate);
+    const form = runIsJournalBalanced(missingRate);
     const evaluation = runEvaluator(missingRate);
 
     expect(check.isValid).toBe(true);
     expect(check.totalDebits).toBe(10);
+    expect(form).toBe(false);
     expect(evaluation.isBalanced).toBe(false);
+    expect(form).toBe(evaluation.isBalanced);
     expect(evaluation.issues).toEqual([
       {
         code: 'missing_exchange_rate',
@@ -512,24 +540,29 @@ describe('documented parity differences', () => {
 
   it('normalization: string amounts use base precision in the form, native precision in the evaluator', () => {
     // isJournalBalanced sanitizes '123.9' at the base precision (2), so the
-    // form checks 123.9 × 0.005. The evaluator sanitizes at JPY's precision
-    // (0), rounds to 124, and converts to 0.62 JOD — five minor units of drift.
+    // form evaluates 123.9 × 0.005. A direct evaluator call sanitizes at JPY's
+    // precision (0), rounds to 124, and converts to 0.62 JOD — five minor
+    // units of drift. This is the remaining form-vs-evaluator gap.
     const jpyString = fixture('string amount parsed at account-currency precision');
     const check = runCheckJournal(jpyString);
+    const form = runIsJournalBalanced(jpyString);
     const evaluation = runEvaluator(jpyString);
 
     expect(check.isValid).toBe(true);
+    expect(form).toBe(true);
     expect(evaluation.isBalanced).toBe(false);
     expect(evaluation.lineValues[0]).toMatchObject({ nativeAmount: 124 });
     expect(evaluation.differenceMinorUnits).toBe(5);
   });
 
-  it('normalization: missing line currencies are skipped by the evaluator, not by the form', () => {
+  it('normalization: missing line currencies are filled by the form, rejected by the evaluator', () => {
     const missingCurrency = fixture('missing line currencies with amounts that cancel');
     const check = runCheckJournal(missingCurrency);
+    const form = runIsJournalBalanced(missingCurrency);
     const evaluation = runEvaluator(missingCurrency);
 
     expect(check.isValid).toBe(true);
+    expect(form).toBe(true);
     expect(evaluation.differenceMinorUnits).toBe(0);
     expect(evaluation.isBalanced).toBe(false);
     expect(evaluation.issues.map(issue => issue.code)).toEqual([
