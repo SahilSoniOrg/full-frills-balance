@@ -1,159 +1,65 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { AuditAction, InboxProcessingStatus } from '@/src/types/enums';
-import type { AuditEventType } from '@/src/types/auditEvents';
+import { InboxProcessingStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import {
-  inboxAuditState,
-  mergeInboxAuditState,
-  sameInboxAuditState,
-} from '@/src/data/repositories/inboxAuditState';
-import {
-  stageModelWrite,
-  type AccountingWriteSession,
-} from '@/src/data/repositories/AccountingWriteSession';
+import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { Model, Q } from '@nozbe/watermelondb';
 import { Observable, combineLatest, filter, map, merge, startWith } from 'rxjs';
 import {
   deviceSmsInboxRepository,
-  deviceSmsSnapshot,
   type DeviceSmsWriteOptions,
 } from './DeviceSmsInboxRepository';
 import { workplaceRepository } from './WorkplaceRepository';
 import type DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
-import { runAccountingWriteSession } from './AccountingWriteSession';
-import { generator } from '@/src/utils/idGenerator';
-import { sanitizeSmsMetadataJson } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
-import { parseJSONRecord } from '@/src/utils/serialization';
 import {
-  applyInboxWriteData,
-  inboxSnapshotFromRecord,
-} from '@/src/data/repositories/inboxRecordFields';
+  findEmail as findEmailRecords,
+  findEmailCopies as findEmailCopyRecords,
+  findRecentPendingEmail as findRecentPendingEmailRecords,
+  stageEmailInSession as stageEmailObservationInSession,
+} from './transactionInbox/inboxEmail';
 import {
-  stageLinkedCaptureSource,
-  stageUnlinkedCaptureSource,
-} from '@/src/data/repositories/journal/captureSourceLinkStaging';
+  persistInboxLink,
+  persistInboxStatus,
+  persistInboxUnlink,
+  prepareInboxLink,
+  prepareInboxStatus,
+  prepareInboxUnlink,
+  prepareInboxUpsert,
+  stageInboxLinkByIdInSession,
+  stageInboxUpsertInSession,
+  type InboxAuditContext,
+} from './transactionInbox/inboxLinkSessionStaging';
+import {
+  findByDeviceSourceIds as findInboxByDeviceSourceIds,
+  findInboxRecord,
+  findLinksForJournals as findInboxLinksForJournals,
+  findMatchingSms as findMatchingSmsRecord,
+  inboxCollection,
+  projectInbox,
+} from './transactionInbox/inboxProjection';
+import {
+  findAllByLinkedJournalId as findSmsAllByLinkedJournalId,
+  findLinkedProcessedSmsPage as findSmsLinkedProcessedPage,
+  findPendingSmsPage as findSmsPendingPage,
+  findRecentLinkedProcessed as findSmsRecentLinkedProcessed,
+  findRecentLinkedToAccount as findSmsRecentLinkedToAccount,
+  findRecentPendingSms as findSmsRecentPending,
+  findRecentSms as findSmsRecent,
+  repairParsedSmsMerchants as repairSmsParsedMerchants,
+  type ParsedMerchantRepair,
+} from './transactionInbox/inboxSmsPaging';
 
-interface InboxAuditContext {
-  correlationId?: string;
-}
-
-export interface ParsedMerchantRepair {
-  recordId: string;
-  previousMerchant: string;
-  correctedMerchant: string;
-}
-
-function isProcessedStatus(status: InboxProcessingStatus): boolean {
-  return (
-    status === InboxProcessingStatus.IMPORTED ||
-    status === InboxProcessingStatus.AUTO_POSTED ||
-    status === InboxProcessingStatus.DISMISSED
-  );
-}
-
-function withoutDuplicateReasons(metadataJson: string | null | undefined): string | undefined {
-  const metadata = parseJSONRecord(metadataJson);
-  if (!('duplicateReasons' in metadata)) return metadataJson ?? undefined;
-  delete metadata.duplicateReasons;
-  return Object.keys(metadata).length ? JSON.stringify(metadata) : undefined;
-}
-
-function clearDuplicateIfAlreadyLinked(
-  data: TransactionInboxRecordWriteData,
-): TransactionInboxRecordWriteData {
-  if (!data.linkedJournalId || data.duplicateJournalId !== data.linkedJournalId) return data;
-
-  return {
-    ...data,
-    duplicateJournalId: undefined,
-    duplicateConfidence: undefined,
-    metadataJson: withoutDuplicateReasons(data.metadataJson),
-  };
-}
+export type { ParsedMerchantRepair };
 
 export class TransactionInboxRepository {
-  private readonly stagedCopies = new WeakMap<
-    AccountingWriteSession,
-    Map<
-      string,
-      {
-        data: TransactionInboxRecordWriteData;
-        existing: TransactionInboxRecord | null;
-        audit?: InboxAuditContext;
-      }
-    >
-  >();
-  private get inbox() {
-    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-  }
-
-  private project(
-    workplaceId: WorkplaceId,
-    devices: DeviceSmsInboxRecord[],
-    copies: TransactionInboxRecord[],
-    names: ReadonlyMap<WorkplaceId, string> = new Map(),
-  ): InboxRecordSnapshot[] {
-    const sourceIds = new Set(devices.map(record => record.deviceSourceId));
-    const copiesBySource = new Map<string, TransactionInboxRecord[]>();
-    for (const copy of copies) {
-      const group = copiesBySource.get(copy.deviceSourceId) ?? [];
-      group.push(copy);
-      copiesBySource.set(copy.deviceSourceId, group);
-    }
-    return [
-      ...devices.map(device => {
-        const consumed = copiesBySource.get(device.deviceSourceId) ?? [];
-        const local = consumed.find(copy => copy.workplaceId === workplaceId);
-        const deviceProjection = deviceSmsSnapshot(device, workplaceId);
-        return {
-          ...(local ? inboxSnapshotFromRecord(local) : deviceProjection),
-          suggestedSourceAccountId: deviceProjection.suggestedSourceAccountId,
-          suggestedCategoryAccountId: deviceProjection.suggestedCategoryAccountId,
-          recognition: deviceProjection.recognition,
-          senderAddress: local?.senderAddress ?? deviceProjection.senderAddress,
-          rawBody: local?.rawBody ?? deviceProjection.rawBody,
-          contentDigest: device.contentDigest,
-          id: device.id,
-          deviceInboxId: device.id,
-          consumedWorkplaces: consumed
-            .filter(
-              copy => copy.workplaceId !== workplaceId && isProcessedStatus(copy.processingStatus),
-            )
-            .map(copy => ({
-              workplaceId: copy.workplaceId,
-              name: names.get(copy.workplaceId) ?? 'Another workplace',
-            })),
-        };
-      }),
-      ...copies
-        .filter(copy => copy.workplaceId === workplaceId && !sourceIds.has(copy.deviceSourceId))
-        .map(copy => inboxSnapshotFromRecord(copy)),
-    ].sort((a, b) => b.inputDate - a.inputDate);
-  }
-
-  private async copiesForSourceIds(sourceIds: string[]): Promise<TransactionInboxRecord[]> {
-    if (!sourceIds.length) return [];
-    return this.inbox
-      .query(Q.where('channel', 'sms'), Q.where('device_source_id', Q.oneOf(sourceIds)))
-      .fetch();
-  }
-
   /** Provider IDs are scoped to the source account and stored without message bodies. */
   async findEmailCopies(sourceId: string): Promise<InboxRecordSnapshot[]> {
-    const records = await this.inbox
-      .query(Q.where('channel', 'email'), Q.where('device_source_id', sourceId))
-      .fetch();
-    return records.map(inboxSnapshotFromRecord);
+    return findEmailCopyRecords(sourceId);
   }
 
   async findEmail(workplaceId: WorkplaceId, id: string): Promise<InboxRecordSnapshot | null> {
-    const records = await this.inbox
-      .query(Q.where('id', id), Q.where('workplace_id', workplaceId), Q.where('channel', 'email'))
-      .fetch();
-    return records[0] ? inboxSnapshotFromRecord(records[0]) : null;
+    return findEmailRecords(workplaceId, id);
   }
 
   async stageEmailInSession(
@@ -161,70 +67,32 @@ export class TransactionInboxRepository {
     data: TransactionInboxRecordWriteData,
     auditContext?: InboxAuditContext,
   ): Promise<void> {
-    if (data.channel !== 'email') throw new Error('Expected an email observation');
-    const existing = await this.findEmailCopies(data.deviceSourceId);
-    if (existing.some(record => record.workplaceId === data.workplaceId)) {
-      throw new Error('This email has already been ingested');
-    }
-    const prepared = this.prepareUpsert(data, null, auditContext);
-    stageModelWrite(session, prepared.ops);
+    return stageEmailObservationInSession(session, data, auditContext);
   }
 
   async find(workplaceId: WorkplaceId, id: string): Promise<InboxRecordSnapshot | null> {
-    const device = await deviceSmsInboxRepository.find(id);
-    if (device)
-      return this.project(
-        workplaceId,
-        [device],
-        await this.copiesForSourceIds([device.deviceSourceId]),
-      )[0];
-    const records = await this.inbox
-      .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
-      .fetch();
-    return records[0] ? inboxSnapshotFromRecord(records[0]) : null;
+    return findInboxRecord(workplaceId, id);
   }
 
   async findByDeviceSourceIds(
     workplaceId: WorkplaceId,
     deviceSourceIds: string[],
   ): Promise<InboxRecordSnapshot[]> {
-    if (!deviceSourceIds.length) return [];
-    const [devices, copies] = await Promise.all([
-      deviceSmsInboxRepository.findBySourceIds(deviceSourceIds),
-      this.copiesForSourceIds(deviceSourceIds),
-    ]);
-    const canonicalCopies = devices.length
-      ? await this.copiesForSourceIds(devices.map(device => device.deviceSourceId))
-      : [];
-    return this.project(workplaceId, devices, [
-      ...new Map([...copies, ...canonicalCopies].map(copy => [copy.id, copy])).values(),
-    ]);
+    return findInboxByDeviceSourceIds(workplaceId, deviceSourceIds);
   }
 
   async findMatchingSms(
     workplaceId: WorkplaceId,
     data: TransactionInboxRecordWriteData,
   ): Promise<InboxRecordSnapshot | null> {
-    const device = await deviceSmsInboxRepository.findMatch(data);
-    return device ? this.find(workplaceId, device.id) : null;
+    return findMatchingSmsRecord(workplaceId, data);
   }
 
   async findAllByLinkedJournalId(
     workplaceId: WorkplaceId,
     journalId: JournalId,
   ): Promise<InboxRecordSnapshot[]> {
-    const copies = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('linked_journal_id', journalId),
-        Q.where('channel', 'sms'),
-        Q.sortBy('input_date', Q.asc),
-      )
-      .fetch();
-    const devices = await deviceSmsInboxRepository.findBySourceIds(
-      copies.map(copy => copy.deviceSourceId),
-    );
-    return this.project(workplaceId, devices, copies).sort((a, b) => a.inputDate - b.inputDate);
+    return findSmsAllByLinkedJournalId(workplaceId, journalId);
   }
 
   /** The database selects a bounded SMS page before any Account history is hydrated. */
@@ -233,36 +101,13 @@ export class TransactionInboxRepository {
     accountId: AccountId,
     limit: number,
   ): Promise<InboxRecordSnapshot[]> {
-    if (limit <= 0) return [];
-    const copies = await this.inbox
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.experimentalNestedJoin('journals', 'transactions'),
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.on('journals', [
-          Q.where('workplace_id', workplaceId),
-          Q.on('transactions', [
-            Q.where('workplace_id', workplaceId),
-            Q.where('account_id', accountId),
-            Q.where('deleted_at', Q.eq(null)),
-          ]),
-        ]),
-        Q.sortBy('input_date', Q.desc),
-        Q.sortBy('id', Q.desc),
-        Q.take(limit),
-      )
-      .fetch();
-    const devices = await deviceSmsInboxRepository.findBySourceIds(
-      copies.map(copy => copy.deviceSourceId),
-    );
-    return this.project(workplaceId, devices, copies);
+    return findSmsRecentLinkedToAccount(workplaceId, accountId, limit);
   }
 
   /** Invalidation signals only; subscribing never materializes the full SMS history. */
   observeMatcherDiscoveryEvidence(workplaceId: WorkplaceId): Observable<void> {
     return merge(
-      this.inbox.changes.pipe(
+      inboxCollection().changes.pipe(
         filter(changes =>
           changes.some(
             ({ record }) => record.workplaceId === workplaceId && record.channel === 'sms',
@@ -283,7 +128,7 @@ export class TransactionInboxRepository {
   ): Observable<InboxRecordSnapshot[]> {
     return combineLatest([
       deviceSmsInboxRepository.observe(),
-      this.inbox
+      inboxCollection()
         .query(
           Q.or(
             Q.where('channel', 'sms'),
@@ -304,7 +149,7 @@ export class TransactionInboxRepository {
       workplaceRepository.observeAll(),
     ]).pipe(
       map(([devices, copies, workplaces]) =>
-        this.project(
+        projectInbox(
           workplaceId,
           devices,
           copies,
@@ -317,7 +162,7 @@ export class TransactionInboxRepository {
   }
 
   observeConsumptionChanges() {
-    return this.inbox
+    return inboxCollection()
       .query(Q.where('channel', 'sms'))
       .observeWithColumns(['processing_status', 'linked_journal_id', 'last_scanned_at']);
   }
@@ -329,18 +174,7 @@ export class TransactionInboxRepository {
   }
 
   async findRecentSms(workplaceId: WorkplaceId, limit: number): Promise<InboxRecordSnapshot[]> {
-    const [devices, copies] = await Promise.all([
-      deviceSmsInboxRepository.findRecent(limit),
-      this.inbox
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('channel', 'sms'),
-          Q.sortBy('input_date', Q.desc),
-          Q.take(limit),
-        )
-        .fetch(),
-    ]);
-    return this.project(workplaceId, devices, copies).slice(0, limit);
+    return findSmsRecent(workplaceId, limit);
   }
 
   /** Workplace-scoped pending email observations for two-sided uniqueness checks. */
@@ -348,16 +182,7 @@ export class TransactionInboxRepository {
     workplaceId: WorkplaceId,
     limit: number,
   ): Promise<InboxRecordSnapshot[]> {
-    const records = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'email'),
-        Q.where('processing_status', InboxProcessingStatus.PENDING),
-        Q.sortBy('input_date', Q.desc),
-        Q.take(limit),
-      )
-      .fetch();
-    return records.map(inboxSnapshotFromRecord);
+    return findRecentPendingEmailRecords(workplaceId, limit);
   }
 
   /** Inbox rows already linked to any of the given journals (any channel). */
@@ -365,106 +190,27 @@ export class TransactionInboxRepository {
     workplaceId: WorkplaceId,
     journalIds: JournalId[],
   ): Promise<{ journalId: JournalId; channel: string; reference?: string | null }[]> {
-    if (journalIds.length === 0) return [];
-    const records = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('linked_journal_id', Q.oneOf(journalIds)),
-      )
-      .fetch();
-    return records.flatMap(row =>
-      row.linkedJournalId
-        ? [
-            {
-              journalId: row.linkedJournalId,
-              channel: row.channel,
-              reference: row.referenceNumber ?? null,
-            },
-          ]
-        : [],
-    );
+    return findInboxLinksForJournals(workplaceId, journalIds);
   }
 
   async findRecentPendingSms(
     workplaceId: WorkplaceId,
     limit: number,
   ): Promise<InboxRecordSnapshot[]> {
-    const [recentDevices, pendingCopies] = await Promise.all([
-      deviceSmsInboxRepository.findRecent(limit),
-      this.inbox
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('channel', 'sms'),
-          Q.where('processing_status', InboxProcessingStatus.PENDING),
-          Q.sortBy('input_date', Q.desc),
-          Q.take(limit),
-        )
-        .fetch(),
-    ]);
-    const pendingDevices = recentDevices.filter(
-      device =>
-        deviceSmsSnapshot(device, workplaceId).processingStatus === InboxProcessingStatus.PENDING,
-    );
-    const newestDateBySourceId = new Map<string, number>();
-    for (const device of pendingDevices) {
-      newestDateBySourceId.set(device.deviceSourceId, device.inputDate);
-    }
-    for (const copy of pendingCopies) {
-      newestDateBySourceId.set(
-        copy.deviceSourceId,
-        Math.max(newestDateBySourceId.get(copy.deviceSourceId) ?? 0, copy.inputDate),
-      );
-    }
-    const sourceIds = [...newestDateBySourceId.entries()]
-      .sort((left, right) => right[1] - left[1])
-      .slice(0, limit)
-      .map(([sourceId]) => sourceId);
-    if (!sourceIds.length) return [];
-    const [devicesBySource, copies] = await Promise.all([
-      deviceSmsInboxRepository.findBySourceIds(sourceIds),
-      this.copiesForSourceIds(sourceIds),
-    ]);
-    const devicesById = new Map(
-      [...recentDevices, ...devicesBySource].map(device => [device.id, device]),
-    );
-    const selectedDevices = [...devicesById.values()].filter(device =>
-      sourceIds.includes(device.deviceSourceId),
-    );
-    return this.project(workplaceId, selectedDevices, copies)
-      .filter(record => record.processingStatus === InboxProcessingStatus.PENDING)
-      .slice(0, limit);
+    return findSmsRecentPending(workplaceId, limit);
   }
 
   // This walks the device inbox by id and then keeps this workplace's pending rows,
   // because pending state lives on workplace review state rather than on the device row.
   async findPendingSmsPage(workplaceId: WorkplaceId, afterId: string | undefined, limit: number) {
-    const devices = await deviceSmsInboxRepository.findPageAfterId(afterId, limit);
-    const copies = await this.copiesForSourceIds(devices.map(device => device.deviceSourceId));
-    return {
-      records: this.project(workplaceId, devices, copies).filter(
-        record => record.deviceInboxId && record.processingStatus === InboxProcessingStatus.PENDING,
-      ),
-      nextCursor: devices.length === limit ? devices[devices.length - 1].id : undefined,
-    };
+    return findSmsPendingPage(workplaceId, afterId, limit);
   }
 
   async findRecentLinkedProcessed(
     workplaceId: WorkplaceId,
     limit: number,
   ): Promise<TransactionInboxRecord[]> {
-    return this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.where('linked_journal_id', Q.notEq(null)),
-        Q.where(
-          'processing_status',
-          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
-        ),
-        Q.sortBy('input_date', Q.desc),
-        Q.take(limit),
-      )
-      .fetch();
+    return findSmsRecentLinkedProcessed(workplaceId, limit);
   }
 
   async findLinkedProcessedSmsPage(
@@ -472,58 +218,14 @@ export class TransactionInboxRepository {
     afterId: string | undefined,
     limit: number,
   ): Promise<TransactionInboxRecord[]> {
-    return this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.where(
-          'processing_status',
-          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
-        ),
-        Q.where('linked_journal_id', Q.notEq(null)),
-        ...(afterId ? [Q.where('id', Q.gt(afterId))] : []),
-        Q.sortBy('id'),
-        Q.take(limit),
-      )
-      .fetch();
+    return findSmsLinkedProcessedPage(workplaceId, afterId, limit);
   }
 
   async repairParsedSmsMerchants(
     workplaceId: WorkplaceId,
     repairs: readonly ParsedMerchantRepair[],
   ): Promise<number> {
-    if (!repairs.length) return 0;
-    const repairsById = new Map(repairs.map(repair => [repair.recordId, repair]));
-
-    return database.write(async () => {
-      const records = await this.inbox
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('channel', 'sms'),
-          Q.where('id', Q.oneOf([...repairsById.keys()])),
-        )
-        .fetch();
-      const updates = records.flatMap(record => {
-        const repair = repairsById.get(record.id);
-        if (
-          !repair ||
-          !record.linkedJournalId ||
-          ![InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED].includes(
-            record.processingStatus,
-          ) ||
-          record.parsedMerchant !== repair.previousMerchant
-        ) {
-          return [];
-        }
-        return [
-          record.prepareUpdate(entry => {
-            entry.parsedMerchant = repair.correctedMerchant;
-          }),
-        ];
-      });
-      if (updates.length) await database.batch(...updates);
-      return updates.length;
-    });
+    return repairSmsParsedMerchants(workplaceId, repairs);
   }
 
   prepareLink(
@@ -531,31 +233,15 @@ export class TransactionInboxRepository {
     journalId: JournalId,
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Model {
-    return record.prepareUpdate(entry => {
-      const duplicateJournalId = entry.duplicateJournalId;
-      entry.linkedJournalId = journalId;
-      entry.processingStatus = disposition;
-      entry.processedAt = Date.now();
-      if (duplicateJournalId !== journalId) return;
-      entry.duplicateJournalId = undefined;
-      entry.duplicateConfidence = undefined;
-      entry.metadataJson = withoutDuplicateReasons(entry.metadataJson);
-    });
+    return prepareInboxLink(record, journalId, disposition);
   }
 
   prepareUnlink(record: TransactionInboxRecord): Model {
-    return record.prepareUpdate(entry => {
-      entry.linkedJournalId = undefined;
-      entry.processingStatus = InboxProcessingStatus.PENDING;
-      entry.processedAt = undefined;
-    });
+    return prepareInboxUnlink(record);
   }
 
   prepareStatus(record: TransactionInboxRecord, status: InboxProcessingStatus): Model {
-    return record.prepareUpdate(entry => {
-      entry.processingStatus = status;
-      entry.processedAt = isProcessedStatus(status) ? Date.now() : undefined;
-    });
+    return prepareInboxStatus(record, status);
   }
 
   prepareUpsert(
@@ -563,143 +249,18 @@ export class TransactionInboxRepository {
     existingRecord: TransactionInboxRecord | null,
     auditContext?: InboxAuditContext,
   ): { ops: Model[]; record: TransactionInboxRecord } {
-    if (existingRecord && existingRecord.workplaceId !== data.workplaceId) {
-      throw new Error('Inbox record does not belong to the specified workplace');
-    }
-
-    const writeData = clearDuplicateIfAlreadyLinked(data);
-    const safeData: TransactionInboxRecordWriteData = {
-      ...writeData,
-      processedAt: isProcessedStatus(writeData.processingStatus)
-        ? (writeData.processedAt ?? Date.now())
-        : undefined,
-      metadataJson: sanitizeSmsMetadataJson(writeData.metadataJson, writeData.channel === 'sms'),
-    };
-
-    if (existingRecord) {
-      const before = inboxAuditState(existingRecord);
-      const after = mergeInboxAuditState(existingRecord, safeData);
-      return {
-        ops: [
-          existingRecord.prepareUpdate(record => {
-            applyInboxWriteData(record, safeData);
-          }),
-          ...(!sameInboxAuditState(before, after)
-            ? [
-                this.prepareAudit(
-                  existingRecord.id,
-                  AuditAction.UPDATE,
-                  'transaction_inbox_record.updated',
-                  before,
-                  after,
-                  safeData.workplaceId,
-                  'system',
-                  auditContext?.correlationId,
-                ),
-              ]
-            : []),
-        ],
-        record: existingRecord,
-      };
-    }
-
-    const record = this.inbox.prepareCreate((entry: TransactionInboxRecord) => {
-      applyInboxWriteData(entry, safeData);
-    });
-    return {
-      ops: [
-        record,
-        this.prepareAudit(
-          record.id,
-          AuditAction.CREATE,
-          'transaction_inbox_record.created',
-          undefined,
-          inboxAuditState(safeData),
-          safeData.workplaceId,
-          'system',
-          auditContext?.correlationId,
-        ),
-      ],
-      record,
-    };
-  }
-
-  private prepareAudit(
-    entityId: string,
-    action: AuditAction,
-    eventType: AuditEventType,
-    before: Record<string, unknown> | undefined,
-    after: Record<string, unknown>,
-    workplaceId: WorkplaceId,
-    source: 'app' | 'system',
-    correlationId?: string,
-  ): Model {
-    return auditRepository.prepareLog(
-      {
-        entityType: 'transaction_inbox_record',
-        entityId,
-        action,
-        eventType,
-        source,
-        correlationId,
-        undoable: false,
-        changes: before ? { before, after } : { after },
-      },
-      workplaceId,
-    );
+    return prepareInboxUpsert(data, existingRecord, auditContext);
   }
 
   /** Device capture and optional Workplace consumption share the journal's atomic write. */
   async stageUpsertInSession(
     session: AccountingWriteSession,
     data: TransactionInboxRecordWriteData,
-    _existingRecord: InboxRecordSnapshot | null,
+    existingRecord: InboxRecordSnapshot | null,
     auditContext?: InboxAuditContext,
-    options: DeviceSmsWriteOptions = { origin: 'manual', queueReview: false },
+    options: DeviceSmsWriteOptions = { origin: 'manual', skipReview: false },
   ): Promise<void> {
-    const writeData = clearDuplicateIfAlreadyLinked(data);
-    const device = await deviceSmsInboxRepository.stageUpsert(
-      session,
-      {
-        ...writeData,
-        deviceInboxId: writeData.deviceInboxId ?? _existingRecord?.id ?? generator(),
-      },
-      options,
-    );
-    const copies = await this.copiesForSourceIds([device.deviceSourceId]);
-    const existing = copies.find(copy => copy.workplaceId === writeData.workplaceId) ?? null;
-    if (isProcessedStatus(writeData.processingStatus) || existing) {
-      let writes = this.stagedCopies.get(session);
-      if (!writes) {
-        writes = new Map();
-        this.stagedCopies.set(session, writes);
-      }
-      const key = `${writeData.workplaceId}:${device.id}`;
-      const safeData = {
-        ...writeData,
-        // Source content belongs to the Device record. Preserve pre-existing
-        // legacy copies, but do not duplicate new captures into workplaces.
-        senderAddress: existing?.senderAddress,
-        rawBody: existing?.rawBody,
-        deviceSourceId: device.deviceSourceId,
-        deviceInboxId: device.id,
-        inputDate: device.inputDate,
-        processingStatus:
-          existing?.linkedJournalId && existing.linkedJournalId === writeData.linkedJournalId
-            ? existing.processingStatus
-            : writeData.processingStatus,
-      };
-      const staged = writes.get(key);
-      if (staged) staged.data = safeData;
-      else {
-        const write = { data: safeData, existing, audit: auditContext };
-        writes.set(key, write);
-        stageModelWrite(
-          session,
-          () => this.prepareUpsert(write.data, write.existing, write.audit).ops,
-        );
-      }
-    }
+    return stageInboxUpsertInSession(session, data, existingRecord, auditContext, options);
   }
 
   async stageLinkByIdInSession(
@@ -710,32 +271,12 @@ export class TransactionInboxRepository {
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
     auditContext?: InboxAuditContext,
   ): Promise<void> {
-    const record = await this.find(workplaceId, recordId);
-    if (!record) throw new Error('Inbox record not found');
-    if (record.linkedJournalId && record.linkedJournalId !== journalId)
-      throw new Error('This source is already linked to another transaction');
-    await stageLinkedCaptureSource(session, workplaceId, journalId, {
-      channel: record.channel,
-      sourceId: record.deviceSourceId,
-      occurredAt: record.inputDate,
-      fingerprint: record.inputFingerprint,
-      merchant: record.parsedMerchant,
-    });
-    if (record.channel !== 'sms') {
-      const model = await this.inbox.find(record.id);
-      stageModelWrite(session, () => [this.prepareLink(model, journalId, disposition)]);
-      return;
-    }
-    await this.stageUpsertInSession(
+    return stageInboxLinkByIdInSession(
       session,
-      {
-        ...record,
-        channel: 'sms',
-        linkedJournalId: journalId,
-        processingStatus: disposition,
-        lastScannedAt: Date.now(),
-      },
-      record,
+      workplaceId,
+      recordId,
+      journalId,
+      disposition,
       auditContext,
     );
   }
@@ -746,36 +287,11 @@ export class TransactionInboxRepository {
     journalId: JournalId,
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Promise<void> {
-    await runAccountingWriteSession(async session => {
-      if (await this.find(workplaceId, recordId))
-        await this.stageLinkByIdInSession(session, workplaceId, recordId, journalId, disposition);
-    });
+    return persistInboxLink(workplaceId, recordId, journalId, disposition);
   }
 
   async persistUnlink(workplaceId: WorkplaceId, recordId: string): Promise<void> {
-    await runAccountingWriteSession(async session => {
-      const record = await this.find(workplaceId, recordId);
-      if (!record) throw new Error('Inbox record not found');
-      if (!record.linkedJournalId) throw new Error('This source is not linked to a journal');
-      const journalId = record.linkedJournalId;
-      await stageUnlinkedCaptureSource(session, workplaceId, journalId, {
-        channel: record.channel,
-        sourceId: record.deviceSourceId,
-      });
-
-      let model: TransactionInboxRecord | null = null;
-      if (record.channel === 'sms') {
-        const copies = await this.copiesForSourceIds([record.deviceSourceId]);
-        model = copies.find(copy => copy.workplaceId === workplaceId) ?? null;
-      } else {
-        const rows = await this.inbox
-          .query(Q.where('id', record.id), Q.where('workplace_id', workplaceId))
-          .fetch();
-        model = rows[0] ?? null;
-      }
-      if (!model) throw new Error('Inbox record not found');
-      stageModelWrite(session, () => [this.prepareUnlink(model)]);
-    });
+    return persistInboxUnlink(workplaceId, recordId);
   }
 
   async persistStatus(
@@ -783,22 +299,7 @@ export class TransactionInboxRepository {
     recordId: string,
     status: InboxProcessingStatus,
   ): Promise<void> {
-    await runAccountingWriteSession(async session => {
-      const record = await this.find(workplaceId, recordId);
-      if (!record) return;
-      if (record.linkedJournalId && status !== record.processingStatus)
-        throw new Error('A linked observation cannot be returned to the pending inbox');
-      if (record.channel !== 'sms') {
-        const model = await this.inbox.find(record.id);
-        stageModelWrite(session, () => [this.prepareStatus(model, status)]);
-        return;
-      }
-      await this.stageUpsertInSession(
-        session,
-        { ...record, channel: 'sms', processingStatus: status, lastScannedAt: Date.now() },
-        record,
-      );
-    });
+    return persistInboxStatus(workplaceId, recordId, status);
   }
 }
 
