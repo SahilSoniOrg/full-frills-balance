@@ -44,11 +44,10 @@ import { isJournalBalanced } from '@/src/services/accounting/JournalCalculator';
  *  - **Structural validation.** `checkJournal` does not enforce a minimum line
  *    count, positive amounts, or currencies. The evaluator (and form) does.
  *  - **Input normalization.** `isJournalBalanced` defaults missing line
- *    currencies to the journal base, and sanitizes string amounts at the base
- *    precision (2) before calling the evaluator. `checkJournal` applies any
- *    supplied rate with no currency concept, and a direct evaluator call
- *    sanitizes string amounts at the account currency's precision and leaves
- *    missing currencies as missing.
+ *    currencies to the journal base, then passes amounts through so the
+ *    evaluator sanitizes strings at account-currency precision. `checkJournal`
+ *    applies any supplied rate with no currency concept. A direct evaluator
+ *    call leaves missing currencies as missing.
  */
 
 type FixtureLine = {
@@ -244,9 +243,8 @@ const FIXTURES: BalanceFixture[] = [
       debit('jpy-cash', '123.9', { accountCurrency: 'JPY', exchangeRate: 0.005 }),
       credit('jod-bank', '0.615', { accountCurrency: 'JOD' }),
     ],
-    // Form sanitizes the string at base precision before the evaluator; a
-    // direct evaluator call sanitizes at JPY precision — normalization only.
-    expected: { checkJournal: true, isJournalBalanced: true, evaluator: false },
+    // Form passes strings through; evaluator owns account-currency sanitization.
+    expected: { checkJournal: true, isJournalBalanced: false, evaluator: false },
   },
   {
     name: 'single line cannot balance',
@@ -539,19 +537,19 @@ describe('documented parity differences', () => {
     expect(evaluation.lineValues[0]?.exchangeRate).toBe(1);
   });
 
-  it('normalization: string amounts use base precision in the form, native precision in the evaluator', () => {
-    // isJournalBalanced sanitizes '123.9' at the base precision (2), so the
-    // form evaluates 123.9 × 0.005. A direct evaluator call sanitizes at JPY's
-    // precision (0), rounds to 124, and converts to 0.62 JOD — five minor
-    // units of drift. This is the remaining form-vs-evaluator gap.
+  it('normalization: string amounts use account-currency precision in form and evaluator', () => {
+    // Form passes strings through; both paths sanitize at JPY precision (0),
+    // round to 124, and convert to 0.62 JOD — five minor units of drift vs the
+    // credit of 0.615 JOD. checkJournal still parses the raw string as 123.9.
     const jpyString = fixture('string amount parsed at account-currency precision');
     const check = runCheckJournal(jpyString);
     const form = runIsJournalBalanced(jpyString);
     const evaluation = runEvaluator(jpyString);
 
     expect(check.isValid).toBe(true);
-    expect(form).toBe(true);
+    expect(form).toBe(false);
     expect(evaluation.isBalanced).toBe(false);
+    expect(form).toBe(evaluation.isBalanced);
     expect(evaluation.lineValues[0]).toMatchObject({ nativeAmount: 124 });
     expect(evaluation.differenceMinorUnits).toBe(5);
   });

@@ -18,7 +18,8 @@ export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: strin
   const normalized = lines.map((line, index) => ({
     id: String(index),
     accountId: asAccountId(String(index)),
-    amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
+    // Pass strings through so the evaluator sanitizes at account-currency precision.
+    amount: line.amount,
     transactionType: line.type,
     accountCurrency: line.accountCurrency?.trim().toUpperCase() || normalizedBaseCurrency,
     exchangeRate: line.exchangeRate,
