@@ -33,7 +33,8 @@ describe('JournalCalculator', () => {
     expect(isJournalBalanced(lines, 'USD')).toBe(true);
   });
 
-  it('accepts the minor-unit rounding caused by a rounded foreign amount', () => {
+  it('rejects minor-unit FX drift that checkJournal tolerance used to accept', () => {
+    // THB 76.82 × 2.89 = 222.0098; evaluator is exact in minor units.
     const lines = [
       {
         amount: 76.82,
@@ -48,10 +49,11 @@ describe('JournalCalculator', () => {
       },
     ];
 
-    expect(isJournalBalanced(lines, 'INR')).toBe(true);
+    expect(isJournalBalanced(lines, 'INR')).toBe(false);
   });
 
-  it('scales foreign-currency rounding tolerance for higher exchange rates', () => {
+  it('rejects FX drift even when rate-scaled checkJournal tolerance would pass', () => {
+    // HKD 4.11 × 12.17 = 50.0187; evaluator requires exact minor-unit balance.
     const lines = [
       {
         amount: 4.11,
@@ -66,7 +68,7 @@ describe('JournalCalculator', () => {
       },
     ];
 
-    expect(isJournalBalanced(lines, 'INR')).toBe(true);
+    expect(isJournalBalanced(lines, 'INR')).toBe(false);
   });
 
   describe('getLineBaseAmount', () => {
