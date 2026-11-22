@@ -15,7 +15,7 @@ import { InboxProcessingStatus } from '@/src/types/enums';
 import type { CanonicalJournal, CanonicalTransaction } from '@/src/types/importContracts';
 import type { TransactionType } from '@/src/types/enums';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { toTransactionType } from '@/src/data/repositories/importValueParsers';
+import { toTransactionType } from '@/src/services/import';
 import {
   evaluateJournalBalance,
   proposeUniqueJournalFxRate,
