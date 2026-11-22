@@ -5,5 +5,6 @@ export const budgetReadServiceJestModule = {
     observeSpendingHistory: jest.fn(),
     observeAllActive: jest.fn(),
     observeBudgetUsage: jest.fn(),
+    observeChartTransactions: jest.fn(),
   },
 };

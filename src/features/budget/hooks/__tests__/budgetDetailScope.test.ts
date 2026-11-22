@@ -1,10 +1,9 @@
 import { act, renderHook, waitFor } from '@/src/testing/render';
-import { BehaviorSubject, defer, of, Subject } from 'rxjs';
+import { BehaviorSubject, defer, map, of, Subject } from 'rxjs';
 import dayjs from 'dayjs';
 import { AppState } from 'react-native';
 import type Journal from '@/src/data/models/Journal';
 import type Transaction from '@/src/data/models/Transaction';
-import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { buildBudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
@@ -13,7 +12,6 @@ import { useBudgetDetailViewModel } from '../useBudgetDetailViewModel';
 import { useJournalEntryList } from '@/src/features/journal';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
@@ -32,18 +30,11 @@ jest.mock('@/src/services/budget/budgetReadService', () => ({
     observeById: jest.fn(),
     observeBudgetUsage: jest.fn(),
     observeScopes: jest.fn(),
+    observeChartTransactions: jest.fn(),
   },
 }));
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeByIds: jest.fn(), observeByType: jest.fn() },
-}));
-jest.mock('@/src/data/repositories/transaction', () => ({
-  transactionQueryRepository: {
-    observeBudgetTransactionsByJournalDateRange: jest.fn(),
-  },
-}));
-jest.mock('@/src/data/repositories/journal/JournalObserveQueries', () => ({
-  journalObserveQueries: { observeByIds: jest.fn() },
 }));
 jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
   journalQueryRepository: { findByIds: jest.fn() },
@@ -79,16 +70,13 @@ const leaf = { ...parent, id: 'dining' as AccountId, name: 'Dining', parentAccou
 function setupStandardBudgetDetailMocks() {
   jest.clearAllMocks();
   jest.spyOn(Date, 'now').mockReturnValue(now);
-  jest.mocked(journalObserveQueries.observeByIds).mockReturnValue(of([]));
   jest
     .mocked(buildBudgetCumulativeChart)
     .mockReset()
     .mockImplementation(async input =>
       budgetCumulativeChartFixture(input.periodStart, input.periodEnd),
     );
-  jest
-    .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-    .mockReturnValue(of([]));
+  jest.mocked(budgetReadService.observeChartTransactions).mockReturnValue(of([]));
   jest.mocked(useLocalSearchParams).mockReturnValue({ id: budgetId });
   jest.mocked(budgetReadService.observeById).mockReturnValue(
     of({
@@ -178,12 +166,11 @@ describe('budget details previous-period chart', () => {
       [marchStart, marchEnd],
       [februaryStart, februaryEnd],
     ]) {
-      expect(
-        transactionQueryRepository.observeBudgetTransactionsByJournalDateRange,
-      ).toHaveBeenCalledWith('workplace', [leaf.id], start, end, [
-        JournalStatus.POSTED,
-        JournalStatus.REVERSED,
-      ]);
+      expect(budgetReadService.observeChartTransactions).toHaveBeenCalledWith(
+        'workplace',
+        [leaf.id],
+        { startDate: start, endDate: end },
+      );
       expect(buildBudgetCumulativeChart).toHaveBeenCalledWith({
         workplaceId: 'workplace',
         transactions: [],
@@ -201,9 +188,9 @@ describe('budget details previous-period chart', () => {
   it('uses a full previous total for past periods and clears data while navigating', async () => {
     const januaryTransactions = new Subject<Transaction[]>();
     jest
-      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-      .mockImplementation((_workplaceId, _ids, start) =>
-        start < februaryStart ? januaryTransactions : of([]),
+      .mocked(budgetReadService.observeChartTransactions)
+      .mockImplementation((_workplaceId, _ids, range) =>
+        range && range.startDate < februaryStart ? januaryTransactions : of([]),
       );
     const { result } = renderHook(() => useBudgetDetailViewModel());
     await waitFor(() => expect(result.current.previousComparisonSpent).toBe(90));
@@ -224,9 +211,9 @@ describe('budget details previous-period chart', () => {
       let previousTransactions = new BehaviorSubject<Transaction[]>([]);
       let shouldFail = false;
       jest
-        .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-        .mockImplementation((_workplaceId, _ids, start) =>
-          start === februaryStart ? defer(() => previousTransactions) : of([]),
+        .mocked(budgetReadService.observeChartTransactions)
+        .mockImplementation((_workplaceId, _ids, range) =>
+          range?.startDate === februaryStart ? defer(() => previousTransactions) : of([]),
         );
       jest.mocked(buildBudgetCumulativeChart).mockImplementation(async input => {
         if (shouldFail && input.periodStart === februaryStart) throw new Error('Unavailable');
@@ -258,14 +245,11 @@ describe('budget details previous-period chart', () => {
     const transactions = [{ journalId }] as Transaction[];
     const journalContext = new Subject<Journal[]>();
     jest
-      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-      .mockImplementation((_workplaceId, _ids, start) =>
-        of(start === februaryStart ? transactions : []),
-      );
-    jest
-      .mocked(journalObserveQueries.observeByIds)
-      .mockImplementation((_workplaceId, ids) =>
-        ids.includes(journalId) ? journalContext : of([]),
+      .mocked(budgetReadService.observeChartTransactions)
+      .mockImplementation((_workplaceId, _ids, range) =>
+        range?.startDate === februaryStart
+          ? journalContext.pipe(map(() => transactions))
+          : of([]),
       );
     let sameDaySpend = 90;
     jest
@@ -275,7 +259,11 @@ describe('budget details previous-period chart', () => {
       );
     const { result } = renderHook(() => useBudgetDetailViewModel());
     await waitFor(() =>
-      expect(journalObserveQueries.observeByIds).toHaveBeenCalledWith('workplace', [journalId]),
+      expect(budgetReadService.observeChartTransactions).toHaveBeenCalledWith(
+        'workplace',
+        [leaf.id],
+        { startDate: februaryStart, endDate: februaryEnd },
+      ),
     );
     const journal = { id: journalId, journalDate: februaryStart, currencyCode: 'USD' } as Journal;
     act(() => journalContext.next([journal]));
@@ -321,9 +309,9 @@ describe('budget details previous-period chart', () => {
       },
     ] as Transaction[];
     jest
-      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-      .mockImplementation((_workplaceId, _ids, start) =>
-        of(start === februaryStart ? transactions : []),
+      .mocked(budgetReadService.observeChartTransactions)
+      .mockImplementation((_workplaceId, _ids, range) =>
+        of(range?.startDate === februaryStart ? transactions : []),
       );
     jest
       .mocked(journalQueryRepository.findByIds)
