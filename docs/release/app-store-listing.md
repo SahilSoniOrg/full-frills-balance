@@ -59,7 +59,7 @@ KEEP CONTROL OF YOUR DATA
 • Export and restore JSON backups, or import supported Ivy Wallet and Cashew files.
 • Protect app access with device authentication and use widgets for a quick view.
 • Use voice input to draft transactions.
-• Optional Gmail capture checks new Inbox messages on your device for transactions. Review matches or enable automatic capture. Gmail access can read across your mailbox; selected match details are stored locally. See the Privacy Policy for details.
+• Optional bank-text capture on iOS uses Apple Shortcuts to pass matching alerts into the Transaction inbox for review. Android can use SMS import. See the Privacy Policy for details.
 
 Full Frills Balance is a record-keeping tool. Safe to Spend is an estimate based on information you provide, not financial, tax, or investment advice.
 
@@ -67,4 +67,4 @@ Full Frills Balance is a record-keeping tool. Safe to Spend is an estimate based
 
 - Export compliance: Build 6 remains “Missing Compliance.” The app uses SHA-256, RSA-SHA256 signature verification, and UUID generation; it does not encrypt stored finance data or backups. App Store Connect requires a French encryption declaration because standard algorithms are used and France is in the availability list ([Apple's requirements](https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption)). ANSSI's declaration is filed through its online service and may require supporting product and identity/business documents ([ANSSI procedure](https://demarche.numerique.gouv.fr/commencer/declaration-relative-a-un-moyen-de-cryptologie)). A source-based technical description is drafted at [`export-compliance-technical-description.md`](./export-compliance-technical-description.md); it is not an ANSSI filing. Upload the French declaration to App Store Connect and wait for Apple's review. Apple then provides an Info.plist key for future submissions ([upload process](https://developer.apple.com/help/app-store-connect/manage-app-information/determine-and-upload-app-encryption-documentation)).
 
-App Review contact details and the note explaining that sign-in is not required and Gmail is optional are saved. Reviewer credentials are not needed.
+App Review contact details and the note explaining that sign-in is not required are saved. Reviewer credentials are not needed. Direct Gmail OAuth capture is parked and not offered in production.

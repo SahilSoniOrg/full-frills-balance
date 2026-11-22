@@ -41,7 +41,7 @@ If you’ve ever wondered “can I afford this before payday?” or “where did
 | **See the whole picture** | Net worth, recent activity, income vs spending, and category reports — across accounts and currencies. |
 | **Plan before you spend** | Budgets and planned payments (recurring or one-off). **Safe to Spend** estimates how much you can use today without going broke before payday. |
 | **Keep separate books** | Workplaces let you keep personal, household, or side projects apart. |
-| **Capture without chaos** | Optional Android SMS and Gmail capture suggest or post transactions; uncertain matches stay for review. |
+| **Capture without chaos** | Optional Android SMS and iOS bank-text Shortcuts capture suggest or post transactions; uncertain matches stay for review. |
 | **Stay in control** | Data lives on your device. Export/restore JSON, import Ivy Wallet or Cashew, biometric lock, privacy mask, widgets, voice draft. |
 
 Full Frills Balance is a **record-keeping tool**. Safe to Spend is an estimate from the entries and plans you provide — not financial, tax, or investment advice.
@@ -85,7 +85,7 @@ The app walks the cash-flow day by day, merges overlapping obligations, normaliz
 
 - Ordinary bookkeeping needs **no bank connection** and **no app account**.
 - Financial data stays on your device.
-- Optional SMS / Gmail capture runs locally; you review uncertain matches.
+- Optional SMS and bank-text capture runs locally; you review uncertain matches.
 - Analytics are coarse event counts — not amounts, merchants, or balances. Session replay is off.
 
 Details: [PRIVACY.MD](PRIVACY.MD) · [Privacy policy](https://fullfrills.sahilsoni.in/privacy.html)

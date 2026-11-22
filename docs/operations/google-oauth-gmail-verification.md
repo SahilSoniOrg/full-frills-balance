@@ -1,6 +1,10 @@
 # Google OAuth and Gmail verification
 
-**Operational snapshot: 2026-11-12.** Project and console statuses below record the last observed state; Google policy and process claims are linked inline. No full OAuth client IDs, credentials, or secrets are included.
+**Status: PARKED (2026-11-22).** Direct `gmail.readonly` OAuth is not the near-term capture path. Restricted-scope verification and a possible paid CASA assessment are deferred. Keep the PostHog flag `gmail-capture-settings` **off** in production. Leave existing OAuth clients, scopes, and Console publishing status unchanged. Do not spend time on demo videos, branding remediation, or assessor engagement unless this park is explicitly lifted.
+
+Near-term capture alternatives (iOS Shortcuts bank texts, Android SMS / bank-app notifications, later Apple Mail via Shortcuts) are in [alert-sources-proposal.md](../specs/automatic-transaction-capture/alert-sources-proposal.md). The Gmail client code stays behind the feature flag for a possible future retry.
+
+**Operational snapshot below: 2026-11-12** (last active verification work). Project and console statuses record that state; Google policy and process claims are linked inline. No full OAuth client IDs, credentials, or secrets are included.
 
 ## Current project and status
 
@@ -24,7 +28,7 @@ Google replied to the verification submission with **action required**. This is 
 
 The latest Verification Centre state after saving the Branding form is: appropriate data access and minimum scopes are complete; privacy policy requirements are in error because Google has not yet reviewed the updated retention/deletion language; app functionality is in error because the old demo video was insufficient; homepage requirements, branding guidelines, and additional requirements are under review. The save updated the pending verification request, but did not submit a new video or satisfy Google's email request to reply with clarification.
 
-Remaining external work: verify `sahilsoni.in` as a Search Console domain owner for the existing Cloud project owner account; prepare the new comprehensive demo video and reviewer navigation notes; submit updated evidence by replying to Google's verification email. Do not change the production OAuth clients, requested scopes, or publishing status, or add billing.
+Parked external work (do not resume unless the park at the top of this note is lifted): verify `sahilsoni.in` as a Search Console domain owner for the existing Cloud project owner account; prepare the new comprehensive demo video and reviewer navigation notes; submit updated evidence by replying to Google's verification email. Do not change the production OAuth clients, requested scopes, or publishing status, or add billing.
 
 ### App navigation to give the reviewer
 

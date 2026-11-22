@@ -223,7 +223,7 @@ export const transactionCaptureStrings = {
     const entries = count === 1 ? `1 past ${kind} entry` : `${count} past ${kind} entries`;
     const messages =
       sourceCount === 1 ? '1 linked SMS message' : `${sourceCount} linked SMS messages`;
-    return `${entries} and ${messages} show ${merchant} on ${account} in ${category}. This default applies to future entries matching the merchant, account, type (${kind}), and currency (${currency}), whether captured from SMS or Gmail. SMS matchers help recognize the account; this default does not select or change a matcher. Past entries are unchanged. Merchant matching ignores case; other spellings are separate.`;
+    return `${entries} and ${messages} show ${merchant} on ${account} in ${category}. This default applies to future entries matching the merchant, account, type (${kind}), and currency (${currency}), whether captured from bank messages or email. SMS matchers help recognize the account; this default does not select or change a matcher. Past entries are unchanged. Merchant matching ignores case; other spellings are separate.`;
   },
   descriptionCandidatesHeader: 'Name suggestions',
   descriptionCandidatesGroupDescription: 'Save a name for future matches at the same amount.',
@@ -297,12 +297,13 @@ export const transactionCaptureStrings = {
   updateErrorTitle: 'Capture settings not updated',
   checkingSources: 'Checking message sources…',
   captureSourceRequiredAndroid:
-    'Enable automatic SMS import or Gmail capture under Message sources to use automatic capture for this workplace.',
+    'Enable automatic SMS import under Message sources to use automatic capture for this workplace. If Gmail capture is available, you can enable that instead.',
   captureSourceRequired:
-    'Connect Gmail and enable Gmail capture under Message sources to use automatic capture for this workplace.',
+    'Connect Gmail and enable Gmail capture under Message sources to use automatic capture for this workplace, or set up Bank texts via Shortcuts.',
   captureSourceRequiredAndroidWithoutGmail:
     'Enable automatic SMS import under Message sources to use automatic capture for this workplace.',
-  captureSourceUnavailableWithoutGmail: 'Automatic posting is unavailable on this device.',
+  captureSourceUnavailableWithoutGmail:
+    'Set up Bank texts via Shortcuts under Message sources to capture bank alerts for this workplace.',
   noAutomaticSourceEnabled: 'No message source is enabled for automatic capture.',
   retry: 'Try again',
   inboxChannelSpoken: 'Spoken',

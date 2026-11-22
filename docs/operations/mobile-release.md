@@ -68,7 +68,7 @@ Every path below uploads to the **internal** track (`eas.json` → `submit.produ
 
 ## 5. Google Sign-In (Gmail) client IDs
 
-The production OAuth clients are the ones under Google verification. Don't change them, their scopes, or their publishing status (see [google-oauth-gmail-verification.md](google-oauth-gmail-verification.md)).
+Gmail OAuth verification is **parked**. Keep the `gmail-capture-settings` PostHog flag off in production. The production OAuth clients still exist under Google verification — don't change them, their scopes, or their publishing status (see [google-oauth-gmail-verification.md](google-oauth-gmail-verification.md)).
 
 | EAS environment | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` |
 | --- | --- | --- |

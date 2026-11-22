@@ -5,7 +5,7 @@ export const PRIVACY_NOTICE_STRINGS = {
   onboardingSummaryBullets: [
     'Financial records stay on this device. Local storage and exported backups have no separate app-level encryption; device backups may retain copies.',
     'Exchange rates and limited analytics use the network. Analytics requests send your IP address, but not your financial records.',
-    'Gmail capture and voice are optional and can use Google or speech services. Review the full policy before enabling them.',
+    'Bank-text capture and voice are optional. Voice may use speech services; review the full policy before enabling them.',
   ],
   acknowledgementPromptTitle: 'Before you continue',
   acknowledgementPromptBody:
@@ -21,7 +21,7 @@ export const PRIVACY_NOTICE_STRINGS = {
   heroTitle: 'Your money stays yours.',
   heroCalloutTitle: 'Private by design',
   heroCalloutBody:
-    'Your financial records stay on this device unless you export or share a backup. Optional Gmail capture reads and parses Inbox messages on your device, then saves selected transaction details locally.',
+    'Your financial records stay on this device unless you export or share a backup. Optional bank-text capture checks matching alerts on your device and saves selected transaction details locally for review.',
   dataSectionTitle: 'What happens to your data',
   controlsSectionTitle: 'Keep control',
   supportSectionTitle: 'Need the full text?',

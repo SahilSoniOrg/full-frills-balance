@@ -2,6 +2,8 @@
 
 Draft for product review · 2026-11-22
 
+**Decision (2026-11-22):** Direct Gmail OAuth (`gmail.readonly`) is parked. Keep the `gmail-capture-settings` flag off in production. Do not pursue verification or CASA while this park holds. [Gmail OAuth runbook](../../operations/google-oauth-gmail-verification.md)
+
 Add automatic capture on iOS without taking on a paid Gmail security assessment. Start with bank texts delivered through Apple Shortcuts. Add bank-app notifications on Android for banks whose push alerts contain usable transaction details. Extend the iOS action to email alerts through Apple Mail once SMS delivery is proven. Eligible alerts appear in the existing Transaction inbox for review. [Automatic transaction capture](spec.md)
 
 ## iOS bank text capture
@@ -24,7 +26,7 @@ A bank may publish a generic or truncated preview, suppress a notification, or r
 
 The user adds Gmail or another supported account to Apple Mail and creates an **Email** automation with a bank sender or subject filter. Shortcuts passes the matching email body to **Capture bank alert**. Apple Mail handles mailbox sign-in and retrieval. Full Frills Balance receives the selected alert text and requests no Gmail OAuth scope for this path. The feature covers new alerts and inherits Mail's fetch timing. [Apple email triggers](https://support.apple.com/guide/shortcuts/communication-triggers-apdd711f9dff/ios) · [TrackExpenses bank email setup](https://trackexpenses.app/guides/bank-email-alerts-iphone.html)
 
-Revisit direct mailbox sync if users need email backfill or Mail setup prevents adoption. Treat the existing `gmail.readonly` connection and its verification as a separate product decision. Android email remains a future decision because notification previews provide variable coverage. [Gmail OAuth runbook](../../operations/google-oauth-gmail-verification.md)
+Revisit direct mailbox sync if users need email backfill or Mail setup prevents adoption. The existing `gmail.readonly` connection remains in code behind `gmail-capture-settings` but is parked with verification; do not re-enable it in production without lifting that park. Android email remains a future decision because notification previews provide variable coverage. [Gmail OAuth runbook](../../operations/google-oauth-gmail-verification.md)
 
 ## Review, privacy, and duplicate handling
 
