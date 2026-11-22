@@ -34,11 +34,10 @@ const featureRules = features.map(feature => ({
       'error',
       {
         patterns: [
-          'app/*',
-          'app/**',
-          '@/app',
-          '@/app/*',
-          '@/app/**',
+          {
+            group: ['app/*', 'app/**', '@/app', '@/app/*', '@/app/**'],
+            message: 'Features must not import Expo Router app routes.',
+          },
           {
             group: ['@/src/data/repositories', '@/src/data/repositories/**'],
             message:
@@ -46,12 +45,17 @@ const featureRules = features.map(feature => ({
           },
           ...features
             .filter(f => f !== feature)
-            .flatMap(otherFeature => [
-              `@/src/features/${otherFeature}/*`,
-              ...(crossFeatureAllowlist[feature]?.includes(otherFeature)
-                ? []
-                : [`@/src/features/${otherFeature}`]),
-            ]),
+            .map(otherFeature => ({
+              group: [
+                `@/src/features/${otherFeature}/*`,
+                ...(crossFeatureAllowlist[feature]?.includes(otherFeature)
+                  ? []
+                  : [`@/src/features/${otherFeature}`]),
+              ],
+              message: crossFeatureAllowlist[feature]?.includes(otherFeature)
+                ? 'Cross-feature imports must use the public barrel, not deep paths.'
+                : 'Cross-feature imports require an allowlist entry and the public barrel.',
+            })),
         ],
       },
     ],
