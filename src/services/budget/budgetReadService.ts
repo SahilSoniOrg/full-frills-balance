@@ -4,12 +4,14 @@ import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { toPlainBudget } from '@/src/data/models/Budget';
 import { toPlainBudgetScope } from '@/src/data/models/BudgetScope';
 import { accountObserveQueries } from '@/src/data/repositories/account';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { map, shareReplay, switchMap } from 'rxjs/operators';
+import type Transaction from '@/src/data/models/Transaction';
 import {
   calculateBudgetSpendFromTransactions,
   resolveLeafExpenseAccountIds,
@@ -271,6 +273,33 @@ export function observeBudgetUsage(
   );
 }
 
+/**
+ * Budget detail chart transactions for a date range, re-emitting when linked
+ * journals change observed columns (date/currency edits).
+ */
+export function observeBudgetChartTransactions(
+  workplaceId: WorkplaceId,
+  accountIds: AccountId[],
+  range: { startDate: number; endDate: number } | undefined,
+): Observable<Transaction[]> {
+  if (!range || accountIds.length === 0) return of([]);
+  return transactionQueryRepository
+    .observeBudgetTransactionsByJournalDateRange(
+      workplaceId,
+      accountIds,
+      range.startDate,
+      range.endDate,
+      ACTIVE_JOURNAL_STATUSES,
+    )
+    .pipe(
+      switchMap(transactions =>
+        journalObserveQueries
+          .observeByIds(workplaceId, [...new Set(transactions.map(tx => tx.journalId))])
+          .pipe(map(() => transactions)),
+      ),
+    );
+}
+
 function spendingPeriodLabel(startDate: number, intervalType?: string) {
   return dayjs(startDate).format(
     intervalType === 'DAILY' || intervalType === 'WEEKLY'
@@ -288,4 +317,5 @@ export const budgetReadService = {
   observeById: observeBudgetById,
   observeScopes: observeBudgetScopes,
   observeBudgetUsage,
+  observeChartTransactions: observeBudgetChartTransactions,
 };
