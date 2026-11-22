@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { TransactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -287,5 +288,55 @@ describe('TransactionInboxRepository integration', () => {
         preparedRecord,
       ),
     ).toThrow('Inbox record does not belong to the specified workplace');
+  });
+
+  describe('session staging', () => {
+    it('stages an email upsert and link inside one accounting write session', async () => {
+      const journalId = 'journal-session-email' as JournalId;
+      const emailPayload = {
+        workplaceId,
+        channel: 'email' as const,
+        deviceSourceId: 'email-session-stage-1',
+        senderAddress: 'bank@example.com',
+        inputDate: 1_700_000_000_000,
+        inputFingerprint: 'email-session-stage-1',
+        parseStatus: InboxParseStatus.PARSED,
+        parsedAmount: 42,
+        parsedCurrencyCode: 'USD',
+        parsedMerchant: 'Coffee',
+        direction: TransactionDirection.DEBIT,
+        processingStatus: InboxProcessingStatus.PENDING,
+        metadataJson: JSON.stringify({ emailSubject: 'Debit alert', gmailMessageId: 'msg-session' }),
+        firstSeenAt: 1_700_000_000_000,
+        lastScannedAt: 1_700_000_000_000,
+      };
+
+      await runAccountingWriteSession(async session => {
+        await repository.stageEmailInSession(session, emailPayload);
+      });
+
+      const staged = (await repository.findEmailCopies('email-session-stage-1')).find(
+        record => record.workplaceId === workplaceId,
+      );
+      expect(staged?.channel).toBe('email');
+      expect(staged?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(staged?.parsedMerchant).toBe('Coffee');
+      expect(staged?.linkedJournalId).toBeFalsy();
+
+      await runAccountingWriteSession(async session => {
+        await repository.stageLinkByIdInSession(
+          session,
+          workplaceId,
+          staged!.id,
+          journalId,
+          InboxProcessingStatus.IMPORTED,
+        );
+      });
+
+      const linked = await repository.find(workplaceId, staged!.id);
+      expect(linked?.linkedJournalId).toBe(journalId);
+      expect(linked?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+      expect(linked?.processedAt).toEqual(expect.any(Number));
+    });
   });
 });
