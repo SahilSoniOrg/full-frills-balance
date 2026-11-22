@@ -42,5 +42,5 @@ export function ModalHost({
 }
 
 const styles = StyleSheet.create({
-  inline: { ...StyleSheet.absoluteFillObject, zIndex: 9999 },
+  inline: { ...StyleSheet.absoluteFill, zIndex: 9999 },
 });
