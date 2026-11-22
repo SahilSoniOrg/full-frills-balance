@@ -1,7 +1,7 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { TransactionType } from '@/src/types/enums';
 
-import { checkJournal, JournalLineForCheck } from '@/src/domain/accounting/BalanceEffects';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { roundToPrecision } from '@/src/domain/money/money';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
 
@@ -14,28 +14,20 @@ interface JournalLineInput {
 
 export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
-  const forCheck: JournalLineForCheck[] = lines.map(line => {
-    const currency = line.accountCurrency?.trim().toUpperCase();
-    const rate = Number(line.exchangeRate);
-    const isForeignCurrencyLine = Boolean(
-      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
-    );
-    return {
-      amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
-      type: line.type,
-      exchangeRate: isForeignCurrencyLine ? rate : 1,
-    };
-  });
-  const hasForeignCurrencyLine = lines.some(line => {
-    const currency = line.accountCurrency?.trim().toUpperCase();
-    const rate = Number(line.exchangeRate);
-    return Boolean(
-      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
-    );
-  });
-  return checkJournal(forCheck, AppConfig.constants.precision, {
-    allowExchangeRateRounding: hasForeignCurrencyLine,
-  }).isValid;
+  const normalized = lines.map((line, index) => ({
+    id: String(index),
+    accountId: String(index),
+    amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
+    transactionType: line.type,
+    accountCurrency: line.accountCurrency?.trim().toUpperCase() || normalizedBaseCurrency,
+    exchangeRate: line.exchangeRate,
+  }));
+  const currencies = new Set([normalizedBaseCurrency, ...normalized.map(line => line.accountCurrency)]);
+  return evaluateJournalBalance({
+    lines: normalized,
+    journalCurrency: normalizedBaseCurrency,
+    precisionByCurrency: new Map([...currencies].map(code => [code, getCurrencyPrecision(code)])),
+  }).isBalanced;
 }
 
 export function getJournalLineBaseAmount(

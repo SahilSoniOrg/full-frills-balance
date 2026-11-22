@@ -65,19 +65,6 @@ export function balanceSign(
   }
 }
 
-function buildSignCase(sign: BalanceSign): string {
-  const clauses = Object.values(AccountType).flatMap(accountType =>
-    Object.values(TransactionType)
-      .filter(transactionType => balanceSign(accountType, transactionType) === sign)
-      .map(
-        transactionType =>
-          `WHEN (a.account_type = '${accountType}' AND t.transaction_type = '${transactionType}') THEN t.amount`,
-      ),
-  );
-
-  return `CASE\n      ${clauses.join('\n      ')}\n      ELSE 0\n    END`;
-}
-
 /**
  * The signed effect of one (accountType × transactionType) pair.
  */
@@ -164,12 +151,3 @@ export function checkJournal(
   };
 }
 
-/**
- * SQL CASE fragments derived from the same sign table as `effect`.
- */
-export function periodFlowSQL(): { increaseCase: string; decreaseCase: string } {
-  return {
-    increaseCase: buildSignCase(1),
-    decreaseCase: buildSignCase(-1),
-  };
-}
