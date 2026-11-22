@@ -10,6 +10,8 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import {
   journalHistoricalCaptureQueries,
   type HistoricalCategoryPattern,
+  type HistoricalEvidenceEntry,
+  type HistoricalEvidenceMark,
 } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import {
   categoryDefaultKey,
@@ -17,7 +19,12 @@ import {
 } from '@/src/domain/transaction-intelligence/categoryDefaults';
 import { createCaptureAccountIndex } from '@/src/domain/transaction-intelligence/captureAccountEligibility';
 
-export type { CaptureReviewItem };
+export type {
+  CaptureReviewItem,
+  HistoricalCategoryPattern,
+  HistoricalEvidenceEntry,
+  HistoricalEvidenceMark,
+};
 
 export class CategoryDefaultConflictError extends Error {
   constructor() {

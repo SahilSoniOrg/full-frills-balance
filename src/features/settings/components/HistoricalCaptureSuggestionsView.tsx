@@ -13,7 +13,7 @@ import {
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Stack, Box } from '@/src/design-system';
-import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
+import type { HistoricalCategoryPattern } from '@/src/services/transaction-intelligence/captureReviewService';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';

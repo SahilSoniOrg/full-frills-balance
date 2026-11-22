@@ -9,11 +9,11 @@ import {
   saveHistoricalCaptureCategoryDefault,
   setCaptureDescriptionDefault,
   setCaptureMerchantOpen,
+  type CaptureReviewItem,
+  type HistoricalCategoryPattern,
 } from '@/src/services/transaction-intelligence/captureReviewService';
 import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
 import { analytics } from '@/src/services/analytics';
-import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
-import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 

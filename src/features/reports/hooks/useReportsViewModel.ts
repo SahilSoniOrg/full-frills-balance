@@ -1,5 +1,4 @@
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   mapAccountBreakdownToLegendEntry,
@@ -9,6 +8,7 @@ import {
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
+import { reportService } from '@/src/services/report-service';
 import { CategoryBreakdown, ExpenseCategory } from '@/src/services/reports/reportSnapshot';
 import { calculateReportSummary } from '@/src/services/reports/reportSummary';
 import { formatCategoryLabel } from '@/src/services/report-visualizations/reportCategoryLabel';
@@ -160,10 +160,10 @@ function useReportFilters({
       let finalRange = range;
 
       if (filter.type === 'ALL_TIME') {
-        const earliest = await transactionQueryRepository.findEarliest(workplaceId);
-        const startTimestamp = earliest?.transactionDate ?? Date.now();
+        const earliest =
+          (await reportService.findEarliestTransactionDate(workplaceId)) ?? Date.now();
         finalRange = {
-          startDate: getStartOfDay(startTimestamp),
+          startDate: getStartOfDay(earliest),
           endDate: getEndOfDay(Date.now()),
           label: 'All Time',
         };

@@ -2,13 +2,13 @@ import { AppButton, AppText } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import type { Theme } from '@/src/constants/design-tokens';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import type {
-  HistoricalCategoryPattern,
-  HistoricalEvidenceEntry,
-} from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import { blendColors, isValidHexColor } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
-import { listHistoricalPatternEvidenceWindow } from '@/src/services/transaction-intelligence/captureReviewService';
+import {
+  listHistoricalPatternEvidenceWindow,
+  type HistoricalCategoryPattern,
+  type HistoricalEvidenceEntry,
+} from '@/src/services/transaction-intelligence/captureReviewService';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
 import dayjs, { type Dayjs } from 'dayjs';

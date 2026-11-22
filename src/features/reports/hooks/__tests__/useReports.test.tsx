@@ -1,10 +1,14 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { AppConfig } from '@/src/constants/app-config';
+import { reportService } from '@/src/services/report-service';
 import { useReports } from '../useReports';
 
-jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
-  journalQueryRepository: { findRecentActive: jest.fn() },
+jest.mock('@/src/services/report-service', () => ({
+  reportService: {
+    findLatestActiveJournalDate: jest.fn(),
+    getReportSnapshot: jest.fn(),
+    getIncomeVsExpense: jest.fn(),
+  },
 }));
 jest.mock('@/src/hooks/useObservable', () => ({
   useObservableWithEnrichment: (
@@ -37,7 +41,7 @@ jest.mock('@/src/services/accounts/accountQueries', () => {
   };
 });
 
-const journals = journalQueryRepository as jest.Mocked<typeof journalQueryRepository>;
+const reports = reportService as jest.Mocked<typeof reportService>;
 
 describe('useReports initial date range', () => {
   beforeEach(() => {
@@ -48,9 +52,7 @@ describe('useReports initial date range', () => {
     const latestJournalDate = new Date();
     latestJournalDate.setDate(latestJournalDate.getDate() - 90);
     latestJournalDate.setHours(14, 30, 0, 0);
-    journals.findRecentActive.mockResolvedValue([
-      { journalDate: latestJournalDate.getTime() } as never,
-    ] as never);
+    reports.findLatestActiveJournalDate.mockResolvedValue(latestJournalDate.getTime());
 
     const { result } = renderHook(() => useReports('workplace-1' as never, 'USD'));
 
@@ -69,11 +71,11 @@ describe('useReports initial date range', () => {
   });
 
   it('does not overwrite a range explicitly selected before the latest journal lookup resolves', async () => {
-    let resolveLookup!: (journals: never[]) => void;
-    journals.findRecentActive.mockReturnValue(
+    let resolveLookup!: (date: number | null) => void;
+    reports.findLatestActiveJournalDate.mockReturnValue(
       new Promise(resolve => {
-        resolveLookup = resolve as (journals: never[]) => void;
-      }) as never,
+        resolveLookup = resolve;
+      }),
     );
 
     const { result } = renderHook(() => useReports('workplace-1' as never, 'USD'));
@@ -86,7 +88,7 @@ describe('useReports initial date range', () => {
       }),
     );
     await act(async () => {
-      resolveLookup([{ journalDate: Date.now() - 90 * 24 * 60 * 60 * 1000 }] as never[]);
+      resolveLookup(Date.now() - 90 * 24 * 60 * 60 * 1000);
     });
 
     expect(result.current.dateRange).toEqual(selectedRange);

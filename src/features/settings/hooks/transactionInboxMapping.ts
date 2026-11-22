@@ -1,6 +1,6 @@
 import { parseJSONRecord } from '@/src/utils/serialization';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { accountQueryRepository } from '@/src/data/repositories/account';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { journalReadService } from '@/src/services/journal/journalReadService';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionDuplicateCandidate, TransactionInboxItem } from '@/src/types/domainJournal';
@@ -17,11 +17,11 @@ export async function enrichTransactionInboxRecords(
       journalIds.add(record.duplicateJournalId);
     }
   }
-  const journals = await journalQueryRepository.findWithDeletedByIds(
+  const journals = await journalReadService.findWithDeletedByIds(
     workplaceId,
     Array.from(journalIds),
   );
-  const recognizedAccounts = await accountQueryRepository.findAllByIds(workplaceId, [
+  const recognizedAccounts = await accountQueries.findAllByIds(workplaceId, [
     ...new Set(records.flatMap(record => record.recognition?.accountIds ?? [])),
   ]);
   const recognizedNamesById = new Map(

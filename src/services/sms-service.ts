@@ -72,6 +72,10 @@ class SmsService {
     return record ? toPlainInboxRecord(record) : null;
   }
 
+  async findEmail(workplaceId: WorkplaceId, id: string) {
+    return transactionInboxRepository.findEmail(workplaceId, id);
+  }
+
   observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
     return transactionInboxRepository
       .observeInbox(workplaceId, limit, this.getProcessingStatusesForFilter(filter?.status))

@@ -1,7 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { Animation } from '@/src/constants';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
   observeWorkplaceActiveTransactionCount,
@@ -47,19 +46,19 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     let isCurrent = true;
     const selectionVersion = rangeSelectionVersion.current;
 
-    void journalQueryRepository
-      .findRecentActive(workplaceId, 1)
-      .then(([latestJournal]) => {
+    void reportService
+      .findLatestActiveJournalDate(workplaceId)
+      .then(latestJournalDate => {
         if (
           !isCurrent ||
           rangeSelectionVersion.current !== selectionVersion ||
-          !latestJournal ||
-          !shouldShiftInitialReportRange(initialDateRange.current, latestJournal.journalDate)
+          latestJournalDate == null ||
+          !shouldShiftInitialReportRange(initialDateRange.current, latestJournalDate)
         ) {
           return;
         }
 
-        const shiftedRange = rangeEndingOnLatestActivity(latestJournal.journalDate);
+        const shiftedRange = rangeEndingOnLatestActivity(latestJournalDate);
 
         setDateRange(shiftedRange);
         setPeriodFilter({
