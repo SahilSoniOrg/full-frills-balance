@@ -1,16 +1,51 @@
 import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
-import { TransactionType } from '@/src/types/enums';
-import { fromMinorUnits } from '@/src/domain/money/money';
+import { Money, fromMinorUnits } from '@/src/domain/money/money';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
+import { TransactionType } from '@/src/types/enums';
+import { asAccountId, type AccountId } from '@/src/types/ids';
 import { convertJournalCurrencyAmount, resolveJournalFxRate } from './journalFx';
 
 export interface JournalBalanceLineInput {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   accountCurrency?: string;
   amount: string | number;
   exchangeRate?: string | number;
   transactionType: TransactionType;
+}
+
+/** Untyped edge input before account IDs are branded into {@link JournalBalanceLineInput}. */
+export type JournalBalanceLineBoundaryInput = {
+  id: string;
+  accountId: string;
+  accountCurrency?: string;
+  amount: string | number | Money;
+  exchangeRate?: string | number;
+  transactionType: TransactionType;
+};
+
+/** Brand account IDs (and unwrap domain Money) at untyped boundaries into evaluator input. */
+export function toJournalBalanceLineInput(
+  input: JournalBalanceLineBoundaryInput,
+): JournalBalanceLineInput {
+  if (input.amount instanceof Money) {
+    return {
+      id: input.id,
+      accountId: asAccountId(input.accountId),
+      accountCurrency: input.accountCurrency ?? input.amount.currencyCode,
+      amount: input.amount.amount,
+      exchangeRate: input.exchangeRate,
+      transactionType: input.transactionType,
+    };
+  }
+  return {
+    id: input.id,
+    accountId: asAccountId(input.accountId),
+    accountCurrency: input.accountCurrency,
+    amount: input.amount,
+    exchangeRate: input.exchangeRate,
+    transactionType: input.transactionType,
+  };
 }
 
 export type JournalBalanceIssueCode =
@@ -33,7 +68,7 @@ export interface JournalBalanceIssue {
 
 export interface EvaluatedJournalBalanceLine {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   accountCurrency: string;
   nativePrecision: number;
   transactionType: TransactionType;

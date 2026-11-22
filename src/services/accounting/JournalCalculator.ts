@@ -1,4 +1,5 @@
 import { TransactionType } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
 
 import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
@@ -16,7 +17,7 @@ export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: strin
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
   const normalized = lines.map((line, index) => ({
     id: String(index),
-    accountId: String(index),
+    accountId: asAccountId(String(index)),
     amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
     transactionType: line.type,
     accountCurrency: line.accountCurrency?.trim().toUpperCase() || normalizedBaseCurrency,

@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { TransactionType } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
 
 import { checkJournal, JournalLineForCheck } from '@/src/domain/accounting/BalanceEffects';
 import {
@@ -330,7 +331,7 @@ function runEvaluator(fixture: BalanceFixture): JournalBalanceEvaluation {
     precisionByCurrency: precisionMapFor(fixture),
     lines: fixture.lines.map(line => ({
       id: line.id,
-      accountId: line.accountId ?? line.id,
+      accountId: asAccountId(line.accountId ?? line.id),
       accountCurrency: line.accountCurrency,
       amount: line.amount,
       exchangeRate: line.exchangeRate,

@@ -16,6 +16,7 @@ import type {
 import { resolveJournalFxRate } from '@/src/domain/accounting/journalFx';
 import { JournalFxRateEditor } from '@/src/features/journal/entry/components/JournalFxRateEditor';
 import type { TransactionType } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { formatRoundedAmount, fromMinorUnits } from '@/src/domain/money/money';
 import { useMemo, useState } from 'react';
@@ -271,7 +272,7 @@ export function JournalBalanceLineEditor({
         precisionByCurrency,
         lines: lines.map((line, index) => ({
           id: line.id,
-          accountId: line.accountId,
+          accountId: asAccountId(line.accountId),
           accountCurrency: line.accountCurrency,
           amount: edits[index]?.amount ?? String(line.amount),
           exchangeRate: edits[index]?.exchangeRate,

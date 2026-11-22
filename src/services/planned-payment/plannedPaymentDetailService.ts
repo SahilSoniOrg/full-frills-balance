@@ -1,6 +1,6 @@
 import { toPlainJournal } from '@/src/data/models/Journal';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
-import type { Money } from '@/src/types/domainReadModels';
+import type { MoneyAmount } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import type { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { PlainJournal, PlainPlannedPayment } from '@/src/types/plainDtos';
@@ -17,11 +17,11 @@ export interface PlannedPaymentActivitySummary {
   pendingCount: number;
   pausedCount: number;
   overdueCount: number;
-  recordedTotals: Money[];
+  recordedTotals: MoneyAmount[];
   lastRecorded?: PlainJournal;
 }
 
-export interface PlannedPaymentNextOccurrence extends Money {
+export interface PlannedPaymentNextOccurrence extends MoneyAmount {
   date: number;
   journalId?: JournalId;
 }
