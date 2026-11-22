@@ -9,7 +9,8 @@ import {
   ListGroup,
 } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { useEffect, useRef, useState } from 'react';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
+import { useState } from 'react';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -28,9 +29,6 @@ import {
   signColorKey,
   signPrefix,
 } from '@/src/domain/accounting/presentationPolicy';
-
-/** Android Modal does not fire onDismiss; wait for the More sheet to finish closing. */
-const MENU_CLOSE_BEFORE_ATTACH_MS = Platform.OS === 'android' ? 320 : 0;
 
 interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
@@ -66,20 +64,7 @@ export function TransactionInboxItemCardView({
   const privateMode = useEffectivePrivacyMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const pendingAfterMenuClose = useRef<(() => void) | null>(null);
-
-  const flushPendingAfterMenuClose = () => {
-    const next = pendingAfterMenuClose.current;
-    if (!next) return;
-    pendingAfterMenuClose.current = null;
-    next();
-  };
-
-  useEffect(() => {
-    if (menuOpen || !pendingAfterMenuClose.current) return;
-    const timer = setTimeout(flushPendingAfterMenuClose, MENU_CLOSE_BEFORE_ATTACH_MS);
-    return () => clearTimeout(timer);
-  }, [menuOpen]);
+  const afterDismiss = useAfterDismiss();
 
   const channelIcon =
     item.channel === 'voice' ? Icon.Mic : item.channel === 'email' ? Icon.Mail : Icon.MessageSquare;
@@ -104,28 +89,17 @@ export function TransactionInboxItemCardView({
     : item.channel === 'voice'
       ? transactionCaptureStrings.inboxSpokenDraft
       : item.parsedMerchant || item.senderAddress || transactionCaptureStrings.inboxUnknownOrigin;
-  const { primary, more, split } = useInboxItemActions(
-    item,
-    {
-      handleDismiss,
-      handleUndismiss,
-      handleImport,
-      onCompareDuplicate,
-      // Queue attach until More closes so Android does not stack native modals.
-      onAttachToJournal: attachItem => {
-        pendingAfterMenuClose.current = () => onAttachToJournal(attachItem);
-        setMenuOpen(false);
-      },
-      onDetachFromJournal: detachItem => {
-        pendingAfterMenuClose.current = () => onDetachFromJournal(detachItem);
-        setMenuOpen(false);
-      },
-      onOpenJournal,
-      onSplitImport,
-      onEditReparse,
-    },
-    { onBeforeAction: () => setMenuOpen(false) },
-  );
+  const { primary, more, split } = useInboxItemActions(item, {
+    handleDismiss,
+    handleUndismiss,
+    handleImport,
+    onCompareDuplicate,
+    onAttachToJournal,
+    onDetachFromJournal,
+    onOpenJournal,
+    onSplitImport,
+    onEditReparse,
+  });
 
   return (
     <AppCard style={styles.card} testID={testID}>
@@ -326,12 +300,24 @@ export function TransactionInboxItemCardView({
         visible={menuOpen}
         title={title}
         onClose={() => setMenuOpen(false)}
-        onDismiss={flushPendingAfterMenuClose}
+        onDismiss={afterDismiss.onDismiss}
         position="bottomSheet"
         fixedHeight={false}
         scrollable={false}
       >
-        <ListGroup items={more} />
+        <ListGroup
+          items={more.map(action => {
+            const { onPress } = action;
+            if (!onPress) return action;
+            return {
+              ...action,
+              onPress: () => {
+                afterDismiss.run(onPress);
+                setMenuOpen(false);
+              },
+            };
+          })}
+        />
       </ModalSurface>
     </AppCard>
   );

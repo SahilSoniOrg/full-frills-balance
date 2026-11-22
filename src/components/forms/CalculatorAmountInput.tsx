@@ -212,7 +212,6 @@ function AmountField({
   const [isFocused, setIsFocused] = useState(false);
   const calculatorDoneRef = useRef(onCalculatorDone);
   const pendingDoneRef = useRef<(() => void) | null>(null);
-  const dismissFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHero = variant === 'hero';
   const isCompact = variant === 'compact';
   const hasAmount = Boolean(value && parseFloat(value) > 0);
@@ -228,21 +227,10 @@ function AmountField({
     return () => clearTimeout(focusTimer);
   }, [autoFocus, editable, inputRef]);
 
-  useEffect(
-    () => () => {
-      if (dismissFallbackTimerRef.current) clearTimeout(dismissFallbackTimerRef.current);
-    },
-    [],
-  );
-
   const finishCalculatorHandoff = useCallback(() => {
     const onDone = pendingDoneRef.current;
     if (!onDone) return;
     pendingDoneRef.current = null;
-    if (dismissFallbackTimerRef.current) {
-      clearTimeout(dismissFallbackTimerRef.current);
-      dismissFallbackTimerRef.current = null;
-    }
     onDone();
   }, []);
 
@@ -410,7 +398,6 @@ function AmountField({
             handleAmountChange(amount);
             pendingDoneRef.current = calculatorDoneRef.current ?? null;
             setCalculatorVisible(false);
-            dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
           }}
         />
       )}

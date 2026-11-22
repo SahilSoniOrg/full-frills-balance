@@ -154,8 +154,8 @@ function EarlyBootstrap() {
           logger.warn('[EarlyBootstrap] Snapshot cleanup retry remains pending');
       })
       .catch(error => logger.warn('[EarlyBootstrap] Projection cleanup retry failed', { error }));
-    void shortcutSmsIntakeService.purgeRetired().catch(error => {
-      logger.warn('[EarlyBootstrap] Retired Shortcut SMS cleanup failed', { error });
+    void shortcutSmsIntakeService.recoverQueue().catch(error => {
+      logger.warn('[EarlyBootstrap] Shortcut SMS queue recovery failed', { error });
     });
   }, []);
   return null;

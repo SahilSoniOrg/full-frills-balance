@@ -19,8 +19,16 @@ public final class ExpoShortcutSmsModule: Module {
       ["firstReceivedAt": try ShortcutSmsQueue.firstReceivedAt() as Any? ?? NSNull()]
     }
 
-    AsyncFunction("invalidate") { () throws in
-      try ShortcutSmsQueue.invalidate()
+    AsyncFunction("stageReset") { () throws in
+      try ShortcutSmsQueue.stageReset()
+    }
+
+    AsyncFunction("hasStagedReset") { () throws -> Bool in
+      try ShortcutSmsQueue.hasStagedReset()
+    }
+
+    AsyncFunction("finishReset") { (committed: Bool) throws in
+      try ShortcutSmsQueue.finishReset(committed: committed)
     }
 
     AsyncFunction("purgeRetired") { () throws in

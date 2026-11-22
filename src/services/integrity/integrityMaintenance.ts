@@ -101,18 +101,15 @@ export async function resetDatabase(): Promise<{
   logger.warn('[IntegrityMaintenance] STARTING FACTORY RESET...');
   const warnings: string[] = [];
   try {
-    await shortcutSmsIntakeService.pauseDuring(async () => {
-      await shortcutSmsIntakeService.invalidate();
-      await databaseRepository.resetDatabase();
-      try {
-        await shortcutSmsIntakeService.purgeRetired();
-      } catch (error) {
-        logger.warn('[IntegrityMaintenance] Shortcut SMS cleanup failed after reset', {
-          error,
-        });
-        warnings.push('Shortcut SMS queue cleanup');
-      }
-    });
+    const result = await shortcutSmsIntakeService.resetWithDatabase(() =>
+      databaseRepository.resetDatabase(),
+    );
+    if (result) {
+      logger.warn('[IntegrityMaintenance] Shortcut SMS cleanup failed after reset', {
+        error: result.cleanupError,
+      });
+      warnings.push('Shortcut SMS queue cleanup');
+    }
   } catch (error) {
     logger.error('[IntegrityMaintenance] CRITICAL: Factory reset failed:', error);
     throw error;

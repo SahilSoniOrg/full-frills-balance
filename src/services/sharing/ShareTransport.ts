@@ -1,10 +1,12 @@
 import { toByteArray } from 'base64-js';
+import { File, FileMode } from 'expo-file-system';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 import { confirm } from '@/src/services/feedback/alerts';
 import { files } from '@/src/services/files/files';
 import { analytics } from '@/src/services/analytics';
+import { logger } from '@/src/services/observability/logger';
 import {
   ShareFormat,
   type ShareArtifact,
@@ -28,6 +30,8 @@ const FORMATS = {
   [ShareFormat.MARKDOWN]: { extension: 'md', mime: 'text/markdown' },
   [ShareFormat.ZIP]: { extension: 'zip', mime: 'application/zip' },
 };
+
+const ANDROID_COPY_CHUNK_BYTES = 256 * 1024;
 
 type BrowserWriter = {
   write(content: string): Promise<void>;
@@ -208,7 +212,7 @@ export class PlatformShareTransport implements ShareTransport {
       while (true) {
         context.ensureActive();
         try {
-          if (await this.saveAndroidFile(artifact, uri, meta, context)) break;
+          if (await this.saveAndroidFile(uri, meta, context)) break;
         } catch (error) {
           context.ensureActive();
           const choice = await context.present('awaiting-user', () =>
@@ -267,7 +271,6 @@ export class PlatformShareTransport implements ShareTransport {
 
   /** Returns false only when folder selection was declined. */
   private async saveAndroidFile(
-    artifact: Exclude<ShareArtifact, { kind: 'destination' | 'blob' }>,
     uri: string,
     meta: ReturnType<typeof metadata>,
     context: ShareDeliveryContext,
@@ -280,19 +283,41 @@ export class PlatformShareTransport implements ShareTransport {
     if (!permission.granted) return false;
 
     context.reportProgress('Writing to destination...');
-    const destination = await FileSystem.StorageAccessFramework.createFileAsync(
-      permission.directoryUri,
-      meta.filename,
-      meta.mimeType,
+    const destination = new File(
+      await FileSystem.StorageAccessFramework.createFileAsync(
+        permission.directoryUri,
+        meta.filename,
+        meta.mimeType,
+      ),
     );
-    context.ensureActive();
-    const content = artifact.kind === 'file' ? await files.readBase64(uri) : artifact.content;
-    context.ensureActive();
-    await files.writeContent(
-      destination,
-      content,
-      artifact.kind === 'file' || artifact.kind === 'base64' ? 'base64' : 'utf8',
-    );
-    return true;
+    try {
+      context.ensureActive();
+      const input = new File(uri).open(FileMode.ReadOnly);
+      try {
+        const output = destination.open(FileMode.WriteOnly);
+        try {
+          while (true) {
+            context.ensureActive();
+            const chunk = await input.readBytes(ANDROID_COPY_CHUNK_BYTES);
+            if (chunk.length === 0) break;
+            context.ensureActive();
+            await output.writeBytes(chunk);
+          }
+        } finally {
+          output.close();
+        }
+      } finally {
+        input.close();
+      }
+      context.ensureActive();
+      return true;
+    } catch (error) {
+      try {
+        destination.delete();
+      } catch (cleanupError) {
+        logger.warn('[Sharing] Could not remove incomplete Android export', { cleanupError });
+      }
+      throw error;
+    }
   }
 }

@@ -2,10 +2,10 @@ import { Icon, AppCard, AppText, IconButton } from '@/src/components/core';
 import { AppConfig, ChromeMotion, Shape, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
+import { ModalHost } from './ModalHost';
 import { MotiView } from 'moti';
 import React from 'react';
 import {
-  Modal,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -37,7 +37,7 @@ interface ModalSurfaceProps {
   /** Native Modal animation for overlay enter/exit. Moti owns the card spring. */
   animationType?: 'fade' | 'slide' | 'none';
   contentStyle?: StyleProp<ViewStyle>;
-  /** Fires after the native modal finish-dismiss animation (iOS). */
+  /** Fires once the surface has closed and a follow-up can be presented. */
   onDismiss?: () => void;
   keyboardAvoiding?: boolean;
 }
@@ -183,23 +183,18 @@ export function ModalSurface({
     </Overlay>
   );
 
-  if (useNativeModal) {
-    return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType={reduceMotion ? 'none' : animationType}
-        onRequestClose={onRequestClose ?? onClose}
-        onDismiss={onDismiss}
-      >
-        {content}
-      </Modal>
-    );
-  }
-
-  if (!visible) return null;
-
-  return <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}>{content}</View>;
+  return (
+    <ModalHost
+      visible={visible}
+      useNativeModal={useNativeModal}
+      transparent
+      animationType={reduceMotion ? 'none' : animationType}
+      onRequestClose={onRequestClose ?? onClose}
+      onDismiss={onDismiss}
+    >
+      {content}
+    </ModalHost>
+  );
 }
 
 const styles = StyleSheet.create({

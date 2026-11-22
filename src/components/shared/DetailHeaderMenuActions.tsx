@@ -70,8 +70,8 @@ export function DetailHeaderMenuActions({
               disabled={action.disabled}
               buttonStyle={{ minHeight: Size.touchTarget, alignItems: 'stretch' }}
               onPress={() => {
-                setOpen(false);
                 afterDismiss.run(action.onPress);
+                setOpen(false);
               }}
             >
               <View style={styles.actionRow}>

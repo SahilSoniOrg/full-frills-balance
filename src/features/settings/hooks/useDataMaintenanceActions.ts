@@ -1,10 +1,10 @@
 import { RestartOptions } from '@/src/contexts/app-shell/AppRestartProvider';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { AppConfig } from '@/src/constants';
 import { analytics } from '@/src/services/analytics';
 import { alert, confirm, toast } from '@/src/services/feedback/alerts';
 import { logger } from '@/src/services/observability/logger';
 import { useCallback, useState } from 'react';
-import { Platform } from 'react-native';
 
 interface IntegrityResult {
   totalAccounts: number;
@@ -45,6 +45,7 @@ export function useDataMaintenanceActions({
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedingProgress, setSeedingProgress] = useState(0);
   const [seedingProgressMessage, setSeedingProgressMessage] = useState('');
+  const afterIntegrityDismiss = useAfterDismiss();
 
   const onFixIntegrity = useCallback(async () => {
     setIntegrityProgress(0);
@@ -55,23 +56,24 @@ export function useDataMaintenanceActions({
         setIntegrityProgressMessage(message);
         setIntegrityProgress(progress);
       });
-      setIsMaintenanceMode(false);
-      if (Platform.OS === 'ios') await new Promise(resolve => setTimeout(resolve, 500));
-      alert.show({
-        title: 'Integrity Check Complete',
-        message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`,
-      });
+      afterIntegrityDismiss.run(() =>
+        alert.show({
+          title: 'Integrity Check Complete',
+          message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`,
+        }),
+      );
       analytics.trackFeatureUsage('data_management', 'integrity_check', {
         accounts_checked: result.totalAccounts,
         issues_found: result.discrepanciesFound,
         repairs_successful: result.repairsSuccessful,
       });
     } catch (error) {
-      setIsMaintenanceMode(false);
       logger.error('[onFixIntegrity] Check failed', error);
       toast.error('Integrity check failed');
+    } finally {
+      setIsMaintenanceMode(false);
     }
-  }, [runIntegrityCheck]);
+  }, [afterIntegrityDismiss, runIntegrityCheck]);
 
   const onAuditJournalBalances = useCallback(async () => {
     setIsAuditingBalances(true);
@@ -205,6 +207,7 @@ export function useDataMaintenanceActions({
     isCleaning,
     isResetting,
     onFixIntegrity,
+    onIntegrityOverlayDismiss: afterIntegrityDismiss.onDismiss,
     integrityProgress,
     integrityProgressMessage:
       integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait,

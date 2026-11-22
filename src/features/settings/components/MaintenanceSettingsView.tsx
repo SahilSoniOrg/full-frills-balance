@@ -124,6 +124,7 @@ function MaintenanceSettingsView() {
 
       <SettingsMaintenanceOverlay
         isVisible={vm.isMaintenanceMode}
+        onDismiss={vm.onIntegrityOverlayDismiss}
         title={AppConfig.strings.settings.maintenance.integrityTitle}
         progress={vm.integrityProgress}
         progressMessage={vm.integrityProgressMessage}

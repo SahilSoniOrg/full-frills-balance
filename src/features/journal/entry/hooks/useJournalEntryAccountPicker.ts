@@ -72,31 +72,15 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
   const autoAdvanceRef = useRef(false);
   const pendingNextLineIdRef = useRef<string | null>(null);
-  const nextPickerFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearNextPickerFallback = useCallback(() => {
-    if (nextPickerFallbackTimerRef.current) {
-      clearTimeout(nextPickerFallbackTimerRef.current);
-      nextPickerFallbackTimerRef.current = null;
-    }
-  }, []);
 
   const openPendingNextPicker = useCallback(() => {
     const nextLineId = pendingNextLineIdRef.current;
     if (!nextLineId) return;
 
     pendingNextLineIdRef.current = null;
-    clearNextPickerFallback();
     setActiveLineId(nextLineId);
     setShowAccountPicker(true);
-  }, [clearNextPickerFallback]);
-
-  useEffect(
-    () => () => {
-      clearNextPickerFallback();
-    },
-    [clearNextPickerFallback],
-  );
+  }, []);
 
   const navigation = useNavigation<{ setParams: (params: AccountCreationResultParams) => void }>();
   const { createdAccountId, createdAccountTarget } =
@@ -129,6 +113,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     (idOrRole: string, requestOptions?: JournalEntryAccountPickerRequestOptions) => {
       const lineId = activeMode === 'allocation' ? idOrRole : editor.resolveActiveLineId(idOrRole);
       autoAdvanceRef.current = activeMode === 'basic' && requestOptions?.autoAdvance === true;
+      pendingNextLineIdRef.current = null;
       setActiveLineId(lineId);
       setShowAccountPicker(true);
     },
@@ -143,9 +128,8 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   const onCloseAccountPicker = useCallback(() => {
     autoAdvanceRef.current = false;
     pendingNextLineIdRef.current = null;
-    clearNextPickerFallback();
     closeAccountPicker();
-  }, [clearNextPickerFallback, closeAccountPicker]);
+  }, [closeAccountPicker]);
 
   const onAccountSelected = useCallback(
     (accountId: AccountId) => {
@@ -163,24 +147,8 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       autoAdvanceRef.current = false;
       pendingNextLineIdRef.current = nextLineId ?? null;
       closeAccountPicker();
-
-      if (nextLineId) {
-        // Native iOS modals cannot present a second modal until the first one
-        // has finished dismissing. onDismiss is the primary handoff; this is
-        // a fallback for test/web modal implementations that omit it.
-        clearNextPickerFallback();
-        nextPickerFallbackTimerRef.current = setTimeout(openPendingNextPicker, 450);
-      }
     },
-    [
-      activeLineId,
-      activeMode,
-      applyAccountToActiveLine,
-      clearNextPickerFallback,
-      closeAccountPicker,
-      editor,
-      openPendingNextPicker,
-    ],
+    [activeLineId, activeMode, applyAccountToActiveLine, closeAccountPicker, editor],
   );
 
   const navigateToAccountForm = useCallback(

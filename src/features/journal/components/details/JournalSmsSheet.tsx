@@ -181,8 +181,8 @@ export function JournalSmsSheet({
               variant: 'destructive',
               testID: 'journal-sms-detach',
               onPress: () => {
-                onClose();
                 afterDismiss.run(() => onDetachSms(footerDetachId));
+                onClose();
               },
             }
           : undefined
@@ -193,8 +193,8 @@ export function JournalSmsSheet({
               label: strings.inbox,
               variant: 'outline',
               onPress: () => {
-                onClose();
                 afterDismiss.run(onOpenSmsInbox);
+                onClose();
               },
             }
           : undefined
@@ -208,8 +208,8 @@ export function JournalSmsSheet({
             onDetach={
               detachable.length > 1 && sms.inboxRecordId && onDetachSms
                 ? () => {
-                    onClose();
                     afterDismiss.run(() => onDetachSms(sms.inboxRecordId!));
+                    onClose();
                   }
                 : undefined
             }

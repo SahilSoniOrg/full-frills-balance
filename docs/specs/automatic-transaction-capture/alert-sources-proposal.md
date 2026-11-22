@@ -32,7 +32,7 @@ Revisit direct mailbox sync if users need email backfill or Mail setup prevents 
 - Parse locally. Apply the existing SMS ignore and review rules to Shortcut texts, including incomplete alerts. Remove temporary delivery files after handling them. Keep alert contents out of analytics and crash reporting. Document what the app retains and how to disable each source.
 - Use stable source identity where available to avoid creating a second draft on replay. An SMS, email, and notification can describe the same movement. Use existing reference and duplicate checks where the evidence supports them. Flag ambiguous matches for review and preserve distinct purchases that happen to share an amount or merchant. [Capture and provenance rules](spec.md) · [Shared extraction used by Gmail](../../../src/services/email/parseGmailTransaction.ts)
 - For Shortcut SMS, the original receipt timestamp helps identify repeated deliveries. When Shortcuts omits it, a replay beyond the existing redelivery window can create another review item. Explain this during setup and require manual confirmation before either item can affect the books.
-- Factory Reset retires the active Shortcuts queue before resetting the database. Intake reads only the new queue. If deletion of retired files fails, retry cleanup at startup, including before a new Workplace exists.
+- Factory Reset stages a new Shortcuts queue and activates it when the database reset commits. If reset fails, the previous queue stays active. Startup reconciles interrupted resets and retries deletion of retired files, including before a new Workplace exists.
 
 ## Rollout criteria
 

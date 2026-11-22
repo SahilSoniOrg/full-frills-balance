@@ -5,7 +5,9 @@ declare class ExpoShortcutSmsModule extends NativeModule {
   getPending(): Promise<SmsMessage[]>;
   acknowledge(id: string): Promise<void>;
   getStatus(): Promise<{ firstReceivedAt: number | null }>;
-  invalidate(): Promise<void>;
+  stageReset(): Promise<void>;
+  hasStagedReset(): Promise<boolean>;
+  finishReset(committed: boolean): Promise<void>;
   purgeRetired(): Promise<void>;
 }
 

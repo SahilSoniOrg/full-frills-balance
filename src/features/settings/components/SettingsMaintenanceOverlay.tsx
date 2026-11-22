@@ -1,9 +1,10 @@
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
+import { ModalHost } from '@/src/components/overlays/ModalHost';
 import { Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Modal, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface SettingsMaintenanceOverlayProps {
   isVisible: boolean;
@@ -12,6 +13,7 @@ interface SettingsMaintenanceOverlayProps {
   progressMessage?: string;
   hint?: string;
   icon?: IconName;
+  onDismiss?: () => void;
 }
 
 export function SettingsMaintenanceOverlay({
@@ -21,11 +23,19 @@ export function SettingsMaintenanceOverlay({
   progressMessage,
   hint,
   icon = Icon.Document,
+  onDismiss,
 }: SettingsMaintenanceOverlayProps) {
   const { theme } = useTheme();
 
   return (
-    <Modal visible={isVisible} transparent animationType="fade" statusBarTranslucent>
+    <ModalHost
+      visible={isVisible}
+      useNativeModal={process.env.NODE_ENV !== 'test'}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onDismiss={onDismiss}
+    >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
           <View style={styles.modalIconRow}>
@@ -50,7 +60,7 @@ export function SettingsMaintenanceOverlay({
           )}
         </View>
       </View>
-    </Modal>
+    </ModalHost>
   );
 }
 

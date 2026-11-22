@@ -31,16 +31,22 @@ public enum ShortcutSmsQueue {
   }
 
   private static var generationFile: URL { root.appendingPathComponent("generation") }
+  private static var stagedGenerationFile: URL { root.appendingPathComponent("staged-generation") }
+
+  private static func readGeneration(at url: URL) throws -> String? {
+    do {
+      let generation = try String(contentsOf: url, encoding: .utf8)
+      guard UUID(uuidString: generation) != nil else { throw QueueError.invalidGeneration }
+      return generation
+    } catch where isMissing(error) {
+      return nil
+    }
+  }
 
   private static func activeDirectory() throws -> URL {
-    do {
-      let generation = try String(contentsOf: generationFile, encoding: .utf8)
-      guard UUID(uuidString: generation) != nil else { throw QueueError.invalidGeneration }
-      return root.appendingPathComponent(generationPrefix + generation, isDirectory: true)
-    } catch where isMissing(error) {
-      // Preserve pending deliveries from installs that predate queue generations.
-      return root
-    }
+    // Preserve pending deliveries from installs that predate queue generations.
+    guard let generation = try readGeneration(at: generationFile) else { return root }
+    return root.appendingPathComponent(generationPrefix + generation, isDirectory: true)
   }
 
   private static func isMissing(_ error: Error) -> Bool {
@@ -114,11 +120,22 @@ public enum ShortcutSmsQueue {
     return date * 1000
   }
 
-  public static func invalidate() throws {
+  public static func stageReset() throws {
     try prepareDirectory(root)
-    // Publish the new generation before the database reset. Intents that already
-    // resolved their directory can only write to the retired generation.
-    try Data(UUID().uuidString.utf8).write(to: generationFile, options: protectedWrite)
+    try Data(UUID().uuidString.utf8).write(to: stagedGenerationFile, options: protectedWrite)
+  }
+
+  public static func hasStagedReset() throws -> Bool {
+    try readGeneration(at: stagedGenerationFile) != nil
+  }
+
+  public static func finishReset(committed: Bool) throws {
+    guard let generation = try readGeneration(at: stagedGenerationFile) else { return }
+    if committed {
+      // Replaying finalization after an interruption keeps the same generation.
+      try Data(generation.utf8).write(to: generationFile, options: protectedWrite)
+    }
+    try removeIfPresent(stagedGenerationFile)
   }
 
   public static func purgeRetired() throws {

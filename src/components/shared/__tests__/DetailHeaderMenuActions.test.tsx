@@ -3,6 +3,9 @@ import { DetailHeaderMenuActions } from '../DetailHeaderMenuActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Icon, IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
+import { Modal, Platform } from 'react-native';
+
+let mockUseNativeModal = false;
 
 it('puts inline actions first and the privacy toggle last, at header icon size', () => {
   const screen = render(
@@ -38,7 +41,7 @@ jest.mock('@/src/components/overlays/ModalSurface', () => {
   >('@/src/components/overlays/ModalSurface');
   return {
     ModalSurface: (props: Parameters<typeof ActualModalSurface>[0]) => (
-      <ActualModalSurface {...props} useNativeModal={false} />
+      <ActualModalSurface {...props} useNativeModal={mockUseNativeModal} />
     ),
   };
 });
@@ -77,8 +80,7 @@ it('omits the overflow button when there is nothing to put in it', () => {
 });
 
 it('waits for the native iOS sheet to dismiss before invoking an action, once only', () => {
-  const previousEnvironment = process.env.NODE_ENV;
-  process.env.NODE_ENV = 'production';
+  mockUseNativeModal = true;
   try {
     const edit = jest.fn();
     const screen = render(<DetailHeaderMenuActions actions={[{ label: 'Edit', onPress: edit }]} />);
@@ -87,12 +89,30 @@ it('waits for the native iOS sheet to dismiss before invoking an action, once on
     expect(edit).not.toHaveBeenCalled();
     const sheet = screen.UNSAFE_getByType(ModalSurface);
     expect(sheet.props.visible).toBe(false);
-    act(() => sheet.props.onDismiss());
+    const host = screen.UNSAFE_getByType(Modal);
+    act(() => host.props.onDismiss?.());
     expect(edit).toHaveBeenCalledTimes(1);
-    act(() => sheet.props.onDismiss());
+    act(() => host.props.onDismiss?.());
     expect(edit).toHaveBeenCalledTimes(1);
   } finally {
-    process.env.NODE_ENV = previousEnvironment;
+    mockUseNativeModal = false;
+  }
+});
+
+it('continues after hiding the Android window without a native dismiss event', () => {
+  const platform = jest.replaceProperty(Platform, 'OS', 'android');
+  mockUseNativeModal = true;
+  try {
+    const edit = jest.fn();
+    const screen = render(<DetailHeaderMenuActions actions={[{ label: 'Edit', onPress: edit }]} />);
+    fireEvent.press(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe('none');
+    fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.UNSAFE_getByType(Modal).props.visible).toBe(false);
+    expect(edit).toHaveBeenCalledTimes(1);
+  } finally {
+    mockUseNativeModal = false;
+    platform.restore();
   }
 });
 

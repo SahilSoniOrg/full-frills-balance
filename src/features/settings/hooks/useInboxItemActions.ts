@@ -28,7 +28,6 @@ export type InboxItemActions = {
 export function useInboxItemActions(
   item: TransactionInboxItem,
   handlers: InboxItemActionHandlers,
-  options?: { onBeforeAction?: () => void },
 ): InboxItemActions {
   const privateMode = useEffectivePrivacyMode();
   const linkedJournalUnavailable =
@@ -38,7 +37,6 @@ export function useInboxItemActions(
   const id = item.deviceSourceId;
 
   const runAction = (fn: (item: TransactionInboxItem) => unknown) => () => {
-    options?.onBeforeAction?.();
     void Promise.resolve(fn(item)).catch(error =>
       showErrorAlert(error, copy.inboxActionErrorTitle, true),
     );
