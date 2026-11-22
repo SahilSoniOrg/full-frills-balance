@@ -46,7 +46,7 @@ import {
   type PlannedPaymentNextOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentDetailService';
 import { observeAuditTrail } from '@/src/services/audit-service';
-import type { Money } from '@/src/types/domainReadModels';
+import type { MoneyAmount } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
@@ -93,7 +93,7 @@ export interface PlannedPaymentDetailsViewModel {
   description?: string;
   startDateText?: string;
   endDateText?: string;
-  occurrenceAmount?: Money;
+  occurrenceAmount?: MoneyAmount;
   outstandingJournalId?: JournalId;
   nextOccurrences?: PlannedPaymentNextOccurrence[];
   nextOccurrenceDate?: number;

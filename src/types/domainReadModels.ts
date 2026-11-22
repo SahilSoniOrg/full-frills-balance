@@ -1,7 +1,7 @@
 import { AccountId, JournalId, PlannedPaymentId, TransactionId } from './ids';
 import { AccountType, JournalDisplayType, SemanticType, TransactionType } from './enums';
 
-export interface Money {
+export interface MoneyAmount {
   amount: number;
   currencyCode: string;
 }
