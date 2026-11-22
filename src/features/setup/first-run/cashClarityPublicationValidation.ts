@@ -9,7 +9,7 @@ import {
   type CommitmentKind,
   type IncomeDraft,
 } from './draft';
-import { CashClarityPublicationError } from './cashClarityPublicationTypes';
+import { CashClarityPublicationError } from '@/src/services/setup/cashClarityPublicationTypes';
 
 export function invalid(message: string): never {
   throw new CashClarityPublicationError('invalid_input', message);
