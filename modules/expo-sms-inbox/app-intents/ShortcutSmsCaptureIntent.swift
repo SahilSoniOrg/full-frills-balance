@@ -1,5 +1,5 @@
 import AppIntents
-import ExpoSmsInbox
+internal import ExpoSmsInbox
 import Foundation
 
 struct CaptureBankAlertIntent: AppIntent {
