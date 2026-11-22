@@ -16,7 +16,7 @@ import type {
   ReportsV2ViewModel,
 } from '@/src/features/reports-v2/types';
 import { AppConfig } from '@/src/constants';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { reportService } from '@/src/services/report-service';
 import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
 import {
@@ -131,19 +131,19 @@ export function useReportsV2ViewModel({
     const selectionVersion = rangeSelectionVersion.current;
     const workplace = asWorkplaceId(workplaceId);
 
-    void journalQueryRepository
-      .findRecentActive(workplace, 1)
-      .then(([latestJournal]) => {
+    void reportService
+      .findLatestActiveJournalDate(workplace)
+      .then(latestJournalDate => {
         if (
           !isCurrent ||
           rangeSelectionVersion.current !== selectionVersion ||
-          !latestJournal ||
-          !shouldShiftInitialReportRange(initialPeriodRange.current, latestJournal.journalDate)
+          latestJournalDate == null ||
+          !shouldShiftInitialReportRange(initialPeriodRange.current, latestJournalDate)
         ) {
           return;
         }
 
-        const shiftedRange = rangeEndingOnLatestActivity(latestJournal.journalDate);
+        const shiftedRange = rangeEndingOnLatestActivity(latestJournalDate);
         setPeriodPreset('custom');
         setPeriodRange(shiftedRange);
       })

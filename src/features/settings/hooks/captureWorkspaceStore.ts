@@ -5,11 +5,11 @@ import {
   listCaptureDescriptionDefaults,
   listOpenCaptureMerchants,
   subscribeToCaptureChanges,
+  type CaptureReviewItem,
+  type HistoricalCategoryPattern,
 } from '@/src/services/transaction-intelligence/captureReviewService';
 import { transactionCaptureService } from '@/src/services/transaction-intelligence/transactionCaptureService';
 import type { WorkplaceId } from '@/src/types/ids';
-import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
-import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 
 type CaptureSettings = Awaited<ReturnType<typeof transactionCaptureService.getSettings>>;
 type CaptureItems = Awaited<ReturnType<typeof listCaptureItems>>;

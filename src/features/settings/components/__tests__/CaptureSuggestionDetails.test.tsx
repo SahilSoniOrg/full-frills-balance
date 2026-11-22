@@ -1,10 +1,10 @@
-import {
-  journalHistoricalCaptureQueries,
-  type HistoricalCategoryPattern,
-  type HistoricalEvidenceEntry,
-} from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
 import { HistoricalPatternRow } from '@/src/features/settings/components/CaptureSuggestionDetails';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
+import {
+  listHistoricalPatternEvidenceEntries,
+  type HistoricalCategoryPattern,
+  type HistoricalEvidenceEntry,
+} from '@/src/services/transaction-intelligence/captureReviewService';
 import { act, fireEvent, render, waitFor } from '@/src/testing/render';
 import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
 
@@ -15,6 +15,16 @@ jest.mock('../HistoricalEvidenceChart', () => ({
   historicalCategoryColor: () => '#888888',
   historicalCategoryMarkerShape: () => 'circle',
 }));
+
+jest.mock('@/src/services/transaction-intelligence/captureReviewService', () => {
+  const actual = jest.requireActual(
+    '@/src/services/transaction-intelligence/captureReviewService',
+  );
+  return {
+    ...actual,
+    listHistoricalPatternEvidenceEntries: jest.fn(),
+  };
+});
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -64,12 +74,14 @@ async function openEntriesDisclosure(screen: ReturnType<typeof render>, key = pa
   fireEvent.press(screen.getByTestId(`historical-entries-disclosure-${key}`));
 }
 
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() => {
+  jest.mocked(listHistoricalPatternEvidenceEntries).mockReset();
+});
 
 it('waits for the first page and reports filtered entries on a later page', async () => {
   const initial = deferred<HistoricalEvidenceEntry[]>();
   const query = jest
-    .spyOn(journalHistoricalCaptureQueries, 'listPatternEvidenceEntries')
+    .mocked(listHistoricalPatternEvidenceEntries)
     .mockReturnValueOnce(initial.promise)
     .mockResolvedValueOnce([entry(9)]);
   const screen = render(
@@ -93,7 +105,7 @@ it('waits for the first page and reports filtered entries on a later page', asyn
 it('ignores a page that finishes after the evidence refreshes', async () => {
   const laterPage = deferred<HistoricalEvidenceEntry[]>();
   const query = jest
-    .spyOn(journalHistoricalCaptureQueries, 'listPatternEvidenceEntries')
+    .mocked(listHistoricalPatternEvidenceEntries)
     .mockResolvedValueOnce(ids.slice(0, 8).map((_, index) => entry(index)))
     .mockReturnValueOnce(laterPage.promise)
     .mockResolvedValueOnce([entry(0)]);
@@ -121,7 +133,7 @@ it('ignores a page that finishes after the evidence refreshes', async () => {
 });
 
 it('explains why a different saved category cannot be replaced', () => {
-  jest.spyOn(journalHistoricalCaptureQueries, 'listPatternEvidenceEntries').mockResolvedValue([]);
+  jest.mocked(listHistoricalPatternEvidenceEntries).mockResolvedValue([]);
   const existing = {
     key: pattern.key,
     categoryAccountId: asAccountId('other'),
@@ -140,7 +152,7 @@ it('explains why a different saved category cannot be replaced', () => {
 });
 
 it('directs conflicted saved categories to resolution', () => {
-  jest.spyOn(journalHistoricalCaptureQueries, 'listPatternEvidenceEntries').mockResolvedValue([]);
+  jest.mocked(listHistoricalPatternEvidenceEntries).mockResolvedValue([]);
   const existing = {
     key: pattern.key,
     categoryAccountId: food,

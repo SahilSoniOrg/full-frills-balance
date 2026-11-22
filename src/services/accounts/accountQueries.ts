@@ -57,4 +57,8 @@ export const accountQueries = {
   async findAll(workplaceId: WorkplaceId) {
     return toPlainAccounts(await accountQueryRepository.findAll(workplaceId));
   },
+
+  async findAllByIds(workplaceId: WorkplaceId, accountIds: AccountId[]) {
+    return toPlainAccounts(await accountQueryRepository.findAllByIds(workplaceId, accountIds));
+  },
 };

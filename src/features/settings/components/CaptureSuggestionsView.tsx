@@ -31,8 +31,10 @@ import {
   countUnrepresentedPausedMerchants,
   SavedCaptureDefaults,
 } from '@/src/features/settings/components/SavedCaptureDefaults';
-import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
-import type { HistoricalCategoryPattern } from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
+import type {
+  CaptureReviewItem,
+  HistoricalCategoryPattern,
+} from '@/src/services/transaction-intelligence/captureReviewService';
 import { Icon } from '@/src/types/domainIcons';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useTheme } from '@/src/hooks/use-theme';
