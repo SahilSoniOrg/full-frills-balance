@@ -1,6 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { getBudgetPreviousComparisonSpent } from '../components/budgetSpendingChartGeometry';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
@@ -29,32 +27,9 @@ import { logger } from '@/src/services/observability/logger';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { combineLatest, map, of, switchMap } from 'rxjs';
+import { combineLatest, of, switchMap } from 'rxjs';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import type { BudgetLineValuationTx } from '@/src/services/budget/budgetCalculationHelpers';
-
-function observeChartTransactions(
-  workplaceId: WorkplaceId,
-  accountIds: AccountId[],
-  range: { startDate: number; endDate: number } | undefined,
-) {
-  if (!range || accountIds.length === 0) return of([]);
-  return transactionQueryRepository
-    .observeBudgetTransactionsByJournalDateRange(
-      workplaceId,
-      accountIds,
-      range.startDate,
-      range.endDate,
-      ACTIVE_JOURNAL_STATUSES,
-    )
-    .pipe(
-      switchMap(transactions =>
-        journalObserveQueries
-          .observeByIds(workplaceId, [...new Set(transactions.map(tx => tx.journalId))])
-          .pipe(map(() => transactions)),
-      ),
-    );
-}
 
 function enrichBudgetPeriodChart(
   workplaceId: WorkplaceId,
@@ -157,7 +132,7 @@ export function useBudgetDetailViewModel() {
   }, [budget, refTimestamp]);
 
   const chartTransactions$ = useMemo(
-    () => observeChartTransactions(workplaceId, chartAccountIds, budgetDateRange),
+    () => budgetReadService.observeChartTransactions(workplaceId, chartAccountIds, budgetDateRange),
     [budgetDateRange, chartAccountIds, workplaceId],
   );
 
@@ -169,7 +144,8 @@ export function useBudgetDetailViewModel() {
     [budget, budgetDateRange],
   );
   const previousChartTransactions$ = useMemo(
-    () => observeChartTransactions(workplaceId, chartAccountIds, previousPeriodRange),
+    () =>
+      budgetReadService.observeChartTransactions(workplaceId, chartAccountIds, previousPeriodRange),
     [previousPeriodRange, chartAccountIds, workplaceId],
   );
   const activityCategory =
