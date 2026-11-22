@@ -23,7 +23,7 @@ import {
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { deriveJournalDisplayType } from '@/src/domain/accounting/journalDisplayType';
 import { AuditAction, JournalStatus, TransactionType } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
@@ -306,7 +306,7 @@ export async function validateJournal(params: {
     totalAmount: fromMinorUnits(totalMinorUnits, evaluation.journalPrecision),
     accountsById,
     precisionByAccountId: new Map(
-      evaluation.lineValues.map(line => [line.accountId as AccountId, line.nativePrecision]),
+      evaluation.lineValues.map(line => [line.accountId, line.nativePrecision]),
     ),
     displayType: deriveJournalDisplayType(
       lines,

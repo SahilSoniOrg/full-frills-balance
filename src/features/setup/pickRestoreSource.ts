@@ -4,6 +4,7 @@ import {
   importRegistry,
   readFileAsBytes,
   sanitizeContent,
+  toTransactionType,
 } from '@/src/services/import';
 import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
@@ -15,7 +16,6 @@ import { InboxProcessingStatus } from '@/src/types/enums';
 import type { CanonicalJournal, CanonicalTransaction } from '@/src/types/importContracts';
 import type { TransactionType } from '@/src/types/enums';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { toTransactionType } from '@/src/services/import';
 import {
   evaluateJournalBalance,
   proposeUniqueJournalFxRate,
