@@ -365,17 +365,11 @@ describe('journal balance parity fixtures', () => {
     },
   );
 
-  it('treats every fixture as the same journal across all three engines', () => {
+  it('matches the expected outcome for every fixture on all three engines', () => {
     for (const fixture of FIXTURES) {
-      const check = runCheckJournal(fixture);
-      const calculator = runIsJournalBalanced(fixture);
-      const evaluation = runEvaluator(fixture);
-
-      // The engines disagree only in the documented cases; whenever they agree
-      // the outcome must be identical, never merely "both falsy".
-      expect(typeof check.isValid).toBe('boolean');
-      expect(typeof calculator).toBe('boolean');
-      expect(typeof evaluation.isBalanced).toBe('boolean');
+      expect(runCheckJournal(fixture).isValid).toBe(fixture.expected.checkJournal);
+      expect(runIsJournalBalanced(fixture)).toBe(fixture.expected.isJournalBalanced);
+      expect(runEvaluator(fixture).isBalanced).toBe(fixture.expected.evaluator);
     }
   });
 });

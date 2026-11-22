@@ -258,7 +258,7 @@ export class TransactionInboxRepository {
     data: TransactionInboxRecordWriteData,
     existingRecord: InboxRecordSnapshot | null,
     auditContext?: InboxAuditContext,
-    options: DeviceSmsWriteOptions = { origin: 'manual', skipReview: false },
+    options: DeviceSmsWriteOptions = { origin: 'manual', queueReview: false },
   ): Promise<void> {
     return stageInboxUpsertInSession(session, data, existingRecord, auditContext, options);
   }

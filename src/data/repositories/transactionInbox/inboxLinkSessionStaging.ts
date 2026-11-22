@@ -202,7 +202,7 @@ export async function stageInboxUpsertInSession(
   data: TransactionInboxRecordWriteData,
   _existingRecord: InboxRecordSnapshot | null,
   auditContext?: InboxAuditContext,
-  options: DeviceSmsWriteOptions = { origin: 'manual', skipReview: false },
+  options: DeviceSmsWriteOptions = { origin: 'manual', queueReview: false },
 ): Promise<void> {
   const writeData = clearDuplicateIfAlreadyLinked(data);
   const device = await deviceSmsInboxRepository.stageUpsert(
