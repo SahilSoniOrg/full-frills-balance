@@ -226,6 +226,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withGradleOptimizations',
     './plugins/withAndroidBuildVariants',
     './plugins/withJournalLauncherWidget',
+    './modules/expo-sms-inbox/app.plugin.js',
     [
       'expo-notifications',
       {
