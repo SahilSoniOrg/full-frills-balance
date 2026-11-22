@@ -96,3 +96,10 @@ and are not changes to the accepted policy.
 - No global application of a stored line rate to an unrelated report currency.
 
 The [implementation plan](../plans/journal-currency-unification-plan.md) owns rollout order and tests. [CONTEXT.md](../../CONTEXT.md) owns the terms.
+
+## Decision-layer clarification (2026-11-23)
+
+`evaluateJournalBalance` is the single journal balancing decision layer, including
+form feedback. `BalanceEffects` owns pure balance signs and effects; SQL `CASE`
+fragments derived from those signs belong to the data adapter because they are
+persistence artifacts, not domain behavior.

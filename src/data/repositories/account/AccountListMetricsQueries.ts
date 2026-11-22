@@ -8,7 +8,8 @@ import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type { AccountListItemRaw } from './types';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
-import { effect, periodFlowSQL } from '@/src/domain/accounting/BalanceEffects';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/data/repositories/accounting/BalanceEffectSql';
 import { AccountType } from '@/src/types/enums';
 import {
   ACTIVE_JOURNAL_STATUSES,

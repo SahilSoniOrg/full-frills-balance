@@ -4,8 +4,8 @@ import {
   checkJournal,
   effect,
   foldBalances,
-  periodFlowSQL,
 } from '@/src/domain/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/data/repositories/accounting/BalanceEffectSql';
 
 describe('BalanceEffects', () => {
   describe('effect', () => {

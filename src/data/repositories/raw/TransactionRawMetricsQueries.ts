@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { effect, periodFlowSQL } from '@/src/domain/accounting/BalanceEffects';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/data/repositories/accounting/BalanceEffectSql';
 import {
   ACTIVE_JOURNAL_STATUSES,
   activeJournalStatusSqlPlaceholders,
