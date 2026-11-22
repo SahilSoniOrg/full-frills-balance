@@ -136,6 +136,20 @@ export async function preparePutOperations(
   const touchesLines =
     put.replacesLines || journalDate !== previousJournalDate || status !== previousStatus;
 
+  // Capture before/after while `existing` still holds the pre-update snapshot.
+  // prepareUpdate mutates the model in place, so building the audit log inside
+  // ops() would collapse before/after and mark the entry non-undoable.
+  const putAuditLog = preparePutAuditLog({
+    existing,
+    input,
+    put,
+    balance,
+    oldTransactions,
+    journalId: journal.id,
+    workplaceId,
+    auditMetadata,
+  });
+
   const ops = (): readonly Model[] => {
     const journalOp = existing
       ? existing.prepareUpdate(record => {
@@ -185,20 +199,7 @@ export async function preparePutOperations(
           )
         : [];
 
-    return [
-      journalOp,
-      ...transactionOps,
-      preparePutAuditLog({
-        existing,
-        input,
-        put,
-        balance,
-        oldTransactions,
-        journalId: journal.id,
-        workplaceId,
-        auditMetadata,
-      }),
-    ];
+    return [journalOp, ...transactionOps, putAuditLog];
   };
 
   return {
