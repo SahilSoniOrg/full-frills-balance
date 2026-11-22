@@ -35,11 +35,32 @@ jest.mock('@/src/data/cache/SnapshotService', () => ({
   },
 }));
 jest.mock('@/src/data/storage/storage', () => ({
-  storage: { clearAll: jest.fn(), remove: jest.fn() },
+  storage: {
+    clearAll: jest.fn(),
+    remove: jest.fn(),
+    getString: jest.fn(),
+    set: jest.fn(),
+  },
 }));
 jest.mock('@/src/services/audit-identity', () => ({ clearLocalAuditActorId: jest.fn() }));
 jest.mock('@/src/services/import/restorePublicationClaims', () => ({
   restorePublicationClaims: { clearAll: jest.fn() },
+}));
+jest.mock('@/src/services/sms/ShortcutSmsIntakeService', () => ({
+  shortcutSmsIntakeService: {
+    resetWithDatabase: jest.fn(async (run: () => Promise<unknown>) => {
+      await run();
+      return undefined;
+    }),
+  },
+}));
+jest.mock('@/modules/expo-sms-inbox/shortcut', () => ({
+  getPending: jest.fn(),
+  acknowledge: jest.fn().mockResolvedValue(undefined),
+  stageReset: jest.fn().mockResolvedValue(undefined),
+  hasStagedReset: jest.fn().mockResolvedValue(false),
+  finishReset: jest.fn().mockResolvedValue(undefined),
+  purgeRetired: jest.fn().mockResolvedValue(undefined),
 }));
 
 export function resetIntegrityMaintenanceTestState() {

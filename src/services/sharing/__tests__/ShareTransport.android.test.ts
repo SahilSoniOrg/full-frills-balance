@@ -10,14 +10,14 @@ const mockDelete = jest.fn();
 jest.mock('expo-file-system', () => ({
   FileMode: { ReadOnly: 'r', WriteOnly: 'w' },
   File: class {
-    constructor(private readonly uri: string) {}
+    constructor(private readonly mockUri: string) {}
 
     open(mode: string) {
-      return mockOpen(this.uri, mode);
+      return mockOpen(this.mockUri, mode);
     }
 
     delete() {
-      mockDelete(this.uri);
+      mockDelete(this.mockUri);
     }
   },
 }));

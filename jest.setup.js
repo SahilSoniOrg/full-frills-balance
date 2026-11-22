@@ -42,6 +42,19 @@ jest.mock('react-native-launch-arguments', () => ({
   },
 }));
 
+// RN's jest Modal mock requireActual's the native module and crashes without
+// getConstants. Use a View stand-in so overlay hosts can render in tests.
+jest.mock('react-native/Libraries/Modal/Modal', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  function MockModal({ children, visible = true, ...props }) {
+    if (!visible) return null;
+    return React.createElement(View, props, children);
+  }
+  MockModal.displayName = 'Modal';
+  return { __esModule: true, default: MockModal };
+});
+
 // Mock MMKV with an in-memory store so tests that round-trip keys actually work.
 jest.mock('react-native-mmkv', () => {
   const createMemoryMMKV = () => {
