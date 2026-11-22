@@ -7,7 +7,10 @@ import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWri
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { withCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
-import { settlePlannedOccurrence } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
+import {
+  findPlanAttachCandidateForOccurrence,
+  settlePlannedOccurrence,
+} from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import {
@@ -155,6 +158,59 @@ describe('planned occurrence settlement plan wire', () => {
 
     const retired = await database.collections.get<Journal>('journals').find(planned.id);
     expect(retired.deletedAt).toBeTruthy();
+  }, 20_000);
+
+  it('generates a planned journal and advances the occurrence cursor', async () => {
+    const payment = await createPlan({ isAutoPost: false });
+
+    const settlement = await runAccountingWriteSession(session =>
+      settlePlannedOccurrence(session, WP, payment.id, occurrenceDay, {
+        kind: 'generate',
+        asOf: occurrenceDay - 1,
+      }),
+    );
+
+    expect(settlement.journal?.journal.status).toBe(JournalStatus.PLANNED);
+    expect(settlement.journal?.journal.plannedPaymentId).toBe(payment.id);
+    expect(settlement.nextOccurrence).toBeGreaterThan(occurrenceDay);
+    expect(settlement.completed).toBe(false);
+  }, 20_000);
+
+  it('creates a skipped journal and advances the occurrence cursor', async () => {
+    const payment = await createPlan({ isAutoPost: false });
+
+    const settlement = await runAccountingWriteSession(session =>
+      settlePlannedOccurrence(session, WP, payment.id, occurrenceDay, { kind: 'skip' }),
+    );
+
+    expect(settlement.journal?.journal.status).toBe(JournalStatus.SKIPPED);
+    expect(settlement.journal?.journal.plannedPaymentId).toBe(payment.id);
+    expect(settlement.nextOccurrence).toBeGreaterThan(occurrenceDay);
+  }, 20_000);
+
+  it('returns a strict candidate from the public lookup seam without attaching it', async () => {
+    const payment = await createPlan({ isAutoPost: false });
+    const planned = await createPlannedJournal(payment.id);
+    const capture = await createCaptureJournal();
+
+    const candidate = await findPlanAttachCandidateForOccurrence(
+      WP,
+      payment.id,
+      occurrenceDay,
+      occurrenceDay,
+    );
+
+    expect(candidate).toEqual(
+      expect.objectContaining({
+        captureJournalId: capture.id,
+        plannedJournalId: planned.id,
+        matchKind: 'strict',
+        occurrenceDay,
+        amount: 100,
+        currencyCode: 'USD',
+      }),
+    );
+    expect(capture.plannedPaymentId).toBeFalsy();
   }, 20_000);
 
   it('soft/ambiguous capture leaves the PLANNED journal untouched on auto-post', async () => {
