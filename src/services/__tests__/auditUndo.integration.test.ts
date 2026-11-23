@@ -171,7 +171,7 @@ test('budget undo restores combined scalar, scope, and funding edits', async () 
   const restored = await budgetRepository.find(wp, budget.id as BudgetId);
   expect(restored?.name).toBe('Original');
   expect(restored?.amount).toBe(100);
-  expect(restored?.assetAccountIds).toBe(originalScope.id);
+  expect(restored?.assetAccountIds).toBe(JSON.stringify([originalScope.id]));
   expect(
     (await budgetRepository.getScopes(wp, budget.id as BudgetId)).map(item => item.accountId),
   ).toEqual([originalScope.id]);

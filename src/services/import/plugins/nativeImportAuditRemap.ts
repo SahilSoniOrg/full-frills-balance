@@ -1,5 +1,9 @@
 import type { AuditEntityType } from '@/src/types/enums';
 import type { CanonicalAuditLog } from '@/src/types/importContracts';
+import {
+  formatFundingAccountIds,
+  parseFundingAccountIds,
+} from '@/src/services/budget/budgetAssetAccountIds';
 
 export type AuditImportEntityIdMaps = Record<AuditEntityType, ReadonlyMap<string, string>>;
 
@@ -78,10 +82,10 @@ function remapValue(
       }
     }
     if (key === 'assetAccountIds') {
-      const remapped = value
-        .split(',')
-        .map(id => remapId(id.trim(), maps.entities.account))
-        .join(',');
+      const remappedIds = parseFundingAccountIds(value).map(id =>
+        remapId(id, maps.entities.account),
+      );
+      const remapped = remappedIds.length === 0 ? '' : formatFundingAccountIds(remappedIds);
       return { value: remapped, changed: remapped !== value };
     }
     const remapped = remapId(value, currentMap);

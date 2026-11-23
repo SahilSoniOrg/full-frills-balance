@@ -14,6 +14,10 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 import { restoreAuditFieldsFromRevert } from '@/src/data/repositories/auditRevertSupport';
 import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
+import {
+  parseFundingAccountIds,
+  persistFundingAccountIds,
+} from '@/src/services/budget/budgetAssetAccountIds';
 
 export interface BudgetInput {
   name: string;
@@ -132,10 +136,7 @@ function auditBudgetState(
     recurrenceDay: budget.recurrenceDay,
     recurrenceMonth: budget.recurrenceMonth,
     active: budget.active,
-    assetAccountIds: (budget.assetAccountIds ?? '')
-      .split(',')
-      .map(id => id.trim())
-      .filter(Boolean),
+    assetAccountIds: parseFundingAccountIds(budget.assetAccountIds),
     scopedAccountIds: [...accountIds],
   };
 }
@@ -230,7 +231,8 @@ export class BudgetRepository {
         record.recurrenceDay = data.recurrenceDay;
         record.recurrenceMonth = data.recurrenceMonth;
         record.active = data.active ?? true;
-        if (data.assetAccountIds) record.assetAccountIds = data.assetAccountIds.join(',');
+        if (data.assetAccountIds)
+          record.assetAccountIds = persistFundingAccountIds(data.assetAccountIds);
         record.createdAt = new Date();
         record.updatedAt = new Date();
       });
@@ -286,7 +288,8 @@ export class BudgetRepository {
       record.recurrenceDay = data.recurrenceDay;
       record.recurrenceMonth = data.recurrenceMonth;
       record.active = data.active ?? true;
-      if (data.assetAccountIds) record.assetAccountIds = data.assetAccountIds.join(',');
+      if (data.assetAccountIds)
+        record.assetAccountIds = persistFundingAccountIds(data.assetAccountIds);
       record.createdAt = new Date();
       record.updatedAt = new Date();
     });
@@ -354,7 +357,7 @@ export class BudgetRepository {
         if (updates.recurrenceMonth !== undefined) record.recurrenceMonth = updates.recurrenceMonth;
         if (updates.active !== undefined) record.active = updates.active;
         if (updates.assetAccountIds !== undefined)
-          record.assetAccountIds = updates.assetAccountIds.join(',');
+          record.assetAccountIds = persistFundingAccountIds(updates.assetAccountIds);
         record.updatedAt = new Date();
       });
 
@@ -607,7 +610,9 @@ export class BudgetRepository {
     record.recurrenceMonth = snapshot.recurrenceMonth ?? undefined;
     record.active = snapshot.active;
     record.assetAccountIds =
-      snapshot.assetAccountIds.length > 0 ? snapshot.assetAccountIds.join(',') : undefined;
+      snapshot.assetAccountIds.length > 0
+        ? persistFundingAccountIds(snapshot.assetAccountIds)
+        : undefined;
   }
 
   private async assertBudgetReferences(
@@ -651,7 +656,7 @@ export class BudgetRepository {
       .fetch();
   }
 
-  /** Budgets whose CSV funding list includes this account id. */
+  /** Budgets whose funding collection includes this account id. */
   async findAllReferencingAssetAccountId(
     workplaceId: WorkplaceId,
     accountId: AccountId,
@@ -660,11 +665,7 @@ export class BudgetRepository {
       .query(Q.where('workplace_id', workplaceId), Q.where('asset_account_ids', Q.notEq(null)))
       .fetch();
     return candidates.filter(budget =>
-      budget.assetAccountIds
-        ?.split(',')
-        .map(id => id.trim())
-        .filter(Boolean)
-        .includes(accountId),
+      parseFundingAccountIds(budget.assetAccountIds).includes(accountId),
     );
   }
 
@@ -696,10 +697,7 @@ export class BudgetRepository {
     ]);
     const sourceIds = new Set(sourceAccountIds);
     const budgets = allBudgets.filter(budget =>
-      (budget.assetAccountIds ?? '')
-        .split(',')
-        .map(id => id.trim())
-        .some(id => sourceIds.has(id as AccountId)),
+      parseFundingAccountIds(budget.assetAccountIds).some(id => sourceIds.has(id as AccountId)),
     );
     const budgetIds = [
       ...new Set([
@@ -766,17 +764,13 @@ export class BudgetRepository {
       if (!budget.assetAccountIds) continue;
 
       let changed = false;
-      const accountIds = budget.assetAccountIds
-        .split(',')
-        .map(id => id.trim())
-        .filter(id => id.length > 0)
-        .map(id => {
-          if (sourceIds.has(id as AccountId)) {
-            changed = true;
-            return targetAccountId;
-          }
-          return id as AccountId;
-        });
+      const accountIds = parseFundingAccountIds(budget.assetAccountIds).map(id => {
+        if (sourceIds.has(id as AccountId)) {
+          changed = true;
+          return targetAccountId;
+        }
+        return id as AccountId;
+      });
 
       if (changed) {
         const before = auditBudgetState(budget, scopeIdsByBudget.get(budget.id) ?? []);
@@ -797,7 +791,7 @@ export class BudgetRepository {
         };
         budgetOps.push(
           budget.prepareUpdate(record => {
-            record.assetAccountIds = nextAssetAccountIds.join(',');
+            record.assetAccountIds = persistFundingAccountIds(nextAssetAccountIds);
             record.updatedAt = new Date();
           }),
         );

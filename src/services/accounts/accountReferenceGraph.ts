@@ -1,7 +1,7 @@
 /**
  * Account reference graph — owns which persisted fields reference Accounts
- * and the policies for those refs (write assert, delete block, CSV funding lists,
- * import salvage/sanitize planning, site enumeration for merge).
+ * and the policies for those refs (write assert, delete block, funding ID
+ * collections, import salvage/sanitize planning, site enumeration for merge).
  *
  * Complements ADR-0008: stays under account command modules; no AccountService.
  */
@@ -13,8 +13,14 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import {
+  formatFundingAccountIds,
+  parseFundingAccountIds,
+} from '@/src/services/budget/budgetAssetAccountIds';
 
-export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
+export type AccountReferenceCardinality = 'scalar' | 'collection' | 'dual';
+
+export { formatFundingAccountIds, parseFundingAccountIds };
 
 /** How merge should treat the site when iterating `referenceSites` (v1 enum). */
 export type AccountReferenceMergeBehavior = 'retarget' | 'destroy' | 'none';
@@ -215,22 +221,6 @@ const SITES_BY_KEY: ReadonlyMap<AccountReferenceSiteKey, AccountReferenceSite> =
  */
 export function referenceSites(): readonly AccountReferenceSite[] {
   return ACCOUNT_REFERENCE_SITES;
-}
-
-/** Read the persisted funding ID collection; accept legacy CSV during migration. */
-export function parseFundingAccountIds(raw: string | readonly string[] | null | undefined): string[] {
-  if (raw == null || raw.length === 0) return [];
-  if (Array.isArray(raw)) return [...new Set(raw.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
-  try {
-    const parsed: unknown = JSON.parse(raw as string);
-    if (Array.isArray(parsed)) return [...new Set(parsed.filter((id): id is string => typeof id === 'string' && id.trim()).map(id => id.trim()))];
-  } catch { /* Legacy CSV */ }
-  return [...new Set((raw as string).split(',').map(id => id.trim()).filter(Boolean))];
-}
-
-/** Serialize funding IDs as an unambiguous JSON collection. */
-export function formatFundingAccountIds(ids: readonly string[]): string {
-  return JSON.stringify([...new Set(ids.map(id => id.trim()).filter(Boolean))]);
 }
 
 function isNonEmptyAccountId(value: string | null | undefined): value is string {

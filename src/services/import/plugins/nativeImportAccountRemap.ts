@@ -286,14 +286,14 @@ export function remapAccountMatcherSuppressions(
   return unionSuppressions(mapped);
 }
 
-/** Remap funding CSV via graph parse/format helpers. */
-export function remapFundingAccountIdsCsv(
-  csv: string | undefined,
+/** Remap funding ID collection via graph parse/format helpers. */
+export function remapFundingAccountIds(
+  raw: string | undefined,
   accountMap: Map<string, AccountId>,
   context: string,
 ): string {
-  const remapped = parseFundingAccountIds(csv).map(id =>
+  const remapped = parseFundingAccountIds(raw).map(id =>
     requireMappedAccountId(accountMap, id, context),
   );
-  return formatFundingAccountIds(remapped);
+  return remapped.length === 0 ? '' : formatFundingAccountIds(remapped);
 }
