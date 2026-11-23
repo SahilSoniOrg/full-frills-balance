@@ -1,6 +1,7 @@
 import { TransactionType } from '@/src/types/enums';
 
 import {
+  getJournalComposerTotals,
   getJournalLineBaseAmount,
   isJournalBalanced,
 } from '@/src/services/accounting/JournalCalculator';
@@ -33,7 +34,8 @@ describe('JournalCalculator', () => {
     expect(isJournalBalanced(lines, 'USD')).toBe(true);
   });
 
-  it('accepts the minor-unit rounding caused by a rounded foreign amount', () => {
+  it('rejects minor-unit FX drift that checkJournal tolerance used to accept', () => {
+    // THB 76.82 × 2.89 = 222.0098; evaluator is exact in minor units.
     const lines = [
       {
         amount: 76.82,
@@ -48,10 +50,11 @@ describe('JournalCalculator', () => {
       },
     ];
 
-    expect(isJournalBalanced(lines, 'INR')).toBe(true);
+    expect(isJournalBalanced(lines, 'INR')).toBe(false);
   });
 
-  it('scales foreign-currency rounding tolerance for higher exchange rates', () => {
+  it('rejects FX drift even when rate-scaled checkJournal tolerance would pass', () => {
+    // HKD 4.11 × 12.17 = 50.0187; evaluator requires exact minor-unit balance.
     const lines = [
       {
         amount: 4.11,
@@ -66,7 +69,30 @@ describe('JournalCalculator', () => {
       },
     ];
 
-    expect(isJournalBalanced(lines, 'INR')).toBe(true);
+    expect(isJournalBalanced(lines, 'INR')).toBe(false);
+  });
+
+  it('reports KWD remaining at three decimals from the same evaluation as isBalanced', () => {
+    const lines = [
+      { amount: '10.000', type: TransactionType.CREDIT, accountCurrency: 'KWD' },
+      { amount: '4.999', type: TransactionType.DEBIT, accountCurrency: 'KWD' },
+      { amount: '5.000', type: TransactionType.DEBIT, accountCurrency: 'KWD' },
+    ];
+    const totals = getJournalComposerTotals(lines, 'KWD');
+    expect(totals.isBalanced).toBe(false);
+    expect(totals.remaining).toBe(0.001);
+    expect(totals.precision).toBe(3);
+  });
+
+  it('keeps split-save two-decimal edge rounding for mixed KWD/USD allocations', () => {
+    const kwd = getJournalLineBaseAmount({ amount: '8.497', accountCurrency: 'KWD' }, 'KWD');
+    const usd = getJournalLineBaseAmount(
+      { amount: '5', accountCurrency: 'USD', exchangeRate: '0.3006' },
+      'KWD',
+    );
+    expect(kwd).toBe(8.5);
+    expect(usd).toBe(1.5);
+    expect(kwd + usd).toBe(10);
   });
 
   describe('getLineBaseAmount', () => {

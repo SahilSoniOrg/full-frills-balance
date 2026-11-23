@@ -1,16 +1,63 @@
 import { normalizeCurrencyCode } from '@/src/domain/money/currencyPrecision';
-import { TransactionType } from '@/src/types/enums';
-import { fromMinorUnits } from '@/src/domain/money/money';
+import { Money, fromMinorUnits } from '@/src/domain/money/money';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
+import { TransactionType } from '@/src/types/enums';
+import { asAccountId, type AccountId } from '@/src/types/ids';
 import { convertJournalCurrencyAmount, resolveJournalFxRate } from './journalFx';
 
 export interface JournalBalanceLineInput {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   accountCurrency?: string;
   amount: string | number;
   exchangeRate?: string | number;
   transactionType: TransactionType;
+}
+
+/** Untyped edge input before account IDs are branded into {@link JournalBalanceLineInput}. */
+export type JournalBalanceLineBoundaryInput = {
+  id: string;
+  accountId: string;
+  accountCurrency?: string;
+  amount: string | number | Money;
+  exchangeRate?: string | number;
+  transactionType: TransactionType;
+};
+
+/** Brand account IDs (and unwrap domain Money) at untyped boundaries into evaluator input. */
+export function toJournalBalanceLineInput(
+  input: JournalBalanceLineBoundaryInput,
+): JournalBalanceLineInput {
+  if (input.amount instanceof Money) {
+    const moneyCurrency = normalizeCurrencyCode(input.amount.currencyCode);
+    if (!moneyCurrency) {
+      throw new Error('Money currency is required');
+    }
+    const accountCurrency = input.accountCurrency
+      ? normalizeCurrencyCode(input.accountCurrency)
+      : moneyCurrency;
+    if (accountCurrency && accountCurrency !== moneyCurrency) {
+      throw new Error(
+        `Money currency ${moneyCurrency} does not match account currency ${accountCurrency}`,
+      );
+    }
+    return {
+      id: input.id,
+      accountId: asAccountId(input.accountId),
+      accountCurrency: accountCurrency || moneyCurrency,
+      amount: input.amount.amount,
+      exchangeRate: input.exchangeRate,
+      transactionType: input.transactionType,
+    };
+  }
+  return {
+    id: input.id,
+    accountId: asAccountId(input.accountId),
+    accountCurrency: input.accountCurrency,
+    amount: input.amount,
+    exchangeRate: input.exchangeRate,
+    transactionType: input.transactionType,
+  };
 }
 
 export type JournalBalanceIssueCode =
@@ -33,7 +80,7 @@ export interface JournalBalanceIssue {
 
 export interface EvaluatedJournalBalanceLine {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   accountCurrency: string;
   nativePrecision: number;
   transactionType: TransactionType;
@@ -57,7 +104,8 @@ export interface JournalBalanceEvaluation {
 }
 
 export interface EvaluateJournalBalanceInput {
-  lines: readonly JournalBalanceLineInput[];
+  /** Untyped or branded lines; Money amounts are currency-checked at this boundary. */
+  lines: readonly JournalBalanceLineBoundaryInput[];
   journalCurrency: string;
   precisionByCurrency: ReadonlyMap<string, number>;
 }
@@ -78,10 +126,11 @@ function formatDifference(minorUnits: number, precision: number, currency: strin
 }
 
 export function evaluateJournalBalance({
-  lines,
+  lines: rawLines,
   journalCurrency: requestedJournalCurrency,
   precisionByCurrency: requestedPrecisions,
 }: EvaluateJournalBalanceInput): JournalBalanceEvaluation {
+  const lines = rawLines.map(toJournalBalanceLineInput);
   const journalCurrency = normalizeCurrencyCode(requestedJournalCurrency);
   const precisionByCurrency = new Map(
     [...requestedPrecisions.entries()].map(([code, precision]) => [

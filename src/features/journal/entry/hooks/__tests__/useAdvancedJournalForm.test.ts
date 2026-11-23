@@ -84,6 +84,31 @@ describe('useAdvancedJournalForm', () => {
     );
   });
 
+  it('keeps KWD remaining at three decimals when the journal is one fill short', () => {
+    const { result } = renderHook(() => {
+      const [lines] = useState([
+        line('cash', TransactionType.CREDIT, '10.000', { accountCurrency: 'KWD' }),
+        line('food', TransactionType.DEBIT, '4.999', { accountCurrency: 'KWD' }),
+        line('drink', TransactionType.DEBIT, '5.000', { accountCurrency: 'KWD' }),
+      ]);
+      return useAdvancedJournalForm({
+        editor: {
+          lines,
+          addLine: jest.fn(),
+          removeLine: jest.fn(),
+          updateLine: jest.fn(),
+          updateLines: jest.fn(),
+          fetchRatesForLines: jest.fn(),
+        },
+        accounts: [],
+        workplaceCurrency: 'KWD',
+      });
+    });
+
+    expect(result.current.isBalanced).toBe(false);
+    expect(result.current.remaining).toBe(0.001);
+  });
+
   it('equalizes the To rows against the From total', () => {
     const { result } = renderForm([
       line('cash', TransactionType.CREDIT, '100'),

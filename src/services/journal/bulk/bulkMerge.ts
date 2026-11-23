@@ -138,7 +138,7 @@ export async function analyzeJournalsForMerge(
       existing.amount = safeAdd(existing.amount, line.journalAmount, evaluation.journalPrecision);
     } else {
       lineMap.set(key, {
-        accountId: line.accountId as AccountId,
+        accountId: line.accountId,
         transactionType: line.transactionType,
         amount: line.journalAmount,
       });

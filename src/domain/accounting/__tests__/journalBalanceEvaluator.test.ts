@@ -1,7 +1,10 @@
+import { Money } from '@/src/domain/money/money';
 import { TransactionType } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
 import {
   evaluateJournalBalance,
   proposeUniqueJournalFxRate,
+  toJournalBalanceLineInput,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 
 describe('evaluateJournalBalance', () => {
@@ -15,7 +18,7 @@ describe('evaluateJournalBalance', () => {
       lines: [
         {
           id: 'eur-expense',
-          accountId: 'expense',
+          accountId: asAccountId('expense'),
           accountCurrency: 'EUR',
           amount: '10.00',
           exchangeRate: '1.2',
@@ -23,7 +26,7 @@ describe('evaluateJournalBalance', () => {
         },
         {
           id: 'usd-bank',
-          accountId: 'bank',
+          accountId: asAccountId('bank'),
           accountCurrency: 'USD',
           amount: '12.00',
           exchangeRate: '',
@@ -56,7 +59,7 @@ describe('evaluateJournalBalance', () => {
       lines: [
         {
           id: 'eur-line',
-          accountId: 'eur-account',
+          accountId: asAccountId('eur-account'),
           accountCurrency: 'EUR',
           amount: '25.00',
           exchangeRate: '1',
@@ -64,7 +67,7 @@ describe('evaluateJournalBalance', () => {
         },
         {
           id: 'usd-line',
-          accountId: 'usd-account',
+          accountId: asAccountId('usd-account'),
           accountCurrency: 'USD',
           amount: '25.00',
           exchangeRate: '',
@@ -88,7 +91,7 @@ describe('evaluateJournalBalance', () => {
       lines: [
         {
           id: 'jpy-line',
-          accountId: 'yen-account',
+          accountId: asAccountId('yen-account'),
           accountCurrency: 'JPY',
           amount: '123.4',
           exchangeRate: '0.005',
@@ -96,7 +99,7 @@ describe('evaluateJournalBalance', () => {
         },
         {
           id: 'jod-line',
-          accountId: 'dinar-account',
+          accountId: asAccountId('dinar-account'),
           accountCurrency: 'JOD',
           amount: '0.615',
           exchangeRate: '',
@@ -125,7 +128,7 @@ describe('evaluateJournalBalance', () => {
       lines: [
         {
           id: 'eur-line',
-          accountId: 'eur-account',
+          accountId: asAccountId('eur-account'),
           accountCurrency: 'EUR',
           amount: '10.00',
           exchangeRate: '1.2',
@@ -133,7 +136,7 @@ describe('evaluateJournalBalance', () => {
         },
         {
           id: 'usd-line',
-          accountId: 'usd-account',
+          accountId: asAccountId('usd-account'),
           accountCurrency: 'USD',
           amount: '12.01',
           exchangeRate: '',
@@ -163,7 +166,7 @@ describe('evaluateJournalBalance', () => {
       lines: [
         {
           id: 'eur-line',
-          accountId: 'eur-account',
+          accountId: asAccountId('eur-account'),
           accountCurrency: 'EUR',
           amount: '10.00',
           transactionType: TransactionType.DEBIT,
@@ -194,7 +197,7 @@ describe('proposeUniqueJournalFxRate', () => {
       lines: [
         {
           id: 'hkd-cash',
-          accountId: 'hkd-account',
+          accountId: asAccountId('hkd-account'),
           accountCurrency: 'HKD',
           amount: 500.76,
           exchangeRate: 11.5348,
@@ -202,7 +205,7 @@ describe('proposeUniqueJournalFxRate', () => {
         },
         {
           id: 'inr-bank',
-          accountId: 'inr-account',
+          accountId: asAccountId('inr-account'),
           accountCurrency: 'INR',
           amount: 5791.12,
           transactionType: TransactionType.CREDIT,
@@ -230,14 +233,14 @@ describe('proposeUniqueJournalFxRate', () => {
       lines: [
         {
           id: 'inr-bank',
-          accountId: 'inr-account',
+          accountId: asAccountId('inr-account'),
           accountCurrency: 'INR',
           amount: 5791.12,
           transactionType: TransactionType.DEBIT,
         },
         {
           id: 'hkd-cash',
-          accountId: 'hkd-account',
+          accountId: asAccountId('hkd-account'),
           accountCurrency: 'HKD',
           amount: 500.76,
           exchangeRate: 11.5348,
@@ -257,7 +260,7 @@ describe('proposeUniqueJournalFxRate', () => {
       lines: [
         {
           id: 'hkd-cash',
-          accountId: 'hkd-account',
+          accountId: asAccountId('hkd-account'),
           accountCurrency: 'HKD',
           amount: 500.76,
           exchangeRate: 11.5348,
@@ -265,7 +268,7 @@ describe('proposeUniqueJournalFxRate', () => {
         },
         {
           id: 'usd-cash',
-          accountId: 'usd-account',
+          accountId: asAccountId('usd-account'),
           accountCurrency: 'USD',
           amount: 2,
           exchangeRate: 90,
@@ -273,7 +276,7 @@ describe('proposeUniqueJournalFxRate', () => {
         },
         {
           id: 'inr-bank',
-          accountId: 'inr-account',
+          accountId: asAccountId('inr-account'),
           accountCurrency: 'INR',
           amount: 5971.12,
           transactionType: TransactionType.CREDIT,
@@ -291,14 +294,14 @@ describe('proposeUniqueJournalFxRate', () => {
       lines: [
         {
           id: 'usd-debit',
-          accountId: 'debit-account',
+          accountId: asAccountId('debit-account'),
           accountCurrency: 'USD',
           amount: 10,
           transactionType: TransactionType.DEBIT,
         },
         {
           id: 'usd-credit',
-          accountId: 'credit-account',
+          accountId: asAccountId('credit-account'),
           accountCurrency: 'USD',
           amount: 9.99,
           transactionType: TransactionType.CREDIT,
@@ -307,5 +310,92 @@ describe('proposeUniqueJournalFxRate', () => {
     });
 
     expect(proposal).toBeUndefined();
+  });
+});
+
+describe('toJournalBalanceLineInput', () => {
+  it('brands account ids and unwraps domain Money amount+currency', () => {
+    expect(
+      toJournalBalanceLineInput({
+        id: 'line-1',
+        accountId: 'cash',
+        amount: new Money(42.5, 'EUR'),
+        transactionType: TransactionType.DEBIT,
+      }),
+    ).toEqual({
+      id: 'line-1',
+      accountId: asAccountId('cash'),
+      accountCurrency: 'EUR',
+      amount: 42.5,
+      exchangeRate: undefined,
+      transactionType: TransactionType.DEBIT,
+    });
+  });
+
+  it('rejects Money whose currency disagrees with accountCurrency', () => {
+    expect(() =>
+      toJournalBalanceLineInput({
+        id: 'line-2',
+        accountId: 'wallet',
+        accountCurrency: 'USD',
+        amount: new Money(10, 'EUR'),
+        exchangeRate: '1.1',
+        transactionType: TransactionType.CREDIT,
+      }),
+    ).toThrow(/does not match account currency/);
+  });
+
+  it('rejects Money with a blank currency even when accountCurrency is set', () => {
+    expect(() =>
+      toJournalBalanceLineInput({
+        id: 'line-blank',
+        accountId: 'wallet',
+        accountCurrency: 'USD',
+        amount: new Money(10, ''),
+        transactionType: TransactionType.DEBIT,
+      }),
+    ).toThrow(/Money currency is required/);
+  });
+
+  it('accepts Money when accountCurrency matches', () => {
+    expect(
+      toJournalBalanceLineInput({
+        id: 'line-3',
+        accountId: 'wallet',
+        accountCurrency: 'EUR',
+        amount: new Money(10, 'EUR'),
+        transactionType: TransactionType.CREDIT,
+      }).accountCurrency,
+    ).toBe('EUR');
+  });
+});
+
+describe('evaluateJournalBalance Money boundary', () => {
+  it('rejects mismatched Money currency on the live evaluation path', () => {
+    expect(() =>
+      evaluateJournalBalance({
+        journalCurrency: 'USD',
+        precisionByCurrency: new Map([
+          ['USD', 2],
+          ['EUR', 2],
+        ]),
+        lines: [
+          {
+            id: 'bad',
+            accountId: 'cash',
+            accountCurrency: 'USD',
+            amount: new Money(10, 'EUR'),
+            transactionType: TransactionType.DEBIT,
+          },
+          {
+            id: 'ok',
+            accountId: 'expense',
+            accountCurrency: 'USD',
+            amount: '10',
+            transactionType: TransactionType.CREDIT,
+          },
+        ],
+      }),
+    ).toThrow(/does not match account currency/);
   });
 });

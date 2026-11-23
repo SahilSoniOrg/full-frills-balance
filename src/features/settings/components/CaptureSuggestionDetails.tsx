@@ -10,13 +10,13 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { Box, Inline, Stack } from '@/src/design-system';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
-import type { CaptureReviewItem } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import { categoryDefaultKey } from '@/src/domain/transaction-intelligence/categoryDefaults';
-import type {
-  HistoricalCategoryPattern,
-  HistoricalEvidenceEntry,
-} from '@/src/data/repositories/journal/JournalHistoricalCaptureQueries';
-import { listHistoricalPatternEvidenceEntries } from '@/src/services/transaction-intelligence/captureReviewService';
+import {
+  listHistoricalPatternEvidenceEntries,
+  type CaptureReviewItem,
+  type HistoricalCategoryPattern,
+  type HistoricalEvidenceEntry,
+} from '@/src/services/transaction-intelligence/captureReviewService';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';

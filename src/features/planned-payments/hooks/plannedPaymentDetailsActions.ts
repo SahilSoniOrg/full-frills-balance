@@ -4,7 +4,7 @@ import { confirm } from '@/src/services/feedback/alerts';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import type { JournalId } from '@/src/types/ids';
-import type { Money } from '@/src/types/domainReadModels';
+import type { MoneyAmount } from '@/src/types/domainReadModels';
 
 export function resolvePlannedPaymentActionTarget(item: {
   status: PlainPlannedPayment['status'];
@@ -30,7 +30,7 @@ export function buildPlannedPaymentDetailsActions(
   handlers: PlannedPaymentDetailsActionHandlers,
   options: {
     isPrivacyMode?: boolean;
-    occurrence?: Money;
+    occurrence?: MoneyAmount;
     isBusy?: boolean;
     isTargetUnavailable?: boolean;
   } = {},

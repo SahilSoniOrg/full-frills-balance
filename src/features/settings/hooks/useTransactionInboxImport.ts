@@ -13,7 +13,7 @@ import { loadAccountMatcherContext } from '@/src/services/accounts/accountMatche
 import { recognizeSmsAccounts } from '@/src/services/sms/recognition/accountMatcherEvaluator';
 import { accountMatcherStrings } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { alert } from '@/src/services/feedback/alerts';
-import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { smsService } from '@/src/services/sms-service';
 import { readEmailRecognitionEvidence } from '@/src/services/email/emailRecognitionEvidence';
 
 interface UseTransactionInboxImportProps {
@@ -42,7 +42,7 @@ export function useTransactionInboxImport({
         } else if (item.channel === 'email') {
           const [matcherContext, inboxRecord] = await Promise.all([
             loadAccountMatcherContext(workplaceId),
-            transactionInboxRepository.findEmail(workplaceId, item.id),
+            smsService.findEmail(workplaceId, item.id),
           ]);
           recognition = readEmailRecognitionEvidence(inboxRecord?.metadataJson, matcherContext) ?? {
             status: 'none',

@@ -6,10 +6,7 @@ import {
 } from '@/src/features/journal/entry/hooks/workplaceRowFx';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import {
-  getJournalLineBaseAmount,
-  isJournalBalanced,
-} from '@/src/services/accounting/JournalCalculator';
+import { getJournalComposerTotals } from '@/src/services/accounting/JournalCalculator';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import {
@@ -123,16 +120,6 @@ export function useAdvancedJournalForm({
     workplaceCurrency,
   ]);
 
-  const fromTotal = useMemo(
-    () =>
-      fromLines.reduce((sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency), 0),
-    [fromLines, workplaceCurrency],
-  );
-  const toTotal = useMemo(
-    () => toLines.reduce((sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency), 0),
-    [toLines, workplaceCurrency],
-  );
-
   const journalLines = useMemo(
     () =>
       lines.map(line => ({
@@ -143,8 +130,10 @@ export function useAdvancedJournalForm({
       })),
     [lines],
   );
-  const isBalanced = isJournalBalanced(journalLines, workplaceCurrency);
-  const remaining = fromTotal - toTotal;
+  const { fromTotal, toTotal, remaining, isBalanced } = useMemo(
+    () => getJournalComposerTotals(journalLines, workplaceCurrency),
+    [journalLines, workplaceCurrency],
+  );
   const precision = getSplitCurrencyPrecision(workplaceCurrency);
   const allocationContext = useMemo<SplitCurrencyContext>(
     () => ({

@@ -2,12 +2,12 @@ import { useCallback, useMemo } from 'react';
 import { combineLatest, from, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { useObservable } from '@/src/hooks/useObservable';
-import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { showDetachFromJournalConfirm } from '@/src/components/transaction-capture/showDetachFromJournalConfirm';
 import { smsService } from '@/src/services/sms-service';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { observeAuditTrail } from '@/src/services/audit-service';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { journalReadService } from '@/src/services/journal/journalReadService';
 import { AccountType } from '@/src/types/enums';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import type { DisplayTransaction } from '@/src/types/domainReadModels';
@@ -33,7 +33,7 @@ export function useJournalSource(
     () =>
       journalId
         ? combineLatest([
-            from(findJournalMetadataByJournalId(journalId, workplaceId)),
+            from(journalReadService.findMetadataByJournalId(journalId, workplaceId)),
             from(smsService.findAllByLinkedJournalId(workplaceId, journalId)),
           ]).pipe(map(([metadata, inboxRecords]) => buildJournalSource(metadata, inboxRecords)))
         : of({}),

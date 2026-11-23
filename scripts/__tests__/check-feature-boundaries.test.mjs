@@ -109,6 +109,73 @@ test('rejects relative cross-feature imports', () => {
   assert.ok(result.violations.some(violation => violation.includes('accounts->journal')));
 });
 
+test('rejects relative cross-feature imports without space after from', () => {
+  const result = analyzeFixture(
+    {
+      'src/features/accounts/components/AccountScreen.tsx':
+        "import { useJournals } from'../../journal';",
+    },
+    { accounts: ['journal'] },
+  );
+
+  assert.ok(result.violations.some(violation => violation.includes('relative cross-feature import')));
+});
+
+test('rejects relative feature imports into data repositories', () => {
+  const result = analyzeFixture({
+    'src/features/accounts/components/AccountScreen.tsx':
+      "import { accountRepository } from '../../../data/repositories/account';",
+    'src/data/repositories/account.ts': 'export const accountRepository = {};',
+  });
+
+  assert.ok(
+    result.violations.some(violation =>
+      violation.includes('feature must not import data repository'),
+    ),
+  );
+});
+
+test('rejects multiline dynamic import() into data repositories from features', () => {
+  const result = analyzeFixture({
+    'src/features/accounts/components/AccountScreen.tsx':
+      "const load = () => import(\n  '../../../data/repositories/account'\n);",
+    'src/data/repositories/account.ts': 'export const accountRepository = {};',
+  });
+
+  assert.ok(
+    result.violations.some(violation =>
+      violation.includes('feature must not import data repository'),
+    ),
+  );
+});
+
+test('rejects aliased feature imports into data repositories', () => {
+  const result = analyzeFixture({
+    'src/features/accounts/components/AccountScreen.tsx':
+      "import { accountRepository } from '@/src/data/repositories/account';",
+    'src/data/repositories/account.ts': 'export const accountRepository = {};',
+  });
+
+  assert.ok(
+    result.violations.some(violation =>
+      violation.includes('feature must not import data repository'),
+    ),
+  );
+});
+
+test('allows feature test fixtures to import data repositories', () => {
+  const result = analyzeFixture({
+    'src/features/accounts/services/__tests__/AccountMerge.test.ts':
+      "import { accountRepository } from '@/src/data/repositories/account';",
+    'src/data/repositories/account.ts': 'export const accountRepository = {};',
+  });
+
+  assert.deepEqual(
+    result.violations.filter(violation => violation.includes('data repository')),
+    [],
+  );
+});
+
 test('rejects unapproved cross-feature public barrel imports', () => {
   const result = analyzeFixture(
     {

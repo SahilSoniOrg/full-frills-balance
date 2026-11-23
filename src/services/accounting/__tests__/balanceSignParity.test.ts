@@ -1,9 +1,10 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-import { effect, periodFlowSQL } from '@/src/domain/accounting/BalanceEffects';
+import { effect } from '@/src/domain/accounting/BalanceEffects';
+import { periodFlowSQL } from '@/src/data/repositories/accounting/BalanceEffectSql';
 
 /**
- * Oracle for `periodFlowSQL().increaseCase` — keep in sync with BalanceEffects.periodFlowSQL.
+ * Oracle for `periodFlowSQL().increaseCase` — keep in sync with BalanceEffectSql.periodFlowSQL.
  */
 function periodFlowIncreaseAmount(
   accountType: AccountType,
@@ -29,7 +30,7 @@ function periodFlowIncreaseAmount(
 }
 
 /**
- * Oracle for `periodFlowSQL().decreaseCase` — keep in sync with BalanceEffects.periodFlowSQL.
+ * Oracle for `periodFlowSQL().decreaseCase` — keep in sync with BalanceEffectSql.periodFlowSQL.
  */
 function periodFlowDecreaseAmount(
   accountType: AccountType,

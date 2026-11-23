@@ -11,7 +11,7 @@ import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useEffect, useRef } from 'react';
 
 // Cache Warmup Imports
-import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -59,7 +59,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     const earlyFx = new AbortController();
     void (async () => {
       try {
-        const accountCurrencyBases = await accountQueryRepository
+        const accountCurrencyBases = await accountQueries
           .findAll(workplaceId)
           .then(accounts => accounts.map(account => account.currencyCode));
         if (earlyFx.signal.aborted) return;
@@ -219,7 +219,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
               // Only optional valuation caches depend on completed FX warmup.
               await runTask('FX cache warmup', async () => {
-                const accounts = await accountQueryRepository.findAll(workplaceId);
+                const accounts = await accountQueries.findAll(workplaceId);
                 if (controller.signal.aborted) return;
                 await exchangeRateService.preWarmCache(
                   defaultCurrencyCode,

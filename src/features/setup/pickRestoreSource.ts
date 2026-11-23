@@ -4,6 +4,7 @@ import {
   importRegistry,
   readFileAsBytes,
   sanitizeContent,
+  toTransactionType,
 } from '@/src/services/import';
 import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
@@ -14,8 +15,7 @@ import type { WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { CanonicalJournal, CanonicalTransaction } from '@/src/types/importContracts';
 import type { TransactionType } from '@/src/types/enums';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { toTransactionType } from '@/src/data/repositories/importValueParsers';
+import { currencyReadService } from '@/src/services/currency-read-service';
 import {
   evaluateJournalBalance,
   proposeUniqueJournalFxRate,
@@ -286,7 +286,7 @@ async function precisionByCurrencyForJournal(
       journal.currencyCode,
       ...lines.map(line => line.accountCurrency ?? line.transaction.currencyCode),
     ],
-    code => activeImportedPrecisions.get(code) ?? currencyRepository.getPrecision(code),
+    code => activeImportedPrecisions.get(code) ?? currencyReadService.getPrecision(code),
   );
 }
 

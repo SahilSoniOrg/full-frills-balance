@@ -1,11 +1,8 @@
-import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import type { AuditStatusLookupType } from '@/src/types/auditEntityCapabilities';
 import { EntityStatus } from '@/src/services/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { auditReadService } from '@/src/services/audit/auditReadService';
 import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import React, { useMemo } from 'react';
@@ -79,26 +76,29 @@ export function useAuditEntityStatus(
   const { data: journals } = useObservable(
     () =>
       observeIdsInChunks(journalIds, chunk =>
-        journalObserveQueries.observeByIdsWithDeleted(workplaceId, chunk),
+        auditReadService.observeJournalsByIdsWithDeleted(workplaceId, chunk),
       ),
     [workplaceId, journalIds],
     [],
   );
   const { data: budgets = [] } = useObservable(
-    () => observeIdsInChunks(budgetIds, chunk => budgetRepository.observeByIds(workplaceId, chunk)),
+    () =>
+      observeIdsInChunks(budgetIds, chunk =>
+        auditReadService.observeBudgetsByIds(workplaceId, chunk),
+      ),
     [workplaceId, budgetIds],
     [],
   );
   const { data: plannedPayments = [] } = useObservable(
     () =>
       observeIdsInChunks(plannedPaymentIds, chunk =>
-        plannedPaymentRepository.observeByIdsIncludingDeleted(workplaceId, chunk),
+        auditReadService.observePlannedPaymentsByIdsIncludingDeleted(workplaceId, chunk),
       ),
     [workplaceId, plannedPaymentIds],
     [],
   );
   const { data: workplace } = useObservable(
-    () => workplaceRepository.observeById(workplaceId),
+    () => auditReadService.observeWorkplaceById(workplaceId),
     [workplaceId],
     null,
   );

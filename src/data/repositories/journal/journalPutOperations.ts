@@ -1,10 +1,8 @@
 import {
+  stageJournalCaptureMetadataWrite,
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import Journal from '@/src/data/models/Journal';
-import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import {
@@ -12,7 +10,6 @@ import {
   fetchJournalTransactions,
   findActiveJournal,
   journalTables,
-  mapJournalSnapshotForAudit,
   toPersistenceLine,
   validateJournal,
 } from '@/src/data/repositories/journal/journalPersistenceSupport';
@@ -20,154 +17,29 @@ import type {
   JournalPersistenceResult,
   PutJournalRequest,
   ReverseJournalOptions,
-  ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
-import type { JournalWriteLine, JournalWriteMetadata } from '@/src/types/journalWrite';
-import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
+import type { JournalWriteLine } from '@/src/types/journalWrite';
 import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
-import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvaluator';
-import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
-import { AccountId, brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
-import { mapTransactionToAudit } from '@/src/types/audit';
-import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import { effect } from '@/src/domain/accounting/BalanceEffects';
-import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
-import { hashSmsMetadataFingerprints } from '@/src/domain/transaction-intelligence/smsPrivateMetadata';
-import { parseJSONRecord } from '@/src/utils/serialization';
-import { stageJournalCaptureMetadataWrite } from '@/src/data/repositories/AccountingWriteSession';
-import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import {
-  mergeCaptureMetadataJson,
-  readCaptureMetadata,
-  withCaptureMetadata,
-  type CaptureCategoryLine,
-} from '@/src/domain/transaction-intelligence/captureMetadata';
-import { transitionCapture } from '@/src/domain/transaction-intelligence/captureTransition';
+  preparePostAuditLog,
+  preparePutAuditLog,
+  prepareRenameAuditLog,
+  prepareReverseAuditLog,
+} from '@/src/data/repositories/journal/journalPutAudit';
+import { stagePutCaptureMetadata } from '@/src/data/repositories/journal/journalPutCaptureMetadata';
+import { resolvePut } from '@/src/data/repositories/journal/journalPutResolve';
+import { runningBalancesAfter } from '@/src/data/repositories/journal/journalPutRunningBalance';
+import { JournalStatus, TransactionType } from '@/src/types/enums';
+import { AccountId, brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
+import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
+import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
+import { parseJSONRecord } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
 
 export interface PreparedJournalWrite {
   ops: () => readonly Model[];
   result: JournalPersistenceResult;
-}
-
-/** Persisted journal values a put resolves to, whether it creates or updates. */
-interface ResolvedPut {
-  existing: Journal | null;
-  oldTransactions: readonly Transaction[];
-  lines: readonly JournalWriteLine[];
-  replacesLines: boolean;
-  journalDate: number;
-  description?: string;
-  notes?: string;
-  displayType?: JournalDisplayType;
-  currencyCode: string;
-  status: JournalStatus;
-}
-
-function resolveCreate(input: PutJournalRequest): ResolvedPut {
-  if (!input.transactions || input.journalDate === undefined || !input.currencyCode) {
-    throw new Error('A new journal requires a date, currency, and transaction lines');
-  }
-  return {
-    existing: null,
-    oldTransactions: [],
-    lines: input.transactions,
-    replacesLines: true,
-    journalDate: input.journalDate,
-    description: input.description,
-    notes: input.notes,
-    displayType: input.displayType,
-    currencyCode: input.currencyCode,
-    status: input.status ?? JournalStatus.POSTED,
-  };
-}
-
-/** Sparse update: omitted fields keep persisted values; an explicit `undefined` text clears it. */
-function resolveUpdate(
-  input: PutJournalRequest,
-  existing: Journal,
-  oldTransactions: readonly Transaction[],
-): ResolvedPut {
-  if (
-    input.currencyCode !== undefined &&
-    input.currencyCode.trim().toUpperCase() !== existing.currencyCode.trim().toUpperCase()
-  ) {
-    throw new JournalBalanceError('A saved journal currency cannot be changed');
-  }
-  return {
-    existing,
-    oldTransactions,
-    lines: input.transactions ?? oldTransactions.map(toPersistenceLine),
-    replacesLines: input.transactions !== undefined,
-    journalDate: input.journalDate ?? existing.journalDate,
-    description: 'description' in input ? input.description : existing.description,
-    notes: 'notes' in input ? input.notes : existing.notes,
-    displayType: input.displayType ?? (input.transactions ? undefined : existing.displayType),
-    currencyCode: existing.currencyCode,
-    status: input.status ?? existing.status,
-  };
-}
-
-async function resolvePut(
-  input: PutJournalRequest,
-  workplaceId: WorkplaceId,
-): Promise<ResolvedPut> {
-  if (!input.journalId) return resolveCreate(input);
-  const existing = await findActiveJournal(input.journalId, workplaceId);
-  if (!existing) throw new Error('Journal not found');
-  const oldTransactions = await fetchJournalTransactions(workplaceId, [existing.id]);
-  return resolveUpdate(input, existing, oldTransactions);
-}
-
-function assignMetadata(record: JournalMetadata, metadata: JournalWriteMetadata, now: Date): void {
-  record.importSource = metadata.importSource;
-  record.originalSmsId = metadata.originalSmsId;
-  if ('originalSmsSender' in metadata) record.originalSmsSender = metadata.originalSmsSender;
-  if ('originalSmsBody' in metadata) record.originalSmsBody = metadata.originalSmsBody;
-  record.metadataJson = hashSmsMetadataFingerprints(metadata.metadataJson);
-  applyJournalMetadataProjections(record);
-  record.updatedAt = now;
-}
-
-/**
- * Each account's balance after this journal, in rebuild order: every active line dated on or
- * before the journal (new lines sort last by creation time), minus the lines this put replaces.
- */
-async function runningBalancesAfter(
-  workplaceId: WorkplaceId,
-  journalDate: number,
-  balance: ValidatedJournal,
-  replacedTransactions: readonly Transaction[],
-): Promise<Map<AccountId, number>> {
-  const accountIds = [...new Set(balance.lines.map(line => line.accountId))];
-  const entries = await Promise.all(
-    accountIds.map(async accountId => {
-      const { accountType } = balance.accountsById.get(accountId)!;
-      const precision = balance.precisionByAccountId.get(accountId)!;
-      let runningBalance = await transactionRawRebuildQueries.getAccountSumRaw(
-        workplaceId,
-        accountId,
-        journalDate,
-        accountType,
-      );
-      for (const replaced of replacedTransactions) {
-        if (replaced.accountId === accountId && replaced.transactionDate <= journalDate) {
-          runningBalance -= effect(accountType, replaced.transactionType).delta(replaced.amount);
-        }
-      }
-      for (const line of balance.lines) {
-        if (line.accountId === accountId) {
-          runningBalance = effect(accountType, line.transactionType).apply(
-            runningBalance,
-            line.amount,
-            precision,
-          );
-        }
-      }
-      return [accountId, runningBalance] as const;
-    }),
-  );
-  return new Map(entries);
 }
 
 export async function preparePutOperations(
@@ -245,152 +117,38 @@ export async function preparePutOperations(
       if (initialDeletedAt) record.deletedAt = initialDeletedAt;
     });
 
-  const existingMetadata = existing
-    ? await journalTables.metadata
-        .query(Q.where('journal_id', existing.id), Q.where('workplace_id', workplaceId))
-        .fetch()
-        .then(rows => rows.find(row => readCaptureMetadata(row.metadataJson)) ?? rows[0] ?? null)
-    : null;
-  const existingCapture = readCaptureMetadata(existingMetadata?.metadataJson);
-  let metadata: JournalWriteMetadata | undefined = input.metadata
-    ? {
-        ...input.metadata,
-        importSource:
-          existingCapture && existingMetadata
-            ? existingMetadata.importSource
-            : input.metadata.importSource,
-        originalSmsId: input.metadata.originalSmsId ?? existingMetadata?.originalSmsId,
-        metadataJson: mergeCaptureMetadataJson(
-          existingMetadata?.metadataJson,
-          input.metadata.metadataJson,
-        ),
-      }
-    : undefined;
-  const newCapture = !existing ? readCaptureMetadata(metadata?.metadataJson) : null;
-  const captureLines = (values: readonly JournalWriteLine[]): CaptureCategoryLine[] =>
-    values.map(line => ({
-      ...line,
-      accountType: balance.accountsById.get(line.accountId)!.accountType,
-      currencyCode: balance.accountsById.get(line.accountId)!.currencyCode,
-    }));
-  if (newCapture && metadata) {
-    // Source UI hints are normalized against persisted account types and rounded lines.
-    const transition = transitionCapture({
-      existing: newCapture,
-      proposedLines: captureLines(lines),
-      actor: auditMetadata?.source === 'system' ? 'system' : 'user',
-      now: now.getTime(),
-    });
-    if (!transition.ok || !transition.capture)
-      throw new Error('The captured category information could not be prepared.');
-    metadata = {
-      ...metadata,
-      metadataJson: withCaptureMetadata(metadata.metadataJson, transition.capture),
-    };
-  }
-  if (put.replacesLines || input.confirmCaptureKey) {
-    const transition = transitionCapture({
-      existing: existingCapture,
-      proposedLines: captureLines(lines),
-      actor: auditMetadata?.source === 'system' ? 'system' : 'user',
-      now: now.getTime(),
-      ...(input.confirmCaptureKey
-        ? {
-            confirmation: {
-              key: input.confirmCaptureKey,
-              originalLines: oldTransactions,
-              posted: auditMetadata?.source === 'app' && status === JournalStatus.POSTED,
-            },
-          }
-        : {}),
-    });
-    if (!transition.ok) {
-      throw new Error(
-        transition.rejection === 'missing_capture'
-          ? 'This entry has no captured categories to confirm.'
-          : 'The categories changed. Review this entry again.',
-      );
-    }
-    if (transition.capture && existingCapture && existingMetadata) {
-      metadata = {
-        importSource: existingMetadata.importSource,
-        originalSmsId: existingMetadata.originalSmsId,
-        ...metadata,
-        metadataJson: withCaptureMetadata(
-          metadata?.metadataJson ?? existingMetadata.metadataJson,
-          transition.capture,
-        ),
-      };
-    }
-  }
-  if (metadata) {
-    const metadataWriterKey = existingMetadata?.id ?? 'create-metadata';
-    stageJournalCaptureMetadataWrite(
-      session,
-      workplaceId,
-      journal.id,
-      metadataWriterKey,
-      metadata.metadataJson,
-      metadataJson => {
-        const linkedMetadata = {
-          ...metadata,
-          metadataJson,
-        };
-        return [
-          existingMetadata
-            ? existingMetadata.prepareUpdate(record => assignMetadata(record, linkedMetadata, now))
-            : journalTables.metadata.prepareCreate(record => {
-                record.journalId = journal.id;
-                record.workplaceId = workplaceId;
-                record.createdAt = now;
-                assignMetadata(record, linkedMetadata, now);
-              }),
-        ];
-      },
-    );
-  }
+  await stagePutCaptureMetadata({
+    session,
+    workplaceId,
+    journalId: journal.id,
+    existing,
+    oldTransactions,
+    replacesLines: put.replacesLines,
+    input,
+    balance,
+    status,
+    auditMetadata,
+    now,
+  });
 
-  const auditedTransactions = lines.map(line =>
-    mapTransactionToAudit({
-      ...line,
-      currencyCode: balance.accountsById.get(line.accountId)?.currencyCode,
-    }),
-  );
-  const auditChanges = existing
-    ? {
-        before: {
-          ...mapJournalSnapshotForAudit(existing),
-          transactions: oldTransactions.map(mapTransactionToAudit),
-        },
-        after: {
-          ...mapJournalSnapshotForAudit({
-            description: put.description,
-            notes: put.notes,
-            journalDate,
-            currencyCode: put.currencyCode,
-            status,
-            totalAmount: balance.totalAmount,
-          }),
-          transactions: auditedTransactions,
-        },
-      }
-    : {
-        after: {
-          ...mapJournalSnapshotForAudit({
-            description: put.description,
-            notes: put.notes,
-            journalDate,
-            currencyCode: put.currencyCode,
-            status,
-            totalAmount: balance.totalAmount,
-          }),
-          transactions: auditedTransactions,
-        },
-      };
   const previousStatus = existing?.status;
   const previousJournalDate = existing?.journalDate;
   const touchesLines =
     put.replacesLines || journalDate !== previousJournalDate || status !== previousStatus;
+
+  // Capture before/after while `existing` still holds the pre-update snapshot.
+  // prepareUpdate mutates the model in place, so building the audit log inside
+  // ops() would collapse before/after and mark the entry non-undoable.
+  const putAuditLog = preparePutAuditLog({
+    existing,
+    input,
+    put,
+    balance,
+    oldTransactions,
+    journalId: journal.id,
+    workplaceId,
+    auditMetadata,
+  });
 
   const ops = (): readonly Model[] => {
     const journalOp = existing
@@ -441,31 +199,7 @@ export async function preparePutOperations(
           )
         : [];
 
-    const operations: Model[] = [journalOp, ...transactionOps];
-    operations.push(
-      auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journal.id,
-          eventType:
-            auditMetadata?.eventType ??
-            (existing
-              ? 'journal.updated'
-              : input.plannedPaymentId
-                ? 'journal.planned_payment_generated'
-                : 'journal.created'),
-          source: auditMetadata?.source,
-          correlationId: auditMetadata?.correlationId,
-          revertsLogId: auditMetadata?.revertsLogId,
-          undoable:
-            auditMetadata?.undoable ?? (!existing && input.plannedPaymentId ? false : undefined),
-          action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
-          changes: auditChanges,
-        },
-        workplaceId,
-      ),
-    );
-    return operations;
+    return [journalOp, ...transactionOps, putAuditLog];
   };
 
   return {
@@ -578,23 +312,7 @@ export async function stagePost(
         record.updatedAt = now;
       }),
     ),
-    auditRepository.prepareLog(
-      {
-        entityType: 'journal',
-        entityId: journalId,
-        eventType: auditMetadata?.eventType ?? 'journal.posted',
-        source: auditMetadata?.source,
-        correlationId: auditMetadata?.correlationId,
-        revertsLogId: auditMetadata?.revertsLogId,
-        undoable: auditMetadata?.undoable,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { status: JournalStatus.PLANNED, journalDate: originalPlannedDate },
-          after: { status: JournalStatus.POSTED, journalDate: postedAt },
-        },
-      },
-      workplaceId,
-    ),
+    preparePostAuditLog({ journalId, originalPlannedDate, postedAt, workplaceId, auditMetadata }),
   ]);
   return {
     journal,
@@ -658,20 +376,13 @@ export async function stageReverse(
       record.status = JournalStatus.REVERSED;
       record.updatedAt = new Date();
     }),
-    auditRepository.prepareLog(
-      {
-        entityType: 'journal',
-        entityId: originalJournalId,
-        eventType: 'journal.reversed',
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { status: originalStatus, reversingJournalId: originalReversingJournalId },
-          after: { status: JournalStatus.REVERSED, reversingJournalId },
-        },
-        undoable: false,
-      },
+    prepareReverseAuditLog({
+      originalJournalId,
+      originalStatus,
+      originalReversingJournalId,
+      reversingJournalId,
       workplaceId,
-    ),
+    }),
   ]);
   return {
     ...prepared.result,
@@ -711,19 +422,12 @@ export async function stageRename(
         record.description = description;
         record.updatedAt = now;
       }),
-      auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journal.id,
-          eventType: 'journal.renamed',
-          action: AuditAction.UPDATE,
-          changes: {
-            before: { description: previousDescription },
-            after: { description },
-          },
-        },
+      prepareRenameAuditLog({
+        journalId: journal.id,
+        previousDescription,
+        description,
         workplaceId,
-      ),
+      }),
     ]),
   );
   return previousDescriptions;

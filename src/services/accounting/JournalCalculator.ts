@@ -1,8 +1,9 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { TransactionType } from '@/src/types/enums';
+import { asAccountId } from '@/src/types/ids';
 
-import { checkJournal, JournalLineForCheck } from '@/src/domain/accounting/BalanceEffects';
-import { roundToPrecision } from '@/src/domain/money/money';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { fromMinorUnits, roundToPrecision } from '@/src/domain/money/money';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
 
 interface JournalLineInput {
@@ -12,30 +13,55 @@ interface JournalLineInput {
   accountCurrency?: string;
 }
 
-export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
+function evaluateComposerJournal(lines: JournalLineInput[], baseCurrency: string) {
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
-  const forCheck: JournalLineForCheck[] = lines.map(line => {
-    const currency = line.accountCurrency?.trim().toUpperCase();
-    const rate = Number(line.exchangeRate);
-    const isForeignCurrencyLine = Boolean(
-      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
-    );
-    return {
-      amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
-      type: line.type,
-      exchangeRate: isForeignCurrencyLine ? rate : 1,
-    };
+  const normalized = lines.map((line, index) => ({
+    id: String(index),
+    accountId: asAccountId(String(index)),
+    // Pass strings through so the evaluator sanitizes at account-currency precision.
+    amount: line.amount,
+    transactionType: line.type,
+    accountCurrency: line.accountCurrency?.trim().toUpperCase() || normalizedBaseCurrency,
+    exchangeRate: line.exchangeRate,
+  }));
+  const currencies = new Set([
+    normalizedBaseCurrency,
+    ...normalized.map(line => line.accountCurrency),
+  ]);
+  return evaluateJournalBalance({
+    lines: normalized,
+    journalCurrency: normalizedBaseCurrency,
+    precisionByCurrency: new Map([...currencies].map(code => [code, getCurrencyPrecision(code)])),
   });
-  const hasForeignCurrencyLine = lines.some(line => {
-    const currency = line.accountCurrency?.trim().toUpperCase();
-    const rate = Number(line.exchangeRate);
-    return Boolean(
-      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
-    );
-  });
-  return checkJournal(forCheck, AppConfig.constants.precision, {
-    allowExchangeRateRounding: hasForeignCurrencyLine,
-  }).isValid;
+}
+
+export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
+  return evaluateComposerJournal(lines, baseCurrency).isBalanced;
+}
+
+/** Credit/debit totals and remaining allocation from the same evaluator as isJournalBalanced. */
+export function getJournalComposerTotals(
+  lines: JournalLineInput[],
+  baseCurrency: string,
+): {
+  fromTotal: number;
+  toTotal: number;
+  remaining: number;
+  isBalanced: boolean;
+  precision: number;
+} {
+  const evaluation = evaluateComposerJournal(lines, baseCurrency);
+  const precision = evaluation.journalPrecision;
+  const fromTotal = fromMinorUnits(evaluation.creditTotalMinorUnits, precision);
+  const toTotal = fromMinorUnits(evaluation.debitTotalMinorUnits, precision);
+  return {
+    fromTotal,
+    toTotal,
+    // Advanced form: From = credits, To = debits; remaining left to allocate is credit − debit.
+    remaining: fromMinorUnits(-evaluation.differenceMinorUnits, precision),
+    isBalanced: evaluation.isBalanced,
+    precision,
+  };
 }
 
 export function getJournalLineBaseAmount(
@@ -71,8 +97,8 @@ export function getJournalLineBaseAmount(
   const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
   if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
-    // Even for base currency, ensure we round to the currency precision
-    // to avoid 10.100000000002 issues from manual entry or calculations
+    // Split-save compares allocation totals with two-decimal edge rounding.
+    // Composer display totals use getJournalComposerTotals / the evaluator instead.
     return roundToPrecision(finalAmount, 2);
   }
 

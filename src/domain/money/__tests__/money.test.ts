@@ -129,6 +129,20 @@ describe('money utilities', () => {
       expect(jpy.add(new Money(0.4, 'JPY'), 2).amount).toBe(2);
     });
   });
+
+  describe('currency mismatch', () => {
+    it('rejects add across currencies', () => {
+      expect(() => new Money(10, 'USD').add(new Money(5, 'EUR'))).toThrow(
+        'Currency mismatch in addition: USD vs EUR',
+      );
+    });
+
+    it('rejects subtract across currencies', () => {
+      expect(() => new Money(10, 'USD').subtract(new Money(5, 'JPY'))).toThrow(
+        'Currency mismatch in subtraction: USD vs JPY',
+      );
+    });
+  });
 });
 
 describe('headlineCurrency', () => {
