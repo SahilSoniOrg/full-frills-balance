@@ -1,3 +1,4 @@
+import { bindAuditRepositoryPorts } from '@/src/services/audit/bindAuditRepositoryPorts';
 import { registerAuditHandlers } from '@/src/services/audit-handlers';
 
 /**
@@ -5,5 +6,6 @@ import { registerAuditHandlers } from '@/src/services/audit-handlers';
  * Safe to call repeatedly — individual registrars are idempotent.
  */
 export function runAppBootstrapSideEffects(): void {
+  bindAuditRepositoryPorts();
   registerAuditHandlers();
 }

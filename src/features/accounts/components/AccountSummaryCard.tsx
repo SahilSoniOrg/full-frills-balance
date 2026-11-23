@@ -15,7 +15,7 @@ import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/cons
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';

@@ -2,7 +2,7 @@ import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 import { getBudgetCurrentPeriod } from './BudgetPeriodUtils';
-import { parseBudgetAssetAccountIds } from './budgetAssetAccountIds';
+import { parseBudgetAssetAccountIds } from '@/src/domain/budget/fundingAccountIds';
 import {
   BudgetCapacityProjection,
   BudgetCycleCapacity,

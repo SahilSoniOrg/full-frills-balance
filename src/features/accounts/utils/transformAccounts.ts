@@ -10,7 +10,7 @@ import {
   getSectionColor,
   resolveAccountAppearance,
 } from '@/src/design-system/accountPresentation';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isAccountArchived, getVisibleRoots } from '@/src/domain/accounts/accountArchive';
 import { Opacity } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';

@@ -1,6 +1,7 @@
 /**
  * Non-sign journal scaffolding helpers (distinct accounts, simple 2-line construction).
- * Balance/sign logic lives in BalanceEffects (`checkJournal`, `effect`).
+ * Journal balance logic lives in `evaluateJournalBalance`; this module owns
+ * distinct-account validation only.
  */
 export function validateDistinctAccounts(accountIds: string[]): {
   isValid: boolean;

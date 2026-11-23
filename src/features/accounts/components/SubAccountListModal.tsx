@@ -5,7 +5,7 @@ import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/co
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';

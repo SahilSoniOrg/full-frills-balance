@@ -73,7 +73,7 @@ describe('Account reference graph', () => {
 
     it('marks active account references by their storage cardinality', () => {
       const byKey = Object.fromEntries(referenceSites().map(site => [site.key, site]));
-      expect(byKey['budget.assetAccountIds'].cardinality).toBe('csv');
+      expect(byKey['budget.assetAccountIds'].cardinality).toBe('collection');
       expect(byKey['transaction.accountId'].cardinality).toBe('scalar');
       expect(byKey['accountMatcher.accountId']).toMatchObject({
         mergeBehavior: 'retarget',
@@ -96,8 +96,13 @@ describe('Account reference graph', () => {
     });
   });
 
-  describe('funding Account-id CSV helpers', () => {
-    it('parses comma-separated ids with trim and empty-token drop', () => {
+  describe('funding Account-id collection helpers', () => {
+    it('parses JSON collections and legacy CSV with trim and empty-token drop', () => {
+      expect(parseFundingAccountIds('["acc-1","acc-2","acc-3"]')).toEqual([
+        'acc-1',
+        'acc-2',
+        'acc-3',
+      ]);
       expect(parseFundingAccountIds('acc-1, acc-2,,acc-3 ,')).toEqual(['acc-1', 'acc-2', 'acc-3']);
       expect(parseFundingAccountIds(undefined)).toEqual([]);
       expect(parseFundingAccountIds(null)).toEqual([]);
@@ -105,9 +110,11 @@ describe('Account reference graph', () => {
       expect(parseFundingAccountIds('   ')).toEqual([]);
     });
 
-    it('formats ids as CSV and round-trips with parse', () => {
-      expect(formatFundingAccountIds(['acc-1', 'acc-2'])).toBe('acc-1,acc-2');
+    it('formats ids as JSON and round-trips with parse', () => {
+      expect(formatFundingAccountIds(['acc-1', 'acc-2'])).toBe('["acc-1","acc-2"]');
       expect(formatFundingAccountIds([])).toBe('');
+      expect(parseFundingAccountIds('[]')).toEqual([]);
+      expect(parseFundingAccountIds('"acc-1"')).toEqual([]);
       expect(parseFundingAccountIds(formatFundingAccountIds(['a', 'b', 'c']))).toEqual([
         'a',
         'b',

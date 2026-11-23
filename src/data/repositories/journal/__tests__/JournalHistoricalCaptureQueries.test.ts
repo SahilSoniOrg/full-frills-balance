@@ -16,6 +16,7 @@ import {
   createJournalFixture,
   resetJournalIntegrationWorkplace,
 } from '@/src/testing/journalFixtures';
+import { Icon } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 import { asJournalId, asWorkplaceId, type AccountId, type JournalId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
@@ -101,7 +102,7 @@ describe('historical capture suggestions', () => {
     expect(patterns).toHaveLength(1);
     expect(patterns[0].journalIds).toEqual([second.id, first.id]);
     expect(patterns[0].categories).toEqual([
-      { accountId: food, name: 'Food', color: null, icon: null, journalCount: 2 },
+      { accountId: food, name: 'Food', color: null, icon: Icon.Tag, journalCount: 2 },
     ]);
     expect(
       await journalHistoricalCaptureQueries.listPatternEvidenceEntries(
@@ -213,7 +214,7 @@ describe('historical capture suggestions', () => {
     expect(items.historicalCategorySuggestions).toHaveLength(1);
     expect(items.historicalCategorySuggestions[0].journalIds).not.toContain(uncategorized.id);
     expect(items.historicalCategorySuggestions[0].categories).toEqual([
-      { accountId: food, name: 'Food', color: null, icon: null, journalCount: 2 },
+      { accountId: food, name: 'Food', color: null, icon: Icon.Tag, journalCount: 2 },
     ]);
   });
 

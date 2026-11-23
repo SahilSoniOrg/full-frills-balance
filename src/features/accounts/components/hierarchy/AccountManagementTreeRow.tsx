@@ -9,7 +9,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useEffect } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {

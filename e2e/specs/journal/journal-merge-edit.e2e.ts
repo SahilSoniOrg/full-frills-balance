@@ -5,7 +5,7 @@
  */
 import { by, element, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
-import { waitForVisibleText } from '../../actions/mobile/elementActions';
+import { replaceById, scrollToId, waitForVisibleText } from '../../actions/mobile/elementActions';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { tabs } from '../../screens';
 
@@ -47,10 +47,12 @@ describe(':android: merged journal edit', () => {
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('edit-button')).tap();
 
-    await waitFor(element(by.id('journal-description-input')))
-      .toBeVisible()
+    // Multi-leg merges open advanced entry; wait for the screen then scroll to meta.
+    await waitFor(element(by.id('journal-entry-screen')))
+      .toExist()
       .withTimeout(LONG_TIMEOUT_MS);
-    await element(by.id('journal-description-input')).replaceText('Merged SMS expenses');
+    await scrollToId('journal-description-input', LONG_TIMEOUT_MS);
+    await replaceById('journal-description-input', 'Merged SMS expenses', LONG_TIMEOUT_MS);
     await element(by.id('submit-footer-button')).tap();
 
     await waitFor(element(by.text('Merged SMS expenses')))

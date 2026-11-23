@@ -383,7 +383,7 @@ describe('CashewImportPlugin', () => {
       expect(canonical!.budgetScopes!.map(s => s.accountId)).toEqual([dining.id]);
 
       const bank = canonical!.accounts.find(a => a.name === 'Bank')!;
-      expect(budget.assetAccountIds).toBe(bank.id);
+      expect(budget.assetAccountIds).toBe(JSON.stringify([bank.id]));
 
       expect(canonical!.plannedPayments).toHaveLength(1);
       expect(canonical!.plannedPayments![0].name).toBe('Monthly internet');

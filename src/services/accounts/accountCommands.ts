@@ -20,6 +20,7 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { IconName } from '@/src/types/domainIcons';
 import { isValidHexColor } from '@/src/design-system/colorMath';
 import { roundToPrecision } from '@/src/domain/money/money';
@@ -77,7 +78,11 @@ async function createAccountCore(
     accountSubtype: resolveAccountSubtype(input.accountType, input.accountSubtype),
     currencyCode,
     description: input.description,
-    icon: input.icon,
+    icon: getAccountIcon({
+      name: input.name,
+      icon: input.icon,
+      accountType: input.accountType,
+    }),
     color: input.color && isValidHexColor(input.color) ? input.color : undefined,
     orderNum: 0,
     parentAccountId: input.parentAccountId || undefined,

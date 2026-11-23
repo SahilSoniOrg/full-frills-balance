@@ -38,7 +38,9 @@ export async function tapByLabel(
   label: string | RegExp,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<void> {
-  const target = element(by.label(label));
+  // Android often exposes both the pressable row and nested TextView with the same
+  // label; prefer the first match so Detox does not fail on ambiguity.
+  const target = element(by.label(label)).atIndex(0);
   await waitFor(target).toBeVisible().withTimeout(timeoutMs);
   await target.tap();
 }

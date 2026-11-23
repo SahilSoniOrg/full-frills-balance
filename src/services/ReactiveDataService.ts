@@ -1,5 +1,9 @@
 import { Animation, AppConfig } from '@/src/constants';
 import { toPlainAccount, toPlainAccounts } from '@/src/data/models/Account';
+import {
+  resolvePlainAccountIcon,
+  resolvePlainAccountIcons,
+} from '@/src/presentation/mappers/accountPlainMapper';
 import { observeAggregatedAccountBalances } from '@/src/services/reactive/reactiveAggregatedBalances';
 import {
   clearReactiveWorkplaceAccountsAndJournalMetaCache,
@@ -157,7 +161,7 @@ class ReactiveDataService {
         ]).pipe(
           map(([base, enrichedJournals]) => {
             const { accounts, balancesMap, wealthSummary } = base;
-            const plainAccounts = toPlainAccounts(accounts);
+            const plainAccounts = resolvePlainAccountIcons(toPlainAccounts(accounts));
 
             const data: DashboardData = {
               accounts: plainAccounts,
@@ -190,7 +194,7 @@ class ReactiveDataService {
     return withFirstEmissionMetric(
       observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
         map(({ accounts, balancesMap, wealthSummary }) => {
-          const plainAccounts = toPlainAccounts(accounts);
+          const plainAccounts = resolvePlainAccountIcons(toPlainAccounts(accounts));
 
           const data: LiveAccountsSummaryData = {
             accounts: plainAccounts,
@@ -231,7 +235,9 @@ class ReactiveDataService {
       combineLatest([
         // Snapshot model values before crossing async boundaries: WatermelonDB
         // mutates the same model objects on later emissions.
-        observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts)),
+        observeWorkplaceAccounts(workplaceId).pipe(
+          map(accounts => resolvePlainAccountIcons(toPlainAccounts(accounts))),
+        ),
         observeWorkplaceJournalMeta(workplaceId),
         observeWorkplaceActiveTransactionCount(workplaceId),
         exchangeRateRepository.observeRevision(),
@@ -245,7 +251,9 @@ class ReactiveDataService {
               accountId,
             );
             return {
-              account: deletedAccount ? toPlainAccount(deletedAccount) : null,
+              account: deletedAccount
+                ? resolvePlainAccountIcon(toPlainAccount(deletedAccount))
+                : null,
               balance: null,
               subAccounts: [],
               allAccounts: plainAccounts,

@@ -1,5 +1,9 @@
 import type { AuditEntityType } from '@/src/types/enums';
 import type { CanonicalAuditLog } from '@/src/types/importContracts';
+import {
+  formatFundingAccountIds,
+  parseFundingAccountIds,
+} from '@/src/domain/budget/fundingAccountIds';
 
 export type AuditImportEntityIdMaps = Record<AuditEntityType, ReadonlyMap<string, string>>;
 
@@ -78,10 +82,10 @@ function remapValue(
       }
     }
     if (key === 'assetAccountIds') {
-      const remapped = value
-        .split(',')
-        .map(id => remapId(id.trim(), maps.entities.account))
-        .join(',');
+      const remappedIds = parseFundingAccountIds(value).map(id =>
+        remapId(id, maps.entities.account),
+      );
+      const remapped = remappedIds.length === 0 ? '' : formatFundingAccountIds(remappedIds);
       return { value: remapped, changed: remapped !== value };
     }
     const remapped = remapId(value, currentMap);
@@ -89,6 +93,23 @@ function remapValue(
   }
 
   if (Array.isArray(value)) {
+    // Funding collections in audit snapshots are string[] of account IDs.
+    // Remap each element as an ID — do not run the string serializer per item
+    // (that would wrap each ID as JSON: ['["new-id"]']).
+    if (key === 'assetAccountIds') {
+      let changed = false;
+      const remapped = value.flatMap(item => {
+        if (typeof item !== 'string') return [];
+        const sourceIds = parseFundingAccountIds(item);
+        const ids = sourceIds.length > 0 ? sourceIds : [item];
+        return ids.map(id => {
+          const next = remapId(id, maps.entities.account);
+          changed ||= next !== id;
+          return next;
+        });
+      });
+      return { value: remapped, changed };
+    }
     let changed = false;
     const remapped = value.map(item => {
       const result = remapValue(item, key, currentMap, maps);

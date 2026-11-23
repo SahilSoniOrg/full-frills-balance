@@ -24,9 +24,9 @@ import {
 } from '@/src/domain/planned-payment/sharedMovementMatcher';
 import { readCaptureMetadata } from '@/src/domain/transaction-intelligence/captureMetadata';
 import { MetadataKeys } from '@/src/constants/ledger-constants';
+import { approxIntervalDays } from '@/src/domain/recurrence/intervalPolicy';
 import {
   JournalStatus,
-  PlannedPaymentInterval,
   PlannedPaymentStatus,
   TransactionDirection,
   TransactionType,
@@ -106,21 +106,6 @@ function defaultDeps(): SharedMovementMatchLoaderDeps {
     },
     now: () => Date.now(),
   };
-}
-
-function intervalDays(intervalN: number, intervalType: PlannedPaymentInterval): number {
-  const n = Math.max(1, intervalN || 1);
-  switch (intervalType) {
-    case PlannedPaymentInterval.DAILY:
-      return n;
-    case PlannedPaymentInterval.WEEKLY:
-      return n * 7;
-    case PlannedPaymentInterval.YEARLY:
-      return n * 365;
-    case PlannedPaymentInterval.MONTHLY:
-    default:
-      return n * 30;
-  }
 }
 
 function mapPlanStatus(status: PlannedPaymentStatus): MovementOccurrence['status'] {
@@ -275,7 +260,7 @@ export function createRepositorySharedMovementMatchLoader(
       };
 
       for (const payment of payments) {
-        const days = intervalDays(payment.intervalN, payment.intervalType);
+        const days = approxIntervalDays(payment.intervalType, payment.intervalN);
         const leg = resolveOccurrenceAccounts(payment, accountsById, observation);
         const structure = structureForPayment(payment, accountsById);
         const status = mapPlanStatus(payment.status);

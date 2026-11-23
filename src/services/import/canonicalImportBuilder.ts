@@ -14,7 +14,8 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { Icon, isValidIconName, parseIconName, type IconName } from '@/src/types/domainIcons';
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { formatFundingAccountIds } from '@/src/domain/budget/fundingAccountIds';
 import {
   CANONICAL_IMPORT_VERSION_V1,
   CanonicalAccount,
@@ -814,7 +815,8 @@ export class CanonicalImportBuilder {
         startDate: b.startDate,
         recurrenceDay: b.recurrenceDay,
         recurrenceMonth: b.recurrenceMonth,
-        assetAccountIds: fundingAccountIds.length > 0 ? fundingAccountIds.join(',') : undefined,
+        assetAccountIds:
+          fundingAccountIds.length > 0 ? formatFundingAccountIds(fundingAccountIds) : undefined,
       });
       scopes.push(...budgetScopes);
     }

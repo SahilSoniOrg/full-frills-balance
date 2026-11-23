@@ -1,66 +1,43 @@
 import Journal from '@/src/data/models/Journal';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import {
-  readPlannedPaymentFxContext,
-  type PlannedPaymentFxReview,
-} from '@/src/services/planned-payment/plannedPaymentFx';
-import { postPlannedJournalOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { JournalStatus, TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-
 import type { JournalSuggestion, JournalSuggestionPage } from '@/src/types/journalSuggestions';
 import type { TabType } from '@/src/types/domainJournal';
-import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
-import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
-import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import type { PostingPlan } from '@/src/types/domainTransaction';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import { MetadataKeys, MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import { parseJSONRecord } from '@/src/utils/serialization';
 import type { CreateJournalData } from '@/src/types/journalWrite';
-import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { accountQueryRepository } from '@/src/data/repositories/account';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { analytics } from '@/src/services/analytics';
-import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import { workplaceService } from '@/src/services/WorkplaceService';
-import { currencyReadService } from '@/src/services/currency-read-service';
+import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
+
+import { type PlannedJournalMode, type SubmitJournalResult } from './domain/journalDomainTypes';
 import {
-  JournalBalanceError,
-  resolveCurrencyPrecisions,
-} from '@/src/domain/accounting/journalBalanceEvaluator';
-import { logger } from '@/src/services/observability/logger';
-import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
+  clearSuggestionsCache,
+  createJournalSuggestionsState,
+  getJournalSuggestions,
+} from './domain/journalDomainSuggestions';
+import * as lifecycle from './domain/journalDomainLifecycle';
+import * as save from './domain/journalDomainSave';
 
-export interface SubmitJournalResult {
-  success: boolean;
-  error?: string;
-  action?: 'created' | 'updated';
-  journalId?: JournalId;
-}
+export type { SubmitJournalResult, PlannedJournalMode } from './domain/journalDomainTypes';
 
-/** 'post' keeps the normal posted save; the others save a future-dated entry as PLANNED. */
-export type PlannedJournalMode = 'auto' | 'manual' | 'post';
-
-/** Future entries stay unposted; 'auto' ones are posted on their date by due processing. */
-function withPlannedStatus(data: CreateJournalData, mode?: PlannedJournalMode): CreateJournalData {
-  if (!mode || mode === 'post' || data.journalDate <= Date.now()) return data;
-  if (mode === 'manual') return { ...data, status: JournalStatus.PLANNED };
-  const metadataJson = parseJSONRecord(data.metadata?.metadataJson);
-  return {
-    ...data,
-    status: JournalStatus.PLANNED,
-    metadata: {
-      importSource: 'manual',
-      ...data.metadata,
-      metadataJson: JSON.stringify({ ...metadataJson, [MetadataKeys.AUTO_POST]: true }),
-    },
-  };
-}
-
+/** Thin façade: public import path stays `@/src/services/journal/journalDomainService`. */
 export class JournalService {
+  private readonly suggestions = createJournalSuggestionsState();
+
+  clearSuggestionsCache(workplaceId?: WorkplaceId): void {
+    clearSuggestionsCache(this.suggestions, workplaceId);
+  }
+
+  async getJournalSuggestions(params: {
+    workplaceId: WorkplaceId;
+    query: string;
+    page: JournalSuggestionPage;
+    transactionType?: TabType;
+    limit?: number;
+  }): Promise<JournalSuggestion[]> {
+    return getJournalSuggestions(this.suggestions, params);
+  }
+
   async postPostingPlan(params: {
     plan: PostingPlan;
     journalId?: JournalId;
@@ -72,55 +49,7 @@ export class JournalService {
     planned?: PlannedJournalMode;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
-    const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
-    const accounts = await accountQueryRepository.findAllByIds(params.workplaceId, accountIds);
-    const resolverAccounts: TransactionResolverAccount[] = accounts.map(account => ({
-      id: account.id,
-      name: account.name,
-      accountType: account.accountType,
-      currencyCode: account.currencyCode,
-    }));
-    const existingJournal = params.journalId
-      ? await journalQueryRepository.find(params.workplaceId, params.journalId)
-      : null;
-    if (params.journalId && !existingJournal) {
-      return { success: false, error: 'Journal not found' };
-    }
-    const expectedCurrency =
-      existingJournal?.currencyCode ??
-      params.newJournalCurrencyCode ??
-      (await workplaceService.getCurrency(params.workplaceId));
-    if (params.plan.currencyCode.trim().toUpperCase() !== expectedCurrency.trim().toUpperCase()) {
-      return {
-        success: false,
-        error: `Posting plan currency must match the journal currency (${expectedCurrency})`,
-      };
-    }
-
-    const precisionByCurrency = await resolveCurrencyPrecisions(
-      [expectedCurrency, ...resolverAccounts.map(account => account.currencyCode)],
-      code => currencyReadService.getPrecision(code),
-    );
-
-    const validation = validatePostingPlan(params.plan, resolverAccounts, { precisionByCurrency });
-    if (!validation.valid) {
-      return { success: false, error: validation.issues[0]?.message || 'Invalid posting plan' };
-    }
-
-    return this.saveJournalEntry({
-      lines: params.plan.lines,
-      description: params.plan.description,
-      notes: params.plan.notes,
-      journalDate: params.plan.date,
-      journalId: params.journalId,
-      newJournalCurrencyCode: params.newJournalCurrencyCode,
-      smsId: params.smsId,
-      smsRecordId: params.smsRecordId,
-      mode: params.mode,
-      launchSource: params.launchSource,
-      planned: params.planned,
-      workplaceId: params.workplaceId,
-    });
+    return save.postPostingPlan(this, params);
   }
 
   async createJournal(
@@ -128,11 +57,7 @@ export class JournalService {
     workplaceId: WorkplaceId,
     smsRecord?: InboxRecordSnapshot | null,
   ): Promise<Journal> {
-    this.clearSuggestionsCache(workplaceId);
-    if (!smsRecord) {
-      return journalPersistenceService.put(data, workplaceId);
-    }
-    return journalPersistenceService.putAndLinkInboxRecord(data, workplaceId, smsRecord.id);
+    return lifecycle.createJournal(this, data, workplaceId, smsRecord);
   }
 
   async updateJournal(
@@ -142,9 +67,10 @@ export class JournalService {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<Journal> {
-    this.clearSuggestionsCache(workplaceId);
-    return journalPersistenceService.put(
-      { ...data, journalId },
+    return lifecycle.updateJournal(
+      this,
+      journalId,
+      data,
       workplaceId,
       auditMetadata,
       expectedCurrent,
@@ -157,11 +83,7 @@ export class JournalService {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<void> {
-    this.clearSuggestionsCache(workplaceId);
-    await journalPersistenceService.delete(journalId, workplaceId, auditMetadata, expectedCurrent);
-    analytics.trackFeatureUsage('journal', 'delete', {
-      journal_id: journalId,
-    });
+    return lifecycle.deleteJournal(this, journalId, workplaceId, auditMetadata, expectedCurrent);
   }
 
   async recoverJournal(
@@ -170,18 +92,7 @@ export class JournalService {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<Journal> {
-    this.clearSuggestionsCache(workplaceId);
-    const journal = await journalPersistenceService.recover(
-      journalId,
-      workplaceId,
-      auditMetadata,
-      expectedCurrent,
-    );
-    analytics.trackFeatureUsage('journal', 'recover', {
-      journal_id: journalId,
-      currency: journal.currencyCode,
-    });
-    return journal;
+    return lifecycle.recoverJournal(this, journalId, workplaceId, auditMetadata, expectedCurrent);
   }
 
   async postJournal(
@@ -192,39 +103,14 @@ export class JournalService {
     expectedCurrent?: Record<string, unknown>,
     review?: PlannedPaymentFxReview,
   ): Promise<Journal> {
-    const selected = await journalQueryRepository.find(workplaceId, journalId);
-    if (selected?.plannedPaymentId) {
-      const payment = await plannedPaymentRepository.find(workplaceId, selected.plannedPaymentId);
-      if (!payment) throw new Error('Linked planned payment not found');
-      const context = await readPlannedPaymentFxContext(payment, selected.journalDate, selected);
-      if (context) {
-        await postPlannedJournalOccurrence(
-          workplaceId,
-          payment.id,
-          selected.id,
-          selected.journalDate,
-          review,
-          { postedAt, auditMetadata, expectedCurrent },
-        );
-        analytics.trackFeatureUsage('journal', 'post', {
-          journal_id: journalId,
-          currency: selected.currencyCode,
-        });
-        return selected;
-      }
-    }
-    const journal = await journalPersistenceService.post(
+    return lifecycle.postJournal(
       journalId,
       workplaceId,
       postedAt,
       auditMetadata,
       expectedCurrent,
+      review,
     );
-    analytics.trackFeatureUsage('journal', 'post', {
-      journal_id: journalId,
-      currency: journal.currencyCode,
-    });
-    return journal;
   }
 
   async revertToPlanned(
@@ -233,47 +119,11 @@ export class JournalService {
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
   ): Promise<Journal> {
-    const journal = await journalPersistenceService.revertToPlanned(
-      journalId,
-      workplaceId,
-      auditMetadata,
-      expectedCurrent,
-    );
-    analytics.trackFeatureUsage('journal', 'revert_to_planned', {
-      journal_id: journalId,
-      currency: journal.currencyCode,
-    });
-    return journal;
+    return lifecycle.revertToPlanned(journalId, workplaceId, auditMetadata, expectedCurrent);
   }
 
   async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalQueryRepository.find(workplaceId, journalId);
-    if (!journal) throw new Error('Journal not found');
-
-    const transactions = await transactionQueryRepository.findByJournal(workplaceId, journalId);
-
-    const duplicated = await this.createJournal(
-      {
-        journalDate: Date.now(),
-        description: journal.description || undefined,
-        currencyCode: journal.currencyCode,
-        transactions: transactions.map(tx => ({
-          accountId: tx.accountId,
-          amount: tx.amount,
-          transactionType: tx.transactionType as TransactionType,
-          notes: tx.notes,
-          exchangeRate: tx.exchangeRate,
-        })),
-      },
-      journal.workplaceId,
-    );
-
-    analytics.trackFeatureUsage('journal', 'duplicate', {
-      count: transactions.length,
-      currency: journal.currencyCode,
-    });
-
-    return duplicated;
+    return lifecycle.duplicateJournal(this, journalId, workplaceId);
   }
 
   async createReversalJournal(
@@ -281,20 +131,7 @@ export class JournalService {
     reason: string = 'Reversal',
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const reversalJournal = await journalPersistenceService.reverse(
-      originalJournalId,
-      reason,
-      workplaceId,
-    );
-
-    analytics.trackFeatureUsage('journal', 'reversal', {
-      original_journal_id: originalJournalId,
-      reversal_journal_id: reversalJournal.id,
-      reason,
-      currency: reversalJournal.currencyCode,
-    });
-
-    return reversalJournal;
+    return lifecycle.createReversalJournal(originalJournalId, reason, workplaceId);
   }
 
   async saveJournalEntry(params: {
@@ -308,84 +145,11 @@ export class JournalService {
     smsId?: string;
     smsRecordId?: string;
     mode?: 'simple' | 'advanced' | 'import';
-    /** Where the entry screen was opened from, e.g. `widget`; analytics only. */
     launchSource?: string;
-    /** Ignored unless the date is still in the future. */
     planned?: PlannedJournalMode;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
-    const {
-      journalId,
-      mode = 'advanced',
-      workplaceId,
-      newJournalCurrencyCode,
-      launchSource,
-      planned,
-      ...entryParams
-    } = params;
-
-    try {
-      const existingJournal = journalId
-        ? await journalQueryRepository.find(workplaceId, journalId)
-        : null;
-      if (journalId && !existingJournal) {
-        return { success: false, error: 'Journal not found' };
-      }
-
-      const effectiveCurrencyCode =
-        existingJournal?.currencyCode ??
-        newJournalCurrencyCode ??
-        (await workplaceService.getCurrency(workplaceId));
-      const assembled = await assembleCreateJournalData({
-        ...entryParams,
-        journalId,
-        workplaceId,
-        currencyCode: effectiveCurrencyCode,
-      });
-      if (!assembled.success) {
-        return assembled;
-      }
-
-      const { journalData } = assembled;
-      const currencyCode = journalData.currencyCode;
-
-      if (journalId) {
-        const updatedJournal = await this.updateJournal(
-          journalId,
-          withPlannedStatus(journalData, planned),
-          workplaceId,
-        );
-        analytics.trackFeatureUsage('journal', 'update', {
-          mode,
-          currency: currencyCode,
-          count: journalData.transactions?.length || 0,
-        });
-        return { success: true, action: 'updated', journalId: updatedJournal.id };
-      }
-
-      const smsRecord = params.smsRecordId
-        ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
-        : null;
-      const createdJournal = await this.createJournal(
-        withPlannedStatus(journalData, planned),
-        workplaceId,
-        smsRecord,
-      );
-      analytics.trackFeatureUsage('journal', 'create', {
-        mode,
-        currency: currencyCode,
-        count: journalData.transactions.length || 0,
-        source: launchSource ?? (params.smsRecordId ? 'sms' : 'manual'),
-      });
-      analytics.trackConversion('transaction_created');
-      return { success: true, action: 'created', journalId: createdJournal.id };
-    } catch (error) {
-      logger.error('Failed to save journal entry:', error);
-      if (error instanceof JournalBalanceError) {
-        return { success: false, error: error.message };
-      }
-      return { success: false, error: 'Failed to save transaction' };
-    }
+    return save.saveJournalEntry(this, params);
   }
 
   async saveBulkJournalEntries(
@@ -402,188 +166,7 @@ export class JournalService {
     error?: string;
     summaries: { description: string; amount: number; currency: string }[];
   }> {
-    if (entries.length === 0) {
-      return { success: false, error: 'No entries to save', summaries: [] };
-    }
-    if (entries.length > MAX_BULK_JOURNAL_ROWS) {
-      return {
-        success: false,
-        error: `You can post at most ${MAX_BULK_JOURNAL_ROWS} entries at once.`,
-        summaries: [],
-      };
-    }
-
-    const workplaceId = entries[0].workplaceId;
-
-    for (const entry of entries) {
-      const structureError = validateJournalEntryStructure({
-        lines: entry.lines,
-        description: entry.description,
-      });
-      if (structureError) {
-        return { ...structureError, summaries: [] };
-      }
-    }
-
-    const preparedItems: {
-      data: CreateJournalData;
-      description: string;
-      amount: number;
-      currency: string;
-    }[] = [];
-
-    let currencyCode: string;
-    try {
-      currencyCode = await workplaceService.getCurrency(workplaceId);
-
-      for (const entry of entries) {
-        const assembled = await assembleCreateJournalData({
-          lines: entry.lines,
-          description: entry.description,
-          notes: entry.notes,
-          journalDate: entry.journalDate,
-          workplaceId,
-          currencyCode,
-        });
-        if (!assembled.success) {
-          return { ...assembled, summaries: [] };
-        }
-
-        const sourceLine =
-          entry.lines.find(line => line.transactionType === TransactionType.CREDIT) ??
-          entry.lines[0];
-        preparedItems.push({
-          data: withPlannedStatus(assembled.journalData, entry.planned),
-          description: entry.description,
-          amount: parseFloat(sourceLine.amount),
-          currency: sourceLine.accountCurrency || currencyCode,
-        });
-      }
-    } catch (error) {
-      logger.error('Failed to prepare bulk journals:', error);
-      if (error instanceof JournalBalanceError) {
-        return { success: false, error: error.message, summaries: [] };
-      }
-      return { success: false, error: 'Failed to prepare journal entries', summaries: [] };
-    }
-
-    try {
-      await journalPersistenceService.putMany(
-        preparedItems.map(item => item.data),
-        workplaceId,
-      );
-
-      preparedItems.forEach(() => analytics.trackConversion('transaction_created'));
-
-      analytics.trackFeatureUsage('journal', 'bulk_create', {
-        count: preparedItems.length,
-        currency: currencyCode,
-      });
-
-      this.clearSuggestionsCache(workplaceId);
-      return {
-        success: true,
-        summaries: preparedItems.map(p => ({
-          description: p.description,
-          amount: p.amount,
-          currency: p.currency,
-        })),
-      };
-    } catch (error) {
-      logger.error('Failed to batch save bulk journals:', error);
-      if (error instanceof JournalBalanceError) {
-        return { success: false, error: error.message, summaries: [] };
-      }
-      return { success: false, error: 'Failed to save journal entries atomically', summaries: [] };
-    }
-  }
-
-  private suggestionsCache = new Map<string, JournalSuggestion[]>();
-  private inFlightSuggestions = new Map<string, Promise<JournalSuggestion[]>>();
-  private suggestionsGeneration = new Map<WorkplaceId, number>();
-
-  private getSuggestionsGeneration(workplaceId: WorkplaceId): number {
-    return this.suggestionsGeneration.get(workplaceId) ?? 0;
-  }
-
-  clearSuggestionsCache(workplaceId?: WorkplaceId): void {
-    if (workplaceId) {
-      this.suggestionsGeneration.set(workplaceId, this.getSuggestionsGeneration(workplaceId) + 1);
-      for (const key of this.suggestionsCache.keys()) {
-        if (key.startsWith(`${workplaceId}:`)) this.suggestionsCache.delete(key);
-      }
-      for (const key of this.inFlightSuggestions.keys()) {
-        if (key.startsWith(`${workplaceId}:`)) this.inFlightSuggestions.delete(key);
-      }
-    } else {
-      const workplaces = new Set([
-        ...this.suggestionsGeneration.keys(),
-        ...[...this.suggestionsCache.keys(), ...this.inFlightSuggestions.keys()].map(
-          key => key.slice(0, key.indexOf(':')) as WorkplaceId,
-        ),
-      ]);
-      workplaces.forEach(id => {
-        this.suggestionsGeneration.set(id, this.getSuggestionsGeneration(id) + 1);
-      });
-      this.suggestionsCache.clear();
-      this.inFlightSuggestions.clear();
-    }
-  }
-
-  async getJournalSuggestions(params: {
-    workplaceId: WorkplaceId;
-    query: string;
-    page: JournalSuggestionPage;
-    transactionType?: TabType;
-    limit?: number;
-  }): Promise<JournalSuggestion[]> {
-    const { workplaceId, page, transactionType } = params;
-    const query = params.query ?? '';
-    const limit = params.limit ?? 20;
-    if (!workplaceId) return [];
-    const normalizedQuery = query.trim().toLowerCase();
-    const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
-    const cacheKey = [
-      workplaceId,
-      page,
-      transactionType ?? 'all',
-      normalizedQuery,
-      boundedLimit,
-    ].join(':');
-    if (this.suggestionsCache.has(cacheKey)) {
-      return this.suggestionsCache.get(cacheKey)!;
-    }
-    if (this.inFlightSuggestions.has(cacheKey)) {
-      return this.inFlightSuggestions.get(cacheKey)!;
-    }
-
-    const generation = this.getSuggestionsGeneration(workplaceId);
-    let fetchPromise: Promise<JournalSuggestion[]>;
-    fetchPromise = journalEnrichmentQueries
-      .findJournalSuggestions({
-        workplaceId,
-        query: normalizedQuery,
-        page,
-        transactionType,
-        limit: boundedLimit,
-      })
-      .then(suggestions => {
-        if (this.getSuggestionsGeneration(workplaceId) === generation) {
-          this.suggestionsCache.set(cacheKey, suggestions);
-        }
-        return suggestions;
-      })
-      .finally(() => {
-        if (
-          this.getSuggestionsGeneration(workplaceId) === generation &&
-          this.inFlightSuggestions.get(cacheKey) === fetchPromise
-        ) {
-          this.inFlightSuggestions.delete(cacheKey);
-        }
-      });
-
-    this.inFlightSuggestions.set(cacheKey, fetchPromise);
-    return fetchPromise;
+    return save.saveBulkJournalEntries(this, entries);
   }
 }
 

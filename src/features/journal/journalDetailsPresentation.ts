@@ -13,7 +13,7 @@ import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from 
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PlainJournal, PlainPlannedPayment } from '@/src/types/plainDtos';
 import { getAccountTypeColorKey } from '@/src/design-system/accountPresentation';
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { formatDate, formatDateKeepingPattern } from '@/src/utils/dateFormatting';
 import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import { fromMinorUnits } from '@/src/domain/money/money';

@@ -25,7 +25,7 @@ import {
   type AccountArchiveChanges,
 } from '@/src/domain/accounts/accountArchive';
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { useCallback, useMemo } from 'react';
 

@@ -1,5 +1,5 @@
 import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { getAccountIcon } from '@/src/components/account-selection';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';

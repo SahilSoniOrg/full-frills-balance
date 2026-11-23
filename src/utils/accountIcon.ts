@@ -20,15 +20,14 @@ export function getAccountFallbackIcon(accountType?: AccountType | string | null
 export type AccountLikeForIcon =
   | AccountFields
   | {
-      name?: string;
+      name?: string | null;
       icon?: string | null;
       accountType?: AccountType | string | null;
     };
 
 /**
- * Reliable way to get an icon for an account,
- * handling special cases for system accounts (OBE, Balance Corrections)
- * and falling back to type-appropriate default icons when missing or unknown in DB.
+ * Resolves a catalog IconName for an account — used on write so the DB stores a
+ * valid icon, and on read for legacy rows that still lack one.
  */
 export function getAccountIcon(account: AccountLikeForIcon): IconName {
   if (isValidIconName(account.icon)) return account.icon;

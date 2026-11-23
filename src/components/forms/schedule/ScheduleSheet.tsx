@@ -7,6 +7,12 @@ import { getReadableColor } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import type { RecurrenceInterval } from '@/src/services/forward-finance/recurrence/types';
+import {
+  INTERVAL_TYPES,
+  type IntervalType,
+  resolveIntervalPolicy,
+  scheduleFieldsForInterval,
+} from '@/src/domain/recurrence/intervalPolicy';
 import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { useState } from 'react';
@@ -23,12 +29,24 @@ export interface ScheduleSheetProps {
   intervalTestIDPrefix?: string;
 }
 
-const tabs: { id: RecurrenceInterval; label: string }[] = [
-  { id: 'DAILY', label: copy.day },
-  { id: 'WEEKLY', label: copy.week },
-  { id: 'MONTHLY', label: copy.month },
-  { id: 'YEARLY', label: copy.year },
-];
+const INTERVAL_TAB_LABELS: Record<IntervalType, string> = {
+  DAILY: copy.day,
+  WEEKLY: copy.week,
+  MONTHLY: copy.month,
+  YEARLY: copy.year,
+};
+
+const INTERVAL_UNIT_LABELS: Record<IntervalType, string> = {
+  DAILY: copy.dayUnit,
+  WEEKLY: copy.weekUnit,
+  MONTHLY: copy.monthUnit,
+  YEARLY: copy.yearUnit,
+};
+
+const tabs: { id: RecurrenceInterval; label: string }[] = INTERVAL_TYPES.map(id => ({
+  id,
+  label: INTERVAL_TAB_LABELS[id],
+}));
 const months = copy.monthShortNames;
 const weekdays = copy.weekdayShortNames;
 const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
@@ -79,29 +97,17 @@ export function ScheduleSheet({
   const updateInterval = (intervalType: RecurrenceInterval) =>
     setDraft(current => {
       if (intervalType === current.intervalType) return current;
-      if (intervalType === 'DAILY')
-        return { ...current, intervalType, recurrenceDay: undefined, recurrenceMonth: undefined };
-      if (intervalType === 'WEEKLY')
-        return {
-          ...current,
-          intervalType,
-          recurrenceDay: anchorWeekday(startDate),
-          recurrenceMonth: undefined,
-        };
-      if (intervalType === 'MONTHLY')
-        return {
-          ...current,
-          intervalType,
-          recurrenceDay: anchorDay(startDate),
-          recurrenceMonth: undefined,
-        };
       return {
         ...current,
         intervalType,
-        recurrenceDay: anchorDay(startDate),
-        recurrenceMonth: anchorMonth(startDate),
+        ...scheduleFieldsForInterval(intervalType, {
+          weekday: anchorWeekday(startDate),
+          dayOfMonth: anchorDay(startDate),
+          month: anchorMonth(startDate),
+        }),
       };
     });
+  const draftPolicy = resolveIntervalPolicy(draft.intervalType);
   const valid = isValidRepeatCount(draft.intervalN);
   const dates = previewOccurrences(draft, startDate);
   const sentenceParts = formatScheduleSentence(draft);
@@ -245,14 +251,7 @@ export function ScheduleSheet({
               <AppIcon name={Icon.Add} size={22} color={theme.textSecondary} />
             </PressScaleTouchable>
             <AppText variant="bodySmall" color="secondary">
-              {
-                {
-                  DAILY: copy.dayUnit,
-                  WEEKLY: copy.weekUnit,
-                  MONTHLY: copy.monthUnit,
-                  YEARLY: copy.yearUnit,
-                }[draft.intervalType]
-              }
+              {INTERVAL_UNIT_LABELS[draftPolicy.type]}
             </AppText>
           </View>
         </View>
@@ -261,7 +260,7 @@ export function ScheduleSheet({
             {copy.repeatCountError}
           </AppText>
         ) : null}
-        {draft.intervalType === 'WEEKLY' ? (
+        {draftPolicy.recurrenceDayKind === 'weekday' ? (
           <>
             <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
               {copy.daysSection.toUpperCase()}
@@ -283,7 +282,7 @@ export function ScheduleSheet({
             ) : null}
           </>
         ) : null}
-        {draft.intervalType === 'YEARLY' ? (
+        {draftPolicy.usesRecurrenceMonth ? (
           <>
             <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
               {copy.monthsSection.toUpperCase()}
@@ -302,7 +301,7 @@ export function ScheduleSheet({
             </View>
           </>
         ) : null}
-        {draft.intervalType === 'MONTHLY' || draft.intervalType === 'YEARLY' ? (
+        {draftPolicy.recurrenceDayKind === 'monthDay' ? (
           <>
             <AppText
               variant="caption"

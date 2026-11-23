@@ -14,27 +14,10 @@ import {
   type MovementObservation,
   type MovementOccurrence,
 } from '@/src/domain/planned-payment/sharedMovementMatcher';
-import { PlannedPaymentInterval, TransactionType } from '@/src/types/enums';
+import { approxIntervalDays } from '@/src/domain/recurrence/intervalPolicy';
+import { TransactionType } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import {
-  occurrenceDay,
-  type PlanCaptureAttachCandidate,
-} from './plannedOccurrenceSettlementTypes';
-
-function intervalDaysForPayment(payment: PlannedPayment): number {
-  const n = Math.max(1, payment.intervalN || 1);
-  switch (payment.intervalType) {
-    case PlannedPaymentInterval.DAILY:
-      return n;
-    case PlannedPaymentInterval.WEEKLY:
-      return n * 7;
-    case PlannedPaymentInterval.YEARLY:
-      return n * 365;
-    case PlannedPaymentInterval.MONTHLY:
-    default:
-      return n * 30;
-  }
-}
+import { occurrenceDay, type PlanCaptureAttachCandidate } from './plannedOccurrenceSettlementTypes';
 
 /**
  * Dual-leg occurrence identity for plan→capture matching. Direction follows the
@@ -89,7 +72,7 @@ export async function findCaptureMatchForOccurrence(
     payment.toAccountId,
   ]);
   const accountsById = new Map(accounts.map(account => [account.id, account]));
-  const days = intervalDaysForPayment(payment);
+  const days = approxIntervalDays(payment.intervalType, payment.intervalN);
   const windowMs =
     (MOVEMENT_MATCH_WINDOWS.softDays + MOVEMENT_MATCH_WINDOWS.strictDays) * AppConfig.time.msPerDay;
   // Do not exact-filter amount: soft matches need the ±5% band the matcher owns.
