@@ -11,7 +11,7 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { confirm, showErrorAlert } from '@/src/services/feedback/alerts';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { Dispatch, SetStateAction, useCallback } from 'react';

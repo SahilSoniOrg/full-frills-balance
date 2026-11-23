@@ -378,7 +378,7 @@ describe('BudgetRepository', () => {
         [accountId1 as AccountId],
       );
 
-      expect(budget.assetAccountIds).toBe(accountId1);
+      expect(budget.assetAccountIds).toBe(JSON.stringify([accountId1]));
 
       await budgetRepository.update('wp-1' as WorkplaceId, budget, { assetAccountIds: [] }, [
         accountId1 as AccountId,

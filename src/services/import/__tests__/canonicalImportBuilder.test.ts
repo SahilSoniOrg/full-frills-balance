@@ -847,7 +847,7 @@ describe('CanonicalImportBuilder', () => {
       expect(linkedAccountIds).not.toContain(internalChecking);
       expect(linkedAccountIds).toContain(internalGroceries);
       expect(linkedAccountIds).toContain(internalUtilities);
-      expect(budget.assetAccountIds).toBe(internalChecking);
+      expect(budget.assetAccountIds).toBe(JSON.stringify([internalChecking]));
     });
 
     it('skips budgets with no category scopes and reports EMPTY_BUDGET_SCOPE', () => {

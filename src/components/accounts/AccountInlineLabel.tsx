@@ -4,7 +4,7 @@ import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPi
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { isAccountArchived } from '@/src/domain/accounts/accountArchive';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import {
   getAccountTypeVariant,
   resolveAccountAppearance,

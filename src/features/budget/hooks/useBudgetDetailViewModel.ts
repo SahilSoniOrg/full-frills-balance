@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { getBudgetPreviousComparisonSpent } from '../components/budgetSpendingChartGeometry';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
-import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
+import { parseBudgetAssetAccountIds } from '@/src/domain/budget/fundingAccountIds';
 import {
   buildBudgetCumulativeChart,
   type BudgetCumulativeChart,

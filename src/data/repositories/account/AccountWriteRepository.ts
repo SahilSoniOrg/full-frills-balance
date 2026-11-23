@@ -1,100 +1,50 @@
-import { database } from '@/src/data/database/Database';
-import {
-  getStagedAccounts,
-  runAccountingWriteSession,
-  stageBalanceRebuildIntents,
-  stageAccountCreation,
-  stageModelWrite,
-  type AccountingWriteSession,
-} from '@/src/data/repositories/AccountingWriteSession';
+import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { auditRepository, type AuditEntry } from '@/src/data/repositories/AuditRepository';
-import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType, AuditAction } from '@/src/types/enums';
-import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
-import { ValidationError } from '@/src/utils/errors';
-import { Model, Q } from '@nozbe/watermelondb';
+import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { Model } from '@nozbe/watermelondb';
 import { stageAccountMergeInSession } from './AccountMergeOperations';
-import { accountQueryRepository } from './AccountQueryRepository';
-import { transactionQueryRepository } from '../transaction/TransactionQueryRepository';
+import {
+  createAccount,
+  createAccountInSession,
+  ensureUniqueAccountName,
+  planAccountUpdate,
+  prepareAccountCreateOps,
+  prepareAccountUpdateBatchOps,
+  updateAccount,
+  validateAccountSubtype,
+} from './AccountCreateUpdateOperations';
+import {
+  deleteAccount,
+  prepareArchiveTargetOps as prepareArchiveTargetOpsImpl,
+  recoverAccount,
+} from './AccountLifecycleOperations';
+import {
+  prepareAccountRefresh,
+  refreshAccounts as refreshAccountsImpl,
+} from './AccountRefreshOperations';
+import { commitAccountMutationPlan } from './accountMutationCommit';
 import type { AccountPersistenceInput } from './types';
+import type {
+  AccountAuditContribution,
+  AccountMutationPlan,
+  AccountMutationResult,
+  PreparedAccountMutation,
+} from './accountWriteTypes';
 
-type AccountAuditContribution = Omit<AuditEntry, 'entityType' | 'entityId'>;
+export type { AccountMutationCommitFacts, AccountMutationResult } from './accountWriteTypes';
 
-export interface AccountMutationCommitFacts {
-  balanceRebuildAccountIds: AccountId[];
-}
-
-/** Validated account-local changes plus the effects implied by committing them. */
-interface AccountMutationPlan {
-  workplaceId: WorkplaceId;
-  account: Account;
-  normalizedUpdates: Partial<AccountPersistenceInput>;
-  existingMetadata: AccountMetadata | null;
-  audit?: AccountAuditContribution;
-  commitFacts: AccountMutationCommitFacts;
-  currencyChangeAllowed: boolean;
-}
-
-export interface AccountMutationResult {
-  account: Account;
-  commitFacts: AccountMutationCommitFacts;
-}
-
-interface PreparedAccountMutation<T> {
-  prepareOps: () => readonly Model[];
-  result: T;
-  rebuildRequest?: { workplaceId: WorkplaceId; accountIds: readonly AccountId[]; fromDate: number };
-}
-
+/** Thin façade over create/update, lifecycle, refresh, and merge account writes. */
 export class AccountWriteRepository {
-  private assertCurrencyUnchanged(
-    account: Account,
-    updates: Partial<AccountPersistenceInput>,
-  ): void {
-    if (updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode) {
-      throw new ValidationError('Account currency changes require a validated update plan');
-    }
-  }
-
-  private get db() {
-    return database;
-  }
-
-  private get accounts() {
-    return this.db.collections.get<Account>('accounts');
-  }
-
-  private get metadata() {
-    return this.db.collections.get<AccountMetadata>('account_metadata');
-  }
-
   async create(data: AccountPersistenceInput): Promise<Account> {
-    return runAccountingWriteSession(session => this.createInSession(session, data));
+    return createAccount(data);
   }
 
-  /** Commit a validated account workflow through the shared single-writer session. */
   async commitMutationPlan<T>(prepare: () => Promise<PreparedAccountMutation<T>>): Promise<T> {
-    return runAccountingWriteSession(async session => {
-      const plan = await prepare();
-      stageModelWrite(session, plan.prepareOps);
-      if (plan.rebuildRequest)
-        stageBalanceRebuildIntents(
-          session,
-          plan.rebuildRequest.workplaceId,
-          plan.rebuildRequest.accountIds,
-          plan.rebuildRequest.fromDate,
-        );
-      return plan.result;
-    });
+    return commitAccountMutationPlan(prepare);
   }
 
-  /**
-   * Stage account creation in a caller-owned atomic accounting write.
-   * The session keeps prepared models private to the repository layer.
-   */
   async createInSession(
     session: AccountingWriteSession,
     data: AccountPersistenceInput,
@@ -103,324 +53,48 @@ export class AccountWriteRepository {
       audit?: { initialBalance?: number; correlationId?: string };
     } = {},
   ): Promise<Account> {
-    if (!data.workplaceId) {
-      throw new ValidationError('workplaceId is required to create an account');
-    }
-    await this.ensureUniqueName(data.name, data.workplaceId);
-
-    const normalizedName = data.name.trim().toLowerCase();
-    if (
-      getStagedAccounts(session, data.workplaceId).some(
-        account => account.name.trim().toLowerCase() === normalizedName,
-      )
-    ) {
-      throw new ValidationError(`Account with name "${data.name}" already exists`);
-    }
-
-    let payload = data;
-    if (options.appendWithinSiblingList) {
-      const persistedAccounts = await accountQueryRepository.findAll(data.workplaceId);
-      const candidates = [...persistedAccounts, ...getStagedAccounts(session, data.workplaceId)];
-      payload = {
-        ...data,
-        orderNum: candidates.filter(
-          candidate =>
-            (candidate.parentAccountId || undefined) === (data.parentAccountId || undefined) &&
-            candidate.accountType === data.accountType,
-        ).length,
-      };
-    }
-
-    const prepared = this.prepareCreateOps(payload, options.audit ? { audit: options.audit } : {});
-    const operations = [...prepared.ops];
-    stageAccountCreation(session, prepared.account, operations);
-    return prepared.account;
+    return createAccountInSession(session, data, options);
   }
 
   prepareCreateOps(
     data: AccountPersistenceInput,
     options: { audit?: { initialBalance?: number; correlationId?: string } } = {},
   ): { account: Account; ops: Model[] } {
-    if (!data.workplaceId) {
-      throw new ValidationError('workplaceId is required to create an account');
-    }
-    const payload: AccountPersistenceInput = {
-      ...data,
-      accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType),
-    };
-    this.validateSubtype(payload.accountType, payload.accountSubtype);
-
-    const account = this.accounts.prepareCreate(acc => {
-      const { metadata, id, ...accountData } = payload;
-      if (id) acc._raw.id = id;
-      Object.assign(acc, accountData);
-      acc.createdAt = new Date();
-      acc.updatedAt = new Date();
-    });
-
-    const ops: Model[] = [account];
-    if (data.metadata) {
-      ops.push(
-        this.metadata.prepareCreate(meta => {
-          Object.assign(meta, data.metadata);
-          meta.account.set(account);
-          if (payload.workplaceId) {
-            meta.workplaceId = payload.workplaceId;
-          }
-          meta.createdAt = new Date();
-          meta.updatedAt = new Date();
-        }),
-      );
-    }
-
-    if (options.audit) {
-      ops.push(
-        this.prepareCreateAuditLog(
-          account,
-          data,
-          options.audit.initialBalance,
-          options.audit.correlationId,
-        ),
-      );
-    }
-
-    return { account, ops };
+    return prepareAccountCreateOps(data, options);
   }
 
-  private prepareCreateAuditLog(
-    account: Account,
-    data: AccountPersistenceInput,
-    initialBalance?: number,
-    correlationId?: string,
-  ): Model {
-    const metadata = data.metadata;
-    return auditRepository.prepareLog(
-      {
-        entityType: 'account',
-        entityId: account.id,
-        eventType: 'account.created',
-        action: AuditAction.CREATE,
-        correlationId,
-        changes: {
-          after: {
-            name: account.name,
-            accountType: account.accountType,
-            accountSubtype: account.accountSubtype,
-            currencyCode: account.currencyCode,
-            description: account.description,
-            icon: account.icon,
-            color: account.color,
-            orderNum: account.orderNum,
-            parentAccountId: account.parentAccountId,
-            metadata: metadata ? accountMetadataAuditState(metadata) : null,
-            initialBalance,
-          },
-        },
-      },
-      data.workplaceId!,
-    );
-  }
-
-  /**
-   * Validate + read everything needed before prepare→batch.
-   * Callers that own the write (e.g. archive compose) use this with prepareUpdateBatchOps.
-   */
   async planUpdate(
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
     audit?: AccountAuditContribution,
   ): Promise<AccountMutationPlan> {
-    if (account.workplaceId !== workplaceId) {
-      throw new Error('Account does not belong to the specified workplace');
-    }
-    if (updates.workplaceId && updates.workplaceId !== workplaceId) {
-      throw new Error('Workplace mismatch in update payload');
-    }
-    const currencyChanged =
-      updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode;
-    if (
-      currencyChanged &&
-      (await transactionQueryRepository.countByAccountIncludingDeleted(workplaceId, account.id)) > 0
-    ) {
-      throw new ValidationError(
-        'Account currency cannot be changed after transactions have been recorded, including deleted transactions',
-      );
-    }
-    if (updates.name && updates.name !== account.name) {
-      await this.ensureUniqueName(updates.name, workplaceId, account.id);
-    }
-    const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates };
-    if (normalizedUpdates.accountType && normalizedUpdates.accountSubtype === undefined) {
-      normalizedUpdates.accountSubtype = isSubtypeAllowedForType(
-        normalizedUpdates.accountType,
-        account.accountSubtype,
-      )
-        ? account.accountSubtype
-        : getDefaultSubtypeForType(normalizedUpdates.accountType);
-    }
-
-    const nextType = normalizedUpdates.accountType ?? account.accountType;
-    const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype;
-    this.validateSubtype(nextType, nextSubtype);
-
-    const existingMetadata = Object.prototype.hasOwnProperty.call(updates, 'metadata')
-      ? await accountQueryRepository.findMetadata(workplaceId, account.id)
-      : null;
-
-    const rebuildsBalance =
-      currencyChanged ||
-      (normalizedUpdates.accountType !== undefined &&
-        normalizedUpdates.accountType !== account.accountType);
-
-    return {
-      workplaceId,
-      account,
-      normalizedUpdates,
-      existingMetadata,
-      audit,
-      currencyChangeAllowed: currencyChanged,
-      commitFacts: {
-        balanceRebuildAccountIds: rebuildsBalance ? [account.id] : [],
-      },
-    };
+    return planAccountUpdate(account, updates, workplaceId, audit);
   }
 
-  /**
-   * Sync prepare of account (+ optional metadata) ops.
-   * Call only inside db.write after all awaits — WatermelonDB requires prepare→batch sync.
-   */
   prepareUpdateBatchOps(
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     existingMetadata: AccountMetadata | null,
     validatedPlan?: AccountMutationPlan,
   ): Model[] {
-    // Currency authorization comes from planUpdate in this same writer, after
-    // checking the complete transaction history. Unplanned batch writes stay locked.
-    if (
-      !validatedPlan?.currencyChangeAllowed ||
-      validatedPlan.account !== account ||
-      validatedPlan.normalizedUpdates.currencyCode !== updates.currencyCode
-    ) {
-      this.assertCurrencyUnchanged(account, updates);
-    }
-    const batchOps: Model[] = [];
-    const hasRowUpdates = Object.keys(updates).some(key => key !== 'metadata');
-
-    if (hasRowUpdates) {
-      batchOps.push(
-        account.prepareUpdate(acc => {
-          const {
-            metadata: _metadata,
-            archivedAt: _archivedAt,
-            deletedAt: _deletedAt,
-            ...accountUpdates
-          } = updates;
-          Object.assign(acc, accountUpdates);
-          if ('description' in updates) acc.description = updates.description ?? undefined;
-          if ('icon' in updates) acc.icon = updates.icon ?? undefined;
-          if ('parentAccountId' in updates) {
-            acc.parentAccountId = updates.parentAccountId ?? undefined;
-          }
-          if ('orderNum' in updates) acc.orderNum = updates.orderNum ?? undefined;
-          if ('reconciledAt' in updates) acc.reconciledAt = updates.reconciledAt ?? undefined;
-          if ('archivedAt' in updates) {
-            acc.archivedAt = updates.archivedAt ?? undefined;
-          }
-          if ('deletedAt' in updates) {
-            acc.deletedAt = updates.deletedAt ?? undefined;
-          }
-          acc.updatedAt = new Date();
-        }),
-      );
-    }
-
-    if ('metadata' in updates) {
-      if (updates.metadata === null) {
-        if (existingMetadata) batchOps.push(existingMetadata.prepareDestroyPermanently());
-      } else if (updates.metadata) {
-        if (existingMetadata) {
-          batchOps.push(
-            existingMetadata.prepareUpdate(meta => {
-              Object.assign(meta, updates.metadata);
-              meta.updatedAt = new Date();
-            }),
-          );
-        } else {
-          batchOps.push(
-            this.metadata.prepareCreate(meta => {
-              Object.assign(meta, updates.metadata);
-              meta.account.set(account);
-              if (account.workplaceId) {
-                meta.workplaceId = account.workplaceId;
-              }
-              meta.createdAt = new Date();
-              meta.updatedAt = new Date();
-            }),
-          );
-        }
-      }
-    }
-
-    return batchOps;
+    return prepareAccountUpdateBatchOps(account, updates, existingMetadata, validatedPlan);
   }
 
-  /**
-   * Touches the requested live accounts in one write so observers refresh.
-   * Account lookup is workplace-scoped and ignores deleted rows.
-   */
   async refreshAccounts(workplaceId: WorkplaceId, accountIds: AccountId[]): Promise<void> {
-    await database.write(async () => {
-      const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
-      if (accounts.length === 0) return;
-      const now = new Date();
-      await database.batch(
-        accounts.map(account =>
-          account.prepareUpdate(record => {
-            record.updatedAt = now;
-          }),
-        ),
-      );
-    });
+    return refreshAccountsImpl(workplaceId, accountIds);
   }
 
-  /**
-   * Prepares WatermelonDB operations to archive or unarchive accounts.
-   */
   prepareArchiveTargetOps(
     archiveTargets: Account[],
     unarchiveTargets: Account[],
     now: Date,
   ): Model[] {
-    return [
-      ...archiveTargets.map(account =>
-        account.prepareUpdate(record => {
-          record.archivedAt = now;
-          record.updatedAt = now;
-        }),
-      ),
-      ...unarchiveTargets.map(account =>
-        account.prepareUpdate(record => {
-          record.archivedAt = undefined;
-          record.updatedAt = now;
-        }),
-      ),
-    ];
+    return prepareArchiveTargetOpsImpl(archiveTargets, unarchiveTargets, now);
   }
 
-  /**
-   * Prepares a reactive refresh for an account owned by the workplace.
-   * The caller owns the write and is responsible for batching the prepared operation.
-   */
   prepareRefresh(workplaceId: WorkplaceId, account: Account): Account {
-    if (account.workplaceId !== workplaceId) {
-      throw new Error('Account does not belong to the specified workplace');
-    }
-
-    return account.prepareUpdate(record => {
-      record.updatedAt = new Date();
-    });
+    return prepareAccountRefresh(workplaceId, account);
   }
 
   async update(
@@ -436,48 +110,7 @@ export class AccountWriteRepository {
       ) => void | Promise<void>;
     } = {},
   ): Promise<AccountMutationResult> {
-    return this.commitMutationPlan(async () => {
-      const plan = await this.planUpdate(account, updates, workplaceId, options.audit);
-      let currentAccount = plan.account;
-      let currentMetadata = plan.existingMetadata;
-      if (options.extraOps || options.validateCurrent) {
-        const freshAccount = await accountQueryRepository.findWithDeleted(workplaceId, account.id);
-        if (!freshAccount) throw new Error('Account not found');
-        currentAccount = freshAccount;
-        currentMetadata = await accountQueryRepository.findMetadata(workplaceId, account.id);
-      }
-      await options.validateCurrent?.(currentAccount, currentMetadata);
-
-      return {
-        rebuildRequest: {
-          workplaceId: plan.workplaceId,
-          accountIds: plan.commitFacts.balanceRebuildAccountIds,
-          fromDate: 0,
-        },
-        prepareOps: () => [
-          ...this.prepareUpdateBatchOps(
-            currentAccount,
-            plan.normalizedUpdates,
-            currentMetadata,
-            plan,
-          ),
-          ...(plan.audit
-            ? [
-                auditRepository.prepareLog(
-                  {
-                    entityType: 'account',
-                    entityId: currentAccount.id,
-                    ...plan.audit,
-                  },
-                  plan.workplaceId,
-                ),
-              ]
-            : []),
-          ...(options.extraOps?.(currentAccount, currentMetadata) ?? []),
-        ],
-        result: { account: currentAccount, commitFacts: plan.commitFacts },
-      };
-    });
+    return updateAccount(account, updates, workplaceId, options);
   }
 
   async delete(
@@ -492,53 +125,7 @@ export class AccountWriteRepository {
       ) => void | Promise<void>;
     } = {},
   ): Promise<AccountMutationResult> {
-    return this.commitMutationPlan(async () => {
-      const currentAccount = await accountQueryRepository.find(workplaceId, account.id);
-      if (!currentAccount) {
-        throw new Error('Cannot delete account. Account not found in workplace provided.');
-      }
-      const currentMetadata =
-        options.validateCurrent || options.extraOps
-          ? await accountQueryRepository.findMetadata(workplaceId, account.id)
-          : null;
-      await options.validateCurrent?.(currentAccount, currentMetadata);
-
-      const children = await accountQueryRepository
-        .queryByParentId(workplaceId, currentAccount.id)
-        .fetch();
-      if (children.length > 0) {
-        throw new Error(
-          'Cannot delete account with children. Please delete or move children first.',
-        );
-      }
-
-      const deletedAt = new Date();
-      return {
-        prepareOps: () => [
-          currentAccount.prepareUpdate(record => {
-            record.deletedAt = deletedAt;
-            record.updatedAt = deletedAt;
-          }),
-          ...(options.audit
-            ? [
-                auditRepository.prepareLog(
-                  {
-                    entityType: 'account',
-                    entityId: currentAccount.id,
-                    ...options.audit,
-                  },
-                  workplaceId,
-                ),
-              ]
-            : []),
-          ...(options.extraOps?.(currentAccount, deletedAt) ?? []),
-        ],
-        result: {
-          account: currentAccount,
-          commitFacts: { balanceRebuildAccountIds: [] },
-        },
-      };
-    });
+    return deleteAccount(workplaceId, account, options);
   }
 
   async recover(
@@ -553,45 +140,7 @@ export class AccountWriteRepository {
       ) => void | Promise<void>;
     } = {},
   ): Promise<AccountMutationResult> {
-    if (account.workplaceId !== workplaceId) {
-      throw new Error('Account does not belong to the specified workplace');
-    }
-    return this.commitMutationPlan(async () => {
-      const currentAccount = await accountQueryRepository.findWithDeleted(workplaceId, account.id);
-      if (!currentAccount) throw new Error('Account not found');
-      const currentMetadata =
-        options.validateCurrent || options.extraOps
-          ? await accountQueryRepository.findMetadata(workplaceId, account.id)
-          : null;
-      await options.validateCurrent?.(currentAccount, currentMetadata);
-
-      const restoredAt = new Date();
-      return {
-        prepareOps: () => [
-          currentAccount.prepareUpdate(record => {
-            record.deletedAt = undefined;
-            record.updatedAt = restoredAt;
-          }),
-          ...(options.audit
-            ? [
-                auditRepository.prepareLog(
-                  {
-                    entityType: 'account',
-                    entityId: currentAccount.id,
-                    ...options.audit,
-                  },
-                  workplaceId,
-                ),
-              ]
-            : []),
-          ...(options.extraOps?.(currentAccount, restoredAt) ?? []),
-        ],
-        result: {
-          account: currentAccount,
-          commitFacts: { balanceRebuildAccountIds: [] },
-        },
-      };
-    });
+    return recoverAccount(workplaceId, account, options);
   }
 
   async ensureUniqueName(
@@ -599,32 +148,11 @@ export class AccountWriteRepository {
     workplaceId: WorkplaceId,
     excludeId?: AccountId,
   ): Promise<void> {
-    const sanitizedName = name.trim();
-
-    const clauses: Q.Clause[] = [
-      Q.where('name', Q.like(Q.sanitizeLikeString(sanitizedName))),
-      Q.where('deleted_at', Q.eq(null)),
-    ];
-    if (workplaceId) {
-      clauses.push(Q.where('workplace_id', workplaceId));
-    }
-
-    const potentialDuplicates = await this.accounts.query(...clauses).fetch();
-
-    const duplicate = potentialDuplicates.find(account => {
-      if (excludeId && account.id === excludeId) return false;
-      return account.name.trim().toLowerCase() === sanitizedName.toLowerCase();
-    });
-
-    if (duplicate) {
-      throw new ValidationError(`Account with name "${name}" already exists`);
-    }
+    return ensureUniqueAccountName(name, workplaceId, excludeId);
   }
 
   validateSubtype(accountType: AccountType, subtype?: AccountSubtype): void {
-    if (!isSubtypeAllowedForType(accountType, subtype)) {
-      throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`);
-    }
+    validateAccountSubtype(accountType, subtype);
   }
 
   /** Stage account-owned reference changes, source deletion, and audit in one session batch. */

@@ -1,5 +1,6 @@
 import { AppText, ListGroup, ListRow } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { hasFundingAccountIds } from '@/src/domain/budget/fundingAccountIds';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
 import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 
@@ -22,7 +23,7 @@ export function BudgetSetupDisclosure({
     ? strings.loadingAccounts
     : fundingAccounts.length > 0
       ? fundingAccounts.map(account => account.name).join(', ')
-      : budget.assetAccountIds
+      : hasFundingAccountIds(budget.assetAccountIds)
         ? strings.selectedAccountsUnavailable
         : strings.noFundingAccounts;
   const summary = strings.setupSummary(formatRecurrence(budget), accounts);

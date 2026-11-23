@@ -4,7 +4,7 @@ import type {
   CanonicalAccountMatcher,
 } from '@/src/types/importContracts';
 import {
-  MissingImportedAccountRef,
+  formatMissingImportedAccountError,
   missingImportedAccountRefs,
 } from '@/src/services/accounts/accountReferenceGraph';
 import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
@@ -24,36 +24,11 @@ function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   }
 }
 
-function formatMissingAccountError(missing: MissingImportedAccountRef): string {
-  const recordId = missing.recordId ?? '?';
-  switch (missing.siteKey) {
-    case 'account.parentAccountId':
-      return `Import validation failed: account "${recordId}" references missing parent account "${missing.accountId}"`;
-    case 'transaction.accountId':
-      return `Import validation failed: transaction "${recordId}" references missing account "${missing.accountId}"`;
-    case 'budgetScope.accountId':
-      return `Import validation failed: budget scope "${recordId}" references missing account "${missing.accountId}"`;
-    case 'budget.assetAccountIds':
-      return `Import validation failed: budget "${recordId}" references missing asset account "${missing.accountId}"`;
-    case 'accountMetadata.accountId':
-      return `Import validation failed: account metadata "${recordId}" references missing account "${missing.accountId}"`;
-    case 'accountMetadata.payFromAccountId':
-      return `Import validation failed: account metadata "${recordId}" references missing payment account "${missing.accountId}"`;
-    case 'plannedPayment.fromAccountId':
-    case 'plannedPayment.toAccountId':
-      return `Import validation failed: planned payment "${recordId}" references a missing account`;
-    case 'balanceSnapshot.accountId':
-      return `Import validation failed: balance snapshot "${recordId}" references a missing account or transaction`;
-    default:
-      return `Import validation failed: missing account "${missing.accountId}"`;
-  }
-}
-
 function validateAccountReferences(data: BatchImportData): void {
   // Soft-deleted txs are skipped inside accountImportBatchFromSources (import-only rule).
   const missing = missingImportedAccountRefs(accountImportBatchFromSources(data));
   if (missing.length > 0) {
-    throw new Error(formatMissingAccountError(missing[0]));
+    throw new Error(formatMissingImportedAccountError(missing[0]));
   }
 }
 

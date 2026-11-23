@@ -15,6 +15,7 @@ import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { mapTransactionToAudit } from '@/src/types/audit';
+import { parseFundingAccountIds } from '@/src/domain/budget/fundingAccountIds';
 
 interface ImportedAuditContext {
   correlationId: string;
@@ -184,10 +185,7 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
           recurrenceDay: budget.recurrenceDay ?? null,
           recurrenceMonth: budget.recurrenceMonth ?? null,
           active: budget.active,
-          assetAccountIds: (budget.assetAccountIds ?? '')
-            .split(',')
-            .map(id => id.trim())
-            .filter(Boolean),
+          assetAccountIds: parseFundingAccountIds(budget.assetAccountIds),
           scopedAccountIds: ctx.budgetScopesById.get(budget.id) ?? [],
         },
       })),

@@ -21,7 +21,7 @@ import {
   buildPlaceholderAccountsForOrphans,
   remapAccountMatchersForImport,
   remapAccountMatcherSuppressions,
-  remapFundingAccountIdsCsv,
+  remapFundingAccountIds,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
 import {
@@ -319,7 +319,7 @@ export const nativePlugin: ImportPlugin = {
         }),
         budgets: (data.budgets || []).map(budget => {
           const remappedAssetAccountIds = budget.assetAccountIds
-            ? remapFundingAccountIdsCsv(
+            ? remapFundingAccountIds(
                 budget.assetAccountIds,
                 accountMap,
                 `budget "${budget.id}" asset account`,

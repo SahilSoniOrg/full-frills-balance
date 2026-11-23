@@ -2,7 +2,7 @@ import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 /**
  * Accounting aggregates that are not mere BalanceEffects wrappers.
- * Prefer `effect` / `checkJournal` / `foldBalances` from BalanceEffects, and `periodFlowSQL` from BalanceEffectSql, for signs.
+ * Use `effect` / `foldBalances` from BalanceEffects and `periodFlowSQL` from BalanceEffectSql for signs.
  */
 import { AppConfig } from '@/src/constants/app-config';
 

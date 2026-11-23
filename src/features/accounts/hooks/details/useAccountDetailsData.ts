@@ -11,7 +11,7 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant } from '@/src/design-system/accountPresentation';
 import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import { ComponentVariant } from '@/src/design-system/variants';

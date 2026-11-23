@@ -18,7 +18,7 @@ import {
   resolveJournalFxRate,
 } from '@/src/domain/accounting/journalFx';
 
-import { getAccountFallbackIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant } from '@/src/design-system/accountPresentation';
 import {
   JournalEntryAccountFlow,

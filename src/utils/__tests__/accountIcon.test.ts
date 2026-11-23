@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { AccountType } from '@/src/types/enums';
 
-import { getAccountFallbackIcon, getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 
 describe('getAccountFallbackIcon', () => {
   it('returns tag for EXPENSE accounts', () => {

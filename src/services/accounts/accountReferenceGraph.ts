@@ -1,7 +1,7 @@
 /**
  * Account reference graph — owns which persisted fields reference Accounts
- * and the policies for those refs (write assert, delete block, CSV funding lists,
- * import salvage/sanitize planning, site enumeration for merge).
+ * and the policies for those refs (write assert, delete block, funding ID
+ * collections, import salvage/sanitize planning, site enumeration for merge).
  *
  * Complements ADR-0008: stays under account command modules; no AccountService.
  */
@@ -13,8 +13,14 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import {
+  formatFundingAccountIds,
+  parseFundingAccountIds,
+} from '@/src/domain/budget/fundingAccountIds';
 
-export type AccountReferenceCardinality = 'scalar' | 'csv' | 'dual';
+export type AccountReferenceCardinality = 'scalar' | 'collection' | 'dual';
+
+export { formatFundingAccountIds, parseFundingAccountIds };
 
 /** How merge should treat the site when iterating `referenceSites` (v1 enum). */
 export type AccountReferenceMergeBehavior = 'retarget' | 'destroy' | 'none';
@@ -47,6 +53,43 @@ export type AccountReferenceSiteKey =
   | 'balanceSnapshot.accountId'
   | 'accountMatcher.accountId';
 
+export type AccountImportRef = {
+  siteKey: AccountReferenceSiteKey;
+  accountId: string;
+  /** Optional record id for validate error messages. */
+  recordId?: string;
+};
+
+export type MissingImportedAccountRef = {
+  siteKey: AccountReferenceSiteKey;
+  accountId: string;
+  recordId?: string;
+};
+
+/** Structural import bag for registry-driven FK extraction (Canonical* assignable). */
+export type AccountImportSourceBag = {
+  accounts: readonly { id: string; parentAccountId?: string | null }[];
+  transactions: readonly {
+    id: string;
+    accountId: string;
+    deletedAt?: number | null;
+  }[];
+  budgetScopes?: readonly { id: string; accountId: string }[];
+  budgets?: readonly { id: string; assetAccountIds?: string | null }[];
+  accountMetadata?: readonly {
+    id: string;
+    accountId: string;
+    payFromAccountId?: string | null;
+  }[];
+  plannedPayments?: readonly {
+    id: string;
+    fromAccountId: string;
+    toAccountId?: string | null;
+  }[];
+  balanceSnapshots?: readonly { id: string; accountId: string }[];
+  accountMatchers?: readonly { id: string; accountId: string }[];
+};
+
 export type AccountReferenceSite = {
   key: AccountReferenceSiteKey;
   /** Watermelon table name */
@@ -59,6 +102,10 @@ export type AccountReferenceSite = {
   mergeBehavior: AccountReferenceMergeBehavior;
   deletePolicy: AccountReferenceDeletePolicy;
   importPolicy: AccountReferenceImportPolicy;
+  /** Walk the import bag for this site's Account FK occurrences. */
+  extractImportRefs: (data: AccountImportSourceBag) => AccountImportRef[];
+  /** User-facing validate error when this site's FK is missing. */
+  formatMissingImportError: (missing: MissingImportedAccountRef) => string;
 };
 
 /** Narrow batch DTO for import planning / inventory-backed validate. */
@@ -69,22 +116,40 @@ export type AccountImportBatchDto = {
   refs: readonly AccountImportRef[];
 };
 
-export type AccountImportRef = {
-  siteKey: AccountReferenceSiteKey;
-  accountId: string;
-  /** Optional record id for validate error messages. */
-  recordId?: string;
-};
-
 export type ImportPlan = {
   missingAccountIds: string[];
 };
 
-export type MissingImportedAccountRef = {
-  siteKey: AccountReferenceSiteKey;
-  accountId: string;
-  recordId?: string;
-};
+function importRef(
+  siteKey: AccountReferenceSiteKey,
+  accountId: string | null | undefined,
+  recordId?: string,
+): AccountImportRef | null {
+  if (typeof accountId !== 'string' || accountId.length === 0) return null;
+  return { siteKey, accountId, recordId };
+}
+
+function collectScalarRefs<T extends { id: string }>(
+  siteKey: AccountReferenceSiteKey,
+  rows: readonly T[],
+  accountIdOf: (row: T) => string | null | undefined,
+): AccountImportRef[] {
+  const refs: AccountImportRef[] = [];
+  for (const row of rows) {
+    const ref = importRef(siteKey, accountIdOf(row), row.id);
+    if (ref) refs.push(ref);
+  }
+  return refs;
+}
+
+function missingImportError(
+  noun: string,
+  missing: MissingImportedAccountRef,
+  accountNoun = 'account',
+): string {
+  const recordId = missing.recordId ?? '?';
+  return `Import validation failed: ${noun} "${recordId}" references missing ${accountNoun} "${missing.accountId}"`;
+}
 
 export type DeleteBlockerCode =
   | 'transactions'
@@ -112,6 +177,9 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block', // delete walks children via parent FK
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs('account.parentAccountId', data.accounts, row => row.parentAccountId),
+    formatMissingImportError: missing => missingImportError('account', missing, 'parent account'),
   },
   {
     key: 'transaction.accountId',
@@ -122,6 +190,13 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'transaction.accountId',
+        data.transactions.filter(tx => tx.deletedAt == null),
+        row => row.accountId,
+      ),
+    formatMissingImportError: missing => missingImportError('transaction', missing),
   },
   {
     key: 'budgetScope.accountId',
@@ -132,16 +207,30 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs('budgetScope.accountId', data.budgetScopes || [], row => row.accountId),
+    formatMissingImportError: missing => missingImportError('budget scope', missing),
   },
   {
     key: 'budget.assetAccountIds',
     table: 'budgets',
     field: 'assetAccountIds',
     column: 'asset_account_ids',
-    cardinality: 'csv',
+    cardinality: 'collection',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data => {
+      const refs: AccountImportRef[] = [];
+      for (const budget of data.budgets || []) {
+        for (const id of parseFundingAccountIds(budget.assetAccountIds)) {
+          const ref = importRef('budget.assetAccountIds', id, budget.id);
+          if (ref) refs.push(ref);
+        }
+      }
+      return refs;
+    },
+    formatMissingImportError: missing => missingImportError('budget', missing, 'asset account'),
   },
   {
     key: 'accountMetadata.accountId',
@@ -152,6 +241,13 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'none',
     deletePolicy: 'owned',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'accountMetadata.accountId',
+        data.accountMetadata || [],
+        row => row.accountId,
+      ),
+    formatMissingImportError: missing => missingImportError('account metadata', missing),
   },
   {
     key: 'accountMetadata.payFromAccountId',
@@ -162,6 +258,14 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'accountMetadata.payFromAccountId',
+        data.accountMetadata || [],
+        row => row.payFromAccountId,
+      ),
+    formatMissingImportError: missing =>
+      missingImportError('account metadata', missing, 'payment account'),
   },
   {
     key: 'plannedPayment.fromAccountId',
@@ -172,6 +276,16 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'plannedPayment.fromAccountId',
+        data.plannedPayments || [],
+        row => row.fromAccountId,
+      ),
+    formatMissingImportError: missing => {
+      const recordId = missing.recordId ?? '?';
+      return `Import validation failed: planned payment "${recordId}" references a missing account`;
+    },
   },
   {
     key: 'plannedPayment.toAccountId',
@@ -182,6 +296,16 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'plannedPayment.toAccountId',
+        data.plannedPayments || [],
+        row => row.toAccountId,
+      ),
+    formatMissingImportError: missing => {
+      const recordId = missing.recordId ?? '?';
+      return `Import validation failed: planned payment "${recordId}" references a missing account`;
+    },
   },
   {
     key: 'balanceSnapshot.accountId',
@@ -192,6 +316,16 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'destroy',
     deletePolicy: 'allow',
     importPolicy: 'salvage',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'balanceSnapshot.accountId',
+        data.balanceSnapshots || [],
+        row => row.accountId,
+      ),
+    formatMissingImportError: missing => {
+      const recordId = missing.recordId ?? '?';
+      return `Import validation failed: balance snapshot "${recordId}" references a missing account or transaction`;
+    },
   },
   {
     key: 'accountMatcher.accountId',
@@ -202,6 +336,14 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'retarget',
     deletePolicy: 'owned',
     importPolicy: 'reject',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        'accountMatcher.accountId',
+        data.accountMatchers || [],
+        row => row.accountId,
+      ),
+    formatMissingImportError: missing =>
+      `Import validation failed: missing account "${missing.accountId}"`,
   },
 ];
 
@@ -217,18 +359,21 @@ export function referenceSites(): readonly AccountReferenceSite[] {
   return ACCOUNT_REFERENCE_SITES;
 }
 
-/** Split/trim funding `assetAccountIds` CSV; drops empty tokens. */
-export function parseFundingAccountIds(csv: string | null | undefined): string[] {
-  if (csv == null || csv.length === 0) return [];
-  return csv
-    .split(',')
-    .map(id => id.trim())
-    .filter(id => id.length > 0);
+/** Collect Account FK refs via each site's extractor (skips sanitize-only sites). */
+export function collectImportAccountRefs(data: AccountImportSourceBag): AccountImportRef[] {
+  const refs: AccountImportRef[] = [];
+  for (const site of ACCOUNT_REFERENCE_SITES) {
+    if (site.importPolicy === 'sanitize') continue;
+    refs.push(...site.extractImportRefs(data));
+  }
+  return refs;
 }
 
-/** Join funding Account ids into the persisted CSV form. */
-export function formatFundingAccountIds(ids: readonly string[]): string {
-  return ids.join(',');
+/** Validate error text from the site registry (no siteKey switch at call sites). */
+export function formatMissingImportedAccountError(missing: MissingImportedAccountRef): string {
+  const site = SITES_BY_KEY.get(missing.siteKey);
+  if (site) return site.formatMissingImportError(missing);
+  return `Import validation failed: missing account "${missing.accountId}"`;
 }
 
 function isNonEmptyAccountId(value: string | null | undefined): value is string {

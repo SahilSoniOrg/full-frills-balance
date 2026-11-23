@@ -1,10 +1,6 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-import {
-  checkJournal,
-  effect,
-  foldBalances,
-} from '@/src/domain/accounting/BalanceEffects';
+import { effect, foldBalances } from '@/src/domain/accounting/BalanceEffects';
 import { periodFlowSQL } from '@/src/data/repositories/accounting/BalanceEffectSql';
 
 describe('BalanceEffects', () => {
@@ -37,77 +33,23 @@ describe('BalanceEffects', () => {
       expect(e.flow).toBe('OUT');
       expect(e.isLiquidOutflow).toBe(true);
     });
-  });
 
-  describe('checkJournal', () => {
-    it('accepts balanced lines', () => {
-      const result = checkJournal([
-        { amount: 100, type: TransactionType.DEBIT },
-        { amount: 100, type: TransactionType.CREDIT },
-      ]);
-      expect(result.isValid).toBe(true);
-      expect(result.imbalance).toBe(0);
-      expect(result.totalDebits).toBe(100);
-      expect(result.totalCredits).toBe(100);
+    it('keeps non-asset liquid flags false', () => {
+      const expenseDebit = effect(AccountType.EXPENSE, TransactionType.DEBIT);
+      expect(expenseDebit.isLiquidInflow).toBe(false);
+      expect(expenseDebit.isLiquidOutflow).toBe(false);
+      const incomeCredit = effect(AccountType.INCOME, TransactionType.CREDIT);
+      expect(incomeCredit.isLiquidInflow).toBe(false);
+      expect(incomeCredit.isLiquidOutflow).toBe(false);
     });
 
-    it('rejects imbalance', () => {
-      const result = checkJournal([
-        { amount: 100, type: TransactionType.DEBIT },
-        { amount: 90, type: TransactionType.CREDIT },
-      ]);
-      expect(result.isValid).toBe(false);
-      expect(result.imbalance).toBe(10);
-    });
-
-    it('handles exchange rates', () => {
-      const result = checkJournal([
-        { amount: 100, type: TransactionType.DEBIT, exchangeRate: 1.2 },
-        { amount: 120, type: TransactionType.CREDIT },
-      ]);
-      expect(result.isValid).toBe(true);
-      expect(result.totalDebits).toBe(120);
-    });
-
-    it('can allow one minor unit of foreign-currency rounding without weakening default checks', () => {
-      const lines = [
-        { amount: 76.82, type: TransactionType.DEBIT, exchangeRate: 2.89 },
-        { amount: 222, type: TransactionType.CREDIT },
-      ];
-
-      expect(checkJournal(lines, 2).isValid).toBe(false);
-      expect(checkJournal(lines, 2, { allowExchangeRateRounding: true }).isValid).toBe(true);
-    });
-
-    it('scales foreign-currency rounding tolerance with the exchange rate', () => {
-      const lines = [
-        { amount: 4.11, type: TransactionType.DEBIT, exchangeRate: 12.17 },
-        { amount: 50, type: TransactionType.CREDIT },
-      ];
-
-      expect(checkJournal(lines, 2).isValid).toBe(false);
-      expect(checkJournal(lines, 2, { allowExchangeRateRounding: true }).isValid).toBe(true);
-    });
-
-    it('handles precision-aware imbalance', () => {
-      const result = checkJournal(
-        [
-          { amount: 100.001, type: TransactionType.DEBIT },
-          { amount: 100, type: TransactionType.CREDIT },
-        ],
-        2,
-      );
-      expect(result.isValid).toBe(true);
-      expect(result.imbalance).toBe(0);
-    });
-
-    it('respects precision argument for imbalance detection', () => {
-      const lines = [
-        { amount: 100.01, type: TransactionType.DEBIT },
-        { amount: 100, type: TransactionType.CREDIT },
-      ];
-      expect(checkJournal(lines, 2).isValid).toBe(false);
-      expect(checkJournal(lines, 1).isValid).toBe(true);
+    it('computes net-worth deltas with liability/equity/expense inverted', () => {
+      expect(effect(AccountType.ASSET, TransactionType.DEBIT).netWorthDelta(10)).toBe(10);
+      expect(effect(AccountType.INCOME, TransactionType.CREDIT).netWorthDelta(10)).toBe(10);
+      expect(effect(AccountType.LIABILITY, TransactionType.CREDIT).netWorthDelta(10)).toBe(-10);
+      expect(effect(AccountType.EQUITY, TransactionType.CREDIT).netWorthDelta(10)).toBe(-10);
+      expect(effect(AccountType.EXPENSE, TransactionType.DEBIT).netWorthDelta(10)).toBe(-10);
+      expect(effect(AccountType.LIABILITY, TransactionType.DEBIT).netWorthDelta(10)).toBe(10);
     });
   });
 

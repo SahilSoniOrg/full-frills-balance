@@ -25,7 +25,7 @@ import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';

@@ -1,4 +1,5 @@
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { parseFundingAccountIds } from '@/src/domain/budget/fundingAccountIds';
 import {
   serializeMultiWorkplaceExport,
   type ExportWorkplaceMetadata,
@@ -9,6 +10,14 @@ import { WorkplaceId } from '@/src/types/ids';
 import { compression } from '@/src/services/files/compression';
 import { preferences } from '@/src/services/preferences';
 import { fetchAndTransformTable } from './exportTableTransformer';
+
+/** v2 backup readers still expect comma-separated funding IDs. */
+function fundingIdsForV2Export(raw: unknown): string {
+  const ids = parseFundingAccountIds(
+    typeof raw === 'string' || Array.isArray(raw) ? raw : raw == null ? '' : String(raw),
+  );
+  return ids.join(',');
+}
 
 const EXPORT_KEY_BY_TABLE: Record<string, string> = {
   accounts: 'accounts',
@@ -53,6 +62,11 @@ export async function exportWorkplacesToJSON(
         rows = rows.filter(row => exportedJournalIds.has(String(row.journalId ?? '')));
       } else if (task.table === 'balance_snapshots') {
         rows = rows.filter(row => exportedTransactionIds.has(String(row.transactionId ?? '')));
+      } else if (task.table === 'budgets') {
+        rows = rows.map(row => ({
+          ...row,
+          assetAccountIds: fundingIdsForV2Export(row.assetAccountIds),
+        }));
       }
       data[EXPORT_KEY_BY_TABLE[task.table] ?? task.table] = rows;
       onProgress?.(

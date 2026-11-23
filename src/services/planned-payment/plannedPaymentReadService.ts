@@ -6,6 +6,7 @@ import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkpl
 import { AccountType, PlannedPaymentStatus } from '@/src/types/enums';
 import type Account from '@/src/data/models/Account';
 import { toPlainAccount } from '@/src/data/models/Account';
+import { resolvePlainAccountIcon } from '@/src/presentation/mappers/accountPlainMapper';
 import type Journal from '@/src/data/models/Journal';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import type { PlainAccount, PlainPlannedPayment } from '@/src/types/plainDtos';
@@ -112,7 +113,9 @@ export function projectPlannedPaymentObligations(
   journals: Journal[],
   accounts: Account[],
 ): PlannedPaymentObligation[] {
-  const accountsById = new Map(accounts.map(account => [account.id, toPlainAccount(account)]));
+  const accountsById = new Map(
+    accounts.map(account => [account.id, resolvePlainAccountIcon(toPlainAccount(account))]),
+  );
   const journalsByPlan = new Map<string, Journal[]>();
   for (const journal of journals) {
     if (!journal.plannedPaymentId) continue;

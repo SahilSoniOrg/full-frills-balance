@@ -6,7 +6,7 @@ import { DisplayTransaction } from '@/src/types/domainReadModels';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { effect } from '@/src/domain/accounting/BalanceEffects';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {

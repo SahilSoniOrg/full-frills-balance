@@ -345,7 +345,7 @@ describe('account commands (integration)', () => {
     const scopes = await budgetRepository.getScopes(WP, budget.id);
     expect(scopes.map(scope => scope.accountId)).toEqual([target.id]);
     const refreshedBudget = await budgetRepository.find(WP, budget.id);
-    expect(refreshedBudget?.assetAccountIds).toBe(target.id);
+    expect(refreshedBudget?.assetAccountIds).toBe(JSON.stringify([target.id]));
 
     const refreshedPayment = await plannedPaymentRepository.find(WP, plannedPayment.id);
     expect(refreshedPayment?.fromAccountId).toBe(target.id);
@@ -436,7 +436,9 @@ describe('account commands (integration)', () => {
     expect(await accountQueryRepository.find(WP, source.id)).toBeTruthy();
     expect(await transactionQueryRepository.findAllByAccountIds(WP, [source.id])).toHaveLength(1);
     expect(await transactionQueryRepository.findAllByAccountIds(WP, [target.id])).toHaveLength(0);
-    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(source.id);
+    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(
+      JSON.stringify([source.id]),
+    );
     expect((await budgetRepository.getScopes(WP, budget.id)).map(scope => scope.accountId)).toEqual(
       [source.id],
     );
@@ -502,7 +504,9 @@ describe('account commands (integration)', () => {
     const scopes = await budgetRepository.getScopes(WP, budget.id);
     expect(scopes).toHaveLength(1);
     expect(scopes[0].accountId).toBe(target.id);
-    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(target.id);
+    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(
+      JSON.stringify([target.id]),
+    );
     expect((await plannedPaymentRepository.find(WP, targetPayment.id))?.status).toBe(
       PlannedPaymentStatus.ACTIVE,
     );
@@ -596,7 +600,9 @@ describe('account commands (integration)', () => {
     expect(await accountQueryRepository.find(WP, source.id)).toBeTruthy();
     expect(await transactionQueryRepository.findAllByAccountIds(WP, [source.id])).toHaveLength(1);
     expect(await transactionQueryRepository.findAllByAccountIds(WP, [target.id])).toHaveLength(0);
-    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(source.id);
+    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(
+      JSON.stringify([source.id]),
+    );
     expect(
       (await auditRepository.findByEntity('account', target.id, WP)).filter(
         audit => audit.action === AuditAction.UPDATE,

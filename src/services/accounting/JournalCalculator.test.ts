@@ -21,7 +21,7 @@ describe('JournalCalculator', () => {
     expect(isJournalBalanced(lines, 'USD')).toBe(false);
   });
 
-  it('isBalanced agrees with BalanceEffects.checkJournal for FX lines', () => {
+  it('uses the shared evaluator for FX lines', () => {
     const lines = [
       { amount: 150, type: TransactionType.DEBIT, accountCurrency: 'USD' },
       {
@@ -34,7 +34,7 @@ describe('JournalCalculator', () => {
     expect(isJournalBalanced(lines, 'USD')).toBe(true);
   });
 
-  it('rejects minor-unit FX drift that checkJournal tolerance used to accept', () => {
+  it('rejects minor-unit FX drift that legacy aggregate tolerance would accept', () => {
     // THB 76.82 × 2.89 = 222.0098; evaluator is exact in minor units.
     const lines = [
       {
@@ -53,7 +53,7 @@ describe('JournalCalculator', () => {
     expect(isJournalBalanced(lines, 'INR')).toBe(false);
   });
 
-  it('rejects FX drift even when rate-scaled checkJournal tolerance would pass', () => {
+  it('rejects FX drift even when legacy rate-scaled tolerance would pass', () => {
     // HKD 4.11 × 12.17 = 50.0187; evaluator requires exact minor-unit balance.
     const lines = [
       {

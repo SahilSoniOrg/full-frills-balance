@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { DateRange } from '@/src/domain/calendar/dateRanges';

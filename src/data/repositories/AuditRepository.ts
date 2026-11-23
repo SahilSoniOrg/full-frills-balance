@@ -4,9 +4,7 @@ import AuditLog from '@/src/data/models/AuditLog';
 import { AuditAction, AuditEntityType } from '@/src/types/enums';
 import { createAuditEventPayload } from '@/src/domain/audit/auditEvents';
 import type { AuditActor, AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
-import { resolveAuditActor } from '@/src/services/audit/resolveAuditActor';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/services/observability/logger';
 import { Q } from '@nozbe/watermelondb';
 
 export interface AuditEntry<T = unknown> {
@@ -29,6 +27,12 @@ export interface AuditLogCursor {
   id: string;
 }
 
+/** Injected ports so the data layer does not depend on services. */
+export type AuditRepositoryPorts = {
+  resolveActor: (source?: AuditEventSource) => AuditActor;
+  warn: (message: string, context?: Record<string, unknown>) => void;
+};
+
 const MAX_AUDIT_PAGE_SIZE = 500;
 
 function normalizeAuditPageSize(limit: number): number {
@@ -36,7 +40,32 @@ function normalizeAuditPageSize(limit: number): number {
   return Math.min(MAX_AUDIT_PAGE_SIZE, Math.max(1, Math.floor(limit)));
 }
 
+/** Safe defaults for tests and early boot before services bind real ports. */
+function createDefaultAuditRepositoryPorts(): AuditRepositoryPorts {
+  return {
+    resolveActor: (source?: AuditEventSource): AuditActor => {
+      if (source === 'system' || source === 'repair') return { type: 'system' };
+      if (source !== undefined && source !== 'app' && source !== 'import') {
+        return { type: 'unknown' };
+      }
+      return { type: 'user' };
+    },
+    warn: () => undefined,
+  };
+}
+
 export class AuditRepository {
+  private ports: AuditRepositoryPorts;
+
+  constructor(ports: AuditRepositoryPorts = createDefaultAuditRepositoryPorts()) {
+    this.ports = ports;
+  }
+
+  /** Bind service-layer actor/logger implementations without importing them here. */
+  configure(ports: AuditRepositoryPorts): void {
+    this.ports = ports;
+  }
+
   private get auditLogs() {
     return database.collections.get<AuditLog>('audit_logs');
   }
@@ -69,13 +98,13 @@ export class AuditRepository {
         displayName: entry.displayName,
         eventType: entry.eventType,
         source: entry.source,
-        actor: entry.actor ?? resolveAuditActor(entry.source),
+        actor: entry.actor ?? this.ports.resolveActor(entry.source),
         correlationId: entry.correlationId,
         revertsLogId: entry.revertsLogId,
         undoable: entry.undoable,
       });
     } catch (error) {
-      logger.warn('[AuditRepository] Failed to stringify changes (possibly circular)', {
+      this.ports.warn('[AuditRepository] Failed to stringify changes (possibly circular)', {
         entityType: entry.entityType,
         entityId: entry.entityId,
       });
@@ -84,7 +113,7 @@ export class AuditRepository {
         action: entry.action,
         eventType: entry.eventType,
         source: entry.source,
-        actor: entry.actor ?? resolveAuditActor(entry.source),
+        actor: entry.actor ?? this.ports.resolveActor(entry.source),
         undoable: false,
         changes: {
           serializationError: error instanceof Error ? error.message : String(error),

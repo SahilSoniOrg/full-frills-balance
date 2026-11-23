@@ -1,6 +1,6 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import type { CreateAccountIntent } from './AccountPickerList';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';

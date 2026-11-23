@@ -14,12 +14,11 @@ import {
 } from '@/src/types/importContracts';
 import {
   AccountImportBatchDto,
-  AccountImportRef,
+  collectImportAccountRefs,
   formatFundingAccountIds,
   importPlan,
   ImportPlan,
   parseFundingAccountIds,
-  referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
 import { logger } from '@/src/services/observability/logger';
 import {
@@ -43,17 +42,6 @@ export type NativeImportAccountSources = {
   accountMatchers?: CanonicalAccountMatcher[];
 };
 
-function addRef(
-  refs: AccountImportRef[],
-  siteKey: AccountImportRef['siteKey'],
-  accountId: string | undefined | null,
-  recordId?: string,
-): void {
-  if (typeof accountId === 'string' && accountId.length > 0) {
-    refs.push({ siteKey, accountId, recordId });
-  }
-}
-
 /**
  * Maps native/plugin bags (or post-remap BatchImportData) onto the narrow
  * Account reference graph import DTO. Soft-deleted transactions should already
@@ -62,73 +50,9 @@ function addRef(
 export function accountImportBatchFromSources(
   data: NativeImportAccountSources | BatchImportData,
 ): AccountImportBatchDto {
-  const refs: AccountImportRef[] = [];
-
-  for (const site of referenceSites()) {
-    if (site.importPolicy === 'sanitize') continue;
-
-    switch (site.key) {
-      case 'account.parentAccountId':
-        for (const account of data.accounts) {
-          addRef(refs, site.key, account.parentAccountId, account.id);
-        }
-        break;
-      case 'transaction.accountId':
-        for (const transaction of data.transactions) {
-          if (transaction.deletedAt != null) continue;
-          addRef(refs, site.key, transaction.accountId, transaction.id);
-        }
-        break;
-      case 'budgetScope.accountId':
-        for (const scope of data.budgetScopes || []) {
-          addRef(refs, site.key, scope.accountId, scope.id);
-        }
-        break;
-      case 'budget.assetAccountIds':
-        for (const budget of data.budgets || []) {
-          for (const id of parseFundingAccountIds(budget.assetAccountIds)) {
-            addRef(refs, site.key, id, budget.id);
-          }
-        }
-        break;
-      case 'accountMetadata.accountId':
-        for (const metadata of data.accountMetadata || []) {
-          addRef(refs, site.key, metadata.accountId, metadata.id);
-        }
-        break;
-      case 'accountMetadata.payFromAccountId':
-        for (const metadata of data.accountMetadata || []) {
-          addRef(refs, site.key, metadata.payFromAccountId, metadata.id);
-        }
-        break;
-      case 'plannedPayment.fromAccountId':
-        for (const payment of data.plannedPayments || []) {
-          addRef(refs, site.key, payment.fromAccountId, payment.id);
-        }
-        break;
-      case 'plannedPayment.toAccountId':
-        for (const payment of data.plannedPayments || []) {
-          addRef(refs, site.key, payment.toAccountId, payment.id);
-        }
-        break;
-      case 'balanceSnapshot.accountId':
-        for (const snapshot of data.balanceSnapshots || []) {
-          addRef(refs, site.key, snapshot.accountId, snapshot.id);
-        }
-        break;
-      case 'accountMatcher.accountId':
-        for (const matcher of data.accountMatchers || []) {
-          addRef(refs, site.key, matcher.accountId, matcher.id);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
   return {
     accountIds: data.accounts.map(account => account.id),
-    refs,
+    refs: collectImportAccountRefs(data),
   };
 }
 
@@ -286,14 +210,14 @@ export function remapAccountMatcherSuppressions(
   return unionSuppressions(mapped);
 }
 
-/** Remap funding CSV via graph parse/format helpers. */
-export function remapFundingAccountIdsCsv(
-  csv: string | undefined,
+/** Remap funding ID collection via graph parse/format helpers. */
+export function remapFundingAccountIds(
+  raw: string | undefined,
   accountMap: Map<string, AccountId>,
   context: string,
 ): string {
-  const remapped = parseFundingAccountIds(csv).map(id =>
+  const remapped = parseFundingAccountIds(raw).map(id =>
     requireMappedAccountId(accountMap, id, context),
   );
-  return formatFundingAccountIds(remapped);
+  return remapped.length === 0 ? '' : formatFundingAccountIds(remapped);
 }

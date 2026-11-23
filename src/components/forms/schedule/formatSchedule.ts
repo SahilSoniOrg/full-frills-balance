@@ -1,4 +1,5 @@
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
+import { type IntervalType, resolveIntervalPolicy } from '@/src/domain/recurrence/intervalPolicy';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import type { ScheduleValue } from './types';
 
@@ -7,34 +8,32 @@ export interface ScheduleSentencePart {
   emphasized: boolean;
 }
 
-const units = {
+const units: Record<IntervalType, string> = {
   DAILY: copy.dayUnit,
   WEEKLY: copy.weekUnit,
   MONTHLY: copy.monthUnit,
   YEARLY: copy.yearUnit,
-} as const;
+};
 export function formatScheduleSentence(value: ScheduleValue): ScheduleSentencePart[] {
-  const unit = units[value.intervalType];
+  const policy = resolveIntervalPolicy(value.intervalType);
+  const unit = units[policy.type];
   const intervalN = Number.isInteger(value.intervalN) && value.intervalN > 0 ? value.intervalN : 1;
   const parts: ScheduleSentencePart[] = [
     { text: copy.everyPrefix(intervalN), emphasized: false },
     { text: intervalN === 1 ? unit : `${unit}s`, emphasized: true },
   ];
-  if (value.intervalType === 'YEARLY' && value.recurrenceMonth !== undefined) {
+  if (policy.usesRecurrenceMonth && value.recurrenceMonth !== undefined) {
     parts.push(
       { text: copy.yearIn, emphasized: false },
       { text: copy.monthNames[value.recurrenceMonth - 1] ?? '', emphasized: true },
     );
   }
-  if (value.intervalType === 'WEEKLY' && value.recurrenceDay !== undefined) {
+  if (policy.recurrenceDayKind === 'weekday' && value.recurrenceDay !== undefined) {
     parts.push(
       { text: copy.on, emphasized: false },
       { text: copy.weekdayNames[value.recurrenceDay] ?? '', emphasized: true },
     );
-  } else if (
-    (value.intervalType === 'MONTHLY' || value.intervalType === 'YEARLY') &&
-    value.recurrenceDay !== undefined
-  ) {
+  } else if (policy.recurrenceDayKind === 'monthDay' && value.recurrenceDay !== undefined) {
     parts.push(
       { text: copy.onThe, emphasized: false },
       {

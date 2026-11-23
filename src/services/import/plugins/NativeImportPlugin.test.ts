@@ -315,7 +315,7 @@ describe('NativeImportPlugin', () => {
       expect(data.budgets[0].startDate).toBeDefined();
       expect(data.budgets[0].recurrenceDay).toBe(1);
       expect(data.budgets[0].recurrenceMonth).toBe(1);
-      expect(data.budgets[0].assetAccountIds).toBe(newAccountId);
+      expect(data.budgets[0].assetAccountIds).toBe(JSON.stringify([newAccountId]));
 
       // Check account metadata mapping and ID remapping in payFromAccountId
       expect(data.accountMetadata[0].payFromAccountId).toBe(newAccountId);

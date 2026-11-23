@@ -8,7 +8,7 @@ import {
   getAccountAccentColor,
   resolveAccountAccentColor,
 } from '@/src/design-system/accountPresentation';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useCallback, useMemo, useState } from 'react';
 import type { AncestorAccountViewModel, SubAccountViewModel } from './types';
