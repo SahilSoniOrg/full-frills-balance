@@ -138,7 +138,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     table: 'budgets',
     field: 'assetAccountIds',
     column: 'asset_account_ids',
-    cardinality: 'csv',
+    cardinality: 'collection',
     mergeBehavior: 'retarget',
     deletePolicy: 'block',
     importPolicy: 'salvage',
@@ -217,18 +217,20 @@ export function referenceSites(): readonly AccountReferenceSite[] {
   return ACCOUNT_REFERENCE_SITES;
 }
 
-/** Split/trim funding `assetAccountIds` CSV; drops empty tokens. */
-export function parseFundingAccountIds(csv: string | null | undefined): string[] {
-  if (csv == null || csv.length === 0) return [];
-  return csv
-    .split(',')
-    .map(id => id.trim())
-    .filter(id => id.length > 0);
+/** Read the persisted funding ID collection; accept legacy CSV during migration. */
+export function parseFundingAccountIds(raw: string | readonly string[] | null | undefined): string[] {
+  if (raw == null || raw.length === 0) return [];
+  if (Array.isArray(raw)) return [...new Set(raw.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+  try {
+    const parsed: unknown = JSON.parse(raw as string);
+    if (Array.isArray(parsed)) return [...new Set(parsed.filter((id): id is string => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+  } catch { /* Legacy CSV */ }
+  return [...new Set((raw as string).split(',').map(id => id.trim()).filter(Boolean))];
 }
 
-/** Join funding Account ids into the persisted CSV form. */
+/** Serialize funding IDs as an unambiguous JSON collection. */
 export function formatFundingAccountIds(ids: readonly string[]): string {
-  return ids.join(',');
+  return JSON.stringify([...new Set(ids.map(id => id.trim()).filter(Boolean))]);
 }
 
 function isNonEmptyAccountId(value: string | null | undefined): value is string {
