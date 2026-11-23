@@ -31,21 +31,14 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>fullfrillsbalance</string>
-          <string>in.sahilsoni.fullfrillsbalance</string>
+          <string>com.googleusercontent.apps.151156364497-tc8lss33d0mlqf38fdpb2d7eeaftojh0</string>
+          <string>com.googleusercontent.apps.151156364497-oi7vgrbq7eh3cmnhohcl2dr17os3soto</string>
         </array>
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
           <string>exp+full-frills-balance</string>
-        </array>
-      </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>com.googleusercontent.apps.151156364497-tc8lss33d0mlqf38fdpb2d7eeaftojh0</string>
-          <string>com.googleusercontent.apps.151156364497-oi7vgrbq7eh3cmnhohcl2dr17os3soto</string>
         </array>
       </dict>
     </array>

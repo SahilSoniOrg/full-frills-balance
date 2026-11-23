@@ -232,7 +232,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'react-native-quick-crypto',
     'expo-localization',
-    './plugins/withTelephony',
+    './plugins/withOptionalAndroidFeatures',
     './plugins/withGradleOptimizations',
     './plugins/withAndroidBuildVariants',
     './plugins/withJournalLauncherWidget',
