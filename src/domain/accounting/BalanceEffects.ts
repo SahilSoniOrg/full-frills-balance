@@ -1,7 +1,8 @@
 import { DEFAULT_CURRENCY_PRECISION } from '@/src/domain/money/currencyPrecision';
+import { roundToPrecision } from '@/src/domain/money/money';
+
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-import { roundToPrecision } from '@/src/domain/money/money';
 
 export type BalanceSign = -1 | 0 | 1;
 export type FlowDirection = 'IN' | 'OUT';
@@ -19,27 +20,6 @@ export type BalanceEffect = {
   isLiquidInflow: boolean;
   isLiquidOutflow: boolean;
   netWorthDelta(amount: number): number;
-};
-
-export type JournalLineForCheck = {
-  amount: number;
-  type: TransactionType;
-  exchangeRate?: number;
-};
-
-export type JournalCheckResult = {
-  isValid: boolean;
-  imbalance: number;
-  totalDebits: number;
-  totalCredits: number;
-};
-
-export type JournalCheckOptions = {
-  /**
-   * Permit the discrepancy introduced when foreign amounts are rounded to their
-   * currency precision before being converted to the base currency.
-   */
-  allowExchangeRateRounding?: boolean;
 };
 
 export type FoldBalanceStep = {
@@ -114,40 +94,5 @@ export function foldBalances(
     balances.push(current);
   }
   return { balances, final: current };
-}
-
-/**
- * Debits ≡ credits (with FX × precision).
- * Does not validate distinct accounts, line count, or zero amounts.
- */
-export function checkJournal(
-  lines: readonly JournalLineForCheck[],
-  precision: number = DEFAULT_CURRENCY_PRECISION,
-  options: JournalCheckOptions = {},
-): JournalCheckResult {
-  const totalDebits = lines
-    .filter(l => l.type === TransactionType.DEBIT)
-    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
-
-  const totalCredits = lines
-    .filter(l => l.type === TransactionType.CREDIT)
-    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
-
-  const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
-  const minorUnit = Math.pow(10, -precision);
-  const exchangeRateRoundingBound = lines.reduce(
-    (sum, line) => sum + (minorUnit / 2) * Math.abs(line.exchangeRate || 1),
-    0,
-  );
-  const tolerance = options.allowExchangeRateRounding
-    ? Math.max(minorUnit, Math.ceil(exchangeRateRoundingBound / minorUnit) * minorUnit)
-    : Math.pow(10, -(precision + 1));
-
-  return {
-    isValid: Math.abs(imbalance) <= tolerance,
-    imbalance,
-    totalDebits: roundToPrecision(totalDebits, precision),
-    totalCredits: roundToPrecision(totalCredits, precision),
-  };
 }
 
