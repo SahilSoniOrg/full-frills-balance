@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
-import { DateRange, RecurrenceInterval, RecurrenceRule } from './types';
+import { type IntervalType, resolveIntervalPolicy } from '@/src/domain/recurrence/intervalPolicy';
+import { DateRange, RecurrenceRule } from './types';
 
 /** Normalizes a timestamp to local midnight. */
 export function normalizeToStartOfDay(timestamp: number): number {
@@ -12,155 +13,22 @@ function setClampedDate(date: dayjs.Dayjs, targetDay: number): dayjs.Dayjs {
   return date.date(Math.min(targetDay, maxDay));
 }
 
-/**
- * Calculates the next discrete occurrence strictly after `current` based on rule.
- */
-export function getNextOccurrence(current: number, rule: RecurrenceRule): number {
-  const intervalN = Math.max(1, rule.intervalN || 1);
-  const intervalType = (rule.intervalType || 'MONTHLY') as RecurrenceInterval;
-  let next = dayjs(current);
+type IntervalStrategy = {
+  getNextOccurrence: (current: number, rule: RecurrenceRule, intervalN: number) => number;
+  computeFirstOccurrence: (startDate: number, rule: RecurrenceRule) => number;
+  getCurrentPeriod: (rule: RecurrenceRule, referenceDate: number, intervalN: number) => DateRange;
+};
 
-  switch (intervalType) {
-    case 'DAILY':
-      next = next.add(intervalN, 'day');
-      break;
-
-    case 'WEEKLY':
-      next = next.add(intervalN, 'week');
-      if (rule.recurrenceDay !== undefined && rule.recurrenceDay !== null) {
-        const currentDay = next.day();
-        const diff = (rule.recurrenceDay - currentDay + 7) % 7;
-        next = next.add(diff, 'day');
-      }
-      break;
-
-    case 'MONTHLY': {
-      const targetDay = rule.recurrenceDay ?? next.date();
-      next = setClampedDate(next.date(1).add(intervalN, 'month'), targetDay);
-      break;
-    }
-
-    case 'YEARLY': {
-      const targetMonth =
-        rule.recurrenceMonth !== undefined && rule.recurrenceMonth !== null
-          ? rule.recurrenceMonth - 1
-          : next.month();
-      const targetDay = rule.recurrenceDay ?? next.date();
-
-      next = setClampedDate(next.add(intervalN, 'year').month(targetMonth).date(1), targetDay);
-      break;
-    }
-
-    default:
-      next = next.add(intervalN, 'month');
-      break;
-  }
-
-  return next.valueOf();
-}
-
-/**
- * First occurrence for a new recurrence rule — aligns within the start period when possible.
- */
-export function computeFirstOccurrence(startDate: number, rule: RecurrenceRule): number {
-  const start = dayjs(startDate).startOf('day');
-  const intervalType = (rule.intervalType || 'MONTHLY') as RecurrenceInterval;
-  const { recurrenceDay, recurrenceMonth } = rule;
-
-  switch (intervalType) {
-    case 'DAILY':
-      return start.valueOf();
-
-    case 'WEEKLY': {
-      if (recurrenceDay === undefined || recurrenceDay === null) {
-        return start.valueOf();
-      }
-      const startWeekday = start.day();
-      const daysUntilTarget = (recurrenceDay - startWeekday + 7) % 7;
-      return start.add(daysUntilTarget, 'day').valueOf();
-    }
-
-    case 'MONTHLY': {
-      const targetDay = recurrenceDay ?? start.date();
-      const candidate = setClampedDate(start, targetDay);
-
-      if (candidate.valueOf() >= start.valueOf()) {
-        return candidate.valueOf();
-      }
-
-      const nextMonth = start.date(1).add(1, 'month');
-      return setClampedDate(nextMonth, targetDay).valueOf();
-    }
-
-    case 'YEARLY': {
-      const targetMonth =
-        recurrenceMonth !== undefined && recurrenceMonth !== null
-          ? recurrenceMonth - 1
-          : start.month();
-      const targetDay = recurrenceDay ?? start.date();
-
-      let candidate = setClampedDate(start.month(targetMonth).date(1), targetDay);
-
-      if (candidate.valueOf() >= start.valueOf()) {
-        return candidate.valueOf();
-      }
-
-      const nextYear = start.add(1, 'year').month(targetMonth).date(1);
-      return setClampedDate(nextYear, targetDay).valueOf();
-    }
-
-    default:
-      return start.valueOf();
-  }
-}
-
-/** Finds the first occurrence on or after a date while preserving the original cycle anchor. */
-export function getOccurrenceOnOrAfter(
-  startDate: number,
-  rule: RecurrenceRule,
-  referenceDate: number,
-): number {
-  const first = computeFirstOccurrence(startDate, rule);
-  const reference = dayjs(referenceDate).startOf('day');
-  if (first >= reference.valueOf()) return first;
-
-  const unit =
-    rule.intervalType === 'DAILY'
-      ? 'day'
-      : rule.intervalType === 'WEEKLY'
-        ? 'week'
-        : rule.intervalType === 'YEARLY'
-          ? 'year'
-          : 'month';
-  const count = Math.max(1, rule.intervalN || 1);
-  const cycles = Math.floor(reference.diff(dayjs(first), unit) / count);
-  const anchoredRule = {
-    ...rule,
-    recurrenceDay:
-      rule.recurrenceDay ?? (unit === 'week' ? dayjs(first).day() : dayjs(first).date()),
-    recurrenceMonth: rule.recurrenceMonth ?? dayjs(first).month() + 1,
-  };
-  let occurrence =
-    cycles > 0 ? getNextOccurrence(first, { ...anchoredRule, intervalN: cycles * count }) : first;
-  while (occurrence < reference.valueOf()) {
-    occurrence = getNextOccurrence(occurrence, anchoredRule);
-  }
-  return occurrence;
-}
-
-/**
- * Calculates the active cycle start and end dates containing referenceDate.
- */
-export function getCurrentPeriod(
-  rule: RecurrenceRule,
-  referenceDate: number = Date.now(),
-): DateRange {
-  const ref = dayjs(referenceDate).startOf('day');
-  const intervalType = (rule.intervalType || 'MONTHLY') as RecurrenceInterval;
-  const intervalN = Math.max(1, rule.intervalN || 1);
-
-  switch (intervalType) {
-    case 'DAILY': {
+const INTERVAL_STRATEGIES: Record<IntervalType, IntervalStrategy> = {
+  DAILY: {
+    getNextOccurrence(current, _rule, intervalN) {
+      return dayjs(current).add(intervalN, 'day').valueOf();
+    },
+    computeFirstOccurrence(startDate) {
+      return dayjs(startDate).startOf('day').valueOf();
+    },
+    getCurrentPeriod(rule, referenceDate, intervalN) {
+      const ref = dayjs(referenceDate).startOf('day');
       const startAnchor = rule.startDate
         ? dayjs(rule.startDate)
         : dayjs(rule.createdAt || referenceDate).startOf('day');
@@ -172,9 +40,31 @@ export function getCurrentPeriod(
         startDate: cycleStart.valueOf(),
         endDate: cycleEnd.valueOf(),
       };
-    }
+    },
+  },
 
-    case 'WEEKLY': {
+  WEEKLY: {
+    getNextOccurrence(current, rule, intervalN) {
+      let next = dayjs(current).add(intervalN, 'week');
+      if (rule.recurrenceDay !== undefined && rule.recurrenceDay !== null) {
+        const currentDay = next.day();
+        const diff = (rule.recurrenceDay - currentDay + 7) % 7;
+        next = next.add(diff, 'day');
+      }
+      return next.valueOf();
+    },
+    computeFirstOccurrence(startDate, rule) {
+      const start = dayjs(startDate).startOf('day');
+      const { recurrenceDay } = rule;
+      if (recurrenceDay === undefined || recurrenceDay === null) {
+        return start.valueOf();
+      }
+      const startWeekday = start.day();
+      const daysUntilTarget = (recurrenceDay - startWeekday + 7) % 7;
+      return start.add(daysUntilTarget, 'day').valueOf();
+    },
+    getCurrentPeriod(rule, referenceDate, intervalN) {
+      const ref = dayjs(referenceDate).startOf('day');
       const baseAnchor = rule.startDate
         ? dayjs(rule.startDate)
         : dayjs(rule.createdAt || referenceDate).startOf('week');
@@ -190,9 +80,29 @@ export function getCurrentPeriod(
         startDate: cycleStart.valueOf(),
         endDate: cycleEnd.valueOf(),
       };
-    }
+    },
+  },
 
-    case 'MONTHLY': {
+  MONTHLY: {
+    getNextOccurrence(current, rule, intervalN) {
+      const next = dayjs(current);
+      const targetDay = rule.recurrenceDay ?? next.date();
+      return setClampedDate(next.date(1).add(intervalN, 'month'), targetDay).valueOf();
+    },
+    computeFirstOccurrence(startDate, rule) {
+      const start = dayjs(startDate).startOf('day');
+      const targetDay = rule.recurrenceDay ?? start.date();
+      const candidate = setClampedDate(start, targetDay);
+
+      if (candidate.valueOf() >= start.valueOf()) {
+        return candidate.valueOf();
+      }
+
+      const nextMonth = start.date(1).add(1, 'month');
+      return setClampedDate(nextMonth, targetDay).valueOf();
+    },
+    getCurrentPeriod(rule, referenceDate, intervalN) {
+      const ref = dayjs(referenceDate).startOf('day');
       const targetDay = rule.recurrenceDay ?? (rule.startDate ? dayjs(rule.startDate).date() : 1);
       const anchor = dayjs(rule.startDate || rule.createdAt || referenceDate).startOf('day');
       const monthsDiff = (ref.year() - anchor.year()) * 12 + (ref.month() - anchor.month());
@@ -219,9 +129,43 @@ export function getCurrentPeriod(
         startDate: startCandidate.valueOf(),
         endDate: endCandidate.valueOf(),
       };
-    }
+    },
+  },
 
-    case 'YEARLY': {
+  YEARLY: {
+    getNextOccurrence(current, rule, intervalN) {
+      const next = dayjs(current);
+      const targetMonth =
+        rule.recurrenceMonth !== undefined && rule.recurrenceMonth !== null
+          ? rule.recurrenceMonth - 1
+          : next.month();
+      const targetDay = rule.recurrenceDay ?? next.date();
+
+      return setClampedDate(
+        next.add(intervalN, 'year').month(targetMonth).date(1),
+        targetDay,
+      ).valueOf();
+    },
+    computeFirstOccurrence(startDate, rule) {
+      const start = dayjs(startDate).startOf('day');
+      const { recurrenceDay, recurrenceMonth } = rule;
+      const targetMonth =
+        recurrenceMonth !== undefined && recurrenceMonth !== null
+          ? recurrenceMonth - 1
+          : start.month();
+      const targetDay = recurrenceDay ?? start.date();
+
+      let candidate = setClampedDate(start.month(targetMonth).date(1), targetDay);
+
+      if (candidate.valueOf() >= start.valueOf()) {
+        return candidate.valueOf();
+      }
+
+      const nextYear = start.add(1, 'year').month(targetMonth).date(1);
+      return setClampedDate(nextYear, targetDay).valueOf();
+    },
+    getCurrentPeriod(rule, referenceDate, intervalN) {
+      const ref = dayjs(referenceDate).startOf('day');
       const targetMonth =
         rule.recurrenceMonth !== undefined && rule.recurrenceMonth !== null
           ? rule.recurrenceMonth - 1
@@ -263,15 +207,66 @@ export function getCurrentPeriod(
         startDate: startCandidate.valueOf(),
         endDate: endCandidate.valueOf(),
       };
-    }
+    },
+  },
+};
 
-    default: {
-      return {
-        startDate: ref.startOf('month').valueOf(),
-        endDate: ref.endOf('month').valueOf(),
-      };
-    }
+function strategyFor(rule: RecurrenceRule): IntervalStrategy {
+  return INTERVAL_STRATEGIES[resolveIntervalPolicy(rule.intervalType).type];
+}
+
+/**
+ * Calculates the next discrete occurrence strictly after `current` based on rule.
+ */
+export function getNextOccurrence(current: number, rule: RecurrenceRule): number {
+  const intervalN = Math.max(1, rule.intervalN || 1);
+  return strategyFor(rule).getNextOccurrence(current, rule, intervalN);
+}
+
+/**
+ * First occurrence for a new recurrence rule — aligns within the start period when possible.
+ */
+export function computeFirstOccurrence(startDate: number, rule: RecurrenceRule): number {
+  return strategyFor(rule).computeFirstOccurrence(startDate, rule);
+}
+
+/** Finds the first occurrence on or after a date while preserving the original cycle anchor. */
+export function getOccurrenceOnOrAfter(
+  startDate: number,
+  rule: RecurrenceRule,
+  referenceDate: number,
+): number {
+  const first = computeFirstOccurrence(startDate, rule);
+  const reference = dayjs(referenceDate).startOf('day');
+  if (first >= reference.valueOf()) return first;
+
+  const policy = resolveIntervalPolicy(rule.intervalType);
+  const unit = policy.unit;
+  const count = Math.max(1, rule.intervalN || 1);
+  const cycles = Math.floor(reference.diff(dayjs(first), unit) / count);
+  const anchoredRule = {
+    ...rule,
+    recurrenceDay:
+      rule.recurrenceDay ?? (unit === 'week' ? dayjs(first).day() : dayjs(first).date()),
+    recurrenceMonth: rule.recurrenceMonth ?? dayjs(first).month() + 1,
+  };
+  let occurrence =
+    cycles > 0 ? getNextOccurrence(first, { ...anchoredRule, intervalN: cycles * count }) : first;
+  while (occurrence < reference.valueOf()) {
+    occurrence = getNextOccurrence(occurrence, anchoredRule);
   }
+  return occurrence;
+}
+
+/**
+ * Calculates the active cycle start and end dates containing referenceDate.
+ */
+export function getCurrentPeriod(
+  rule: RecurrenceRule,
+  referenceDate: number = Date.now(),
+): DateRange {
+  const intervalN = Math.max(1, rule.intervalN || 1);
+  return strategyFor(rule).getCurrentPeriod(rule, referenceDate, intervalN);
 }
 
 /**
@@ -288,7 +283,7 @@ export function getPeriodLabel(rule: RecurrenceRule, referenceDate: number = Dat
     return d.format('MMM D');
   };
 
-  if ((rule.intervalType || 'MONTHLY') === 'DAILY' && start.isSame(end, 'day')) {
+  if (resolveIntervalPolicy(rule.intervalType).type === 'DAILY' && start.isSame(end, 'day')) {
     return format(start);
   }
 
