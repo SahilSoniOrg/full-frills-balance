@@ -1,15 +1,27 @@
 import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
+import {
+  DEFAULT_INTERVAL_TYPE,
+  type IntervalType,
+  resolveIntervalPolicy,
+} from '@/src/domain/recurrence/intervalPolicy';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { roundToPrecision } from '@/src/domain/money/money';
 import { AccountId, BudgetId } from '@/src/types/ids';
 import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 
 const DEFAULT_BUDGET_SCHEDULE = {
-  intervalType: 'MONTHLY',
+  intervalType: DEFAULT_INTERVAL_TYPE,
   intervalN: 1,
   recurrenceDay: 1,
 } as const;
+
+const INTERVAL_UNIT_LABELS: Record<IntervalType, string> = {
+  DAILY: budgetFormStrings.intervalUnits.day,
+  WEEKLY: budgetFormStrings.intervalUnits.week,
+  MONTHLY: budgetFormStrings.intervalUnits.month,
+  YEARLY: budgetFormStrings.intervalUnits.year,
+};
 
 export type BudgetSpendingPeriod = {
   label: string;
@@ -19,14 +31,7 @@ export type BudgetSpendingPeriod = {
 };
 
 export function formatBudgetAmountLabel(intervalType: string, intervalN: number): string {
-  const unit =
-    intervalType === 'DAILY'
-      ? budgetFormStrings.intervalUnits.day
-      : intervalType === 'WEEKLY'
-        ? budgetFormStrings.intervalUnits.week
-        : intervalType === 'YEARLY'
-          ? budgetFormStrings.intervalUnits.year
-          : budgetFormStrings.intervalUnits.month;
+  const unit = INTERVAL_UNIT_LABELS[resolveIntervalPolicy(intervalType).type];
   return intervalN > 1
     ? budgetFormStrings.limitEvery(intervalN, unit)
     : budgetFormStrings.limitEach(unit);
@@ -86,6 +91,7 @@ export function mapBudgetToEditDraft(
 ): BudgetEditDraft {
   const [year, month] = (budget.startMonth ?? '').split('-');
   const intervalType = budget.intervalType || DEFAULT_BUDGET_SCHEDULE.intervalType;
+  const policy = resolveIntervalPolicy(intervalType);
   return {
     name: budget.name,
     amount: budget.amount.toString(),
@@ -93,10 +99,10 @@ export function mapBudgetToEditDraft(
     startMonth: new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1),
     intervalType,
     intervalN: budget.intervalN || DEFAULT_BUDGET_SCHEDULE.intervalN,
-    ...(intervalType !== 'DAILY' && {
+    ...(policy.recurrenceDayKind !== 'none' && {
       recurrenceDay: budget.recurrenceDay ?? DEFAULT_BUDGET_SCHEDULE.recurrenceDay,
     }),
-    ...(intervalType === 'YEARLY' && { recurrenceMonth: budget.recurrenceMonth || 1 }),
+    ...(policy.usesRecurrenceMonth && { recurrenceMonth: budget.recurrenceMonth || 1 }),
     startDate: budget.startDate,
     selectedAccountIds: scopes.map(s => s.accountId),
     assetAccountIds: parseBudgetAssetAccountIds(budget.assetAccountIds),
