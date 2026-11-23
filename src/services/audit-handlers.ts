@@ -3,6 +3,7 @@ import {
   accountMatchesAuditSnapshot,
   revertAccountFromAuditState,
 } from '@/src/services/accounts/accountAuditCommands';
+import { bindAuditRepositoryPorts } from '@/src/services/audit/bindAuditRepositoryPorts';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
@@ -271,6 +272,7 @@ function matchesSnapshot(
 let registered = false;
 
 export function registerAuditHandlers(): void {
+  bindAuditRepositoryPorts();
   if (registered) return;
 
   revertRegistry.register(
