@@ -3,7 +3,7 @@ import { asAccountId } from '@/src/types/ids';
 
 import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
-import { roundToPrecision } from '@/src/domain/money/money';
+import { fromMinorUnits, roundToPrecision } from '@/src/domain/money/money';
 import { sanitizeAmount } from '@/src/domain/money/amountInput';
 
 interface JournalLineInput {
@@ -13,7 +13,7 @@ interface JournalLineInput {
   accountCurrency?: string;
 }
 
-export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
+function evaluateComposerJournal(lines: JournalLineInput[], baseCurrency: string) {
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
   const normalized = lines.map((line, index) => ({
     id: String(index),
@@ -24,12 +24,44 @@ export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: strin
     accountCurrency: line.accountCurrency?.trim().toUpperCase() || normalizedBaseCurrency,
     exchangeRate: line.exchangeRate,
   }));
-  const currencies = new Set([normalizedBaseCurrency, ...normalized.map(line => line.accountCurrency)]);
+  const currencies = new Set([
+    normalizedBaseCurrency,
+    ...normalized.map(line => line.accountCurrency),
+  ]);
   return evaluateJournalBalance({
     lines: normalized,
     journalCurrency: normalizedBaseCurrency,
     precisionByCurrency: new Map([...currencies].map(code => [code, getCurrencyPrecision(code)])),
-  }).isBalanced;
+  });
+}
+
+export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
+  return evaluateComposerJournal(lines, baseCurrency).isBalanced;
+}
+
+/** Credit/debit totals and remaining allocation from the same evaluator as isJournalBalanced. */
+export function getJournalComposerTotals(
+  lines: JournalLineInput[],
+  baseCurrency: string,
+): {
+  fromTotal: number;
+  toTotal: number;
+  remaining: number;
+  isBalanced: boolean;
+  precision: number;
+} {
+  const evaluation = evaluateComposerJournal(lines, baseCurrency);
+  const precision = evaluation.journalPrecision;
+  const fromTotal = fromMinorUnits(evaluation.creditTotalMinorUnits, precision);
+  const toTotal = fromMinorUnits(evaluation.debitTotalMinorUnits, precision);
+  return {
+    fromTotal,
+    toTotal,
+    // Advanced form: From = credits, To = debits; remaining left to allocate is credit − debit.
+    remaining: fromMinorUnits(-evaluation.differenceMinorUnits, precision),
+    isBalanced: evaluation.isBalanced,
+    precision,
+  };
 }
 
 export function getJournalLineBaseAmount(
@@ -64,12 +96,13 @@ export function getJournalLineBaseAmount(
 
   const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
+  const precision = getCurrencyPrecision(normalizedBaseCurrency);
   if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
     // Even for base currency, ensure we round to the currency precision
     // to avoid 10.100000000002 issues from manual entry or calculations
-    return roundToPrecision(finalAmount, 2);
+    return roundToPrecision(finalAmount, precision);
   }
 
   const baseAmount = finalAmount * rate;
-  return roundToPrecision(baseAmount, 2);
+  return roundToPrecision(baseAmount, precision);
 }

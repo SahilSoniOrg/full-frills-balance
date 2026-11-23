@@ -43,6 +43,12 @@ const featureRules = features.map(feature => ({
             message:
               'Features must not import data repositories; use service façades instead (FUL-112).',
           },
+          {
+            // Relative paths like ../../../data/repositories/... bypass the alias group.
+            regex: '(^|/)data/repositories(/|$)',
+            message:
+              'Features must not import data repositories; use service façades instead (FUL-112).',
+          },
           ...features
             .filter(f => f !== feature)
             .map(otherFeature => ({

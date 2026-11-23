@@ -332,8 +332,8 @@ describe('toJournalBalanceLineInput', () => {
     });
   });
 
-  it('keeps an explicit accountCurrency over Money.currencyCode', () => {
-    expect(
+  it('rejects Money whose currency disagrees with accountCurrency', () => {
+    expect(() =>
       toJournalBalanceLineInput({
         id: 'line-2',
         accountId: 'wallet',
@@ -341,7 +341,49 @@ describe('toJournalBalanceLineInput', () => {
         amount: new Money(10, 'EUR'),
         exchangeRate: '1.1',
         transactionType: TransactionType.CREDIT,
+      }),
+    ).toThrow(/does not match account currency/);
+  });
+
+  it('accepts Money when accountCurrency matches', () => {
+    expect(
+      toJournalBalanceLineInput({
+        id: 'line-3',
+        accountId: 'wallet',
+        accountCurrency: 'EUR',
+        amount: new Money(10, 'EUR'),
+        transactionType: TransactionType.CREDIT,
       }).accountCurrency,
-    ).toBe('USD');
+    ).toBe('EUR');
+  });
+});
+
+describe('evaluateJournalBalance Money boundary', () => {
+  it('rejects mismatched Money currency on the live evaluation path', () => {
+    expect(() =>
+      evaluateJournalBalance({
+        journalCurrency: 'USD',
+        precisionByCurrency: new Map([
+          ['USD', 2],
+          ['EUR', 2],
+        ]),
+        lines: [
+          {
+            id: 'bad',
+            accountId: 'cash',
+            accountCurrency: 'USD',
+            amount: new Money(10, 'EUR'),
+            transactionType: TransactionType.DEBIT,
+          },
+          {
+            id: 'ok',
+            accountId: 'expense',
+            accountCurrency: 'USD',
+            amount: '10',
+            transactionType: TransactionType.CREDIT,
+          },
+        ],
+      }),
+    ).toThrow(/does not match account currency/);
   });
 });

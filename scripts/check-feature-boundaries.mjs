@@ -49,15 +49,19 @@ function getSourceKind(relativePath, neutralRoots) {
   return null;
 }
 
-function resolveFeatureImport(rootDir, importerPath, specifier) {
-  let resolved;
+function resolveImportPath(rootDir, importerPath, specifier) {
   if (specifier.startsWith('@/')) {
-    resolved = path.resolve(rootDir, specifier.slice(2));
-  } else if (specifier.startsWith('.')) {
-    resolved = path.resolve(path.dirname(importerPath), specifier);
-  } else {
-    return null;
+    return path.resolve(rootDir, specifier.slice(2));
   }
+  if (specifier.startsWith('.')) {
+    return path.resolve(path.dirname(importerPath), specifier);
+  }
+  return null;
+}
+
+function resolveFeatureImport(rootDir, importerPath, specifier) {
+  const resolved = resolveImportPath(rootDir, importerPath, specifier);
+  if (!resolved) return null;
 
   const featuresRoot = path.resolve(rootDir, 'src/features');
   const relativeToFeatures = path.relative(featuresRoot, resolved);
@@ -66,6 +70,16 @@ function resolveFeatureImport(rootDir, importerPath, specifier) {
   const [targetFeature, ...suffix] = relativeToFeatures.split(path.sep);
   if (!targetFeature) return null;
   return { targetFeature, isDeep: suffix.length > 0, isRelative: specifier.startsWith('.') };
+}
+
+/** Feature → repository imports, including relative paths that bypass the @/ alias ban. */
+function resolveRepositoryImport(rootDir, importerPath, specifier) {
+  const resolved = resolveImportPath(rootDir, importerPath, specifier);
+  if (!resolved) return null;
+  const repositoriesRoot = path.resolve(rootDir, 'src/data/repositories');
+  const relative = path.relative(repositoriesRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return { specifier, isRelative: specifier.startsWith('.') };
 }
 
 export function analyzeFeatureBoundaries({
@@ -88,6 +102,15 @@ export function analyzeFeatureBoundaries({
     const source = fs.readFileSync(absolutePath, 'utf8');
     for (const match of source.matchAll(IMPORT_RE)) {
       const [, , specifier] = match;
+      if (sourceKind.type === 'feature' && !isExcludedNeutralFixture(relativePath)) {
+        const repositoryImport = resolveRepositoryImport(rootDir, absolutePath, specifier);
+        if (repositoryImport) {
+          violations.push(
+            `${relativePath}: feature must not import data repository ${specifier}; use a service façade instead`,
+          );
+          continue;
+        }
+      }
       const importedFeature = resolveFeatureImport(rootDir, absolutePath, specifier);
       if (!importedFeature) continue;
       const { targetFeature, isDeep, isRelative } = importedFeature;

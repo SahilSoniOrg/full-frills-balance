@@ -29,10 +29,19 @@ export function toJournalBalanceLineInput(
   input: JournalBalanceLineBoundaryInput,
 ): JournalBalanceLineInput {
   if (input.amount instanceof Money) {
+    const moneyCurrency = normalizeCurrencyCode(input.amount.currencyCode);
+    const accountCurrency = input.accountCurrency
+      ? normalizeCurrencyCode(input.accountCurrency)
+      : moneyCurrency;
+    if (accountCurrency && moneyCurrency && accountCurrency !== moneyCurrency) {
+      throw new Error(
+        `Money currency ${moneyCurrency} does not match account currency ${accountCurrency}`,
+      );
+    }
     return {
       id: input.id,
       accountId: asAccountId(input.accountId),
-      accountCurrency: input.accountCurrency ?? input.amount.currencyCode,
+      accountCurrency: accountCurrency || moneyCurrency,
       amount: input.amount.amount,
       exchangeRate: input.exchangeRate,
       transactionType: input.transactionType,
@@ -92,7 +101,8 @@ export interface JournalBalanceEvaluation {
 }
 
 export interface EvaluateJournalBalanceInput {
-  lines: readonly JournalBalanceLineInput[];
+  /** Untyped or branded lines; Money amounts are currency-checked at this boundary. */
+  lines: readonly JournalBalanceLineBoundaryInput[];
   journalCurrency: string;
   precisionByCurrency: ReadonlyMap<string, number>;
 }
@@ -113,10 +123,11 @@ function formatDifference(minorUnits: number, precision: number, currency: strin
 }
 
 export function evaluateJournalBalance({
-  lines,
+  lines: rawLines,
   journalCurrency: requestedJournalCurrency,
   precisionByCurrency: requestedPrecisions,
 }: EvaluateJournalBalanceInput): JournalBalanceEvaluation {
+  const lines = rawLines.map(toJournalBalanceLineInput);
   const journalCurrency = normalizeCurrencyCode(requestedJournalCurrency);
   const precisionByCurrency = new Map(
     [...requestedPrecisions.entries()].map(([code, precision]) => [

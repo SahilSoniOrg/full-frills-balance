@@ -1,6 +1,7 @@
 import { TransactionType } from '@/src/types/enums';
 
 import {
+  getJournalComposerTotals,
   getJournalLineBaseAmount,
   isJournalBalanced,
 } from '@/src/services/accounting/JournalCalculator';
@@ -69,6 +70,18 @@ describe('JournalCalculator', () => {
     ];
 
     expect(isJournalBalanced(lines, 'INR')).toBe(false);
+  });
+
+  it('reports KWD remaining at three decimals from the same evaluation as isBalanced', () => {
+    const lines = [
+      { amount: '10.000', type: TransactionType.CREDIT, accountCurrency: 'KWD' },
+      { amount: '4.999', type: TransactionType.DEBIT, accountCurrency: 'KWD' },
+      { amount: '5.000', type: TransactionType.DEBIT, accountCurrency: 'KWD' },
+    ];
+    const totals = getJournalComposerTotals(lines, 'KWD');
+    expect(totals.isBalanced).toBe(false);
+    expect(totals.remaining).toBe(0.001);
+    expect(totals.precision).toBe(3);
   });
 
   describe('getLineBaseAmount', () => {
