@@ -8,9 +8,9 @@ import { analyzeDomainBoundaries } from './lib/domain-boundaries.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const SOURCE_FILE_RE = /\.(?:ts|tsx)$/;
-// Allow whitespace/newlines between import( and the specifier so multiline
-// dynamic imports cannot bypass the repository / feature boundary checks.
-const IMPORT_RE = /(?:from\s+|import\s*\(\s*)(['"])([^'"]+)\1/g;
+// `from\s*` keeps valid `from'...'` syntax; `\s*` after `import(` catches
+// multiline dynamic imports that would otherwise slip past the boundary check.
+const IMPORT_RE = /(?:from\s*|import\s*\(\s*)(['"])([^'"]+)\1/g;
 export const NEUTRAL_ROOTS = [
   'src/components',
   'src/constants',

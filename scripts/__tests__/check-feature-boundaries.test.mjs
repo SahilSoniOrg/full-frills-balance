@@ -109,6 +109,18 @@ test('rejects relative cross-feature imports', () => {
   assert.ok(result.violations.some(violation => violation.includes('accounts->journal')));
 });
 
+test('rejects relative cross-feature imports without space after from', () => {
+  const result = analyzeFixture(
+    {
+      'src/features/accounts/components/AccountScreen.tsx':
+        "import { useJournals } from'../../journal';",
+    },
+    { accounts: ['journal'] },
+  );
+
+  assert.ok(result.violations.some(violation => violation.includes('relative cross-feature import')));
+});
+
 test('rejects relative feature imports into data repositories', () => {
   const result = analyzeFixture({
     'src/features/accounts/components/AccountScreen.tsx':
