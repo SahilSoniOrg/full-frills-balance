@@ -1,10 +1,6 @@
 # Specialist pass reconciliation
 
-The three delegated passes were read and reviewed by the orchestrator. Their source memos are preserved at:
-
-- [`docs/audits/ui-performance-memo-2026-08-25.md`](../docs/audits/ui-performance-memo-2026-08-25.md)
-- persistence/reactivity memo: captured in `hypotheses.csv`, `report.md`, and the source paths below
-- compute/native/lifecycle memo: captured in `hypotheses.csv`, `report.md`, and the source paths below
+The React/UI, persistence/reactivity, and compute/native/lifecycle findings are summarized below. The supporting evidence is in [hypotheses.csv](hypotheses.csv) and [report.md](report.md).
 
 ## Persistence/reactivity
 

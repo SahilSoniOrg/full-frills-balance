@@ -1,7 +1,5 @@
 # Gesture interactions
 
-Updated 29 October 2026.
-
 ## Rules
 
 - Recognize before changing durable state. `onBegin` only means receiving touches; `onStart` means an activated pan; successful `onEnd` means an action may commit.
@@ -46,7 +44,7 @@ Cancelled active hierarchy drags cannot call the successful finish path. Failure
 
 ### Scroll selectors
 
-ClockWheel and GlyphCarousel share `useScrollSettlement`:
+ClockWheel uses `useScrollSettlement`:
 
 - Drag begin starts a user-owned scroll session.
 - Momentum begin suppresses the fallback; momentum end commits once.
@@ -60,21 +58,17 @@ Home has one six-leaf native pager: Dashboard, Accounts, Categories, Budgets, Pl
 
 Paging permission accounts for navigator focus, app activity, keyboard, lock, screen reader, workplace switching, selection mode, drawer visibility and screen-owned overlay locks. Losing permission restores the committed page without animation. Reduce Motion skips automatic page travel while direct finger-driven navigation remains available.
 
-On native, the closed drawer can open by swiping right on Dashboard (full width on Android, the left 32-point edge on iOS). The pager publishes its current gesture permission to the shell, so focus, app state, keyboard, lock, screen reader, workplace switching, selection, and child swipe reservations block both opening and paging. An open drawer can still be swiped closed while paging is disabled. The avatar trigger remains an explicit opening control. Web uses explicit controls and does not enable drawer or page swipe gestures. Chart and row interactions continue to reserve paging through `setPageSwipeLock`; this JavaScript-mediated reservation still needs device arbitration checks.
+On native, a right swipe can open the closed drawer from anywhere on Dashboard. The pager publishes its current gesture permission to the shell, so focus, app state, keyboard, lock, screen reader, Workplace switching, selection, and child swipe reservations block both opening and paging. An open drawer can still be swiped closed while paging is disabled, subject to its own interaction gates. The avatar trigger remains an explicit opening control. Web uses explicit controls and does not enable drawer or page swipe gestures. Chart and row interactions reserve paging through `setPageSwipeLock`.
 
-Native recognizer behavior, interruptions, accessibility and destination readiness need device validation. See `docs/home-v2/implementation.md` for the current architecture and manual checks.
+Expo Router owns the committed leaf, deep links, and Back. Add follows the committed leaf. Group taps restore their last selected leaf. Settings and details open over the originating leaf. Legacy Accounts and Plans tab queries normalize to leaf routes on focus. The native shared value owns continuous progress while React handles committed selection and queued navigation intent.
 
-## Prior verification for the October 7 gesture fixes
+Visited scenes retain UI state. Idle neighbor preparation uses Expo Router PRELOAD before mounting a route, preserves existing route identity and params, and pauses during gestures, backgrounding, lock, or Workplace transitions. Distant retained scenes pause costly reads. A short swipe can still reach a cold query.
 
-- Full Jest run: **496 suites, 3,325 tests passed**, including cancellation, ownership, delayed measurement, disabled/empty charts, slow picker releases, hierarchy draft moves and reduced motion.
-- Type checking, architecture checks, privacy-policy version check, and whitespace checks passed. Lint has no errors; an existing dependency warning remains in `useJournalSuggestions`.
-- Live iOS: vertical chart scrolling produces no selection; tap selection works; outside dismissal works after scrolling; horizontal chart dragging works both ways. Ordering buttons stage a move, and Discard restores it. The initially added split removal buttons were tested, then removed at the user's request to retain the compact gesture-and-written-hint layout. Cancellation, successful removal, and screen-reader delete actions remain covered by regression tests.
-- Inspection changes were discarded; no journal was saved and no hierarchy move was committed. The app was returned to Dashboard with its original Simple entry mode.
-- Android device arbitration, VoiceOver/TalkBack interaction, interrupted native swipes, and switching system/app motion preferences were not exercised on-device. Callback/configuration regression tests cover the corresponding implementation paths.
+See the [Workplace contract](../specs/user-device-workplace/spec.md) for switching and creation-draft isolation.
 
-## Primary pager verification status (29 October 2026)
+### Device acceptance
 
-- `bun run typecheck` passed for the source changes.
-- Automated tests and native builds were not run for the pager change.
-- Android/iOS gesture arbitration, cancellation, accessibility, and matched release-performance acceptance remain unverified on device.
-- Dashboard drawer arbitration differs by platform as described above; both paths remain unverified on device.
+- Swipe across every leaf boundary, cancel and reverse, and try rapid group taps and distant jumps. Check route, header, scroll, search, and selection state.
+- Check drawer/pager/chart arbitration on iOS and Android. Cover keyboard, overlays, Reduce Motion, large text, RTL, screen readers, and Android Back.
+- Lock, background, or switch Workplaces during interaction. Check that no data from the previous Workplace appears and that a bound creation draft cannot save into the new Workplace.
+- For a performance claim, compare release builds on the same device and dataset. Check native frame time and cold destination readiness independently.

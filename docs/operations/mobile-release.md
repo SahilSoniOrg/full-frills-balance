@@ -68,7 +68,7 @@ Every path below uploads to the **internal** track (`eas.json` → `submit.produ
 
 ## 5. Google Sign-In (Gmail) client IDs
 
-Gmail OAuth verification is **parked**. Keep the `gmail-capture-settings` PostHog flag off in production. The production OAuth clients still exist under Google verification — don't change them, their scopes, or their publishing status (see [google-oauth-gmail-verification.md](google-oauth-gmail-verification.md)).
+Direct Gmail OAuth verification and CASA work are parked. Keep the `gmail-capture-settings` PostHog flag off in production and preserve the existing OAuth clients, scopes, and publishing status. iOS bank-text capture uses Shortcuts.
 
 | EAS environment | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` |
 | --- | --- | --- |

@@ -1,8 +1,8 @@
 # Account matcher discovery
 
 **Date:** 2026-11-06
-**Status:** Agreed design; implemented through Phases 1–8. Feature flag removal waits one internal release.
-**Related:** [Glossary](../../../CONTEXT.md), [confirmation boundary](../../adr/0008-confirm-discovered-account-matchers.md), [transaction capture](../automatic-transaction-capture/spec.md)
+**Status:** Implemented behavior contract
+**Related:** [Glossary](../../../CONTEXT.md), [transaction capture](../automatic-transaction-capture/spec.md)
 
 ## Document responsibilities
 

@@ -2,8 +2,8 @@
 
 **Product:** Full Frills Balance
 **Date:** 2026-11-14
-**Status:** Approved contract; onboarding implementation in progress
-**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/adr`](../../adr/), and [onboarding implementation plan](../onboarding-improvement/implementation-plan.md)
+**Status:** Approved behavior contract
+**Related:** [Glossary](../../../CONTEXT.md) and [gesture and navigation contracts](../../architecture/GESTURE_INTERACTIONS.md)
 
 This is the canonical behavior and ownership contract. Terms follow `CONTEXT.md`. File paths and component names are intentionally excluded.
 
@@ -59,6 +59,12 @@ Bare books deep links received before a valid `open` target are rejected because
 Existing valid Workplace rows may prove that an older or recovered install had usable books. Recovery may repair Device registration, Active workplace, and a missing display name without creating or modifying a Workplace. `User` is permitted only as this recovery name; it is never a first-run fallback.
 
 Recovery is not a compatibility layer for any unreleased Setup draft or onboarding flag.
+
+### 2.2 Workplace switching
+
+The launch coordinator owns switching. Keep the previous Workplace committed while validating the target under the blocking overlay. On success, clear record-specific routes and publish the validated target. Preserve the primary leaf while resetting Workplace-specific filters and selections. On failure, retain the previous scope and allow retry.
+
+Scope screen state, cached data, and pending reads to the committed Workplace. Deleting a Workplace disposes its caches. A creation draft retains its launch Workplace binding and its write must verify that binding. A switch never retargets the draft.
 
 ## 3. Setup model
 

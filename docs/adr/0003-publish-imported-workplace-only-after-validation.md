@@ -1,3 +1,0 @@
-# Publish an imported Workplace only after validation
-
-A Workplace restore first prepares and validates its source without creating books. Missing publication-critical facts are resolved explicitly, then the prepared graph and Workplace shell are published in one database transaction under a stable operation ID. Publication returns a typed Restore handoff but does not activate the Workplace, navigate, register the Device, or mutate User preferences. First-run Restore setup may use imported User facts as sourced draft input; Settings and picker imports ignore them. Failed preparation creates no rows, while post-publication interruption leaves a valid inactive Workplace that the persisted Setup draft can resume or explicitly discard.

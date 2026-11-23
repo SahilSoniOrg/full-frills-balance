@@ -6,7 +6,7 @@ Placement table is required for the current product model.
 
 ## Interface
 
-`src/services/accounts/accountTree.ts` owns structural interpretation:
+`src/domain/accounts/accountTree.ts` owns structural interpretation:
 
 - `createAccountTreeSnapshot(accounts)` builds ordered roots by account type,
   children by parent, parent lookup, descendants, leaves, and structurally safe
@@ -15,7 +15,7 @@ Placement table is required for the current product model.
 - `planAccountTreeMove` and `planAccountTreeBulkMove` return the complete set of
   parent/order changes needed to normalize affected sibling lists.
 - `validateAccountTreeMove` enforces pure structural invariants before writes.
-- `moveAccount`/`moveAccounts` in `accountHierarchyCommands.ts` are the named
+- `moveAccount`/`moveAccounts` in `accountTreeCommands.ts` are the named
   commands. `AccountTreeTransactionCoordinator` owns the Watermelon write lock
   and batch; commands return a receipt containing every affected row's before
   and expected-after structural state.

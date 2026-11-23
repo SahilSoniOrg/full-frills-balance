@@ -48,7 +48,7 @@ Use the existing PostingPlan seam for ordinary creators. The plan's currencyCode
 
 An asynchronous resolver may obtain missing reference quotes. A pure evaluator calculates line values, side totals, allocation, total, saveability, and structured issues without I/O or UI strings. Preview may evaluate early for feedback, but the final validation belongs inside the journal persistence repository's database writer transaction. `put` creates or updates and checks the effective saved status; `post` validates persisted planned lines before committing the posted transition. Persistence preparation maps a validated result to the existing fields and must not decide currency, substitute a rate, or choose the larger side.
 
-Every new ordinary creator eventually uses this boundary, including editors, SMS auto-post, planned occurrences, and account adjustments. Workflow metadata and planned-occurrence side effects remain atomic with the journal write. Full historical restore remains a separate publication path with an explicit posted-balance preflight policy. The [journal write-boundary cutover plan](../plans/journal-write-boundary-cutover-plan.md) defines the layered implementation sequence and current bypasses.
+Every new ordinary creator eventually uses this boundary, including editors, SMS auto-post, planned occurrences, and account adjustments. Workflow metadata and planned-occurrence side effects remain atomic with the journal write. Full historical restore remains a separate publication path with an explicit posted-balance preflight policy.
 
 ## Reading, editing, and reporting
 
@@ -62,30 +62,12 @@ A trusted stored line rate converts that line to the journal currency only. To r
 
 No old row is rewritten or assigned a new semantics marker. Ordinary existing journals already generally save the Workplace currency as Journal.currencyCode; characterize and preserve their create/read/edit round trip before changing writers. Some historical direct writers and import formats do not prove that every stored rate points to journal currency. Do not infer rate direction from its number or from closeness to a market quote.
 
-Keep native restore's IDs, timestamps, balances, and atomic publication. Correct an Ivy source mapping only where source fixtures prove the values and direction. Future imported rows that lack a proven rate keep an explicit missing/uncertain rate and warning. Older local imported rows stay as stored. If a monetary edit needs an unprovable old rate, require an explicit effective rate for that edit rather than silently recalculating it. Cashew import is outside this decision while its importer is nonfunctional and has no deployed user history to preserve.
+Keep native restore's IDs, timestamps, balances, and atomic publication. Correct an Ivy source mapping only where source fixtures prove the values and direction. Future imported rows that lack a proven rate keep an explicit missing/uncertain rate and warning. Older local imported rows stay as stored. If a monetary edit needs an unprovable old rate, require an explicit effective rate for that edit rather than silently recalculating it. Apply importer-specific currency mappings only where source fixtures establish their meaning.
 
 Changing only a saved journal's description, notes, or date must not force its
 old postings through new balance rules or rewrite its amounts and rates.
 Changing monetary fields uses the new validation and may require the user to
 resolve an old mismatch explicitly.
-
-## Implementation status (2026-09-24)
-
-The production writer cutover is complete: ordinary journal mutations use the
-new persistence repository/service, and the former ledger write layer has been
-removed. The cutover did not change the decisions above.
-
-Two implementation gaps remain. First, generic sparse `put` currently
-revalidates retained lines even for a description, notes, or date-only edit,
-which can reject a historical posted journal despite no monetary change.
-Date-only edits still need to update transaction dates and rebuild caches
-without changing amounts or rates. Second, reports
-can apply a saved line rate directly to the requested report currency instead
-of converting through the saved journal currency at the journal date. The
-guided editor also still uses legacy balance feedback while advanced mode uses
-exact feedback; the repository remains the final exact posted-balance gate.
-These gaps are tracked in the [implementation plan](../plans/journal-currency-unification-plan.md)
-and are not changes to the accepted policy.
 
 ## Non-goals
 
@@ -95,7 +77,7 @@ and are not changes to the accepted policy.
 - No automatic FX adjustment posting.
 - No global application of a stored line rate to an unrelated report currency.
 
-The [implementation plan](../plans/journal-currency-unification-plan.md) owns rollout order and tests. [CONTEXT.md](../../CONTEXT.md) owns the terms.
+[CONTEXT.md](../../CONTEXT.md) owns the terms.
 
 ## Decision-layer clarification (2026-11-23)
 

@@ -188,4 +188,4 @@ Every future optimization must compare the same commit family, platform/device, 
 
 ## Coverage handoff
 
-Durable ledgers: `file-inventory.csv`, `workloads.csv`, `surface-matrix.csv`, `hypotheses.csv`, `run-log.csv`, `findings.md`, `rejected-hypotheses.md`, `blockers.md`, and `coverage.md`. Specialist memos and the UI source memo are preserved in `specialist-memos.md` and `docs/audits/ui-performance-memo-2026-08-25.md`.
+Durable ledgers: `file-inventory.csv`, `workloads.csv`, `surface-matrix.csv`, `hypotheses.csv`, `run-log.csv`, `findings.md`, `rejected-hypotheses.md`, `blockers.md`, and `coverage.md`. The specialist findings are summarized in [specialist-memos.md](specialist-memos.md).

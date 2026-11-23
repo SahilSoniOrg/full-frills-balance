@@ -2,7 +2,6 @@
  * Evidence-driven Planned Payment settlement — Acceptance Scenarios
  *
  * Durable contract: docs/specs/evidence-driven-planned-payment-settlement/spec.md
- * Implementation plan: docs/plans/evidence-driven-planned-payment-settlement-plan.md
  *
  * All 26 acceptance scenarios from spec.md section "## Acceptance scenarios (table)"
  * are scaffolded as named describe suites with it.todo/it.skip assertions.

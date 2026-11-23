@@ -1,7 +1,6 @@
 /**
  * Evidence-driven Planned Payment settlement — Verification Plan
  *
- * Implementation plan: docs/plans/evidence-driven-planned-payment-settlement-plan.md
  * Section: ## Verification (when implementation is requested)
  *
  * Mirrors all 16 verification bullets from the implementation plan as named describe

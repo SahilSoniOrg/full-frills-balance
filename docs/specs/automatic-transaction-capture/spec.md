@@ -1,8 +1,8 @@
 # Automatic transaction capture
 
 **Date:** 2026-11-07
-**Status:** Capture, review, and historical SMS suggestion backfill are implemented; integration validation and rollout remain pending. Tests have not been run for this change. Cross-movement identity with Planned Payments is specified separately and not yet implemented.
-**Related:** [Glossary](../../../CONTEXT.md), [Account matchers](../account-matcher-discovery/spec.md), [Evidence-driven Planned Payment settlement](../evidence-driven-planned-payment-settlement/spec.md), [ADR 0010](../../adr/0010-evidence-driven-planned-payment-settlement.md)
+**Status:** Implemented behavior contract. Source rollout varies by platform.
+**Related:** [Glossary](../../../CONTEXT.md), [Account matchers](../account-matcher-discovery/spec.md), [Evidence-driven Planned Payment settlement](../evidence-driven-planned-payment-settlement/spec.md)
 
 ## Boundary
 

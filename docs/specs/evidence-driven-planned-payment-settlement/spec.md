@@ -1,15 +1,14 @@
 # Evidence-driven Planned Payment settlement
 
 **Date:** 2026-11-10 (revised after design review the same day)
-**Status:** Implemented on `t3/evidence-driven-settlement`; pending merge/rollout.
-**Related:** [Glossary](../../../CONTEXT.md), [ADR 0010](../../adr/0010-evidence-driven-planned-payment-settlement.md), [Automatic transaction capture](../automatic-transaction-capture/spec.md), [Implementation plan](../../plans/evidence-driven-planned-payment-settlement-plan.md)
+**Status:** Implemented behavior contract
+**Related:** [Glossary](../../../CONTEXT.md), [Automatic transaction capture](../automatic-transaction-capture/spec.md)
 
 ## Document responsibilities
 
 | Document | Authority |
 | --- | --- |
 | Glossary | Meaning of Source observation, Planned Payment, Planned payment auto-post, Evidence-driven settlement, Uncategorized account |
-| ADR 0010 | Why evidence-driven settlement may post without Planned payment auto-post |
 | Capture spec | Capture posting gate, observation provenance, categorization review |
 | This spec | Product behavior when capture observations and Planned Payments describe one money movement |
 
