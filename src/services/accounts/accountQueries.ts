@@ -5,7 +5,11 @@ import { accountQueryRepository, accountObserveQueries } from '@/src/data/reposi
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { map } from 'rxjs';
-import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/data/models/Account';
+import {
+  toPlainAccount,
+  toPlainAccountMetadata,
+  toPlainAccounts,
+} from '@/src/presentation/mappers/accountPlainMapper';
 
 export const accountQueries = {
   observeAll(workplaceId: WorkplaceId) {

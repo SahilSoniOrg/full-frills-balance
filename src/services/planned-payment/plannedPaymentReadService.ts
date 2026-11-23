@@ -5,7 +5,7 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/JournalOb
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { AccountType, PlannedPaymentStatus } from '@/src/types/enums';
 import type Account from '@/src/data/models/Account';
-import { toPlainAccount } from '@/src/data/models/Account';
+import { toPlainAccount } from '@/src/presentation/mappers/accountPlainMapper';
 import type Journal from '@/src/data/models/Journal';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import type { PlainAccount, PlainPlannedPayment } from '@/src/types/plainDtos';

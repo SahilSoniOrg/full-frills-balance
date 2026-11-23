@@ -1,5 +1,5 @@
 import { Animation, AppConfig } from '@/src/constants';
-import { toPlainAccount, toPlainAccounts } from '@/src/data/models/Account';
+import { toPlainAccount, toPlainAccounts } from '@/src/presentation/mappers/accountPlainMapper';
 import { observeAggregatedAccountBalances } from '@/src/services/reactive/reactiveAggregatedBalances';
 import {
   clearReactiveWorkplaceAccountsAndJournalMetaCache,

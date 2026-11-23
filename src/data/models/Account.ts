@@ -1,7 +1,7 @@
 import type AccountMetadata from '@/src/data/models/AccountMetadata';
-import { getAccountIcon } from '@/src/design-system/accountIcon';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import type Transaction from '@/src/data/models/Transaction';
+import { isValidIconName } from '@/src/types/domainIcons';
 import { AccountId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { PlainAccount, PlainAccountMetadata } from '@/src/types/plainDtos';
@@ -49,7 +49,8 @@ export function toPlainAccount(a: Account): PlainAccount {
     currencyCode: a.currencyCode,
     parentAccountId: a.parentAccountId,
     description: a.description,
-    icon: getAccountIcon(a),
+    // Presentation resolves fallbacks via getAccountIcon; data only keeps stored names.
+    icon: isValidIconName(a.icon) ? a.icon : undefined,
     color: a.color,
     orderNum: a.orderNum,
     reconciledAt: a.reconciledAt?.getTime(),
