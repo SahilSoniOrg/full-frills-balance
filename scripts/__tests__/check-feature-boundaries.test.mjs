@@ -123,6 +123,20 @@ test('rejects relative feature imports into data repositories', () => {
   );
 });
 
+test('rejects multiline dynamic import() into data repositories from features', () => {
+  const result = analyzeFixture({
+    'src/features/accounts/components/AccountScreen.tsx':
+      "const load = () => import(\n  '../../../data/repositories/account'\n);",
+    'src/data/repositories/account.ts': 'export const accountRepository = {};',
+  });
+
+  assert.ok(
+    result.violations.some(violation =>
+      violation.includes('feature must not import data repository'),
+    ),
+  );
+});
+
 test('rejects aliased feature imports into data repositories', () => {
   const result = analyzeFixture({
     'src/features/accounts/components/AccountScreen.tsx':

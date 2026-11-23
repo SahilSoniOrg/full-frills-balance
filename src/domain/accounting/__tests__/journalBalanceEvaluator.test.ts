@@ -345,6 +345,18 @@ describe('toJournalBalanceLineInput', () => {
     ).toThrow(/does not match account currency/);
   });
 
+  it('rejects Money with a blank currency even when accountCurrency is set', () => {
+    expect(() =>
+      toJournalBalanceLineInput({
+        id: 'line-blank',
+        accountId: 'wallet',
+        accountCurrency: 'USD',
+        amount: new Money(10, ''),
+        transactionType: TransactionType.DEBIT,
+      }),
+    ).toThrow(/Money currency is required/);
+  });
+
   it('accepts Money when accountCurrency matches', () => {
     expect(
       toJournalBalanceLineInput({

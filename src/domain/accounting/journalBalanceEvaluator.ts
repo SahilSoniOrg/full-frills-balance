@@ -30,10 +30,13 @@ export function toJournalBalanceLineInput(
 ): JournalBalanceLineInput {
   if (input.amount instanceof Money) {
     const moneyCurrency = normalizeCurrencyCode(input.amount.currencyCode);
+    if (!moneyCurrency) {
+      throw new Error('Money currency is required');
+    }
     const accountCurrency = input.accountCurrency
       ? normalizeCurrencyCode(input.accountCurrency)
       : moneyCurrency;
-    if (accountCurrency && moneyCurrency && accountCurrency !== moneyCurrency) {
+    if (accountCurrency && accountCurrency !== moneyCurrency) {
       throw new Error(
         `Money currency ${moneyCurrency} does not match account currency ${accountCurrency}`,
       );

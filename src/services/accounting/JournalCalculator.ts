@@ -96,13 +96,12 @@ export function getJournalLineBaseAmount(
 
   const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
-  const precision = getCurrencyPrecision(normalizedBaseCurrency);
   if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
-    // Even for base currency, ensure we round to the currency precision
-    // to avoid 10.100000000002 issues from manual entry or calculations
-    return roundToPrecision(finalAmount, precision);
+    // Split-save compares allocation totals with two-decimal edge rounding.
+    // Composer display totals use getJournalComposerTotals / the evaluator instead.
+    return roundToPrecision(finalAmount, 2);
   }
 
   const baseAmount = finalAmount * rate;
-  return roundToPrecision(baseAmount, precision);
+  return roundToPrecision(baseAmount, 2);
 }

@@ -84,6 +84,17 @@ describe('JournalCalculator', () => {
     expect(totals.precision).toBe(3);
   });
 
+  it('keeps split-save two-decimal edge rounding for mixed KWD/USD allocations', () => {
+    const kwd = getJournalLineBaseAmount({ amount: '8.497', accountCurrency: 'KWD' }, 'KWD');
+    const usd = getJournalLineBaseAmount(
+      { amount: '5', accountCurrency: 'USD', exchangeRate: '0.3006' },
+      'KWD',
+    );
+    expect(kwd).toBe(8.5);
+    expect(usd).toBe(1.5);
+    expect(kwd + usd).toBe(10);
+  });
+
   describe('getLineBaseAmount', () => {
     it('should return base amount correctly without exchange rate', () => {
       const line = { amount: 100 };
