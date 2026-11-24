@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
@@ -13,6 +14,7 @@ import {
 } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
@@ -675,6 +677,42 @@ async function seedEvidenceSettleSoft(workplaceId: WorkplaceId): Promise<void> {
   });
 }
 
+async function seedBudgetSplitSelection(workplaceId: WorkplaceId): Promise<void> {
+  const [bank, food, groceries] = await Promise.all([
+    accountQueryRepository.findByName(workplaceId, 'Bank'),
+    accountQueryRepository.findByName(workplaceId, 'Food & Drink'),
+    accountQueryRepository.findByName(workplaceId, 'Groceries'),
+  ]);
+  if (!bank || !food || !groceries) {
+    throw new Error('[E2E] budget-split-selection requires Bank, Food & Drink, and Groceries');
+  }
+
+  const now = dayjs();
+  await budgetRepository.create(
+    workplaceId,
+    {
+      name: 'Split selection budget',
+      amount: 100,
+      currencyCode: 'USD',
+      startMonth: now.format('YYYY-MM'),
+    },
+    [food.id, groceries.id],
+  );
+  await journalPersistenceService.put(
+    {
+      description: 'Split budget purchase',
+      journalDate: now.valueOf(),
+      currencyCode: 'USD',
+      transactions: [
+        { accountId: bank.id, amount: 30, transactionType: TransactionType.CREDIT },
+        { accountId: food.id, amount: 10, transactionType: TransactionType.DEBIT },
+        { accountId: groceries.id, amount: 20, transactionType: TransactionType.DEBIT },
+      ],
+    },
+    workplaceId,
+  );
+}
+
 /** Three SMS-originated two-leg journals used to exercise merge → edit losslessness. */
 async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
@@ -750,6 +788,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
 
   if (profile === 'journal-suggestions') {
     await seedJournalSuggestions(workplaceId);
+  }
+
+  if (profile === 'budget-split-selection') {
+    await seedBudgetSplitSelection(workplaceId);
   }
 
   if (profile === 'picker-ready') {

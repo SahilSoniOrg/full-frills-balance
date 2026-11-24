@@ -119,7 +119,9 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
   } = props;
 
   const selectionActive = !!isSelectionModeActive && !!selectionChrome;
-  const journalEntryCount = items.filter(i => i.type === 'journal').length;
+  const journalEntryCount = new Set(
+    items.flatMap(item => (item.type === 'journal' && item.selectionId ? [item.selectionId] : [])),
+  ).size;
 
   const loadFailure = error ? (
     <EmptyStateView

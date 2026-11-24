@@ -20,6 +20,7 @@ export const E2E_SEED_PROFILES = [
   'onboarded',
   'journal-ready',
   'journal-suggestions',
+  'budget-split-selection',
   'fx-demo',
   'fx-missing-rate',
   'planned-payments',
