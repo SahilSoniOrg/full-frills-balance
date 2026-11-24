@@ -1,0 +1,17 @@
+New release 🚀
+
+Card purchases now show a red minus and repayments show a green plus in your card activity, totals and charts. The app also retries interrupted balance recalculations automatically.
+
+---
+
+Also in this update
+
+* Popups — The main button is easier to spot, and the appearance picker opens over the screen you're on.
+* Account edits — You can enter a negative balance for an overdrawn account or an overpaid card.
+* Gmail — Removed for now.
+
+---
+
+Big difference you'll notice
+
+* If you overpay a card, Safe to Spend applies that credit to spending on the same card when calculating upcoming payments.
