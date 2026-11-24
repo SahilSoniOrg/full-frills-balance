@@ -93,6 +93,7 @@ jest.mock('@/src/constants', () => {
 });
 
 jest.mock('@/src/domain/money/money', () => ({
+  ...jest.requireActual('@/src/domain/money/money'),
   safeAdd: (a: number, b: number) => a + b,
   safeSubtract: (a: number, b: number) => a - b,
 }));
@@ -226,7 +227,7 @@ describe('useJournalEntryList', () => {
     expect(logger.warn).toHaveBeenCalledWith('Missing EUR to USD');
   });
 
-  it('should handle collapsed days', () => {
+  it('keeps collapsed days out of the selectable count and Select All', () => {
     const { result } = renderHook(() =>
       useJournalEntryList({
         workplaceId: 'test-wp' as WorkplaceId,
@@ -242,6 +243,15 @@ describe('useJournalEntryList', () => {
     expect(itemsAfter.find(i => i.id === 'j1')).toBeDefined();
     expect(itemsAfter.find(i => i.id === 'j2')).toBeDefined();
     expect(itemsAfter.length).toBe(4);
+
+    act(() => result.current.onLongPressItem('j1' as JournalId));
+    expect(result.current.selectionChrome?.state).toMatchObject({
+      selectedCount: 1,
+      selectableCount: 2,
+    });
+
+    act(() => result.current.selectionChrome?.selectAll());
+    expect(result.current.selectedIds).toEqual(new Set(['j1', 'j2']));
   });
 
   it('should prune stale selection ids when journals change', () => {

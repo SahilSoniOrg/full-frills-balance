@@ -2,7 +2,7 @@ import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
-import { type ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import {
@@ -45,11 +45,11 @@ export type JournalPeriodBarBundle = {
   onNext?: () => void;
 };
 
-export type JournalSelectionBundle = ListSelectionChrome & {
+export type JournalSelectionBundle = {
+  chrome?: SelectionOverlayProps;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  toggleSelection: (id: JournalId) => void;
 };
 
 export interface JournalListViewProps {
@@ -97,7 +97,7 @@ export function JournalListView(props: JournalListViewProps) {
           selectedIds={selection?.selectedIds}
           onLongPressItem={selection?.onLongPressItem}
           isSelectionModeActive={selection?.isSelectionModeActive}
-          selectionChrome={selection}
+          onExitSelectionMode={chrome.selection?.exitSelectionMode}
         />
 
         {datePicker ? (

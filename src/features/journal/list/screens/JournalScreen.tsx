@@ -1,4 +1,3 @@
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { journalCsvExportHeaderAction } from '@/src/components/journal/JournalCsvExportButton';
 import { AppConfig, Size } from '@/src/constants';
@@ -44,32 +43,27 @@ function JournalScreen() {
 
   const chrome = useMemo<TabScreenChrome>(() => {
     const exportAction = journalCsvExportHeaderAction(csvExport);
-    return applySelectionChrome(
-      {
-        screenTitle: AppConfig.strings.journal.transactions,
-        kind: 'tab',
-        headerActions: (
-          <ScreenHeaderActions
-            actions={[
-              ...(exportAction ? [exportAction] : []),
-              {
-                name: Icon.Search,
-                size: Size.iconSm,
-                variant: 'surface',
-                onPress: () => AppNavigation.toJournalSearch(),
-                accessibilityLabel: 'Search and Filter',
-              },
-            ]}
-            trailing={<PrivacyToggleButton />}
-          />
-        ),
-      },
-      {
-        active: journalList.isSelectionModeActive,
-        onExit: journalList.exitSelectionMode,
-      },
-    );
-  }, [csvExport, journalList.exitSelectionMode, journalList.isSelectionModeActive]);
+    return {
+      screenTitle: AppConfig.strings.journal.transactions,
+      kind: 'tab',
+      headerActions: (
+        <ScreenHeaderActions
+          actions={[
+            ...(exportAction ? [exportAction] : []),
+            {
+              name: Icon.Search,
+              size: Size.iconSm,
+              variant: 'surface',
+              onPress: () => AppNavigation.toJournalSearch(),
+              accessibilityLabel: 'Search and Filter',
+            },
+          ]}
+          trailing={<PrivacyToggleButton />}
+        />
+      ),
+      selection: journalList.selection.chrome,
+    };
+  }, [csvExport, journalList.selection.chrome]);
 
   return (
     <JournalListView

@@ -10,12 +10,6 @@ import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
 import { JournalEntryCard } from './JournalEntryCard';
-import { selectableJournalIds } from './selectableJournalIds';
-import { getSelectionState } from '@/src/hooks/selectionState';
-import {
-  SelectionActionBar,
-  type ListSelectionChrome,
-} from '@/src/components/shared/SelectionActionBar';
 
 interface JournalEntryListViewProps {
   ref?: React.Ref<JournalEntryListRef>;
@@ -35,8 +29,7 @@ interface JournalEntryListViewProps {
   selectedIds?: Set<JournalId>;
   onLongPressItem?: (id: JournalId) => void;
   isSelectionModeActive?: boolean;
-  /** Selection-mode secondary chrome (action bar + dismiss). Owned by this list. */
-  selectionChrome?: ListSelectionChrome;
+  onExitSelectionMode?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -116,12 +109,9 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     selectedIds,
     onLongPressItem,
     isSelectionModeActive,
-    selectionChrome,
+    onExitSelectionMode,
     style,
   } = props;
-
-  const selectionActive = !!isSelectionModeActive && !!selectionChrome;
-  const selectableIds = selectableJournalIds(items);
 
   const loadFailure = error ? (
     <EmptyStateView
@@ -150,7 +140,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     <View
       testID="journal-list-selection-dismiss-area"
       onStartShouldSetResponder={() => {
-        if (selectionActive) selectionChrome.exitSelectionMode();
+        if (isSelectionModeActive) onExitSelectionMode?.();
         return false;
       }}
       style={styles.dismissFooter}
@@ -198,18 +188,6 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
         onEndReachedThreshold={0.5}
         keyboardShouldPersistTaps="always"
       />
-
-      {selectionChrome ? (
-        <SelectionActionBar
-          selection={getSelectionState(selectedIds ?? new Set<JournalId>(), selectableIds)}
-          onClear={selectionChrome.exitSelectionMode}
-          onSelectAll={selectionChrome.selectAll}
-          onDeselectAll={selectionChrome.clearItems}
-          onShare={selectionChrome.onShareSelected}
-          actions={selectionChrome.actions}
-          isVisible={selectionActive}
-        />
-      ) : null}
     </View>
   );
 }

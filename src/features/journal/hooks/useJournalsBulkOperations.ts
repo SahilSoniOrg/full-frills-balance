@@ -1,7 +1,5 @@
-import type {
-  ListSelectionChrome,
-  SelectionAction,
-} from '@/src/components/shared/SelectionActionBar';
+import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
+import { AppConfig } from '@/src/constants';
 import type {
   JournalActiveModal,
   JournalListModalsProps,
@@ -23,17 +21,10 @@ import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { useCallback, useMemo } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 
-type JournalListBulkSelection = Pick<
-  UseSelectionResult<JournalId>,
-  'selectedIds' | 'exitSelectionMode' | 'clearItems'
-> & {
-  selectAll: () => void;
-};
-
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
   journals: EnrichedJournal[];
-  selection: JournalListBulkSelection;
+  selection: Pick<UseSelectionResult<JournalId>, 'selectedIds' | 'exitSelectionMode'>;
   onShareSelected: () => void;
 }
 
@@ -202,6 +193,7 @@ export function useJournalsBulkOperations({
             label: 'Rename',
             onPress: handleOpenBulkRename,
             variant: 'surface',
+            isPrimary: true,
             accessibilityLabel: 'Edit names of selected transactions',
           },
           isEnabled: count => count > 0,
@@ -220,6 +212,7 @@ export function useJournalsBulkOperations({
           action: {
             name: Icon.Merge,
             label: 'Merge',
+            disabledHint: AppConfig.strings.selection.hints.mergeRequiresTwo,
             onPress: handleOpenMerge,
             variant: 'surface',
             accessibilityLabel: 'Merge selected transactions',
@@ -289,25 +282,7 @@ export function useJournalsBulkOperations({
     ],
   );
 
-  const selectionChrome: ListSelectionChrome = useMemo(
-    () => ({
-      exitSelectionMode: selection.exitSelectionMode,
-      selectAll: selection.selectAll,
-      clearItems: selection.clearItems,
-      onShareSelected,
-      actions,
-    }),
-    [
-      selection.exitSelectionMode,
-      selection.selectAll,
-      selection.clearItems,
-      onShareSelected,
-      actions,
-    ],
-  );
-
   return {
-    selectionChrome,
     activeModal,
     selectedJournals,
     closeModal,

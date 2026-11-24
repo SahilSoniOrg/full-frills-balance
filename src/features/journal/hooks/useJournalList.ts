@@ -37,9 +37,6 @@ export type JournalListModel = {
   selection: JournalSelectionBundle;
   periodBar: JournalPeriodBarBundle;
   modals: JournalListModalsProps;
-  /** For Selection-mode nav chrome. */
-  isSelectionModeActive: boolean;
-  exitSelectionMode: () => void;
 };
 
 /**
@@ -162,15 +159,14 @@ export function useJournalList(
       selectedIds: core.selectedIds,
       isSelectionModeActive: core.isSelectionModeActive,
       onLongPressItem: core.onLongPressItem,
-      toggleSelection: core.toggleSelection,
-      ...bulkOperations.selectionChrome,
+      chrome: core.selectionChrome && { ...core.selectionChrome, actions: bulkOperations.actions },
     }),
     [
       core.selectedIds,
       core.isSelectionModeActive,
       core.onLongPressItem,
-      core.toggleSelection,
-      bulkOperations.selectionChrome,
+      core.selectionChrome,
+      bulkOperations.actions,
     ],
   );
 
@@ -190,7 +186,5 @@ export function useJournalList(
     selection,
     periodBar,
     modals,
-    isSelectionModeActive: core.isSelectionModeActive,
-    exitSelectionMode: core.exitSelectionMode,
   };
 }

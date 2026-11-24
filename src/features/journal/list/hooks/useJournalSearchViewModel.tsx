@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
+import type { JournalSelectionBundle } from '../../components/JournalListView';
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -17,7 +17,6 @@ import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
-import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
 import { useJournalEntryList } from './useJournalEntryList';
@@ -71,17 +70,7 @@ export interface JournalSearchViewModel {
   openDatePicker: () => void;
   closeDatePicker: () => void;
 
-  // Selection
-  selectedIds: Set<JournalId>;
-  isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
-  toggleSelection: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  exitSelectionMode: () => void;
-  onShareSelected: () => void;
-  setSelectedIds: Dispatch<SetStateAction<Set<JournalId>>>;
-  actions?: SelectionAction[];
+  selection: JournalSelectionBundle;
   modals?: JournalListModalsProps;
 }
 
@@ -288,16 +277,12 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     isDatePickerVisible,
     openDatePicker,
     closeDatePicker,
-    selectedIds: core.selectedIds,
-    isSelectionModeActive: core.isSelectionModeActive,
-    onLongPressItem: core.onLongPressItem,
-    toggleSelection: core.toggleSelection,
-    selectAll: core.selectAll,
-    clearItems: core.clearItems,
-    exitSelectionMode: core.exitSelectionMode,
-    onShareSelected: core.onShareSelected,
-    setSelectedIds: core.setSelectedIds,
-    actions: attachMode ? undefined : bulkOperations.actions,
+    selection: {
+      selectedIds: core.selectedIds,
+      isSelectionModeActive: core.isSelectionModeActive,
+      onLongPressItem: core.onLongPressItem,
+      chrome: core.selectionChrome && { ...core.selectionChrome, actions: bulkOperations.actions },
+    },
     modals: attachMode ? undefined : bulkOperations.modals,
   };
 }

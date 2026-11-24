@@ -3,6 +3,8 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { selectableJournalIds } from '@/src/components/journal/selectableJournalIds';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
@@ -16,6 +18,7 @@ import {
   createSelectedJournalShareable,
   type ShareableJournalEntry,
 } from '@/src/services/sharing/JournalShareProvider';
+import { computeSelectedJournalsTotal } from '@/src/services/journal/selectedJournalTotal';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import {
   journalFlowSignOf,
@@ -74,14 +77,12 @@ export interface JournalEntryListCore {
   hasMore: boolean;
   onEndReached?: () => void;
   selectedIds: Set<JournalId>;
+  selectionChrome?: Omit<SelectionOverlayProps, 'actions'>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
   toggleSelection: (id: JournalId) => void;
-  selectAll: () => void;
-  clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
 }
 
 /**
@@ -192,9 +193,11 @@ export function useJournalEntryList({
     setSelectedIds,
   } = selectionControl;
 
+  const selectionActive = !disableSelection && isSelectionModeActive;
+
   const handleRowPress = useCallback(
     (row: JournalTimelineRow) => {
-      if (isSelectionModeActive) {
+      if (selectionActive) {
         toggleSelection(row.selectionId);
         return;
       }
@@ -206,7 +209,7 @@ export function useJournalEntryList({
 
       AppNavigation.toJournalDetails(row.journal.id);
     },
-    [isSelectionModeActive, onJournalPress, toggleSelection],
+    [selectionActive, onJournalPress, toggleSelection],
   );
 
   const groupingOptions = useMemo(
@@ -249,9 +252,44 @@ export function useJournalEntryList({
     await selectedShare.share(defaultShareFormat);
   }, [selectedEntries.length, selectedShare, defaultShareFormat]);
 
-  const selectAll = useCallback(() => {
-    selectionControl.selectAll(selectableJournalIds(items));
-  }, [items, selectionControl]);
+  const selectableIds = useMemo(
+    () => (selectionActive ? selectableJournalIds(items) : []),
+    [items, selectionActive],
+  );
+  const selectedTotal = useMemo(
+    () =>
+      selectionActive ? computeSelectedJournalsTotal(timelineRows ?? [], selectedIds) : undefined,
+    [selectionActive, selectedIds, timelineRows],
+  );
+  const { selectAll: selectItems } = selectionControl;
+  const selectionChrome = useMemo<JournalEntryListCore['selectionChrome']>(
+    () =>
+      selectionActive
+        ? {
+            state: getSelectionState(selectedIds, selectableIds),
+            amountSummary: selectedTotal && {
+              ...selectedTotal,
+              label: AppConfig.strings.selection.signedTotal,
+              signed: true,
+            },
+            itemTypeLabel: AppConfig.strings.selection.itemTypes.transaction,
+            selectAll: () => selectItems(selectableIds),
+            clearItems,
+            exitSelectionMode,
+            onShareSelected,
+          }
+        : undefined,
+    [
+      selectionActive,
+      selectedIds,
+      selectableIds,
+      selectedTotal,
+      selectItems,
+      clearItems,
+      exitSelectionMode,
+      onShareSelected,
+    ],
+  );
 
   useEffect(() => {
     if (selectedIds.size === 0 || isLoading) return;
@@ -310,13 +348,11 @@ export function useJournalEntryList({
     hasMore,
     onEndReached,
     selectedIds,
-    isSelectionModeActive: disableSelection ? false : isSelectionModeActive,
+    selectionChrome,
+    isSelectionModeActive: selectionActive,
     onLongPressItem: disableSelection ? () => undefined : onLongPressItem,
     toggleSelection,
-    selectAll,
-    clearItems,
     exitSelectionMode,
     onShareSelected,
-    setSelectedIds,
   };
 }

@@ -160,17 +160,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           listHeader: filterHeader,
         }}
         chrome={chrome}
-        selection={{
-          selectedIds: vm.selectedIds,
-          isSelectionModeActive: vm.isSelectionModeActive,
-          onLongPressItem: vm.onLongPressItem,
-          toggleSelection: vm.toggleSelection,
-          selectAll: vm.selectAll,
-          clearItems: vm.clearItems,
-          exitSelectionMode: vm.exitSelectionMode,
-          onShareSelected: vm.onShareSelected,
-          actions: vm.actions,
-        }}
+        selection={vm.selection}
         modals={vm.modals}
       />
 

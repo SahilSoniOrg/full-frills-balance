@@ -42,16 +42,11 @@ describe('JournalSearchView report drill-down scope', () => {
       isDatePickerVisible: false,
       openDatePicker: jest.fn(),
       closeDatePicker: jest.fn(),
-      selectedIds: new Set(),
-      isSelectionModeActive: false,
-      onLongPressItem: jest.fn(),
-      toggleSelection: jest.fn(),
-      selectAll: jest.fn(),
-      clearItems: jest.fn(),
-      exitSelectionMode: jest.fn(),
-      onShareSelected: jest.fn(),
-      setSelectedIds: jest.fn(),
-      actions: [],
+      selection: {
+        selectedIds: new Set(),
+        isSelectionModeActive: false,
+        onLongPressItem: jest.fn(),
+      },
     } as unknown as JournalSearchViewModel;
 
     render(<JournalSearchView chrome={{} as ScreenNavChrome} {...vm} />);

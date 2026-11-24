@@ -172,7 +172,7 @@ describe('useJournalList', () => {
       expect.objectContaining({
         selectedIds: expect.any(Set),
         isSelectionModeActive: false,
-        exitSelectionMode: expect.any(Function),
+        chrome: undefined,
       }),
     );
     expect(result.current.periodBar).toEqual(
