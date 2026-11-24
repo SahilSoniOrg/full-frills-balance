@@ -133,6 +133,30 @@ describe('observability privacy boundary', () => {
     expect(sanitizeAnalyticsProperties('user_screen_view', { screen: 'hub' })).toBeNull();
   });
 
+  it('keeps not-found URLs with query params, redacting sensitive values', () => {
+    expect(
+      sanitizeAnalyticsProperties('not_found', {
+        url: '/this-page-does-not-exist?e2eAuth=ffb-e2e-v1&e2eSeedProfile=onboarded',
+        params: 'e2eAuth=ffb-e2e-v1&e2eSeedProfile=onboarded',
+      }),
+    ).toEqual({
+      url: '/this-page-does-not-exist?e2eAuth=[redacted]&e2eSeedProfile=onboarded',
+      params: 'e2eAuth=[redacted]&e2eSeedProfile=onboarded',
+    });
+    expect(
+      sanitizeAnalyticsProperties('not_found', {
+        url: PRIVATE_MARKER,
+        params: PRIVATE_MARKER,
+      }),
+    ).toEqual({});
+    expect(
+      sanitizeAnalyticsProperties('not_found', {
+        url: 'javascript:alert(1)',
+        params: 'note=PrivateMerchant',
+      }),
+    ).toEqual({});
+  });
+
   it('keeps only approved app context and pseudonymous generated workplace IDs', () => {
     expect(
       sanitizeGlobalAnalyticsProperties({

@@ -286,6 +286,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     appVariant: variant,
+    // The custom +not-found route is the only user-facing fallback; hide the
+    // Expo Router sitemap so its route list cannot be reached directly.
+    router: {
+      sitemap: false,
+    },
     e2eHarnessEnabled: process.env.EXPO_PUBLIC_E2E === '1',
     e2eSeedProfile: process.env.EXPO_PUBLIC_E2E_SEED_PROFILE,
     eas: {

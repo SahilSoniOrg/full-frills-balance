@@ -176,6 +176,62 @@ const ENUM_VALUES_WITH_DESIGN_TOKENS: Record<string, ReadonlySet<string>> = {
 
 const THEME_PREFERENCES = new Set(['light', 'dark', 'system']);
 
+const MAX_ANALYTICS_URL_LENGTH = 512;
+const MAX_ANALYTICS_PARAMS_LENGTH = 512;
+const SENSITIVE_QUERY_KEY =
+  /(?:auth|token|secret|password|passwd|pwd|api[_-]?key|session|signature|sig|code|email|phone)/i;
+const SAFE_URL_CHARACTERS = /^[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+$/;
+const SAFE_PARAM_KEY = /^[A-Za-z0-9_.-]{1,64}$/;
+const SAFE_PARAM_VALUE = /^[a-z0-9._~:+=@/\[\]-]*$/;
+
+function decodeQueryComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function redactQueryPair(pair: string): string | null {
+  if (!pair) return null;
+  const separator = pair.indexOf('=');
+  if (separator <= 0) return null;
+  const rawKey = pair.slice(0, separator);
+  const rawValue = pair.slice(separator + 1);
+  const key = decodeQueryComponent(rawKey);
+  if (!SAFE_PARAM_KEY.test(key)) return null;
+  if (SENSITIVE_QUERY_KEY.test(key)) return `${rawKey}=[redacted]`;
+  const value = decodeQueryComponent(rawValue);
+  if (value.length > 64 || !SAFE_PARAM_VALUE.test(value)) return null;
+  return pair;
+}
+
+function sanitizeQueryString(value: unknown): string | null {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value.length > MAX_ANALYTICS_PARAMS_LENGTH ||
+    value.includes('#') ||
+    /\s/.test(value)
+  )
+    return null;
+  const pairs = value.split('&').map(redactQueryPair);
+  if (pairs.some(pair => pair === null)) return null;
+  return pairs.join('&');
+}
+
+function sanitizeAnalyticsUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > MAX_ANALYTICS_URL_LENGTH) return null;
+  const withoutFragment = value.split('#')[0];
+  if (!/^(?:https?:\/\/[^\s/?#]+)?\//.test(withoutFragment)) return null;
+  if (!SAFE_URL_CHARACTERS.test(withoutFragment)) return null;
+  const queryStart = withoutFragment.indexOf('?');
+  if (queryStart === -1) return withoutFragment;
+  const query = sanitizeQueryString(withoutFragment.slice(queryStart + 1));
+  if (query === null) return null;
+  return `${withoutFragment.slice(0, queryStart)}?${query}`;
+}
+
 const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
   account: { account_type: ACCOUNT_TYPES, type: ACCOUNT_TYPES },
   journal: {
@@ -330,6 +386,7 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
   app_foregrounded: {},
   analytics_event_dropped: { event_name: 'token' },
   app_error: { name: 'token' },
+  not_found: { url: 'url', params: 'params' },
   app_cold_start: {
     splash_hidden_ms: 'duration',
     splash_hidden_sec: 'duration',
@@ -481,6 +538,11 @@ export function sanitizeAnalyticsProperties(
       continue;
     }
     const value = properties?.[key];
+    if (kind === 'url' || kind === 'params') {
+      const safe = kind === 'url' ? sanitizeAnalyticsUrl(value) : sanitizeQueryString(value);
+      if (safe !== null) result[key] = safe;
+      continue;
+    }
     if (typeof value === 'string' && ['screen', 'next_screen', 'previous_screen'].includes(key)) {
       result[key] = sanitizeScreenName(value);
       continue;

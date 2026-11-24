@@ -1,5 +1,5 @@
 export type AnalyticsPropertyKind =
-  'boolean' | 'count' | 'duration' | 'currency' | 'token' | 'version';
+  'boolean' | 'count' | 'duration' | 'currency' | 'token' | 'version' | 'url' | 'params';
 
 export const FEATURE_EVENT_CATALOG = {
   journal: {

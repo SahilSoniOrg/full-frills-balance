@@ -129,6 +129,13 @@ const internalRoutes = [
     screenType: 'widget_launch',
     flowContext: null,
   },
+  {
+    name: '+not-found',
+    presentation: 'internal',
+    isModal: false,
+    screenType: 'not_found',
+    flowContext: null,
+  },
 ] as const satisfies readonly RouteManifestEntry[];
 
 export const ROUTE_MANIFEST = [
