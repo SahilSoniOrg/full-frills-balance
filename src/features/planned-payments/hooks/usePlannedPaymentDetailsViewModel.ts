@@ -416,7 +416,17 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     onLongPressItem,
     clearItems,
     exitSelectionMode,
+    setSelectedIds,
   } = selectionControl;
+
+  useEffect(() => {
+    if (selectedIds.size === 0 || isHistoryLoading) return;
+    setSelectedIds(prev => {
+      const validIds = new Set(history.map(journal => journal.id));
+      const filtered = new Set([...prev].filter(journalId => validIds.has(journalId)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
+  }, [history, selectedIds, setSelectedIds, isHistoryLoading]);
 
   const selectAll = useCallback(() => {
     if (!history) return;
@@ -462,7 +472,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const bulkOperations = useJournalsBulkOperations({
     workplaceId,
     journals: history ?? [],
-    selection: { ...selectionControl, selectAll },
+    selection: selectionControl,
     onShareSelected,
   });
 

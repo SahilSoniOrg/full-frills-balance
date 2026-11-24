@@ -3,7 +3,7 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
-import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import {
   useJournalEntryList,
   useJournalsBulkOperations,
@@ -40,7 +40,7 @@ export interface RecentJournalEntries {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectionChrome: ListSelectionChrome;
+  selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }
 
@@ -187,7 +187,10 @@ export function useDashboardViewModel(): DashboardViewModel {
       selectedIds: journalListCore.selectedIds,
       isSelectionModeActive: journalListCore.isSelectionModeActive,
       onLongPressItem: journalListCore.onLongPressItem,
-      selectionChrome: journalBulk.selectionChrome,
+      selectionChrome: journalListCore.selectionChrome && {
+        ...journalListCore.selectionChrome,
+        actions: journalBulk.actions,
+      },
       modals: journalBulk.modals,
     }),
     [
@@ -200,7 +203,8 @@ export function useDashboardViewModel(): DashboardViewModel {
       journalListCore.selectedIds,
       journalListCore.isSelectionModeActive,
       journalListCore.onLongPressItem,
-      journalBulk.selectionChrome,
+      journalListCore.selectionChrome,
+      journalBulk.actions,
       journalBulk.modals,
       strings.common.loading,
       strings.dashboard.emptyTitle,

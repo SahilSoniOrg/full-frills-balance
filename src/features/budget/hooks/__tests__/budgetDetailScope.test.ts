@@ -55,7 +55,7 @@ jest.mock('@/src/features/journal', () => ({
     onLongPressItem: jest.fn(),
     exitSelectionMode: jest.fn(),
   })),
-  useJournalsBulkOperations: () => ({ selectionChrome: {} }),
+  useJournalsBulkOperations: () => ({ actions: [] }),
 }));
 
 const budgetId = 'budget' as BudgetId;
@@ -247,9 +247,7 @@ describe('budget details previous-period chart', () => {
     jest
       .mocked(budgetReadService.observeChartTransactions)
       .mockImplementation((_workplaceId, _ids, range) =>
-        range?.startDate === februaryStart
-          ? journalContext.pipe(map(() => transactions))
-          : of([]),
+        range?.startDate === februaryStart ? journalContext.pipe(map(() => transactions)) : of([]),
       );
     let sameDaySpend = 90;
     jest

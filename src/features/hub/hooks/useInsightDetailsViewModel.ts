@@ -1,4 +1,4 @@
-import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -30,7 +30,7 @@ export interface InsightDetailsViewModel {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectionChrome: ListSelectionChrome;
+  selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }
 
@@ -80,7 +80,10 @@ export function useInsightDetailsViewModel(
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: bulkOperations.selectionChrome,
+    selectionChrome: journalList.selectionChrome && {
+      ...journalList.selectionChrome,
+      actions: bulkOperations.actions,
+    },
     modals: bulkOperations.modals,
   };
 }

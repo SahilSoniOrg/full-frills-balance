@@ -54,7 +54,7 @@ jest.mock('@/src/features/journal', () => ({
     onEndReached: undefined,
     onShareSelected: jest.fn(),
   }),
-  useJournalsBulkOperations: () => ({ selectionChrome: {}, modals: undefined }),
+  useJournalsBulkOperations: () => ({ actions: [], modals: undefined }),
 }));
 jest.mock('@/src/features/planned-payments', () => ({
   usePlannedOccurrences: () => ({ items: [] }),

@@ -25,7 +25,6 @@ export function InsightDetailsView({
   selectedIds,
   isSelectionModeActive,
   onLongPressItem,
-  selectionChrome,
   modals,
 }: InsightDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
@@ -126,7 +125,7 @@ export function InsightDetailsView({
         selectedIds={selectedIds}
         onLongPressItem={onLongPressItem}
         isSelectionModeActive={isSelectionModeActive}
-        selectionChrome={selectionChrome}
+        onExitSelectionMode={chrome.selection?.exitSelectionMode}
       />
       {modals ? <JournalListModals {...modals} /> : null}
     </ScreenWithChrome>

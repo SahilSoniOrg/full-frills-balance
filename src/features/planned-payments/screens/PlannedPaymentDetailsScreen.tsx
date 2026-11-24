@@ -2,7 +2,8 @@ import {
   DetailHeaderMenuActions,
   type DetailMenuAction,
 } from '@/src/components/shared/DetailHeaderMenuActions';
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
+import { getSelectionState } from '@/src/hooks/selectionState';
+import { selectedPlannedPaymentTotal } from '../hooks/plannedPaymentDetailsPresentation';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -46,20 +47,52 @@ function PlannedPaymentDetailsScreen() {
           },
         ].map(action => ({ ...action, disabled: !!vm.pendingAction }))
       : [];
+    const phase = vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready';
     const detailChrome = buildDetailNavChrome({
-      phase: vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready',
+      phase,
       readyTitle: vm.nameText ?? AppConfig.strings.plannedPayments.details.screenTitle,
       loadingTitle: AppConfig.strings.plannedPayments.details.screenTitle,
       onBack: vm.onBack,
       headerActions: actions.length ? <DetailHeaderMenuActions actions={actions} /> : undefined,
     });
-    return applySelectionChrome(detailChrome, {
-      active: vm.isSelectionModeActive,
-      onExit: vm.exitSelectionMode,
-    });
+    if (phase !== 'ready' || !vm.isSelectionModeActive) return detailChrome;
+    const history = vm.history ?? [];
+    const selectedTotal = selectedPlannedPaymentTotal(
+      history,
+      vm.selectedIds,
+      vm.currencyCode,
+      vm.reversalJournalIds,
+    );
+    return {
+      ...detailChrome,
+      selection: {
+        state: getSelectionState(
+          vm.selectedIds,
+          history.map(journal => journal.id),
+        ),
+        amountSummary: {
+          label: AppConfig.strings.selection.paymentAmounts,
+          ...selectedTotal,
+        },
+        itemTypeLabel: AppConfig.strings.selection.itemTypes.payment,
+        selectAll: vm.selectAll,
+        clearItems: vm.clearItems,
+        exitSelectionMode: vm.exitSelectionMode,
+        actions: vm.actions,
+        onShareSelected: vm.onShareSelected,
+      },
+    };
   }, [
     strings,
     vm.exitSelectionMode,
+    vm.selectAll,
+    vm.clearItems,
+    vm.actions,
+    vm.onShareSelected,
+    vm.history,
+    vm.reversalJournalIds,
+    vm.selectedIds,
+    vm.currencyCode,
     vm.headerActions,
     vm.isLoading,
     vm.isMissing,

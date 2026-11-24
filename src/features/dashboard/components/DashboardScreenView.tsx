@@ -185,7 +185,6 @@ export function DashboardScreenView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
-    selectionChrome,
   } = recentJournalEntries;
 
   return (
@@ -205,7 +204,7 @@ export function DashboardScreenView({
           selectedIds={selectedIds}
           onLongPressItem={onLongPressItem}
           isSelectionModeActive={isSelectionModeActive}
-          selectionChrome={selectionChrome}
+          onExitSelectionMode={chrome.selection?.exitSelectionMode}
           contentContainerStyle={styles.listContent}
           style={styles.feed}
           ListHeaderComponent={

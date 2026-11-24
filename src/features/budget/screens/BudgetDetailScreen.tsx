@@ -1,5 +1,4 @@
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -12,50 +11,45 @@ import { useMemo } from 'react';
 function BudgetDetailScreenInner() {
   const vm = useBudgetDetailViewModel();
   const strings = AppConfig.strings.commitmentsRedesign;
-  const chrome = useMemo<ScreenNavChrome>(
-    () =>
-      applySelectionChrome(
-        buildDetailNavChrome({
-          phase: vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready',
-          readyTitle: vm.budget?.name ?? AppConfig.strings.budget.details.screenTitle,
-          loadingTitle: AppConfig.strings.budget.details.screenTitle,
-          onBack: AppNavigation.back,
-          headerActions: (
-            <DetailHeaderMenuActions
-              actions={[
-                { label: strings.edit, onPress: vm.handleEdit, testID: 'edit-button' },
-                {
-                  label: strings.delete,
-                  onPress: vm.handleDelete,
-                  destructive: true,
-                  testID: 'delete-button',
-                },
-              ]}
-            />
-          ),
-        }),
-        {
-          active: vm.isSelectionModeActive,
-          onExit: vm.selectionChrome.exitSelectionMode,
-          fab: {
-            onPress: vm.onAddExpense,
-            label: strings.expenseAction,
-            accessibilityLabel: strings.addExpense,
-          },
+  const chrome = useMemo<ScreenNavChrome>(() => {
+    const phase = vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready';
+    return {
+      ...buildDetailNavChrome({
+        phase,
+        readyTitle: vm.budget?.name ?? AppConfig.strings.budget.details.screenTitle,
+        loadingTitle: AppConfig.strings.budget.details.screenTitle,
+        onBack: AppNavigation.back,
+        headerActions: (
+          <DetailHeaderMenuActions
+            actions={[
+              { label: strings.edit, onPress: vm.handleEdit, testID: 'edit-button' },
+              {
+                label: strings.delete,
+                onPress: vm.handleDelete,
+                destructive: true,
+                testID: 'delete-button',
+              },
+            ]}
+          />
+        ),
+        fab: {
+          onPress: vm.onAddExpense,
+          label: strings.expenseAction,
+          accessibilityLabel: strings.addExpense,
         },
-      ),
-    [
-      vm.isLoading,
-      vm.isMissing,
-      vm.budget?.name,
-      vm.handleEdit,
-      vm.handleDelete,
-      vm.onAddExpense,
-      vm.isSelectionModeActive,
-      vm.selectionChrome.exitSelectionMode,
-      strings,
-    ],
-  );
+      }),
+      selection: phase === 'ready' ? vm.selectionChrome : undefined,
+    };
+  }, [
+    vm.isLoading,
+    vm.isMissing,
+    vm.budget?.name,
+    vm.handleEdit,
+    vm.handleDelete,
+    vm.onAddExpense,
+    vm.selectionChrome,
+    strings,
+  ]);
   return <BudgetDetailView {...vm} chrome={chrome} />;
 }
 export const BudgetDetailScreen = withPrivacyScope(BudgetDetailScreenInner);

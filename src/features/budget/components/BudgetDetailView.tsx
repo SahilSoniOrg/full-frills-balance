@@ -75,7 +75,7 @@ export function BudgetDetailView({
           selectedIds={vm.selectedIds}
           onLongPressItem={vm.onLongPressItem}
           isSelectionModeActive={vm.isSelectionModeActive}
-          selectionChrome={vm.selectionChrome}
+          onExitSelectionMode={chrome.selection?.exitSelectionMode}
           ListHeaderComponent={
             <Stack gap="md" marginBottom="sm">
               <BudgetDetailHeader

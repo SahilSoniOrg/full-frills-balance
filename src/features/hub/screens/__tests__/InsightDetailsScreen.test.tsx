@@ -6,6 +6,7 @@ import {
   type InsightDetailsViewModel,
 } from '../../hooks/useInsightDetailsViewModel';
 import { InsightDetailsView } from '../../components/InsightDetailsView';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { Icon } from '@/src/types/domainIcons';
 
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}) }));
@@ -22,12 +23,18 @@ jest.mock('../../components/InsightDetailsView', () => ({
   InsightDetailsView: jest.fn(() => null),
 }));
 
-it('makes header back exit selection, then restores navigation', () => {
+it('publishes selection chrome only while selection is active', () => {
   const exitSelectionMode = jest.fn();
   const useViewModel = jest.mocked(useInsightDetailsViewModel);
   const viewModel: InsightDetailsViewModel = {
     isSelectionModeActive: true,
-    selectionChrome: { exitSelectionMode, selectAll: jest.fn(), clearItems: jest.fn() },
+    selectionChrome: {
+      state: getSelectionState(new Set(), []),
+      itemTypeLabel: 'transaction',
+      exitSelectionMode,
+      selectAll: jest.fn(),
+      clearItems: jest.fn(),
+    },
     selectedIds: new Set(),
     onLongPressItem: jest.fn(),
     items: [],
@@ -54,20 +61,19 @@ it('makes header back exit selection, then restores navigation', () => {
 
   const view = render(<InsightDetailsScreen />);
   let chrome = jest.mocked(InsightDetailsView).mock.lastCall?.[0].chrome;
-  expect(chrome?.selectionMode).toBe(true);
+  expect(chrome?.selection?.exitSelectionMode).toBe(exitSelectionMode);
   expect(chrome?.kind).toBe('nav');
   if (chrome?.kind !== 'nav') throw new Error('Expected navigation chrome');
-  chrome.onBack();
-  expect(exitSelectionMode).toHaveBeenCalledTimes(1);
-  expect(AppNavigation.back).not.toHaveBeenCalled();
+  expect(chrome.onBack).toBe(AppNavigation.back);
 
   useViewModel.mockReturnValue({
     ...viewModel,
     isSelectionModeActive: false,
+    selectionChrome: undefined,
   });
   view.rerender(<InsightDetailsScreen />);
   chrome = jest.mocked(InsightDetailsView).mock.lastCall?.[0].chrome;
-  expect(chrome?.selectionMode).toBe(false);
+  expect(chrome?.selection).toBeUndefined();
   if (chrome?.kind !== 'nav') throw new Error('Expected navigation chrome');
   chrome.onBack();
   expect(AppNavigation.back).toHaveBeenCalledTimes(1);

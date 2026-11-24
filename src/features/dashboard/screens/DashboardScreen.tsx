@@ -1,4 +1,3 @@
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -75,33 +74,23 @@ function DashboardScreen() {
 
   useScrollToTop(listRef);
 
+  const { selectionChrome } = vm.recentJournalEntries;
   const chrome = useMemo<TabScreenChrome>(
-    () =>
-      applySelectionChrome(
-        {
-          kind: 'tab',
-          screenTitle: AppConfig.strings.dashboard.greeting(userName),
-          headerActions: (
-            <DashboardHeaderActions
-              onSearchPress={AppNavigation.toJournalSearch}
-              onReviewPress={AppNavigation.toHub}
-              insightCount={insightCount}
-              onSmsPress={onSmsPress}
-              unreadSmsCount={unreadSmsCount || 0}
-            />
-          ),
-        },
-        {
-          active: vm.recentJournalEntries.isSelectionModeActive,
-        },
+    () => ({
+      kind: 'tab',
+      screenTitle: AppConfig.strings.dashboard.greeting(userName),
+      headerActions: (
+        <DashboardHeaderActions
+          onSearchPress={AppNavigation.toJournalSearch}
+          onReviewPress={AppNavigation.toHub}
+          insightCount={insightCount}
+          onSmsPress={onSmsPress}
+          unreadSmsCount={unreadSmsCount || 0}
+        />
       ),
-    [
-      insightCount,
-      onSmsPress,
-      unreadSmsCount,
-      userName,
-      vm.recentJournalEntries.isSelectionModeActive,
-    ],
+      selection: selectionChrome,
+    }),
+    [insightCount, onSmsPress, unreadSmsCount, userName, selectionChrome],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

@@ -1,5 +1,7 @@
 import { PlannedPaymentDetailsView } from '../PlannedPaymentDetailsView';
 import type { PlannedPaymentDetailsViewModel } from '../../hooks/usePlannedPaymentDetailsViewModel';
+import { selectedPlannedPaymentTotal } from '../../hooks/plannedPaymentDetailsPresentation';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { cleanup, fireEvent, render, within } from '@/src/testing/render';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
 import { AccountType, JournalDisplayType, PlannedPaymentStatus } from '@/src/types/enums';
@@ -270,6 +272,75 @@ describe('PlannedPaymentDetailsView', () => {
     expect(
       screen.getByTestId('planned-history-skipped-described').props.accessibilityLabel,
     ).toContain('Rent payment skipped');
+  });
+
+  it('keeps skipped occurrences selected without adding their scheduled amounts', () => {
+    const paid = row('paid', 'POSTED', day(1), 321.23);
+    const skipped = row('skipped', 'SKIPPED', day(2), 456.78);
+    const history = [paid, skipped];
+    const selectedIds = new Set([paid.id, skipped.id]);
+    const screen = render(
+      <PlannedPaymentDetailsView
+        {...vm}
+        chrome={{
+          ...chrome,
+          selection: {
+            state: getSelectionState(selectedIds, [paid.id, skipped.id]),
+            amountSummary: {
+              label: AppConfig.strings.selection.paymentAmounts,
+              ...selectedPlannedPaymentTotal(history, selectedIds),
+            },
+            itemTypeLabel: AppConfig.strings.selection.itemTypes.payment,
+            selectAll: vm.selectAll,
+            clearItems: vm.clearItems,
+            exitSelectionMode: vm.exitSelectionMode,
+          },
+        }}
+        history={history}
+        isSelectionModeActive
+        selectedIds={selectedIds}
+      />,
+    );
+
+    expect(screen.getByText('2 of 2 · Selected amounts')).toBeTruthy();
+    expect(screen.getByTestId('planned-history-skipped').props.accessibilityState.selected).toBe(
+      true,
+    );
+    expect(screen.getAllByText('$321.23')).toHaveLength(2);
+    expect(screen.queryByText('$778.01')).toBeNull();
+  });
+
+  it('excludes reversed and reversal occurrences and marks missing history totals incomplete', () => {
+    const paid = row('paid', 'POSTED', day(1), 100);
+    const reversed = row('reversed', 'REVERSED', day(2), 100);
+    const reversal = row('reversal', 'POSTED', day(3), 100);
+    const reversalIds = new Set([reversal.id]);
+
+    expect(
+      selectedPlannedPaymentTotal(
+        [paid, reversed, reversal],
+        new Set([paid.id, reversed.id, reversal.id]),
+        'USD',
+        reversalIds,
+      ),
+    ).toEqual({
+      amounts: [{ amount: 100, currencyCode: 'USD' }],
+      incomplete: false,
+    });
+
+    expect(
+      selectedPlannedPaymentTotal([paid], new Set([paid.id, 'missing' as JournalId]), 'USD'),
+    ).toEqual({
+      amounts: [{ amount: 100, currencyCode: 'USD' }],
+      incomplete: true,
+    });
+
+    expect(
+      selectedPlannedPaymentTotal([{ ...paid, currencyCode: '' }], new Set([paid.id]), 'EUR'),
+    ).toEqual({
+      amounts: [{ amount: 100, currencyCode: 'EUR' }],
+      incomplete: false,
+    });
   });
 
   it('keeps a different-amount paid date neutral and puts the warning on its subtitle', () => {

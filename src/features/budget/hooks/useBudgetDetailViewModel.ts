@@ -372,7 +372,10 @@ export function useBudgetDetailViewModel() {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: bulkOperations.selectionChrome,
+    selectionChrome: journalList.selectionChrome && {
+      ...journalList.selectionChrome,
+      actions: bulkOperations.actions,
+    },
     modals: bulkOperations.modals,
   };
 }
