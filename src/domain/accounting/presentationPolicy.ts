@@ -291,6 +291,10 @@ export const SURFACE_RULES = {
     intent: 'UNSIGNED',
     source: 'magnitude from the viewed leg or journal total; emoji from its flow sign',
   },
+  'selection.summary': {
+    intent: 'FLOW',
+    source: 'net signed flow of selected rows, per currency',
+  },
   'budget.usage': { intent: 'UNSIGNED', source: 'magnitude against budget' },
 } as const satisfies Record<string, SurfaceRule>;
 

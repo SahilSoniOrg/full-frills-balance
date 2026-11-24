@@ -1,14 +1,15 @@
 import { Icon, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { ComponentVariant } from '@/src/design-system/variants';
 import { formatRecurrence } from '@/src/components/shared/recurrenceLabels';
 import dayjs from 'dayjs';
-import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { DEFAULT_CURRENCY_CODE, getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { sumByCurrency } from '@/src/domain/money/sumByCurrency';
 import { accountEntryLeg } from '@/src/services/journal/journalTimelinePresentation';
-import { asAccountId } from '@/src/types/ids';
+import { asAccountId, type JournalId } from '@/src/types/ids';
 import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
 
 /** A schedule account as a transaction-flow leg, or a placeholder leg when the account is missing. */
@@ -260,5 +261,48 @@ export function getPlannedPaymentHistoryPresentation(
       !isSkipped && !isReversed && !isWaiting && !sameCurrency ? plannedAmount : undefined,
     expectedCurrencyCode:
       !isSkipped && !isReversed && !isWaiting && !sameCurrency ? plannedCurrencyCode : undefined,
+  };
+}
+
+export function selectedPlannedPaymentTotal(
+  history: readonly EnrichedJournal[],
+  selectedIds: ReadonlySet<JournalId>,
+  fallbackCurrencyCode: string = DEFAULT_CURRENCY_CODE,
+  reversalJournalIds?: ReadonlySet<JournalId>,
+): { amounts: { amount: number; currencyCode: string }[]; incomplete: boolean } {
+  if (selectedIds.size === 0) return { amounts: [], incomplete: false };
+
+  const missingIds = new Set(selectedIds);
+  const amounts: { amount: number; currencyCode: string }[] = [];
+  let hasUnavailable = false;
+  const fallback = fallbackCurrencyCode?.trim() || '';
+
+  for (const journal of history) {
+    if (!selectedIds.has(journal.id)) continue;
+    missingIds.delete(journal.id);
+
+    if (
+      journal.status === JournalStatus.SKIPPED ||
+      journal.status === JournalStatus.REVERSED ||
+      reversalJournalIds?.has(journal.id)
+    ) {
+      continue;
+    }
+
+    const currencyCode = journal.currencyCode?.trim() || fallback;
+    if (journal.totalAmount == null || !Number.isFinite(journal.totalAmount) || !currencyCode) {
+      hasUnavailable = true;
+      continue;
+    }
+
+    amounts.push({
+      amount: journal.totalAmount,
+      currencyCode,
+    });
+  }
+
+  return {
+    amounts: sumByCurrency(amounts),
+    incomplete: missingIds.size > 0 || hasUnavailable,
   };
 }
