@@ -12,10 +12,11 @@ import type { JournalListRowId } from '@/src/types/ui';
 export function computeSelectedJournalsTotal(
   rows: readonly JournalTimelineRow[],
   selectedIds: ReadonlySet<JournalId>,
-): { amounts: MoneyAmount[]; incomplete: boolean } {
-  if (selectedIds.size === 0) return { amounts: [], incomplete: false };
+): { amounts: MoneyAmount[]; incomplete: boolean; includedCount: number } {
+  if (selectedIds.size === 0) return { amounts: [], incomplete: false, includedCount: 0 };
 
   const missingIds = new Set(selectedIds);
+  const includedIds = new Set<JournalId>();
   // undefined = unavailable (marks total incomplete); null = zero-flow entry (excluded cleanly).
   const amountByRow = new Map<JournalListRowId, MoneyAmount | null | undefined>();
 
@@ -38,6 +39,7 @@ export function computeSelectedJournalsTotal(
       amountByRow.set(amountId, null);
       continue;
     }
+    includedIds.add(selectionId);
     amountByRow.set(amountId, {
       amount: sign * amount,
       currencyCode,
@@ -53,5 +55,6 @@ export function computeSelectedJournalsTotal(
   return {
     amounts: sumByCurrency(available),
     incomplete: missingIds.size > 0 || hasUnavailable,
+    includedCount: includedIds.size,
   };
 }

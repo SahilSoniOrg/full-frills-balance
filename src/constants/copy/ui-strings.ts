@@ -30,9 +30,7 @@ export const UI_STRINGS = {
     countOfTotal: (selected: number, total: number) => `${selected} of ${total}`,
     countSelected: (count: number) => `${count} selected`,
     selectedCount: (count: string | number, label: string) => `${count} ${label} selected`,
-    summaryMeta: (count: string, label: string) => `${count} · ${label}`,
     average: (value: string) => `Avg ${value}`,
-    currencies: (count: number) => `${count} currencies`,
     remaining: (count: number) => `${count} left`,
     allSelected: 'All selected',
     itemTypes: {

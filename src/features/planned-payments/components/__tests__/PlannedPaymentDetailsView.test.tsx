@@ -302,7 +302,8 @@ describe('PlannedPaymentDetailsView', () => {
       />,
     );
 
-    expect(screen.getByText('2 of 2 · Selected amounts')).toBeTruthy();
+    expect(screen.getByText('2 of 2 payments · Selected amounts · All selected')).toBeTruthy();
+    expect(screen.queryByText(/Avg/)).toBeNull();
     expect(screen.getByTestId('planned-history-skipped').props.accessibilityState.selected).toBe(
       true,
     );
@@ -326,6 +327,7 @@ describe('PlannedPaymentDetailsView', () => {
     ).toEqual({
       amounts: [{ amount: 100, currencyCode: 'USD' }],
       incomplete: false,
+      includedCount: 1,
     });
 
     expect(
@@ -333,6 +335,7 @@ describe('PlannedPaymentDetailsView', () => {
     ).toEqual({
       amounts: [{ amount: 100, currencyCode: 'USD' }],
       incomplete: true,
+      includedCount: 1,
     });
 
     expect(
@@ -340,6 +343,7 @@ describe('PlannedPaymentDetailsView', () => {
     ).toEqual({
       amounts: [{ amount: 100, currencyCode: 'EUR' }],
       incomplete: false,
+      includedCount: 1,
     });
   });
 

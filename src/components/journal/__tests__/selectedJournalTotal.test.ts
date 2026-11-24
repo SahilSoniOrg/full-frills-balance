@@ -39,6 +39,7 @@ describe('computeSelectedJournalsTotal', () => {
         { amount: 50, currencyCode: 'USD' },
       ],
       incomplete: false,
+      includedCount: 3,
     });
   });
 
@@ -116,14 +117,18 @@ describe('computeSelectedJournalsTotal', () => {
         journalsToTimelineRows([split], { expandAccountIds: [food, transit] }),
         selected,
       ),
-    ).toEqual({ amounts: [{ amount: -60, currencyCode: 'USD' }], incomplete: true });
+    ).toEqual({
+      amounts: [{ amount: -60, currencyCode: 'USD' }],
+      incomplete: true,
+      includedCount: 1,
+    });
 
     expect(
       computeSelectedJournalsTotal(
         journalsToTimelineRows([split], { viewer: { accountId: asAccountId('unavailable') } }),
         selected,
       ),
-    ).toEqual({ amounts: [], incomplete: true });
+    ).toEqual({ amounts: [], incomplete: true, includedCount: 0 });
   });
 
   it('skips unscoped zero-flow transfers without marking totals incomplete, while keeping scoped legs and real zero nets', () => {
@@ -152,27 +157,39 @@ describe('computeSelectedJournalsTotal', () => {
 
     expect(
       computeSelectedJournalsTotal(journalsToTimelineRows([transfer]), new Set([transfer.id])),
-    ).toEqual({ amounts: [], incomplete: false });
+    ).toEqual({ amounts: [], incomplete: false, includedCount: 0 });
 
     expect(
       computeSelectedJournalsTotal(
         journalsToTimelineRows([transfer, expense]),
         new Set([transfer.id, expense.id]),
       ),
-    ).toEqual({ amounts: [{ amount: -20, currencyCode: 'USD' }], incomplete: false });
+    ).toEqual({
+      amounts: [{ amount: -20, currencyCode: 'USD' }],
+      incomplete: false,
+      includedCount: 1,
+    });
 
     expect(
       computeSelectedJournalsTotal(
         journalsToTimelineRows([income, expense]),
         new Set([income.id, expense.id]),
       ),
-    ).toEqual({ amounts: [{ amount: 0, currencyCode: 'USD' }], incomplete: false });
+    ).toEqual({
+      amounts: [{ amount: 0, currencyCode: 'USD' }],
+      incomplete: false,
+      includedCount: 2,
+    });
 
     expect(
       computeSelectedJournalsTotal(
         journalsToTimelineRows([transfer], { viewer: { accountId: checking } }),
         new Set([transfer.id]),
       ),
-    ).toEqual({ amounts: [{ amount: -500, currencyCode: 'EUR' }], incomplete: false });
+    ).toEqual({
+      amounts: [{ amount: -500, currencyCode: 'EUR' }],
+      incomplete: false,
+      includedCount: 1,
+    });
   });
 });

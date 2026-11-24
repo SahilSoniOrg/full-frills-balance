@@ -269,10 +269,15 @@ export function selectedPlannedPaymentTotal(
   selectedIds: ReadonlySet<JournalId>,
   fallbackCurrencyCode: string = DEFAULT_CURRENCY_CODE,
   reversalJournalIds?: ReadonlySet<JournalId>,
-): { amounts: { amount: number; currencyCode: string }[]; incomplete: boolean } {
-  if (selectedIds.size === 0) return { amounts: [], incomplete: false };
+): {
+  amounts: { amount: number; currencyCode: string }[];
+  incomplete: boolean;
+  includedCount: number;
+} {
+  if (selectedIds.size === 0) return { amounts: [], incomplete: false, includedCount: 0 };
 
   const missingIds = new Set(selectedIds);
+  const includedIds = new Set<JournalId>();
   const amounts: { amount: number; currencyCode: string }[] = [];
   let hasUnavailable = false;
   const fallback = fallbackCurrencyCode?.trim() || '';
@@ -295,6 +300,8 @@ export function selectedPlannedPaymentTotal(
       continue;
     }
 
+    if (includedIds.has(journal.id)) continue;
+    includedIds.add(journal.id);
     amounts.push({
       amount: journal.totalAmount,
       currencyCode,
@@ -304,5 +311,6 @@ export function selectedPlannedPaymentTotal(
   return {
     amounts: sumByCurrency(amounts),
     incomplete: missingIds.size > 0 || hasUnavailable,
+    includedCount: includedIds.size,
   };
 }

@@ -4,7 +4,6 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
-import { triggerPressHaptic } from '@/src/design-system/haptics';
 import type { AccountTypeColorKey } from '@/src/design-system/accountPresentation';
 import {
   signColorKey,
@@ -31,6 +30,8 @@ export type SelectionAmountSummary = {
   label: string;
   amounts: readonly MoneyAmount[];
   incomplete?: boolean;
+  /** Number of selected items that contributed to `amounts` (defaults to `selectedCount`). */
+  includedCount?: number;
   /** Signed flow amounts use presentationPolicy prefixes and income/expense ink. */
   signed?: boolean;
   /** When multiple account types are selected, render each type as its own labeled block. */
@@ -103,7 +104,14 @@ export function SelectionSummary({
   const countLabel = copy.selectedCount(count, itemLabel);
   const countWithType = `${compactCount} ${itemLabel}`;
   const remaining = Math.max(0, selectableCount - selectedSelectableCount);
-  const { amounts = [], label, incomplete, signed = false, sections = [] } = amountSummary ?? {};
+  const {
+    amounts = [],
+    label,
+    incomplete,
+    includedCount,
+    signed = false,
+    sections = [],
+  } = amountSummary ?? {};
   const showSections = sections.length > 1;
   const displayAmounts = showSections ? [] : amounts;
   const multipleCurrencies = displayAmounts.length > 1;
@@ -129,22 +137,20 @@ export function SelectionSummary({
     };
   };
 
-  const singleMoney =
-    hasAmounts && !multipleCurrencies && !showSections
-      ? formatSummaryMoney(displayAmounts[0].amount)
-      : null;
-  // Skip "N currencies" — stacked amounts already show that. Avg only for single-currency nets.
+  const singleAmount =
+    hasAmounts && !multipleCurrencies && !showSections ? displayAmounts[0] : null;
+  const singleMoney = singleAmount ? formatSummaryMoney(singleAmount.amount) : null;
+  const contributingCount = includedCount ?? selectedCount;
+  // Skip "N currencies" — stacked amounts already show that. Only average when every
+  // selected item contributed to the single-currency total.
   const averageMeta =
-    singleMoney && selectedCount > 1
-      ? copy.average(
-          formatMoney(
-            Math.abs(displayAmounts[0].amount / selectedCount),
-            displayAmounts[0].currencyCode,
-            {
-              prefix: signed ? signPrefix(flowSignFor(displayAmounts[0].amount)) : undefined,
-            },
-          ),
-        )
+    singleAmount && !incomplete && selectedCount > 1 && contributingCount === selectedCount
+      ? (() => {
+          const avg = formatSummaryMoney(singleAmount.amount / selectedCount);
+          return copy.average(
+            formatMoney(avg.displayAmount, singleAmount.currencyCode, { prefix: avg.prefix }),
+          );
+        })()
       : undefined;
   const selectionStatus =
     selectableCount > 0 && selectedCount > 0 && remaining === 0
@@ -172,6 +178,16 @@ export function SelectionSummary({
   const toggleIcon = allSelected ? Icon.CheckSquare : Icon.Square;
   const toggleTint = toggleDisabled ? theme.textTertiary : allSelected ? theme.primary : theme.text;
 
+  const partialBadge = incomplete ? (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={copy.partialAmount(label ?? copy.signedTotal)}
+    >
+      <AppIcon name={Icon.Alert} size={Size.iconXs} color={theme.warning} />
+    </View>
+  ) : null;
+
   return (
     <MotiView
       pointerEvents="box-none"
@@ -191,10 +207,7 @@ export function SelectionSummary({
       <View style={[styles.summaryCard, cardStyle]}>
         <Inline align="center" justify="space-between" gap="xs" style={styles.row}>
           <PressScaleTouchable
-            onPress={() => {
-              triggerPressHaptic('selection');
-              onClear();
-            }}
+            onPress={onClear}
             hitSlop={CONTROL_HIT_SLOP}
             pressScale="subtle"
             haptic="selection"
@@ -213,76 +226,74 @@ export function SelectionSummary({
 
           <View style={styles.summaryContent} accessibilityLiveRegion="polite">
             {showSections ? (
-              <View style={styles.sectionStack}>
-                {sections.map(section => (
-                  <View key={section.label} style={styles.sectionBlock}>
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{
-                        color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
-                      }}
-                    >
-                      {section.label}
-                    </AppText>
-                    <View style={styles.amountStack}>
-                      {section.amounts.map(({ amount, currencyCode }) => {
-                        const formatted = formatSummaryMoney(amount);
-                        return (
-                          <MoneyText
-                            key={`${section.label}-${currencyCode}`}
-                            amount={formatted.displayAmount}
-                            currencyCode={currencyCode}
-                            prefix={formatted.prefix}
-                            variant="body"
-                            weight="bold"
-                            numberOfLines={1}
-                            style={{ color: formatted.color }}
-                          />
-                        );
-                      })}
+              <Inline align="flex-start" gap="xs">
+                <View style={styles.sectionStack}>
+                  {sections.map(section => (
+                    <View key={section.label} style={styles.sectionBlock}>
+                      <AppText
+                        variant="caption"
+                        weight="bold"
+                        style={{
+                          color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
+                        }}
+                      >
+                        {section.label}
+                      </AppText>
+                      <View style={styles.amountStack}>
+                        {section.amounts.map(({ amount, currencyCode }) => {
+                          const formatted = formatSummaryMoney(amount);
+                          return (
+                            <MoneyText
+                              key={`${section.label}-${currencyCode}`}
+                              amount={formatted.displayAmount}
+                              currencyCode={currencyCode}
+                              prefix={formatted.prefix}
+                              variant="body"
+                              weight="bold"
+                              numberOfLines={1}
+                              style={{ color: formatted.color }}
+                            />
+                          );
+                        })}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+                {partialBadge}
+              </Inline>
             ) : multipleCurrencies ? (
-              <View style={styles.amountStack}>
-                {displayAmounts.map(({ amount, currencyCode }) => {
-                  const formatted = formatSummaryMoney(amount);
-                  return (
-                    <MoneyText
-                      key={currencyCode}
-                      amount={formatted.displayAmount}
-                      currencyCode={currencyCode}
-                      prefix={formatted.prefix}
-                      variant="body"
-                      weight="bold"
-                      numberOfLines={1}
-                      style={{ color: formatted.color }}
-                    />
-                  );
-                })}
-              </View>
-            ) : singleMoney ? (
+              <Inline align="center" gap="xs">
+                <View style={styles.amountStack}>
+                  {displayAmounts.map(({ amount, currencyCode }) => {
+                    const formatted = formatSummaryMoney(amount);
+                    return (
+                      <MoneyText
+                        key={currencyCode}
+                        amount={formatted.displayAmount}
+                        currencyCode={currencyCode}
+                        prefix={formatted.prefix}
+                        variant="body"
+                        weight="bold"
+                        numberOfLines={1}
+                        style={{ color: formatted.color }}
+                      />
+                    );
+                  })}
+                </View>
+                {partialBadge}
+              </Inline>
+            ) : singleMoney && singleAmount ? (
               <Inline align="center" gap="xs">
                 <MoneyText
                   amount={singleMoney.displayAmount}
-                  currencyCode={displayAmounts[0].currencyCode}
+                  currencyCode={singleAmount.currencyCode}
                   prefix={singleMoney.prefix}
                   variant="heading"
                   weight="bold"
                   fit={SUMMARY_AMOUNT_FIT}
                   style={[styles.amountText, { color: singleMoney.color }]}
                 />
-                {incomplete ? (
-                  <View
-                    accessible
-                    accessibilityRole="image"
-                    accessibilityLabel={copy.partialAmount(label ?? copy.signedTotal)}
-                  >
-                    <AppIcon name={Icon.Alert} size={Size.iconXs} color={theme.warning} />
-                  </View>
-                ) : null}
+                {partialBadge}
               </Inline>
             ) : (
               <AppText

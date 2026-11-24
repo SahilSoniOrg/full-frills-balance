@@ -6,8 +6,13 @@ import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render } from '@/src/testing/render';
 import { View } from 'react-native';
 import { getSelectionState } from '@/src/hooks/selectionState';
+import { triggerPressHaptic } from '@/src/design-system/haptics';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
+jest.mock('@/src/design-system/haptics', () => ({
+  ...jest.requireActual('@/src/design-system/haptics'),
+  triggerPressHaptic: jest.fn(),
+}));
 
 jest.mock('react-native/Libraries/Animated/NativeAnimatedModule', () => {
   const { NativeModules } = jest.requireActual<typeof import('react-native')>('react-native');
@@ -146,7 +151,7 @@ it('renders mixed account-type totals as labeled sections', () => {
   expect(view.getByText('2 of 3 accounts · Direct balances')).toBeTruthy();
 });
 
-it('distinguishes a partial amount from an unavailable total', () => {
+it('distinguishes a partial amount from an unavailable total and omits partial averages', () => {
   const summary = (amounts: { amount: number; currencyCode: string }[]) => (
     <SelectionSummary
       selection={getSelectionState(new Set(['1', '2']), ['1', '2'])}
@@ -158,9 +163,9 @@ it('distinguishes a partial amount from an unavailable total', () => {
     />
   );
   const view = render(summary([{ amount: -60, currencyCode: 'USD' }]));
-  expect(
-    view.getByText('2 of 2 transactions · Signed total (partial) · Avg − $30.00'),
-  ).toBeTruthy();
+  expect(view.getByText('2 of 2 transactions · Signed total (partial)')).toBeTruthy();
+  expect(view.queryByText(/Avg/)).toBeNull();
+  expect(view.getByLabelText('Signed total (partial)')).toBeTruthy();
   expect(view.getByText(/− .*60\.00/)).toBeTruthy();
   expect(view.getByText('Clear')).toBeTruthy();
 
@@ -168,6 +173,96 @@ it('distinguishes a partial amount from an unavailable total', () => {
   expect(view.getByText('Total unavailable')).toBeTruthy();
   expect(view.getByText('2 of 2 transactions selected')).toBeTruthy();
   expect(view.queryByText(/60\.00/)).toBeNull();
+});
+
+it('preserves negative sign in unsigned averages, omits averages when items are excluded, and shows partial badges across all layouts', () => {
+  const onClear = jest.fn();
+  const view = render(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['1', '2']), ['1', '2', '3'])}
+      amountSummary={{
+        label: 'Assets',
+        amounts: [{ amount: -200, currencyCode: 'USD' }],
+        includedCount: 2,
+      }}
+      itemTypeLabel="account"
+      onClear={onClear}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+  expect(view.getByText('2 of 3 accounts · Assets · Avg -$100.00')).toBeTruthy();
+
+  // Excluded items (e.g. transfer or skipped occurrence) must not distort the average.
+  view.rerender(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['1', '2']), ['1', '2'])}
+      amountSummary={{
+        label: 'Signed total',
+        signed: true,
+        amounts: [{ amount: -200, currencyCode: 'USD' }],
+        includedCount: 1,
+      }}
+      itemTypeLabel="transaction"
+      onClear={onClear}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+  expect(view.getByText('2 of 2 transactions · Signed total · All selected')).toBeTruthy();
+  expect(view.queryByText(/Avg/)).toBeNull();
+
+  // Partial warning icon renders on multi-currency and multi-section summaries too.
+  view.rerender(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['1', '2']), ['1', '2', '3'])}
+      amountSummary={{
+        label: 'Signed total',
+        signed: true,
+        incomplete: true,
+        amounts: [
+          { amount: -100, currencyCode: 'USD' },
+          { amount: 50, currencyCode: 'EUR' },
+        ],
+      }}
+      itemTypeLabel="transaction"
+      onClear={onClear}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+  expect(view.getByLabelText('Signed total (partial)')).toBeTruthy();
+
+  view.rerender(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['a', 'l']), ['a', 'l', 'x'])}
+      amountSummary={{
+        label: 'Direct balances',
+        incomplete: true,
+        amounts: [],
+        sections: [
+          { label: 'Assets', colorKey: 'asset', amounts: [{ amount: 200, currencyCode: 'USD' }] },
+          {
+            label: 'Liabilities',
+            colorKey: 'liability',
+            amounts: [{ amount: 80, currencyCode: 'USD' }],
+          },
+        ],
+      }}
+      itemTypeLabel="account"
+      onClear={onClear}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+  expect(view.getByLabelText('Direct balances (partial)')).toBeTruthy();
+
+  // Exit selection triggers haptic exactly once.
+  jest.mocked(triggerPressHaptic).mockClear();
+  fireEvent.press(view.getByLabelText('Exit selection'));
+  expect(onClear).toHaveBeenCalledTimes(1);
+  expect(triggerPressHaptic).toHaveBeenCalledTimes(1);
+  expect(triggerPressHaptic).toHaveBeenCalledWith('selection');
 });
 
 it('pluralizes irregular item labels and guides the user when zero items are selected', () => {
