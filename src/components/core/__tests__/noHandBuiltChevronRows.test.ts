@@ -12,7 +12,6 @@ const ALLOWED = new Set([
   'components/filters/CustomDateTimePicker/DateView.tsx',
   'components/journal/JournalDayHeader.tsx',
   'components/shared/PeriodStepper.tsx',
-  'components/shared/SelectionActionBar.tsx',
   'components/account-selection/AccountPickerList.tsx',
   'components/forms/schedule/ScheduleField.tsx',
   'features/accounts/components/AccountParentPath.tsx',

@@ -1,26 +1,29 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import {
   Icon,
   AppIcon,
   AppText,
-  IconButton,
   type IconName,
+  ListGroup,
   PressScaleTouchable,
 } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/design-system/colorMath';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import type { getSelectionState } from '@/src/hooks/selectionState';
-import { AnimatePresence, MotiView } from 'moti';
-import { useMemo, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { MotiView } from 'moti';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { SelectionEdgeShadow, useSelectionBarSurface } from './selectionBarChrome';
 
 export interface SelectionAction {
   name: IconName;
   label: string;
+  /** Compact label for the bottom dock when `label` is longer (e.g. sheet title). */
+  shortLabel?: string;
+  /** Brief reason shown in the overflow sheet when the action is disabled. */
+  disabledHint?: string;
   onPress: () => void;
   variant?: IconButtonProps['variant'];
   iconColor?: string;
@@ -28,14 +31,6 @@ export interface SelectionAction {
   accessibilityLabel?: string;
   testID?: string;
   isPrimary?: boolean;
-}
-
-export interface ListSelectionChrome {
-  exitSelectionMode: () => void;
-  selectAll: () => void;
-  clearItems: () => void;
-  onShareSelected?: () => void;
-  actions?: SelectionAction[];
 }
 
 export interface SelectionActionPartition {
@@ -65,34 +60,30 @@ export function partitionSelectionActions(actions: SelectionAction[]): Selection
 }
 
 export interface SelectionActionBarProps {
-  selection: ReturnType<typeof getSelectionState>;
-  onClear: () => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
+  selectedCount: number;
   onShare?: () => void;
   actions?: SelectionAction[];
-  isVisible: boolean;
 }
 
 /**
- * SelectionActionBar — bulk actions while Selection mode is active.
+ * SelectionActionBar — labeled bulk-action dock while Selection mode is active.
  * Shows primary actions directly, with an overflow bottom sheet for secondary actions.
  */
 export const SelectionActionBar = ({
-  selection,
-  onClear,
-  onSelectAll,
-  onDeselectAll,
+  selectedCount,
   onShare,
   actions,
-  isVisible,
 }: SelectionActionBarProps) => {
-  const { selectedCount, selectableCount, checked } = selection;
-  const { theme } = useTheme();
+  const { cardStyle, theme } = useSelectionBarSurface('bottom');
   const reduceMotion = useReducedMotion();
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
-  const isBarActive = isVisible && selectedCount > 0;
+  const afterDismiss = useAfterDismiss();
+  const isBarActive = selectedCount > 0;
+  if (!isBarActive && isOverflowOpen) {
+    setIsOverflowOpen(false);
+  }
   const isModalVisible = isOverflowOpen && isBarActive;
+  const copy = AppConfig.strings.selection;
 
   const finalActions: SelectionAction[] = useMemo(() => {
     if (actions) return actions;
@@ -105,12 +96,12 @@ export const SelectionActionBar = ({
           variant: 'primary',
           isPrimary: true,
           disabled: selectedCount === 0,
-          accessibilityLabel: 'Share selected items',
+          accessibilityLabel: copy.shareSelected,
         },
       ];
     }
     return [];
-  }, [actions, onShare, selectedCount]);
+  }, [actions, onShare, selectedCount, copy.shareSelected]);
 
   // Split actions between direct bar buttons and overflow bottom sheet
   const { barActions, overflowActions } = useMemo(
@@ -118,183 +109,148 @@ export const SelectionActionBar = ({
     [finalActions],
   );
 
-  // --- Selection State Logic
-  const selectIcon =
-    checked === true ? Icon.CheckSquare : checked === 'mixed' ? Icon.MinusSquare : Icon.Square;
+  useEffect(() => {
+    if (!isBarActive) afterDismiss.cancel();
+  }, [afterDismiss, isBarActive]);
 
-  const handleClear = () => {
-    setIsOverflowOpen(false);
-    onClear();
-  };
-
-  const handleDeselectAll = () => {
-    setIsOverflowOpen(false);
-    onDeselectAll();
-  };
-
-  const handleSelectToggle = () => {
-    if (selectableCount === 0) return;
-    if (checked === true) {
-      handleDeselectAll();
-    } else {
-      onSelectAll();
-    }
+  const resolveDockTone = (action: SelectionAction, disabled: boolean) => {
+    if (disabled) return theme.textTertiary;
+    if (action.variant === 'error') return theme.error;
+    if (action.iconColor) return action.iconColor;
+    if (action.variant === 'primary') return theme.primary;
+    return theme.text;
   };
 
   return (
     <>
-      <AnimatePresence>
-        {isVisible && (
-          <MotiView
-            from={{ opacity: 0, scale: reduceMotion ? 1 : 0.92, translateY: reduceMotion ? 0 : 24 }}
-            animate={{ opacity: 1, scale: 1, translateY: 0 }}
-            exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.92, translateY: reduceMotion ? 0 : 24 }}
-            transition={{
-              type: 'timing',
-              duration: 150,
-            }}
-            style={[styles.wrapper, { bottom: Spacing.md }]}
-          >
-            <View
-              style={[
-                styles.container,
-                {
-                  backgroundColor: theme.pure,
-                  borderColor: withOpacity(theme.primary, Opacity.muted),
-                },
-              ]}
-            >
-              <Box paddingHorizontal="md" paddingVertical="xs">
-                <Inline align="center" justify="space-between" gap="xs">
-                  {/* LEFT: Exit & Count */}
-                  <Inline align="center" gap="xs">
-                    <IconButton
-                      name={Icon.Close}
-                      size={Size.iconSm}
-                      onPress={handleClear}
-                      variant="clear"
-                      accessibilityLabel="Exit selection"
-                    />
-
-                    <Box
-                      unsafe_backgroundRaw={theme.primary}
-                      borderRadius="full"
-                      paddingHorizontal="sm"
-                      paddingVertical="xs"
-                      minWidth={26}
-                      alignItems="center"
+      {finalActions.length > 0 && (
+        <MotiView
+          pointerEvents="box-none"
+          from={{
+            opacity: 0,
+            scale: reduceMotion ? 1 : 0.96,
+            translateY: reduceMotion ? 0 : 18,
+          }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          transition={{
+            type: 'timing',
+            duration: 180,
+          }}
+          style={styles.bottomWrapper}
+        >
+          <SelectionEdgeShadow edge="bottom" />
+          <View style={[styles.actionsCard, cardStyle]}>
+            <Inline align="stretch" justify="space-between" style={styles.dockRow}>
+              {barActions.map((action, index) => {
+                const disabled = selectedCount === 0 || !!action.disabled;
+                const tone = resolveDockTone(action, disabled);
+                return (
+                  <PressScaleTouchable
+                    key={`${action.name}-${index}`}
+                    onPress={action.onPress}
+                    disabled={disabled}
+                    pressScale="subtle"
+                    haptic={action.variant === 'error' ? 'destructive' : 'selection'}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.accessibilityLabel || action.label}
+                    accessibilityState={{ disabled }}
+                    testID={action.testID}
+                    style={styles.dockItem}
+                    surfaceStyle={[styles.dockSurface, disabled && styles.dockDisabled]}
+                  >
+                    <AppIcon name={action.name} size={Size.iconSm} color={tone} />
+                    <AppText
+                      variant="caption"
+                      weight="medium"
+                      numberOfLines={1}
+                      style={[styles.dockLabel, { color: tone }]}
                     >
-                      <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
-                        {selectedCount}
-                      </AppText>
-                    </Box>
-                  </Inline>
+                      {action.shortLabel ?? action.label}
+                    </AppText>
+                  </PressScaleTouchable>
+                );
+              })}
 
-                  {/* RIGHT: Actions */}
-                  <Inline align="center" gap="xs">
-                    <IconButton
-                      name={selectIcon}
-                      onPress={handleSelectToggle}
-                      variant="clear"
-                      size={Size.iconSm}
-                      disabled={selectableCount === 0}
-                      accessibilityLabel="Toggle all"
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked,
-                      }}
-                    />
-
-                    {barActions.map((action, index) => (
-                      <IconButton
-                        key={`${action.name}-${index}`}
-                        name={action.name}
-                        variant={action.variant ?? 'primary'}
-                        size={Size.iconSm}
-                        iconColor={action.iconColor}
-                        onPress={action.onPress}
-                        disabled={selectedCount === 0 || !!action.disabled}
-                        accessibilityLabel={action.accessibilityLabel || action.label}
-                        testID={action.testID}
-                      />
-                    ))}
-
-                    {overflowActions.length > 0 && (
-                      <IconButton
-                        name={Icon.More}
-                        variant="surface"
-                        size={Size.iconSm}
-                        onPress={() => setIsOverflowOpen(true)}
-                        disabled={selectedCount === 0}
-                        accessibilityLabel="More bulk actions"
-                      />
-                    )}
-                  </Inline>
-                </Inline>
-              </Box>
-            </View>
-          </MotiView>
-        )}
-      </AnimatePresence>
+              {overflowActions.length > 0 && (
+                <PressScaleTouchable
+                  onPress={() => setIsOverflowOpen(true)}
+                  disabled={selectedCount === 0}
+                  pressScale="subtle"
+                  haptic="selection"
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.moreActions}
+                  accessibilityState={{ disabled: selectedCount === 0 }}
+                  style={styles.dockItem}
+                  surfaceStyle={[styles.dockSurface, selectedCount === 0 && styles.dockDisabled]}
+                >
+                  <AppIcon
+                    name={Icon.More}
+                    size={Size.iconSm}
+                    color={selectedCount === 0 ? theme.textTertiary : theme.textSecondary}
+                  />
+                  <AppText
+                    variant="caption"
+                    weight="medium"
+                    numberOfLines={1}
+                    style={[
+                      styles.dockLabel,
+                      { color: selectedCount === 0 ? theme.textTertiary : theme.textSecondary },
+                    ]}
+                  >
+                    {copy.more}
+                  </AppText>
+                </PressScaleTouchable>
+              )}
+            </Inline>
+          </View>
+        </MotiView>
+      )}
 
       {overflowActions.length > 0 && (
         <ModalSurface
           visible={isModalVisible}
-          title={`Actions (${selectedCount} selected)`}
-          onClose={() => setIsOverflowOpen(false)}
+          title={copy.actionsSheetTitle(selectedCount)}
+          onClose={() => {
+            afterDismiss.cancel();
+            setIsOverflowOpen(false);
+          }}
+          onDismiss={afterDismiss.onDismiss}
           position="bottomSheet"
           fixedHeight={false}
           scrollable={false}
         >
-          <View style={styles.sheetContent}>
-            {overflowActions.map((action, index) => {
-              const isDestructive = action.variant === 'error';
-              const isDisabled = selectedCount === 0 || !!action.disabled;
-              const itemColor = isDisabled
-                ? theme.textTertiary
-                : isDestructive
-                  ? theme.error
-                  : theme.text;
-              const iconColor = isDisabled
-                ? theme.textTertiary
-                : isDestructive
-                  ? theme.error
-                  : (action.iconColor ??
-                    (action.variant === 'primary' ? theme.primary : theme.textSecondary));
+          <Box paddingBottom="lg">
+            <ListGroup
+              items={overflowActions}
+              toRow={(action, index) => {
+                const destructive = action.variant === 'error';
+                const disabled = selectedCount === 0 || !!action.disabled;
+                const iconColor =
+                  !disabled && !destructive
+                    ? (action.iconColor ??
+                      (action.variant === 'primary' ? theme.primary : undefined))
+                    : undefined;
 
-              return (
-                <PressScaleTouchable
-                  key={`${action.name}-${index}`}
-                  onPress={() => {
-                    setIsOverflowOpen(false);
-                    action.onPress();
-                  }}
-                  disabled={isDisabled}
-                  activeOpacity={Opacity.heavy}
-                  style={[styles.sheetActionRow, { borderBottomColor: theme.border }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.accessibilityLabel || action.label}
-                  testID={action.testID}
-                >
-                  <View style={styles.sheetActionLeft}>
+                return {
+                  id: `${action.name}-${index}`,
+                  title: action.label || action.accessibilityLabel || action.name,
+                  subtitle: disabled ? action.disabledHint : undefined,
+                  icon: iconColor ? undefined : action.name,
+                  leading: iconColor ? (
                     <AppIcon name={action.name} size={Size.iconMd} color={iconColor} />
-                    <AppText
-                      variant="body"
-                      weight="medium"
-                      style={{ color: itemColor, marginLeft: Spacing.md }}
-                    >
-                      {action.label || action.accessibilityLabel || action.name}
-                    </AppText>
-                  </View>
-                  <AppIcon
-                    name={Icon.ChevronRight}
-                    size={Size.iconSm}
-                    color={isDisabled ? theme.textTertiary : theme.textSecondary}
-                  />
-                </PressScaleTouchable>
-              );
-            })}
-          </View>
+                  ) : undefined,
+                  onPress: () => {
+                    afterDismiss.run(action.onPress);
+                    setIsOverflowOpen(false);
+                  },
+                  destructive,
+                  disabled,
+                  accessibilityLabel: action.accessibilityLabel || action.label,
+                  testID: action.testID,
+                };
+              }}
+            />
+          </Box>
         </ModalSurface>
       )}
     </>
@@ -302,43 +258,41 @@ export const SelectionActionBar = ({
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
+  bottomWrapper: {
     position: 'absolute',
-    left: Spacing.md,
-    right: Spacing.md,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.md,
     alignItems: 'center',
-    zIndex: 1000,
+    bottom: Spacing.xs,
   },
-  container: {
-    borderRadius: Shape.radius.full,
-    borderWidth: 1.5,
+  actionsCard: {
+    borderRadius: Shape.radius.xl,
+    borderWidth: 1,
     width: '100%',
-    maxWidth: 420,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
+    maxWidth: 440,
   },
-  sheetContent: {
-    paddingBottom: Spacing.lg,
+  dockRow: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
   },
-  sheetActionRow: {
-    flexDirection: 'row',
+  dockItem: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dockSurface: {
+    minHeight: Size.touchTarget + Spacing.xs,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.md,
   },
-  sheetActionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dockDisabled: {
+    opacity: Opacity.medium,
+  },
+  dockLabel: {
+    textAlign: 'center',
   },
 });

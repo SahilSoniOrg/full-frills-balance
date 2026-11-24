@@ -1,10 +1,14 @@
 export function getSelectionState<T>(selectedIds: ReadonlySet<T>, selectableIds: readonly T[]) {
-  const hasSelection = selectableIds.some(id => selectedIds.has(id));
-  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
+  let selectedSelectableCount = 0;
+  for (const id of selectableIds) {
+    if (selectedIds.has(id)) selectedSelectableCount++;
+  }
+  const allSelected = selectableIds.length > 0 && selectedSelectableCount === selectableIds.length;
 
   return {
     selectedCount: selectedIds.size,
+    selectedSelectableCount,
     selectableCount: selectableIds.length,
-    checked: allSelected ? true : hasSelection ? ('mixed' as const) : false,
+    checked: allSelected ? true : selectedSelectableCount > 0 ? ('mixed' as const) : false,
   };
 }

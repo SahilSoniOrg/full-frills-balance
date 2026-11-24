@@ -13,6 +13,8 @@ describe('getSelectionState', () => {
     ({ selected, selectable, checked }) => {
       expect(getSelectionState(new Set<string>(selected), selectable)).toEqual({
         selectedCount: selected.length,
+        selectedSelectableCount: selectable.filter(id => selected.some(value => value === id))
+          .length,
         selectableCount: selectable.length,
         checked,
       });
