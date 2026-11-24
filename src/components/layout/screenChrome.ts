@@ -1,7 +1,7 @@
 import type { FloatingActionButtonProps } from '@/src/components/core/FloatingActionButton';
 import { Icon } from '@/src/types/domainIcons';
 import type { ReactNode } from 'react';
-import type { ViewStyle } from 'react-native';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 
 export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 
@@ -12,10 +12,8 @@ export type ScreenFabChrome = Pick<
 
 type ScreenChromeBase = {
   isSearchActive?: boolean;
-  /** Drives the persistent tab navigation gate for drawer access during selection. */
-  selectionMode?: boolean;
-  /** Dim / style nav (e.g. selection mode). Owned by Screen. */
-  headerStyle?: ViewStyle;
+  /** Present while the screen is in selection mode, even if no items are selected. */
+  selection?: SelectionOverlayProps;
 };
 
 /**
@@ -23,7 +21,7 @@ type ScreenChromeBase = {
  *
  * - **Screen** builds and passes `chrome` (`withPrivacyScope` on money routes).
  * - **View** renders via `ScreenWithChrome` — no chrome props other than `chrome`.
- * - Left slot / headerStyle live on `chrome`; FAB only on `ScreenNavChrome` (see `applySelectionChrome`).
+ * - Selection replaces the header and suspends the screen FAB.
  *
  * Left header slot (chosen in `ScreenWithChrome`):
  * - `kind: 'nav'` → back

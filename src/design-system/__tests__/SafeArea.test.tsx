@@ -94,6 +94,35 @@ describe('root safe-area ownership', () => {
     expect(containers[1].props.edges).toEqual([]);
   });
 
+  it('positions a page overlay outside layout at the safe-area edges', () => {
+    mockInsets = { top: 24, right: 16, bottom: 34, left: 12 };
+    const content = (selecting: boolean) => (
+      <Page
+        header={<Text>Toolbar</Text>}
+        overlay={selecting ? <Text>Selection summary</Text> : undefined}
+      >
+        <Text>Content</Text>
+      </Page>
+    );
+    const { rerender } = render(content(false));
+    const header = screen.getByText('Toolbar');
+
+    rerender(content(true));
+    expect(screen.getByText('Toolbar')).toBe(header);
+    const overlay = screen
+      .UNSAFE_getByType(SafeAreaFrame)
+      .findAllByType(View)
+      .find(view => view.props.pointerEvents === 'box-none');
+    expect(StyleSheet.flatten(overlay?.props.style)).toMatchObject({
+      position: 'absolute',
+      top: 24,
+      right: 16,
+      bottom: 34,
+      left: 12,
+    });
+    expect(screen.getByText('Selection summary')).toBeTruthy();
+  });
+
   it('lets an edge-to-edge form footer own its bottom inset', () => {
     render(
       <Page edges={['top', 'left', 'right']} footer={footer}>

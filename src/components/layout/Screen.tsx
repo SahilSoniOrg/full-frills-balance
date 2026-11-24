@@ -3,7 +3,7 @@ import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import React from 'react';
-import { ScrollViewProps, StyleSheet, View, type ViewProps, type ViewStyle } from 'react-native';
+import { ScrollViewProps, StyleSheet, View, type ViewProps } from 'react-native';
 import type { ScrollView } from 'react-native-gesture-handler';
 import { type Edge } from 'react-native-safe-area-context';
 
@@ -19,6 +19,7 @@ export type ScreenProps = ViewProps & {
   headerActions?: React.ReactNode;
   isSearchActive?: boolean;
   // Layout
+  overlay?: React.ReactNode;
   scrollable?: boolean;
   withPadding?: boolean;
   edges?: Edge[];
@@ -26,11 +27,11 @@ export type ScreenProps = ViewProps & {
   footer?: React.ReactNode;
   scrollViewProps?: ScrollViewProps;
   scrollViewRef?: React.Ref<ScrollView>;
-  headerStyle?: ViewStyle;
 };
 
 export function Screen({
   children,
+  overlay,
   title,
   subtitle,
   left,
@@ -43,7 +44,6 @@ export function Screen({
   footer,
   scrollViewProps,
   scrollViewRef,
-  headerStyle,
   style,
   ...rest
 }: ScreenProps) {
@@ -53,16 +53,23 @@ export function Screen({
     <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
   );
 
+  const headerCovered = Boolean(overlay);
   const navigationBar =
     left || title || headerActions ? (
-      <NavigationBar
-        title={title || ''}
-        subtitle={subtitle}
-        left={left}
-        rightActions={headerActions}
-        isSearchActive={isSearchActive}
-        style={headerStyle}
-      />
+      <View
+        style={headerCovered ? styles.coveredHeader : undefined}
+        pointerEvents={headerCovered ? 'none' : 'auto'}
+        accessibilityElementsHidden={headerCovered}
+        importantForAccessibility={headerCovered ? 'no-hide-descendants' : 'auto'}
+      >
+        <NavigationBar
+          title={title || ''}
+          subtitle={subtitle}
+          left={left}
+          rightActions={headerActions}
+          isSearchActive={isSearchActive}
+        />
+      </View>
     ) : undefined;
 
   return (
@@ -74,6 +81,7 @@ export function Screen({
       keyboardAvoiding={keyboardAvoiding}
       footer={footer}
       header={navigationBar}
+      overlay={overlay}
       scrollViewProps={scrollViewProps}
       scrollViewRef={scrollViewRef}
       {...rest}
@@ -84,6 +92,7 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
+  coveredHeader: { opacity: 0 },
   content: {
     flex: 1,
   },

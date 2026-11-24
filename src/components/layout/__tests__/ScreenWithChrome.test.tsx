@@ -1,4 +1,15 @@
+import {
+  PersistentTabChromeProvider,
+  PersistentTabLeaf,
+  usePersistentTabChrome,
+} from '@/src/components/layout/PersistentTabChrome';
+import { NavigationBar } from '@/src/components/layout/NavigationBar';
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
+import {
+  SelectionOverlay,
+  type SelectionOverlayProps,
+} from '@/src/components/shared/SelectionOverlay';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 import { Icon } from '@/src/types/domainIcons';
 import { render, screen } from '@/src/testing/render';
@@ -130,24 +141,7 @@ describe('primaryTabFromRouteName', () => {
   });
 });
 
-describe('ScreenWithChrome navigation reporting', () => {
-  it('does not re-report selection mode when unrelated navigation context changes', () => {
-    const reportSelectionMode = jest.fn();
-    const renderRoot = (drawerVisible: boolean) => (
-      <PrimaryNavigationProvider value={navigationValue({ reportSelectionMode, drawerVisible })}>
-        <ScreenWithChrome chrome={{ kind: 'tab', screenTitle: 'Accounts' }}>
-          <Text>Content</Text>
-        </ScreenWithChrome>
-      </PrimaryNavigationProvider>
-    );
-
-    const { rerender } = render(renderRoot(false));
-    expect(reportSelectionMode).toHaveBeenCalledTimes(1);
-
-    rerender(renderRoot(true));
-    expect(reportSelectionMode).toHaveBeenCalledTimes(1);
-  });
-
+describe('ScreenWithChrome primary header', () => {
   it('keeps the primary header while the shell drawer state changes', () => {
     const navigation = navigationValue();
     const outgoingTab = (drawerVisible: boolean) => (
@@ -161,7 +155,6 @@ describe('ScreenWithChrome navigation reporting', () => {
     expect(screen.UNSAFE_getByType(Screen).props.left?.kind).toBe('leading');
     rerender(outgoingTab(true));
     expect(screen.UNSAFE_getByType(Screen).props.left?.kind).toBe('leading');
-    expect(navigation.reportSelectionMode).toHaveBeenLastCalledWith(false);
   });
 
   it('does not render a leading slot outside the primary navigation provider', () => {
@@ -171,5 +164,75 @@ describe('ScreenWithChrome navigation reporting', () => {
       </ScreenWithChrome>,
     );
     expect(screen.UNSAFE_getByType(Screen).props.left).toBeUndefined();
+  });
+});
+
+describe('ScreenWithChrome selection overlay', () => {
+  const selection: SelectionOverlayProps = {
+    state: getSelectionState(new Set(['journal']), ['journal']),
+    itemTypeLabel: 'transaction',
+    selectAll: jest.fn(),
+    clearItems: jest.fn(),
+    exitSelectionMode: jest.fn(),
+  };
+  it('keeps the navigation bar mounted when selection appears', () => {
+    const chrome: ScreenChrome = {
+      kind: 'nav',
+      screenTitle: 'Details',
+      onBack: jest.fn(),
+    };
+    const view = (selecting: boolean) => (
+      <ScreenWithChrome
+        chrome={{
+          ...chrome,
+          selection: selecting ? selection : undefined,
+        }}
+      >
+        <Text>Content</Text>
+      </ScreenWithChrome>
+    );
+
+    const { rerender } = render(view(false));
+    const navigationBar = screen.UNSAFE_getByType(NavigationBar);
+
+    rerender(view(true));
+    expect(screen.UNSAFE_getByType(NavigationBar)).toBe(navigationBar);
+    expect(screen.getByText('1 of 1 transaction selected')).toBeTruthy();
+    expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(selection.exitSelectionMode);
+
+    rerender(view(false));
+    expect(screen.UNSAFE_getByType(NavigationBar)).toBe(navigationBar);
+    expect(screen.queryByText('1 of 1 transaction selected')).toBeNull();
+    expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(chrome.onBack);
+  });
+
+  it('publishes a retained leaf overlay only under that leaf’s route', () => {
+    const activityChrome: ScreenChrome = {
+      kind: 'tab',
+      screenTitle: 'Activity',
+      selection,
+    };
+
+    function ActiveOverlay({ routeName }: { routeName: string }) {
+      const activeSelection = usePersistentTabChrome(routeName)?.selection;
+      return activeSelection ? <SelectionOverlay {...activeSelection} /> : null;
+    }
+
+    const view = (routeName: string) => (
+      <PersistentTabChromeProvider>
+        <ActiveOverlay routeName={routeName} />
+        <PersistentTabLeaf routeName="activity">
+          <ScreenWithChrome chrome={activityChrome}>
+            <Text>Activity content</Text>
+          </ScreenWithChrome>
+        </PersistentTabLeaf>
+      </PersistentTabChromeProvider>
+    );
+    const { rerender } = render(view('activity'));
+    expect(screen.getByText('1 of 1 transaction selected')).toBeTruthy();
+
+    rerender(view('accounts'));
+    expect(screen.getByText('Activity content')).toBeTruthy();
+    expect(screen.queryByText('1 of 1 transaction selected')).toBeNull();
   });
 });

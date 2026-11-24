@@ -1,6 +1,6 @@
 import { Spacing } from '@/src/constants/design-tokens';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { View, type ViewProps } from 'react-native';
+import { StyleSheet, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets, type Edge, type EdgeInsets } from 'react-native-safe-area-context';
 
 const EDGE_BITS = { top: 1, right: 2, bottom: 4, left: 8 } as const;
@@ -91,16 +91,36 @@ export function SafeAreaFrame({
   children,
   edges = ['top', 'bottom', 'left', 'right'],
   enabled = true,
+  overlay,
   style,
   ...props
-}: ViewProps & { edges?: readonly Edge[]; enabled?: boolean }) {
+}: ViewProps & {
+  edges?: readonly Edge[];
+  enabled?: boolean;
+  overlay?: ReactNode;
+}) {
   const layouts = useContext(LayoutsContext);
   const inherited = useContext(AvailableEdgesContext);
   const requested = edges.reduce((mask, edge) => mask | EDGE_BITS[edge], 0);
   const layout = layouts[enabled ? requested & inherited : 0];
   return (
     <View {...props} style={[style, layout.padding]}>
-      <SafeAreaScope consumedEdges={enabled ? edges : []}>{children}</SafeAreaScope>
+      <SafeAreaScope consumedEdges={enabled ? edges : []}>
+        {children}
+        {overlay ? <SafeAreaOverlay insets={layout.insets}>{overlay}</SafeAreaOverlay> : null}
+      </SafeAreaScope>
     </View>
   );
 }
+
+export function SafeAreaOverlay({ children, insets }: { children: ReactNode; insets: EdgeInsets }) {
+  return (
+    <View pointerEvents="box-none" style={[styles.overlay, insets]}>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: { position: 'absolute', zIndex: 1 },
+});

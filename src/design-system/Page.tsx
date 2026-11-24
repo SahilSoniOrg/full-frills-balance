@@ -27,6 +27,7 @@ export type PageProps = ViewProps & {
   paddingX?: SpacingKey;
   paddingY?: SpacingKey;
   header?: React.ReactNode;
+  overlay?: React.ReactNode;
   footer?: React.ReactNode;
   scrollViewProps?: ScrollViewProps;
   scrollViewRef?: React.Ref<ScrollView>;
@@ -50,6 +51,7 @@ export const Page = ({
   paddingX,
   paddingY,
   header,
+  overlay,
   footer,
   scrollViewProps,
   scrollViewRef,
@@ -123,6 +125,7 @@ export const Page = ({
       <SafeAreaFrame
         enabled={safeArea}
         edges={containerEdges}
+        overlay={overlay}
         style={[styles.container, { backgroundColor }]}
       >
         <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
