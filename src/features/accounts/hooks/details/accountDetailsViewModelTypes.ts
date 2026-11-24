@@ -3,7 +3,7 @@ import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { JournalListModalsProps } from '@/src/features/journal';
-import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import { IconName } from '@/src/components/core';
 import type {
@@ -113,6 +113,6 @@ export interface AccountDetailsViewModel {
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
-  selectionChrome: ListSelectionChrome;
+  selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }

@@ -13,7 +13,6 @@ import {
 import { AppConfig, Layout, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
-import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
@@ -26,7 +25,6 @@ import {
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
 import { useTheme } from '@/src/hooks/use-theme';
-import { getSelectionState } from '@/src/hooks/selectionState';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
@@ -40,8 +38,6 @@ export function AccountsListView({
   onAccountActionPress,
   selectedAccountIds,
   isSelectionModeActive,
-  selectionChrome,
-  selectableAccountIds,
   modals,
   onCollapseAccount,
   onCreateAccount,
@@ -61,7 +57,6 @@ export function AccountsListView({
   activeTab,
 }: AccountsListViewModel) {
   const { theme } = useTheme();
-
   const rows = useMemo(() => buildAccountListRows(sections), [sections]);
   const keyExtractor = useCallback((item: AccountListRow) => item.key, []);
 
@@ -294,15 +289,6 @@ export function AccountsListView({
           </View>
         }
         contentContainerStyle={styles.listContainer}
-      />
-
-      <SelectionActionBar
-        isVisible={isSelectionModeActive}
-        selection={getSelectionState(selectedAccountIds, selectableAccountIds)}
-        onClear={selectionChrome.exitSelectionMode}
-        onSelectAll={selectionChrome.selectAll}
-        onDeselectAll={selectionChrome.clearItems}
-        actions={selectionChrome.actions}
       />
 
       <AccountsListModals {...modals} />

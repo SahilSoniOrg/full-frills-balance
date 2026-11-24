@@ -222,11 +222,8 @@ describe('AccountsListView', () => {
     expect(queryByTestId('section-select-asset')).toBeNull();
   });
 
-  it('renders SelectionActionBar and selection indicators when isSelectionModeActive is true', () => {
-    const onSelectAll = jest.fn();
-    const onClearSelection = jest.fn();
-
-    const { getAllByText, getByLabelText, getByTestId } = render(
+  it('shows selection indicators on selected rows', () => {
+    const { getByTestId } = render(
       <AccountsListView
         sections={mockSections}
         onToggleSection={jest.fn()}
@@ -257,26 +254,11 @@ describe('AccountsListView', () => {
         {...requiredViewProps}
         isSelectionModeActive={true}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
-        selectionChrome={{
-          ...requiredViewProps.selectionChrome,
-          selectAll: onSelectAll,
-          exitSelectionMode: onClearSelection,
-          actions: [
-            {
-              name: Icon.Archive,
-              label: 'Archive',
-              onPress: jest.fn(),
-              accessibilityLabel: 'Archive selected',
-            },
-          ],
-        }}
         selectableAccountIds={['acc-1' as AccountId]}
       />,
     );
 
     expect(getByTestId('account-card-selection-indicator')).toBeTruthy();
-    expect(getByLabelText('Exit selection')).toBeTruthy();
-    expect(getAllByText('1').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders BulkRenameAccountsModal when activeModal is bulkRename', () => {

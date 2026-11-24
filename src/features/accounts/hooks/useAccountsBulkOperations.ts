@@ -1,4 +1,5 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
+import { AppConfig } from '@/src/constants';
 import { Icon, IconName } from '@/src/components/core';
 import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
 import {
@@ -280,6 +281,7 @@ export function useAccountsBulkOperations({
         action: {
           name: Icon.Edit,
           label: 'Rename',
+          isPrimary: true,
           onPress: () => openModal({ type: 'bulkRename' }),
           accessibilityLabel: 'Edit account names',
         },
@@ -323,6 +325,9 @@ export function useAccountsBulkOperations({
         action: {
           name: Icon.Hierarchy,
           label: 'Move Hierarchy',
+          disabledHint: isMixedAccountTypes
+            ? AppConfig.strings.selection.hints.moveRequiresSameType
+            : undefined,
           onPress: () => openModal({ type: 'bulkHierarchy' }),
           accessibilityLabel: 'Move accounts hierarchy',
         },
@@ -332,6 +337,7 @@ export function useAccountsBulkOperations({
         action: {
           name: Icon.Archive,
           label: 'Archive / Unarchive',
+          shortLabel: 'Archive',
           onPress: handleBulkArchive,
           variant: 'surface' as const,
           isPrimary: true,

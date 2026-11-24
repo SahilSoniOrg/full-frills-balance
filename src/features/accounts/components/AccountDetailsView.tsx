@@ -52,7 +52,6 @@ export function AccountDetailsView({
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
-    selectionChrome,
   } = vm;
 
   const showActivity = secondaryContentReady && accountRenderMode !== 'summary-no-rows';
@@ -174,7 +173,7 @@ export function AccountDetailsView({
             selectedIds={selectedIds}
             onLongPressItem={onLongPressItem}
             isSelectionModeActive={isSelectionModeActive}
-            selectionChrome={selectionChrome}
+            onExitSelectionMode={chrome.selection?.exitSelectionMode}
             ListHeaderComponent={
               <AccountDetailsListHeader
                 {...listHeader}

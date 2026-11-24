@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -14,6 +15,12 @@ import {
   resolveInflowReportDateRange,
   resolveInflowTotals,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
+import {
+  getAccountTypeColorKey,
+  getAccountTypeSectionTitle,
+  type AccountTypeColorKey,
+} from '@/src/design-system/accountPresentation';
+import { computeSelectedAccountsTotal } from '@/src/features/accounts/helpers/selectedAccountsTotal';
 import type {
   AccountsListActiveModal,
   AccountsListModalsProps,
@@ -346,15 +353,41 @@ export function useAccountsListViewModel(
     selection.selectAll(allSelectableAccountIds);
   }, [selection, allSelectableAccountIds]);
 
-  const selectionChrome = useMemo(
-    () => ({
+  const selectedTotal = useMemo(
+    () => computeSelectedAccountsTotal(accounts, balancesByAccountId, selection.selectedIds),
+    [accounts, balancesByAccountId, selection.selectedIds],
+  );
+
+  const selectionChrome = useMemo(() => {
+    const singleSection = selectedTotal.sections.length === 1 ? selectedTotal.sections[0] : null;
+    return {
       exitSelectionMode: selection.exitSelectionMode,
       selectAll: handleSelectAll,
       clearItems: selection.clearItems,
+      amountSummary: {
+        amounts: selectedTotal.amounts,
+        incomplete: selectedTotal.incomplete,
+        label: singleSection
+          ? getAccountTypeSectionTitle(singleSection.accountType)
+          : AppConfig.strings.selection.directBalances,
+        sections:
+          selectedTotal.sections.length > 1
+            ? selectedTotal.sections.map(section => ({
+                label: getAccountTypeSectionTitle(section.accountType),
+                amounts: section.amounts,
+                colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
+              }))
+            : undefined,
+      },
       actions: bulk.selectionActions,
-    }),
-    [selection.exitSelectionMode, handleSelectAll, selection.clearItems, bulk.selectionActions],
-  );
+    };
+  }, [
+    selection.exitSelectionMode,
+    handleSelectAll,
+    selection.clearItems,
+    selectedTotal,
+    bulk.selectionActions,
+  ]);
 
   return {
     sections,

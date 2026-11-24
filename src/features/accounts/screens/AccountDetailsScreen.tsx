@@ -1,4 +1,3 @@
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -23,15 +22,8 @@ function AccountDetailsScreen() {
   const deferSecondaryContent = accountRenderMode === 'deferred-full' && Platform.OS !== 'web';
   const [transitionCompleted, setTransitionCompleted] = useState(!deferSecondaryContent);
   const transitionReported = useRef(false);
-  const {
-    accountLoading,
-    accountMissing,
-    headerActions,
-    isDeleted,
-    onAddPress,
-    isSelectionModeActive,
-    selectionChrome,
-  } = vm;
+  const { accountLoading, accountMissing, headerActions, isDeleted, onAddPress, selectionChrome } =
+    vm;
 
   useLayoutEffect(
     () =>
@@ -46,8 +38,8 @@ function AccountDetailsScreen() {
 
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
-    return applySelectionChrome(
-      buildDetailNavChrome({
+    return {
+      ...buildDetailNavChrome({
         phase,
         // The body already shows the name in large type; no need to repeat it in the bar.
         readyTitle: '',
@@ -69,19 +61,15 @@ function AccountDetailsScreen() {
               accessibilityLabel: 'Add transaction for this account',
             },
       }),
-      {
-        active: isSelectionModeActive,
-        onExit: selectionChrome.exitSelectionMode,
-      },
-    );
+      selection: phase === 'ready' ? selectionChrome : undefined,
+    };
   }, [
     accountLoading,
     accountMissing,
     headerActions,
     isDeleted,
     onAddPress,
-    isSelectionModeActive,
-    selectionChrome.exitSelectionMode,
+    selectionChrome,
     vm.onBack,
   ]);
 

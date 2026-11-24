@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { ScreenWithChrome } from '@/src/components/layout';
-import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { AppConfig } from '@/src/constants';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { usePrimaryLeafActive } from '@/src/navigation/primaryPageNavigation';
 import { AccountsListHeaderActions } from '../components/AccountsListHeaderActions';
 import { AccountsListView } from '../components/AccountsListView';
@@ -12,25 +13,31 @@ export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'c
   const active = usePrimaryLeafActive(tab);
   const vm = useAccountsListViewModel(tab, active);
   const chrome = useMemo<TabScreenChrome>(
-    () =>
-      applySelectionChrome(
-        {
-          kind: 'tab',
-          screenTitle: 'Accounts',
-          isSearchActive: vm.isSearching,
-          headerActions: (
-            <AccountsListHeaderActions
-              isSearching={vm.isSearching}
-              searchQuery={vm.searchQuery}
-              onSearchChange={vm.onSearchChange}
-              setIsSearching={vm.setIsSearching}
-              onManageHierarchy={vm.onManageHierarchy}
-              accountsForArchiveToggle={vm.accountsForArchiveToggle}
-            />
-          ),
-        },
-        { active: vm.isSelectionModeActive, onExit: vm.selectionChrome.exitSelectionMode },
+    () => ({
+      kind: 'tab',
+      screenTitle: 'Accounts',
+      isSearchActive: vm.isSearching,
+      selection: vm.isSelectionModeActive
+        ? {
+            ...vm.selectionChrome,
+            state: getSelectionState(vm.selectedAccountIds, vm.selectableAccountIds),
+            itemTypeLabel:
+              tab === 'categories'
+                ? AppConfig.strings.selection.itemTypes.category
+                : AppConfig.strings.selection.itemTypes.account,
+          }
+        : undefined,
+      headerActions: (
+        <AccountsListHeaderActions
+          isSearching={vm.isSearching}
+          searchQuery={vm.searchQuery}
+          onSearchChange={vm.onSearchChange}
+          setIsSearching={vm.setIsSearching}
+          onManageHierarchy={vm.onManageHierarchy}
+          accountsForArchiveToggle={vm.accountsForArchiveToggle}
+        />
       ),
+    }),
     [
       vm.isSearching,
       vm.searchQuery,
@@ -39,7 +46,10 @@ export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'c
       vm.onManageHierarchy,
       vm.accountsForArchiveToggle,
       vm.isSelectionModeActive,
-      vm.selectionChrome.exitSelectionMode,
+      vm.selectedAccountIds,
+      vm.selectableAccountIds,
+      vm.selectionChrome,
+      tab,
     ],
   );
   return (

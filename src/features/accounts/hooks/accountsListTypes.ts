@@ -1,4 +1,4 @@
-import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { ListSelectionChrome } from '@/src/components/shared/SelectionOverlay';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type {
   AccountCardViewModel,
