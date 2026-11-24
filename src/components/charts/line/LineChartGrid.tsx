@@ -129,6 +129,11 @@ export const LineChartGrid = React.memo(function LineChartGrid({
           const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
           if (normalizedX < 0 || normalizedX > 1) return null;
           const x = paddingLeft + normalizedX * plotWidth;
+          // Right-aligned reference labels occupy the chart's trailing edge. Keep today's
+          // annotation on the opposite side once its marker enters the right half.
+          const labelOnLeft = normalizedX >= 0.5;
+          const labelX = x + (labelOnLeft ? -4 : 4);
+          const labelAnchor = labelOnLeft ? 'end' : 'start';
           const pointY = todayDataPoint
             ? height -
               paddingVertical -
@@ -154,11 +159,11 @@ export const LineChartGrid = React.memo(function LineChartGrid({
               />
               <SvgText
                 fontFamily={(fonts.numeric ?? fonts).medium}
-                x={x + 4}
+                x={labelX}
                 y={todayLabelY}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
                 fill={theme.textSecondary}
-                textAnchor="start"
+                textAnchor={labelAnchor}
                 opacity={0.8}
               >
                 {AppConfig.strings.reports.today}
@@ -175,11 +180,11 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                   />
                   <SvgText
                     fontFamily={(fonts.numeric ?? fonts).bold}
-                    x={x + 4}
+                    x={labelX}
                     y={pointY - 8}
                     fontSize={11}
                     fill={chartColor}
-                    textAnchor="start"
+                    textAnchor={labelAnchor}
                   >
                     {formatMoneyShort(todayDataPoint.y, currencyCode)}
                   </SvgText>
