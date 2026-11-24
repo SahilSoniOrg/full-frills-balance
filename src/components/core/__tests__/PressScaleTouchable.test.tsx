@@ -128,4 +128,27 @@ describe('PressScaleTouchable', () => {
     delayedPressOut({});
     expect(withTiming).toHaveBeenLastCalledWith(0.5, expect.any(Object));
   });
+
+  it('preserves surfaceStyle rest opacity in wrapped mode without brightening on press', () => {
+    render(
+      <PressScaleTouchable
+        testID="wrapped-dimmed"
+        surfaceStyle={{ opacity: 0.5 }}
+        onPress={() => {}}
+      >
+        <Text>Disabled dock item</Text>
+      </PressScaleTouchable>,
+    );
+    const outer = screen.getByTestId('wrapped-dimmed');
+    const surface = outer.children[0];
+    expect(typeof surface).not.toBe('string');
+    if (typeof surface === 'string') return;
+    expect(surface.props.animate).toMatchObject({ opacity: 0.5 });
+
+    fireEvent(outer, 'pressIn');
+    const pressedSurface = screen.getByTestId('wrapped-dimmed').children[0];
+    expect(typeof pressedSurface).not.toBe('string');
+    if (typeof pressedSurface === 'string') return;
+    expect(pressedSurface.props.animate).toMatchObject({ opacity: 0.5 });
+  });
 });

@@ -94,7 +94,7 @@ export function PressScaleTouchable({
   // dimmed caller (archived row, disabled pill) kept its rest opacity. Preserve
   // that contract: the animated opacity runs between the caller's opacity and
   // activeOpacity instead of between 1 and activeOpacity.
-  const flattenedOpacity = StyleSheet.flatten(style)?.opacity;
+  const flattenedOpacity = StyleSheet.flatten(wrapped ? surfaceStyle : style)?.opacity;
   const baseOpacity = typeof flattenedOpacity === 'number' ? flattenedOpacity : 1;
   const scale = useSharedValue<number>(Scale.identity);
   const opacity = useSharedValue<number>(baseOpacity);
@@ -162,7 +162,12 @@ export function PressScaleTouchable({
       <Pressable {...props} {...pressHandlers} style={style}>
         <MotiView
           animate={
-            activeOpacity === 1 ? animate : { ...animate, opacity: pressed ? activeOpacity : 1 }
+            activeOpacity === 1
+              ? animate
+              : {
+                  ...animate,
+                  opacity: pressed ? Math.min(baseOpacity, activeOpacity) : baseOpacity,
+                }
           }
           transition={transition}
           style={surfaceStyle}
