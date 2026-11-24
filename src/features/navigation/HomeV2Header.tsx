@@ -73,7 +73,7 @@ export function HomeV2Header({
       {!searching ? (
         <HomeV2PagePicker
           activeRouteName={activeRouteName}
-          disabled={isTransitioning}
+          disabled={isTransitioning || headerCovered}
           onNavigate={onNavigate}
         >
           <View style={{ height: Math.ceil(32 * Math.max(1, fontScale)) }}>
@@ -104,7 +104,7 @@ export function HomeV2Header({
             pageProgress={pageProgress}
             reportWidth={reportWidth}
             expanded={searching}
-            interactive={!isTransitioning && activeRouteName === page.routeName}
+            interactive={!headerCovered && !isTransitioning && activeRouteName === page.routeName}
           />
         ))}
       </View>
