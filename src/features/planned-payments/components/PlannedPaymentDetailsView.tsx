@@ -20,6 +20,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { confirm } from '@/src/services/feedback/alerts';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { JournalListModals } from '@/src/features/journal';
@@ -249,8 +250,10 @@ export function PlannedPaymentDetailsView({
       footer={
         <SelectionActionBar
           isVisible={isSelectionModeActive}
-          selectedCount={selectedIds.size}
-          totalCount={history.length}
+          selection={getSelectionState(
+            selectedIds,
+            history.map(journal => journal.id),
+          )}
           onSelectAll={vm.selectAll}
           onDeselectAll={vm.clearItems}
           onClear={vm.exitSelectionMode}

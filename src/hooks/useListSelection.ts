@@ -11,7 +11,7 @@ export interface SelectionActionDefinition<TCount extends number = number> {
 
 export interface UseListSelectionInput<TItem extends { id: TId }, TId extends string | number> {
   items: TItem[];
-  selection: UseSelectionResult<TId>;
+  selection: Pick<UseSelectionResult<TId>, 'selectedIds' | 'exitSelectionMode'>;
   onCloseModal?: () => void;
 }
 
@@ -26,7 +26,7 @@ export interface UseListSelectionInput<TItem extends { id: TId }, TId extends st
  */
 export function useSelectedItemMap<TItem extends { id: TId }, TId extends string | number>(
   items: TItem[],
-  selection: UseSelectionResult<TId>,
+  selection: Pick<UseSelectionResult<TId>, 'selectedIds'>,
 ) {
   const itemsById = useMemo(
     () => new Map(items.map(item => [item.id, item] as [TId, TItem])),

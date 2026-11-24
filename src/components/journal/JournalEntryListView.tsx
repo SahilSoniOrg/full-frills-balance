@@ -10,6 +10,8 @@ import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
 import { JournalEntryCard } from './JournalEntryCard';
+import { selectableJournalIds } from './selectableJournalIds';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import {
   SelectionActionBar,
   type ListSelectionChrome,
@@ -119,9 +121,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
   } = props;
 
   const selectionActive = !!isSelectionModeActive && !!selectionChrome;
-  const journalEntryCount = new Set(
-    items.flatMap(item => (item.type === 'journal' && item.selectionId ? [item.selectionId] : [])),
-  ).size;
+  const selectableIds = selectableJournalIds(items);
 
   const loadFailure = error ? (
     <EmptyStateView
@@ -201,8 +201,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
 
       {selectionChrome ? (
         <SelectionActionBar
-          selectedCount={selectedIds?.size ?? 0}
-          totalCount={journalEntryCount}
+          selection={getSelectionState(selectedIds ?? new Set<JournalId>(), selectableIds)}
           onClear={selectionChrome.exitSelectionMode}
           onSelectAll={selectionChrome.selectAll}
           onDeselectAll={selectionChrome.clearItems}

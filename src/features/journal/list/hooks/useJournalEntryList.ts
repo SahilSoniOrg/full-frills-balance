@@ -3,6 +3,7 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
+import { selectableJournalIds } from '@/src/components/journal/selectableJournalIds';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
@@ -249,14 +250,7 @@ export function useJournalEntryList({
   }, [selectedEntries.length, selectedShare, defaultShareFormat]);
 
   const selectAll = useCallback(() => {
-    const visibleIds = [
-      ...new Set(
-        items
-          .filter(i => i.type === 'journal' && i.selectionId)
-          .map(i => i.selectionId as JournalId),
-      ),
-    ];
-    selectionControl.selectAll(visibleIds);
+    selectionControl.selectAll(selectableJournalIds(items));
   }, [items, selectionControl]);
 
   useEffect(() => {

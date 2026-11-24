@@ -35,45 +35,38 @@ export function useSelection<T>(): UseSelectionResult<T> {
     });
   }, []);
 
-  const toggleMultiple = useCallback(
-    (ids: T[]) => {
-      if (ids.length === 0) return;
-      triggerPressHaptic('selection');
+  const toggleMultiple = useCallback((ids: T[]) => {
+    if (ids.length === 0) return;
+    triggerPressHaptic('selection');
 
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        const allSelected = ids.every(id => prev.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => prev.has(id));
 
-        if (allSelected) {
-          for (const id of ids) {
-            next.delete(id);
-          }
-        } else {
-          for (const id of ids) {
-            next.add(id);
-          }
+      if (allSelected) {
+        for (const id of ids) {
+          next.delete(id);
         }
-
-        return next;
-      });
-
-      if (!isSelectionModeActive) {
-        setSelectionModeActive(true);
+      } else {
+        for (const id of ids) {
+          next.add(id);
+        }
       }
-    },
-    [isSelectionModeActive],
-  );
+
+      return next;
+    });
+
+    setSelectionModeActive(true);
+  }, []);
 
   const onLongPressItem = useCallback(
     (id: T) => {
       toggleSelection(id);
       triggerPressHaptic('selection');
 
-      if (!isSelectionModeActive) {
-        setSelectionModeActive(true);
-      }
+      setSelectionModeActive(true);
     },
-    [isSelectionModeActive, toggleSelection],
+    [toggleSelection],
   );
 
   const selectAll = useCallback((allIds: T[]) => {
@@ -99,7 +92,7 @@ export function useSelection<T>(): UseSelectionResult<T> {
 
     const backAction = () => {
       const isFocused = navigation ? navigation.isFocused() : true;
-      if (isSelectionModeActive && isFocused) {
+      if (isFocused) {
         exitSelectionMode();
         return true;
       }

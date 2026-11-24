@@ -27,7 +27,7 @@ type JournalListBulkSelection = Pick<
   UseSelectionResult<JournalId>,
   'selectedIds' | 'exitSelectionMode' | 'clearItems'
 > & {
-  selectAll: (allIds: JournalId[]) => void;
+  selectAll: () => void;
 };
 
 interface UseJournalsBulkOperationsInput {
@@ -52,7 +52,7 @@ export function useJournalsBulkOperations({
     buildActions,
   } = useListSelection<EnrichedJournal, JournalId, JournalActiveModal>({
     items: journals,
-    selection: selection as UseSelectionResult<JournalId>,
+    selection,
   });
 
   // 1. Bulk Rename
@@ -289,19 +289,21 @@ export function useJournalsBulkOperations({
     ],
   );
 
-  const handleSelectAll = useCallback(() => {
-    selection.selectAll(journals.map(j => j.id));
-  }, [selection, journals]);
-
   const selectionChrome: ListSelectionChrome = useMemo(
     () => ({
       exitSelectionMode: selection.exitSelectionMode,
-      selectAll: handleSelectAll,
+      selectAll: selection.selectAll,
       clearItems: selection.clearItems,
       onShareSelected,
       actions,
     }),
-    [selection.exitSelectionMode, handleSelectAll, selection.clearItems, onShareSelected, actions],
+    [
+      selection.exitSelectionMode,
+      selection.selectAll,
+      selection.clearItems,
+      onShareSelected,
+      actions,
+    ],
   );
 
   return {

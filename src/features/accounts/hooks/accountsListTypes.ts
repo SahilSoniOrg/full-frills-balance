@@ -38,7 +38,7 @@ export interface AccountsListViewModel {
   selectedAccountIds: Set<AccountId>;
   isSelectionModeActive: boolean;
   selectionChrome: ListSelectionChrome;
-  totalSelectableAccounts: number;
+  selectableAccountIds: AccountId[];
   modals: AccountsListModalsProps;
   onCollapseAccount: (accountId: AccountId) => void;
   onCreateAccount: () => void;

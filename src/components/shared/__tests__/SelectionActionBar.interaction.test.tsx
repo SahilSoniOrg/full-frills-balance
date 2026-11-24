@@ -3,6 +3,7 @@ import { getLayoutPath } from '@/src/testing/layoutAssertions';
 import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render } from '@/src/testing/render';
 import { View } from 'react-native';
+import { getSelectionState } from '@/src/hooks/selectionState';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
 
@@ -21,7 +22,6 @@ it('preserves action slots across counts and prevents actions when no items are 
   const onMerge = jest.fn();
   const props = {
     isVisible: true,
-    totalCount: 3,
     onClear: jest.fn(),
     onSelectAll: jest.fn(),
     onDeselectAll: jest.fn(),
@@ -29,7 +29,7 @@ it('preserves action slots across counts and prevents actions when no items are 
   const view = render(
     <SelectionActionBar
       {...props}
-      selectedCount={0}
+      selection={getSelectionState(new Set<string>(), ['1', '2', '3'])}
       actions={[{ name: Icon.Merge, label: 'Merge', onPress: onMerge, disabled: false }]}
     />,
   );
@@ -45,7 +45,7 @@ it('preserves action slots across counts and prevents actions when no items are 
   view.rerender(
     <SelectionActionBar
       {...props}
-      selectedCount={1}
+      selection={getSelectionState(new Set(['1']), ['1', '2', '3'])}
       actions={[{ name: Icon.Merge, label: 'Merge', onPress: onMerge, disabled: true }]}
     />,
   );
@@ -59,7 +59,7 @@ it('preserves action slots across counts and prevents actions when no items are 
   view.rerender(
     <SelectionActionBar
       {...props}
-      selectedCount={3}
+      selection={getSelectionState(new Set(['1', '2', '3']), ['1', '2', '3'])}
       actions={[{ name: Icon.Merge, label: 'Merge', onPress: onMerge, disabled: false }]}
     />,
   );
@@ -69,4 +69,24 @@ it('preserves action slots across counts and prevents actions when no items are 
   );
   fireEvent.press(view.getByLabelText('Merge'));
   expect(onMerge).toHaveBeenCalledTimes(1);
+});
+
+it('selects visible items when a different hidden item is selected', () => {
+  const onSelectAll = jest.fn();
+  const onDeselectAll = jest.fn();
+  const view = render(
+    <SelectionActionBar
+      isVisible
+      selection={getSelectionState(new Set(['hidden']), ['visible'])}
+      onClear={jest.fn()}
+      onSelectAll={onSelectAll}
+      onDeselectAll={onDeselectAll}
+    />,
+  );
+
+  const toggle = view.getByRole('checkbox', { name: 'Toggle all' });
+  expect(toggle.props.accessibilityState.checked).toBe(false);
+  fireEvent.press(toggle);
+  expect(onSelectAll).toHaveBeenCalledTimes(1);
+  expect(onDeselectAll).not.toHaveBeenCalled();
 });

@@ -366,7 +366,7 @@ export function useAccountsListViewModel(
     selectedAccountIds: selection.selectedIds,
     isSelectionModeActive: selection.isSelectionModeActive,
     selectionChrome,
-    totalSelectableAccounts: allSelectableAccountIds.length,
+    selectableAccountIds: allSelectableAccountIds,
     modals,
     onCollapseAccount,
     onCreateAccount: actions.onCreateAccount,

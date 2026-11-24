@@ -26,6 +26,7 @@ import {
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
 import { useTheme } from '@/src/hooks/use-theme';
+import { getSelectionState } from '@/src/hooks/selectionState';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
@@ -40,7 +41,7 @@ export function AccountsListView({
   selectedAccountIds,
   isSelectionModeActive,
   selectionChrome,
-  totalSelectableAccounts,
+  selectableAccountIds,
   modals,
   onCollapseAccount,
   onCreateAccount,
@@ -297,8 +298,7 @@ export function AccountsListView({
 
       <SelectionActionBar
         isVisible={isSelectionModeActive}
-        selectedCount={selectedAccountIds.size}
-        totalCount={totalSelectableAccounts}
+        selection={getSelectionState(selectedAccountIds, selectableAccountIds)}
         onClear={selectionChrome.exitSelectionMode}
         onSelectAll={selectionChrome.selectAll}
         onDeselectAll={selectionChrome.clearItems}

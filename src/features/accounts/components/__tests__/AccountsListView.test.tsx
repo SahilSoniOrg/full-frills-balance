@@ -56,7 +56,7 @@ const requiredViewProps = {
     clearItems: jest.fn(),
     actions: [],
   },
-  totalSelectableAccounts: 0,
+  selectableAccountIds: [],
   modals: {
     activeModal: null,
     onCloseModal: jest.fn(),
@@ -190,7 +190,7 @@ describe('AccountsListView', () => {
         isSelectionModeActive={isSelectionModeActive}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
         onToggleSectionSelect={onToggleSectionSelect}
-        totalSelectableAccounts={1}
+        selectableAccountIds={['acc-1' as AccountId]}
       />
     );
     const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
@@ -270,7 +270,7 @@ describe('AccountsListView', () => {
             },
           ],
         }}
-        totalSelectableAccounts={1}
+        selectableAccountIds={['acc-1' as AccountId]}
       />,
     );
 

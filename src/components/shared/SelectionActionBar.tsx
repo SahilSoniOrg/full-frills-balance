@@ -13,6 +13,7 @@ import { withOpacity } from '@/src/design-system/colorMath';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import type { getSelectionState } from '@/src/hooks/selectionState';
 import { AnimatePresence, MotiView } from 'moti';
 import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -64,8 +65,7 @@ export function partitionSelectionActions(actions: SelectionAction[]): Selection
 }
 
 export interface SelectionActionBarProps {
-  selectedCount: number;
-  totalCount: number;
+  selection: ReturnType<typeof getSelectionState>;
   onClear: () => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
@@ -79,8 +79,7 @@ export interface SelectionActionBarProps {
  * Shows primary actions directly, with an overflow bottom sheet for secondary actions.
  */
 export const SelectionActionBar = ({
-  selectedCount,
-  totalCount,
+  selection,
   onClear,
   onSelectAll,
   onDeselectAll,
@@ -88,6 +87,7 @@ export const SelectionActionBar = ({
   actions,
   isVisible,
 }: SelectionActionBarProps) => {
+  const { selectedCount, selectableCount, checked } = selection;
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
@@ -119,12 +119,8 @@ export const SelectionActionBar = ({
   );
 
   // --- Selection State Logic
-  const allSelected = totalCount > 0 && selectedCount === totalCount;
-  const selectIcon = allSelected
-    ? Icon.CheckSquare
-    : selectedCount > 0
-      ? Icon.MinusSquare
-      : Icon.Square;
+  const selectIcon =
+    checked === true ? Icon.CheckSquare : checked === 'mixed' ? Icon.MinusSquare : Icon.Square;
 
   const handleClear = () => {
     setIsOverflowOpen(false);
@@ -137,8 +133,8 @@ export const SelectionActionBar = ({
   };
 
   const handleSelectToggle = () => {
-    if (totalCount === 0) return;
-    if (allSelected) {
+    if (selectableCount === 0) return;
+    if (checked === true) {
       handleDeselectAll();
     } else {
       onSelectAll();
@@ -201,11 +197,11 @@ export const SelectionActionBar = ({
                       onPress={handleSelectToggle}
                       variant="clear"
                       size={Size.iconSm}
-                      disabled={totalCount === 0}
+                      disabled={selectableCount === 0}
                       accessibilityLabel="Toggle all"
                       accessibilityRole="checkbox"
                       accessibilityState={{
-                        checked: allSelected ? true : selectedCount > 0 ? 'mixed' : false,
+                        checked,
                       }}
                     />
 

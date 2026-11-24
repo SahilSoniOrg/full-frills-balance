@@ -462,7 +462,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const bulkOperations = useJournalsBulkOperations({
     workplaceId,
     journals: history ?? [],
-    selection: selectionControl,
+    selection: { ...selectionControl, selectAll },
     onShareSelected,
   });
 

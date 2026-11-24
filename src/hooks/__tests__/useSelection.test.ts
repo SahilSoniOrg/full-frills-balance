@@ -69,6 +69,38 @@ describe('useSelection', () => {
     expect(result.current.selectedIds.has('1')).toBe(true);
   });
 
+  it('clears items without exiting selection mode and exits separately', () => {
+    const { result } = renderHook(() => useSelection<string>());
+    act(() => result.current.onLongPressItem('a'));
+    act(() => result.current.clearItems());
+
+    expect(result.current.selectedIds.size).toBe(0);
+    expect(result.current.isSelectionModeActive).toBe(true);
+
+    act(() => result.current.exitSelectionMode());
+    expect(result.current.isSelectionModeActive).toBe(false);
+  });
+
+  it('selects and deselects a group based on its members', () => {
+    const { result } = renderHook(() => useSelection<string>());
+    act(() => result.current.onLongPressItem('outside'));
+    act(() => result.current.toggleSelection('a'));
+    act(() => result.current.toggleMultiple(['a', 'b']));
+    expect(result.current.selectedIds).toEqual(new Set(['outside', 'a', 'b']));
+
+    act(() => result.current.toggleMultiple(['a', 'b']));
+    expect(result.current.selectedIds).toEqual(new Set(['outside']));
+    expect(result.current.isSelectionModeActive).toBe(true);
+  });
+
+  it('replaces the selection with the select-all scope', () => {
+    const { result } = renderHook(() => useSelection<string>());
+    act(() => result.current.onLongPressItem('hidden'));
+    act(() => result.current.selectAll(['a', 'b', 'a']));
+    expect(result.current.selectedIds).toEqual(new Set(['a', 'b']));
+    expect(result.current.isSelectionModeActive).toBe(true);
+  });
+
   it('should handle hardware back press when selection is active and screen is focused', () => {
     const { result } = renderHook(() => useSelection<string>());
     act(() => {
