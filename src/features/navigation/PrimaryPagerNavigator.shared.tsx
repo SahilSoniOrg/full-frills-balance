@@ -2,9 +2,10 @@ import {
   PrimaryPrivacyScopeStoreProvider,
   PrivacyScopeProvider,
 } from '@/src/contexts/PrivacyScope';
+import { SelectionOverlay } from '@/src/components/shared/SelectionOverlay';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { AccountsGroupProvider } from '@/src/features/accounts';
-import { PrimaryTabBar } from './PrimaryTabBar';
+import { PrimaryTabBar, type PrimaryTabBarProps } from './PrimaryTabBar';
 import type { ContextualAddAction } from './ContextualAddMenu';
 import type { PrimaryPagerPage, PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 import {
@@ -25,15 +26,21 @@ import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { NavigatorContentProps } from 'expo-router';
 import { unstable_useReconcileTabHistory, useIsFocused } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, AppState, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import {
   PersistentTabChromeProvider,
   PersistentTabLeaf,
+  usePersistentTabChrome,
 } from '@/src/components/layout/PersistentTabChrome';
-import { SafeAreaFrame } from '@/src/design-system/SafeArea';
+import {
+  SafeAreaFrame,
+  SafeAreaOverlay,
+  SafeAreaScope,
+  useSafeAreaLayout,
+} from '@/src/design-system/SafeArea';
 import { HomeV2Header } from './HomeV2Header';
 import { usePrimaryPageTransitions } from './usePrimaryPageTransitions';
 
@@ -248,54 +255,92 @@ export function createPrimaryPagerContent(
       onTransitioningChange: reportTransitioning,
     };
 
+    const tabBarProps: PrimaryTabBarProps = {
+      routes: state.routes,
+      activeRouteName,
+      emitTabPress,
+      emitTabLongPress,
+      onNavigateToPage: navigateToPage,
+      isSwitching: workplace.isSwitchingWorkplace,
+      isTransitioning,
+      pageProgress,
+      onAddAction,
+    };
+
     return (
-      <View style={styles.container}>
-        <PrimaryPageNavigationProvider
-          liveRouteName={settledReadRoute}
-          preparedRoutes={preparedRoutes}
-          value={{
-            activeRouteName,
-            isTransitioning,
-            scrollEnabled,
-            pageProgress,
-            navigateToPage,
-            setPageSwipeLock,
-          }}
-        >
-          <RemountOnWorkplace>
-            <AccountsGroupProvider
-              active={preparedRoutes.has('accounts') || preparedRoutes.has('categories')}
-            >
-              <PrimaryPrivacyScopeStoreProvider>
-                <PersistentTabChromeProvider>
-                  <SafeAreaFrame edges={['top', 'left', 'right']} style={styles.container}>
-                    <HomeV2Header
-                      activeRouteName={activeRouteName}
-                      pageProgress={pageProgress}
-                      onNavigate={navigateToPage}
-                      isTransitioning={isTransitioning}
-                    />
-                    <Viewport {...viewportProps} />
-                  </SafeAreaFrame>
-                </PersistentTabChromeProvider>
-              </PrimaryPrivacyScopeStoreProvider>
-            </AccountsGroupProvider>
-          </RemountOnWorkplace>
-          <PrimaryTabBar
-            routes={state.routes}
-            activeRouteName={activeRouteName}
-            emitTabPress={emitTabPress}
-            emitTabLongPress={emitTabLongPress}
-            onNavigateToPage={navigateToPage}
-            isSwitching={workplace.isSwitchingWorkplace}
-            isTransitioning={isTransitioning}
-            pageProgress={pageProgress}
-            onAddAction={onAddAction}
-          />
-        </PrimaryPageNavigationProvider>
-      </View>
+      <PrimaryPageNavigationProvider
+        liveRouteName={settledReadRoute}
+        preparedRoutes={preparedRoutes}
+        value={{
+          activeRouteName,
+          isTransitioning,
+          scrollEnabled,
+          pageProgress,
+          navigateToPage,
+          setPageSwipeLock,
+        }}
+      >
+        <RemountOnWorkplace>
+          <AccountsGroupProvider
+            active={preparedRoutes.has('accounts') || preparedRoutes.has('categories')}
+          >
+            <PrimaryPrivacyScopeStoreProvider>
+              <PersistentTabChromeProvider>
+                <PrimaryPagerFrame tabBarProps={tabBarProps} isFocused={isFocused}>
+                  <Viewport {...viewportProps} />
+                </PrimaryPagerFrame>
+              </PersistentTabChromeProvider>
+            </PrimaryPrivacyScopeStoreProvider>
+          </AccountsGroupProvider>
+        </RemountOnWorkplace>
+      </PrimaryPageNavigationProvider>
     );
   };
+}
+
+function PrimaryPagerFrame({
+  children,
+  tabBarProps,
+  isFocused,
+}: {
+  children: ReactNode;
+  tabBarProps: PrimaryTabBarProps;
+  isFocused: boolean;
+}) {
+  const { activeRouteName, pageProgress, onNavigateToPage, isTransitioning } = tabBarProps;
+  const selection = usePersistentTabChrome(activeRouteName)?.selection;
+  const reportSelectionMode = usePrimaryNavigation()?.reportSelectionMode;
+  const selectionModeActive = isFocused && Boolean(selection);
+  const { insets } = useSafeAreaLayout();
+  const page = primaryPageFromRouteName(activeRouteName);
+
+  useLayoutEffect(() => {
+    reportSelectionMode?.(selectionModeActive);
+  }, [reportSelectionMode, selectionModeActive]);
+
+  return (
+    <View style={styles.container}>
+      <SafeAreaFrame edges={['top', 'left', 'right']} style={styles.container}>
+        <SafeAreaScope consumedEdges={['bottom']}>
+          <HomeV2Header
+            activeRouteName={activeRouteName}
+            pageProgress={pageProgress}
+            onNavigate={onNavigateToPage}
+            isTransitioning={isTransitioning}
+          />
+          {children}
+        </SafeAreaScope>
+      </SafeAreaFrame>
+      <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
+      {selection ? (
+        <SafeAreaOverlay insets={insets}>
+          <PrivacyScopeProvider key={activeRouteName} scopeKey={page?.group}>
+            <SelectionOverlay {...selection} />
+          </PrivacyScopeProvider>
+        </SafeAreaOverlay>
+      ) : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({ container: { flex: 1 } });

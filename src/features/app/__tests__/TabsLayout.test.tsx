@@ -51,6 +51,7 @@ jest.mock('@/src/features/navigation/PrimaryPagerNavigator', () => {
         isTransitioning={false}
         pageProgress={pageProgress}
         onAddAction={onAddAction}
+        covered={navigation.selectionModeActive}
       />
     );
   };
@@ -196,12 +197,24 @@ describe('primary navigation', () => {
     expect(screen.queryByTestId('contextual-add')).toBeNull();
   });
 
-  it('keeps Add available in selection mode and clears selection on tab focus', () => {
+  it('keeps the tab bar mounted and covered while the pager reports selection mode', () => {
     renderTabs();
+    const originalBar = screen.getByTestId('primary-tab-bar');
+
     act(() => mockNavigation.current?.reportSelectionMode(true));
     expect(mockNavigation.current?.selectionModeActive).toBe(true);
-    expect(screen.getByTestId('contextual-add').props.accessibilityState.disabled).toBe(false);
-    act(() => mockNavigation.focus?.('index'));
+    const coveredBar = screen.getByTestId('primary-tab-bar', { includeHiddenElements: true });
+    expect(coveredBar).toBe(originalBar);
+    expect(coveredBar.props.pointerEvents).toBe('none');
+    expect(coveredBar.props.accessibilityElementsHidden).toBe(true);
+    expect(coveredBar.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(StyleSheet.flatten(coveredBar.props.style as ViewProps['style'])?.opacity).toBe(0);
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+
+    act(() => mockNavigation.current?.reportSelectionMode(false));
     expect(mockNavigation.current?.selectionModeActive).toBe(false);
+    expect(screen.getByTestId('primary-tab-bar').props.pointerEvents).toBe('auto');
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.getByTestId('contextual-add').props.accessibilityState.disabled).toBe(false);
   });
 });

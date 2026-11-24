@@ -31,6 +31,8 @@ export type PrimaryTabBarProps = {
   /** Continuous six-leaf native position. */
   pageProgress: SharedValue<number>;
   onAddAction: (action: ContextualAddAction) => void;
+  /** Covered by a full-pager overlay such as selection chrome. */
+  covered?: boolean;
 };
 
 export function PrimaryTabBar({
@@ -43,6 +45,7 @@ export function PrimaryTabBar({
   isTransitioning,
   pageProgress,
   onAddAction,
+  covered = false,
 }: PrimaryTabBarProps) {
   const { theme } = useTheme();
   const { isKeyboardVisible } = useKeyboard();
@@ -90,8 +93,12 @@ export function PrimaryTabBar({
   return (
     <View
       testID="primary-tab-bar"
+      pointerEvents={covered ? 'none' : 'auto'}
+      accessibilityElementsHidden={covered}
+      importantForAccessibility={covered ? 'no-hide-descendants' : 'auto'}
       style={[
         styles.tabBar,
+        covered && styles.coveredTabBar,
         {
           backgroundColor: barColor,
           borderTopColor: withOpacity(theme.border, Opacity.muted),
@@ -187,6 +194,7 @@ function TabVisual({
 }
 
 const styles = StyleSheet.create({
+  coveredTabBar: { opacity: 0 },
   tabBar: {
     overflow: 'visible',
     borderTopWidth: StyleSheet.hairlineWidth,

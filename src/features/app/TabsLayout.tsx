@@ -1,6 +1,5 @@
 import { PrimaryNavigationProvider } from '@/src/navigation/primaryNavigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { SafeAreaScope } from '@/src/design-system/SafeArea';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import {
   NavigationDrawer,
@@ -32,7 +31,6 @@ export function TabsLayout() {
   }, [selectionModeActive, workplace.isSwitchingWorkplace]);
   const reportActiveRoute = useCallback((routeName: string) => {
     setActiveRouteName(routeName);
-    setSelectionModeActive(false);
   }, []);
   const onAddAction = (action: ContextualAddAction) => {
     const workplaceId = workplace.workplaceId;
@@ -58,36 +56,34 @@ export function TabsLayout() {
   };
 
   return (
-    <SafeAreaScope consumedEdges={['bottom']}>
-      <PrimaryNavigationProvider
-        value={{
-          reportSelectionMode,
-          selectionModeActive,
-          drawerVisible,
-          openDrawer,
-          closeDrawer,
-          userName: displayName,
-          activeRouteName,
-          reportActiveRoute,
-          drawerSwipePermission,
-          reportDrawerSwipePermission: setDrawerSwipePermission,
-        }}
-      >
-        <NavigationDrawer>
-          <View style={styles.shell}>
-            <PrimaryPager onAddAction={onAddAction} backBehavior="none">
-              {PRIMARY_PAGES.map(page => (
-                <PrimaryPager.Screen
-                  key={page.routeName}
-                  name={page.routeName}
-                  options={{ title: page.title }}
-                />
-              ))}
-            </PrimaryPager>
-          </View>
-        </NavigationDrawer>
-      </PrimaryNavigationProvider>
-    </SafeAreaScope>
+    <PrimaryNavigationProvider
+      value={{
+        reportSelectionMode,
+        selectionModeActive,
+        drawerVisible,
+        openDrawer,
+        closeDrawer,
+        userName: displayName,
+        activeRouteName,
+        reportActiveRoute,
+        drawerSwipePermission,
+        reportDrawerSwipePermission: setDrawerSwipePermission,
+      }}
+    >
+      <NavigationDrawer>
+        <View style={styles.shell}>
+          <PrimaryPager onAddAction={onAddAction} backBehavior="none">
+            {PRIMARY_PAGES.map(page => (
+              <PrimaryPager.Screen
+                key={page.routeName}
+                name={page.routeName}
+                options={{ title: page.title }}
+              />
+            ))}
+          </PrimaryPager>
+        </View>
+      </NavigationDrawer>
+    </PrimaryNavigationProvider>
   );
 }
 

@@ -40,6 +40,7 @@ export function HomeV2Header({
         : { ...previous, [routeName]: width },
     );
   }, []);
+  const headerCovered = Boolean(chrome?.selection);
   const searching = !!chrome?.isSearchActive;
   const widths = PRIMARY_PAGES.map(page =>
     Math.max(Size.touchTarget, actionWidths[page.routeName] ?? 0),
@@ -55,8 +56,12 @@ export function HomeV2Header({
   return (
     <View
       testID="home-v2-header"
+      pointerEvents={headerCovered ? 'none' : 'auto'}
+      accessibilityElementsHidden={headerCovered}
+      importantForAccessibility={headerCovered ? 'no-hide-descendants' : 'auto'}
       style={[
         styles.toolbar,
+        headerCovered && styles.coveredToolbar,
         {
           backgroundColor: theme.background,
           borderBottomColor: theme.border,
@@ -206,6 +211,7 @@ function HeaderActions({
 }
 
 const styles = StyleSheet.create({
+  coveredToolbar: { opacity: 0 },
   toolbar: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
