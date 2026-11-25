@@ -33,6 +33,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
 import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
+import { JournalEntryInboxSource } from './JournalEntryInboxSource';
 import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
@@ -338,6 +339,9 @@ export function JournalEntryView(props: JournalEntryShell) {
             onScrollBeginDrag={dismissDescriptionOnScroll}
             onCalculatorDone={focusDescription}
             accountFlowRef={accountFlowRef}
+            inboxSource={
+              <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
+            }
           />
         ) : activeMode === 'allocation' ? (
           <>
@@ -348,6 +352,7 @@ export function JournalEntryView(props: JournalEntryShell) {
               editor={editor}
               onCreateAccountForTarget={onCreateAccountForTarget}
             />
+            <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
           </>
         ) : activeMode === 'expert' ? (
           <>
@@ -359,6 +364,7 @@ export function JournalEntryView(props: JournalEntryShell) {
               onCreateAccountForTarget={onCreateAccountForTarget}
               showLineNotes={showEntryNotes}
             />
+            <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
           </>
         ) : (
           <BatchModePanel

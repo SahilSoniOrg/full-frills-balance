@@ -6,7 +6,7 @@ import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
 import type { AccountRole } from '@/src/types/domainJournal';
-import React, { type RefObject, useEffect, useRef } from 'react';
+import React, { type ReactNode, type RefObject, useEffect, useRef } from 'react';
 import { StyleSheet, type TextInput } from 'react-native';
 
 export interface SimpleFormProps {
@@ -20,6 +20,7 @@ export interface SimpleFormProps {
   autopilotFirstRole?: AccountRole;
   onCalculatorDone?: () => void;
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
+  bottomContent?: ReactNode;
 }
 
 export const SimpleForm = React.memo(function SimpleForm({
@@ -33,6 +34,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   autopilotFirstRole,
   onCalculatorDone,
   accountFlowRef,
+  bottomContent,
 }: SimpleFormProps) {
   const amountInputRef = useRef<TextInput>(null);
   const sourceSection = editor.accountSections.find(section => section.role === 'source');
@@ -101,6 +103,7 @@ export const SimpleForm = React.memo(function SimpleForm({
         onCreateAccountRequest={onCreateAccountRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
+      {bottomContent}
     </KeyboardAwareScrollView>
   );
 });

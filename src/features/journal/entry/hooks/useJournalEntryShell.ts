@@ -2,7 +2,7 @@ import { useAccounts, type CreateAccountIntent } from '@/src/components/account-
 import { AppConfig } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountFields, PlainInboxRecord } from '@/src/types/plainDtos';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import {
@@ -37,6 +37,7 @@ import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { smsService } from '@/src/services/sms-service';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -86,6 +87,7 @@ export interface JournalEntryShell {
   onDoneBatch: () => void;
   /** True briefly after a successful save so the CTA can pulse before leave. */
   saveSuccessPulse: boolean;
+  inboxItems: PlainInboxRecord[];
 }
 
 export function useJournalEntryShell(): JournalEntryShell {
@@ -145,6 +147,40 @@ export function useJournalEntryShell(): JournalEntryShell {
     onSuccess,
   });
   const { editor, splitState } = session;
+
+  const smsRecordId = seed.sourceContext?.smsRecordId;
+  const inboxLookupKey = smsRecordId
+    ? `record:${smsRecordId}`
+    : editor.isEdit && seed.journalId
+      ? `journal:${seed.journalId}`
+      : undefined;
+  const [inboxLookup, setInboxLookup] = useState<{
+    key: string;
+    items: PlainInboxRecord[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!inboxLookupKey) return;
+    let isActive = true;
+    const loadInboxItems = async () => {
+      try {
+        const items = smsRecordId
+          ? [await smsService.findInboxRecord(workplaceId, smsRecordId)].filter(
+              (item): item is PlainInboxRecord => item !== null,
+            )
+          : seed.journalId
+            ? await smsService.findAllByLinkedJournalId(workplaceId, seed.journalId)
+            : [];
+        if (isActive) setInboxLookup({ key: inboxLookupKey, items });
+      } catch {
+        if (isActive) setInboxLookup({ key: inboxLookupKey, items: [] });
+      }
+    };
+    void loadInboxItems();
+    return () => {
+      isActive = false;
+    };
+  }, [inboxLookupKey, seed.journalId, smsRecordId, workplaceId]);
 
   const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
     useJournalEntryModeState(editor, seed.editorMode);
@@ -254,6 +290,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   return {
     editor,
+    inboxItems: inboxLookup && inboxLookup.key === inboxLookupKey ? inboxLookup.items : [],
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     validationIssues: session.validationIssues,
