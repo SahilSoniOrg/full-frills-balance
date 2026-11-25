@@ -1,6 +1,6 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, Badge, LoadingView } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -8,7 +8,7 @@ import { analyzeJournalsForMerge, MergeJournalsAnalysis } from '@/src/services/j
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface MergeJournalsModalProps {
   visible: boolean;
@@ -78,12 +78,7 @@ function MergeJournalsModalContent({
       testID="merge-journals-modal"
     >
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <AppText style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Analyzing merge preview...
-          </AppText>
-        </View>
+        <LoadingView loading text="Analyzing merge preview..." style={styles.loadingContainer} />
       ) : !preview ? (
         <View style={styles.emptyContainer}>
           <AppText style={{ color: theme.textTertiary }}>Unable to load merge preview.</AppText>
@@ -229,9 +224,6 @@ const styles = StyleSheet.create({
     padding: Spacing.xxl,
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  loadingText: {
-    fontSize: Typography.sizes.sm,
   },
   emptyContainer: {
     padding: Spacing.xxl,

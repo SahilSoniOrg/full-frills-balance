@@ -6,7 +6,16 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { AppText, type AppTextProps } from '@/src/components/core';
+import { Typography } from '@/src/constants';
 import { useCallback, useState } from 'react';
+
+/** Hero / summary amounts that use the title type role. */
+export const titleAmountFit: FitTextSizing = {
+  maxFontSize: Typography.roles.title.fontSize,
+  minFontSize: Typography.sizes.xl,
+  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+  hug: true,
+};
 
 /** Fraction of the container the text may fill, so sub-pixel rounding never clips a glyph. */
 const FIT_SAFETY = 0.98;

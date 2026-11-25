@@ -1,5 +1,5 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { Icon, AppIcon, AppText, LoadingView, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -9,7 +9,7 @@ import {
 } from '@/src/services/journal/bulk';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface BulkChangeJournalAccountModalProps {
   visible: boolean;
@@ -78,12 +78,11 @@ function BulkChangeJournalAccountModalContent({
         testID="bulk-change-journal-account-modal"
       >
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <AppText style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Checking transaction structure...
-            </AppText>
-          </View>
+          <LoadingView
+            loading
+            text="Checking transaction structure..."
+            style={styles.loadingContainer}
+          />
         ) : !eligibility ? (
           <View style={styles.emptyContainer}>
             <AppText style={{ color: theme.textTertiary }}>Unable to inspect transactions.</AppText>
@@ -201,9 +200,6 @@ const styles = StyleSheet.create({
     padding: Spacing.xxl,
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  loadingText: {
-    fontSize: Typography.sizes.sm,
   },
   emptyContainer: {
     padding: Spacing.xxl,

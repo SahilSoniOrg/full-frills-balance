@@ -3,6 +3,7 @@ import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountIn
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
+  AppButton,
   Icon,
   AppSegmentedControl,
   AppText,
@@ -17,7 +18,7 @@ import type { ScreenNavChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';
-import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 type JournalSearchViewProps = JournalSearchViewModel & {
@@ -40,17 +41,15 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             <AppText variant="caption" weight="semibold" style={styles.reportScopeLabel}>
               Report drill-down · {vm.reportScopeLabel}
             </AppText>
-            <Pressable
-              accessibilityRole="button"
+            <AppButton
+              variant="ghost"
+              size="sm"
               accessibilityLabel="Clear report drill-down scope"
               testID="journal-search-clear-report-scope"
               onPress={vm.clearReportScope}
-              hitSlop={8}
             >
-              <AppText variant="caption" color="primary" weight="semibold">
-                Clear scope
-              </AppText>
-            </Pressable>
+              Clear scope
+            </AppButton>
           </View>
         ) : null}
         <SearchField
@@ -76,33 +75,29 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             showNavigationArrows={false}
           />
 
-          <View style={{ marginLeft: Spacing.sm }}>
-            <FilterChipButton
-              label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
-              icon={Icon.Wallet}
-              isActive={vm.accountIds.length > 0}
-              onPress={() => {
-                Keyboard.dismiss();
-                vm.openAccountPicker();
-              }}
-            />
-          </View>
+          <FilterChipButton
+            label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
+            icon={Icon.Wallet}
+            isActive={vm.accountIds.length > 0}
+            onPress={() => {
+              Keyboard.dismiss();
+              vm.openAccountPicker();
+            }}
+          />
 
-          <View style={{ marginLeft: Spacing.sm }}>
-            <AppSegmentedControl
-              options={[
-                { label: 'All', id: '' },
-                { label: 'Income', id: 'INCOME' },
-                { label: 'Expense', id: 'EXPENSE' },
-                { label: 'Transfer', id: 'TRANSFER' },
-              ]}
-              value={vm.displayType}
-              onChange={val => {
-                Keyboard.dismiss();
-                vm.setDisplayType(val);
-              }}
-            />
-          </View>
+          <AppSegmentedControl
+            options={[
+              { label: 'All', id: '' },
+              { label: 'Income', id: 'INCOME' },
+              { label: 'Expense', id: 'EXPENSE' },
+              { label: 'Transfer', id: 'TRANSFER' },
+            ]}
+            value={vm.displayType}
+            onChange={val => {
+              Keyboard.dismiss();
+              vm.setDisplayType(val);
+            }}
+          />
         </ScrollView>
 
         <View style={styles.amountRangeRow}>
@@ -200,7 +195,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chipContainer: {
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     paddingVertical: Spacing.xs,
     alignItems: 'center',
   },
