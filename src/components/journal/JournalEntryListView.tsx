@@ -1,4 +1,4 @@
-import { AppText, EmptyStateView } from '@/src/components/core';
+import { AppText, EmptyStateView, ErrorStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
@@ -113,16 +113,18 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     style,
   } = props;
 
-  const loadFailure = error ? (
-    <EmptyStateView
-      title={AppConfig.strings.common.listLoadError}
-      subtitle={AppConfig.strings.common.listLoadErrorSubtitle}
-      primaryActionLabel={AppConfig.strings.common.retry}
-      onPrimaryAction={retry}
-    />
-  ) : null;
-  const listEmpty = suppressEmptyContent ? null : loadFailure ? (
-    loadFailure
+  const loadFailure = (variant: 'screen' | 'inline' = 'screen') =>
+    error ? (
+      <ErrorStateView
+        variant={variant}
+        message={AppConfig.strings.common.listLoadError}
+        retryLabel={AppConfig.strings.common.retry}
+        onRetry={retry}
+        style={variant === 'inline' ? styles.loadFailureInline : undefined}
+      />
+    ) : null;
+  const listEmpty = suppressEmptyContent ? null : error ? (
+    loadFailure()
   ) : isLoading && items.length === 0 ? (
     <Stack gap="md">
       {[1, 2, 3, 4, 5].map(i => (
@@ -149,7 +151,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
 
   const listFooter = (
     <Stack>
-      {items.length > 0 && !suppressEmptyContent ? loadFailure : null}
+      {items.length > 0 && !suppressEmptyContent ? loadFailure('inline') : null}
       {isLoadingMore && (
         <Inline align="center" justify="center" gap="sm" paddingVertical="lg">
           <ActivityIndicator size="small" />
@@ -204,5 +206,8 @@ const styles = StyleSheet.create({
   },
   dismissFooter: {
     height: Spacing.lg,
+  },
+  loadFailureInline: {
+    padding: Spacing.lg,
   },
 });

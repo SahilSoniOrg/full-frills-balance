@@ -3,6 +3,7 @@ import {
   AppCard,
   AppText,
   EmptyStateView,
+  ErrorStateView,
   FilterChipButton,
   Icon,
   LoadingView,
@@ -64,14 +65,16 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
 
   const isAndroid = Platform.OS === 'android';
   const showSmsPlatformNotice = !isAndroid && !shortcutSmsIntakeService.canSetUp;
-  const loadFailure = error ? (
-    <EmptyStateView
-      title={AppConfig.strings.common.listLoadError}
-      subtitle={AppConfig.strings.common.listLoadErrorSubtitle}
-      primaryActionLabel={AppConfig.strings.common.retry}
-      onPrimaryAction={retry}
-    />
-  ) : null;
+  const loadFailure = (variant: 'screen' | 'inline' = 'screen') =>
+    error ? (
+      <ErrorStateView
+        variant={variant}
+        message={AppConfig.strings.common.listLoadError}
+        retryLabel={AppConfig.strings.common.retry}
+        onRetry={retry}
+        style={variant === 'inline' ? styles.loadFailureInline : undefined}
+      />
+    ) : null;
 
   return (
     <View style={styles.container} testID="transaction-inbox-screen">
@@ -154,8 +157,8 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
             )}
             contentContainerStyle={styles.content}
             ListEmptyComponent={
-              loadFailure ? (
-                loadFailure
+              error ? (
+                loadFailure()
               ) : isLoading ? (
                 <LoadingView
                   loading
@@ -178,7 +181,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
             ListFooterComponent={
               error ? (
                 items.length > 0 ? (
-                  loadFailure
+                  loadFailure('inline')
                 ) : null
               ) : hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
                 <Stack gap="lg" style={styles.footer}>
@@ -269,5 +272,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  loadFailureInline: {
+    padding: Spacing.lg,
   },
 });

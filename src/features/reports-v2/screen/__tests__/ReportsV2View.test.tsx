@@ -146,6 +146,15 @@ it('fetches the omitted quotes once and disables the button until fetching finis
   expect(engine.run).toHaveBeenCalledTimes(3);
 });
 
+it('shows ErrorStateView with retry when the first report load fails', async () => {
+  const engine = engineMock();
+  engine.run.mockRejectedValueOnce(new Error('offline'));
+  renderReports(engine);
+  await waitFor(() => expect(screen.getByText('Report unavailable. offline')).toBeTruthy());
+  expect(screen.queryByText('overview')).toBeNull();
+  expect(screen.getByText(AppConfig.strings.common.retry)).toBeTruthy();
+});
+
 it('blocks fetching while the report refreshes and after that refresh fails', async () => {
   const engine = engineMock();
   renderReports(engine);

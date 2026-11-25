@@ -20,7 +20,7 @@ describe('JournalEntryListView failures', () => {
 
     expect(view.getByText(AppConfig.strings.common.listLoadError)).toBeTruthy();
     expect(view.queryByText('No matching entries')).toBeNull();
-    fireEvent.press(view.getByLabelText(AppConfig.strings.common.retry));
+    fireEvent.press(view.getByText(AppConfig.strings.common.retry));
     expect(retry).toHaveBeenCalledTimes(1);
 
     view.rerender(

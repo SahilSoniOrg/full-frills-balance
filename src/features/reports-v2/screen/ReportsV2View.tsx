@@ -3,7 +3,7 @@ import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import {
   AppButton,
   AppTabs,
-  EmptyStateView,
+  ErrorStateView,
   LoadingView,
   type TabOption,
 } from '@/src/components/core';
@@ -203,11 +203,15 @@ export function ReportsV2View({
               />
             ) : null}
             {vm.state === 'error' && !vm.result ? (
-              <EmptyStateView
-                title="Report unavailable"
-                subtitle={vm.error?.message ?? 'Try again.'}
-                primaryActionLabel="Retry"
-                onPrimaryAction={vm.onRetry}
+              <ErrorStateView
+                variant="inline"
+                message={
+                  vm.error?.message
+                    ? `Report unavailable. ${vm.error.message}`
+                    : 'Report unavailable. Try again.'
+                }
+                retryLabel={AppConfig.strings.common.retry}
+                onRetry={vm.onRetry}
               />
             ) : null}
             {(vm.state === 'loading' || vm.state === 'refreshing') && !vm.result ? (
