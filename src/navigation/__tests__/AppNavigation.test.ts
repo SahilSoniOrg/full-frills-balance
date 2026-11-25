@@ -527,7 +527,7 @@ describe('workplace switch history', () => {
     );
   });
 
-  it('preserves a bound creation draft and the selected subtab', () => {
+  it('preserves a bound creation draft and the selected page', () => {
     const dispatch = jest.fn();
     dispatchWorkplaceSwitchHistory({
       getState: () =>

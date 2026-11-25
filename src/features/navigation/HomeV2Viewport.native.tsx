@@ -6,7 +6,6 @@ import PagerView, {
 } from 'react-native-pager-view';
 import Animated, { useEvent } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/use-theme';
-import { HomeV2Subtabs } from './HomeV2Subtabs';
 import { PrimaryPagerPageContent } from './PrimaryPagerPageContent';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 
@@ -245,7 +244,6 @@ export function HomeV2Viewport({
             accessibilityElementsHidden={!active}
             importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
           >
-            <HomeV2Subtabs routeName={page.name} />
             <View style={styles.body}>
               {mountedIndices.has(index) || active ? (
                 <PrimaryPagerPageContent page={page} />

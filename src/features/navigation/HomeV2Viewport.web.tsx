@@ -1,6 +1,5 @@
 import { useLayoutEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { HomeV2Subtabs } from './HomeV2Subtabs';
 import { PrimaryPagerPageContent } from './PrimaryPagerPageContent';
 import type { PrimaryPagerViewportProps } from './PrimaryPagerViewport.types';
 
@@ -27,12 +26,9 @@ export function HomeV2Viewport({
             importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
           >
             {mountedIndices.has(index) || active ? (
-              <>
-                <HomeV2Subtabs routeName={page.name} />
-                <View style={styles.body}>
-                  <PrimaryPagerPageContent page={page} />
-                </View>
-              </>
+              <View style={styles.body}>
+                <PrimaryPagerPageContent page={page} />
+              </View>
             ) : null}
           </View>
         );

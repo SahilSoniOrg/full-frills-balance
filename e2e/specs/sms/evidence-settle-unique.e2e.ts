@@ -28,8 +28,8 @@ describe(':android: evidence-driven settle (unique SMS)', () => {
 
   it('settles the plan occurrence and clears the SMS from pending', async () => {
     await openCommitmentsTab();
-    // HomeV2 subtabs: current route `commitments` → sibling `planned-payments`
-    await tapById('home-v2-subtab-commitments-planned-payments', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-title', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-option-planned-payments', LONG_TIMEOUT_MS);
     await assertTextVisible(E2E_EVIDENCE_SETTLE.planName, LONG_TIMEOUT_MS);
 
     await openSmsInboxFromSettings();

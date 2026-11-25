@@ -26,7 +26,8 @@ describe(':android: evidence-driven settle (soft fee mismatch)', () => {
 
   it('keeps the plan pending and routes the fee SMS to duplicates review', async () => {
     await openCommitmentsTab();
-    await tapById('home-v2-subtab-commitments-planned-payments', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-title', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-option-planned-payments', LONG_TIMEOUT_MS);
     await assertTextVisible(E2E_EVIDENCE_SETTLE.planName, LONG_TIMEOUT_MS);
 
     await openSmsInboxFromSettings();

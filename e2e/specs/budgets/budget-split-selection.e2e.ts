@@ -8,7 +8,8 @@ describe('Budget activity selection', () => {
   it('deselects both rows of a split journal with Toggle all', async () => {
     await launchOnboardedApp({ seedProfile: 'budget-split-selection' });
     await openCommitmentsTab();
-    await tapById('home-v2-subtab-commitments-commitments', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-title', LONG_TIMEOUT_MS);
+    await tapById('home-v2-page-option-commitments', LONG_TIMEOUT_MS);
     await tapByLabel(/^Split selection budget.*/, LONG_TIMEOUT_MS);
 
     const groceriesRow = by.label(/^Split budget purchase\..*\$20\. To Groceries\..*/);
