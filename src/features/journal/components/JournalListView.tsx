@@ -4,7 +4,7 @@ import { JournalEntryListView } from '@/src/components/journal/JournalEntryListV
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { Layout, Spacing } from '@/src/constants';
 import {
   JournalListModals,
   type JournalListModalsProps,
@@ -130,6 +130,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Layout.listBottomInset.tab,
   },
 });

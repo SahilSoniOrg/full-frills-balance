@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Layout.listBottomInset.fab,
+    paddingBottom: Layout.listBottomInset.tab,
   },
   emptyState: { marginTop: Spacing.xxxl },
   sectionHeading: {

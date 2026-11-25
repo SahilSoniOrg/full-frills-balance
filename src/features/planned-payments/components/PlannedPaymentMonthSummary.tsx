@@ -22,8 +22,6 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
       padding="md"
       radius="xl"
       background="surface"
-      borderWidth={1}
-      borderColor="surfaceSecondary"
       style={styles.card}
     >
       <View style={styles.summaryTop}>

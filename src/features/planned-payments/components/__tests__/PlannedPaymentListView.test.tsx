@@ -118,12 +118,10 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
     expect(getByText('Every 2 months')).toBeTruthy();
   });
 
-  it('reserves the floating action button footprint after the last row', () => {
+  it('reserves the tab bar footprint after the last row', () => {
     const { UNSAFE_getAllByType } = renderList([]);
     const listContainer = UNSAFE_getAllByType(View).find(
-      view =>
-        StyleSheet.flatten(view.props.style)?.paddingBottom >=
-        Size.fab + Spacing.xxxxl + Size.buttonMd,
+      view => StyleSheet.flatten(view.props.style)?.paddingBottom >= Size.buttonLg + Spacing.xl,
     );
     expect(listContainer).toBeTruthy();
   });
