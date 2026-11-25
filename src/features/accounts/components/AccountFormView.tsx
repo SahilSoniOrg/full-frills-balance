@@ -70,7 +70,12 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
   return (
     <EntityFormScreen
       chrome={vm.chrome}
-      submitAction={{ onPress: vm.onSave, label: vm.submitLabel, disabled: vm.isSaveDisabled }}
+      submitAction={{
+        onPress: vm.onSave,
+        label: vm.submitLabel,
+        disabled: vm.isSaveDisabled,
+        requirementHint: vm.requirementHint,
+      }}
       scrollProps={{ keyboardShouldPersistTaps: 'handled' }}
     >
       <View style={styles.identitySection}>

@@ -56,6 +56,8 @@ export function DateRangeTrigger({
           }}
           style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
           activeOpacity={Opacity.heavy}
+          accessibilityRole="button"
+          accessibilityLabel={AppConfig.strings.common.period.previousButton}
         >
           <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
         </PressScaleTouchable>
@@ -73,6 +75,8 @@ export function DateRangeTrigger({
           onPress();
         }}
         activeOpacity={Opacity.heavy}
+        accessibilityRole="button"
+        accessibilityLabel={displayText}
       >
         <AppIcon name={Icon.Calendar} size={Size.sm} color={theme.primary} />
         <AppText
@@ -93,6 +97,8 @@ export function DateRangeTrigger({
           }}
           style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
           activeOpacity={Opacity.heavy}
+          accessibilityRole="button"
+          accessibilityLabel={AppConfig.strings.common.period.nextButton}
         >
           <AppIcon name={Icon.ChevronRight} size={Size.sm} color={theme.textSecondary} />
         </PressScaleTouchable>

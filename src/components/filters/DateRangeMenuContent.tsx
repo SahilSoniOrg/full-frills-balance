@@ -109,6 +109,9 @@ function DatePanelHeader({
       style={styles.panelHeader}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ selected: active }}
     >
       {content}
     </PressScaleTouchable>
@@ -227,6 +230,12 @@ export function DateRangeMenuContent({
               },
             ]}
             onPress={onShowStartDate}
+            accessibilityRole="button"
+            accessibilityLabel={
+              customRange.startDate
+                ? `From, ${customRange.startDate.format('DD MMM YYYY')}`
+                : 'From, Choose date'
+            }
           >
             <AppText variant="caption" color="secondary">
               From
@@ -251,6 +260,10 @@ export function DateRangeMenuContent({
               },
             ]}
             onPress={onShowEndDate}
+            accessibilityRole="button"
+            accessibilityLabel={
+              customRange.endDate ? `To, ${customRange.endDate.format('DD MMM YYYY')}` : 'To, Now'
+            }
           >
             <AppText variant="caption" color="secondary">
               To

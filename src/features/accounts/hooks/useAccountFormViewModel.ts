@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core';
+import { formatRequirementHint } from '@/src/components/forms/requirementHint';
 import { AppConfig } from '@/src/constants/app-config';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountId } from '@/src/types/ids';
@@ -87,6 +88,7 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   onSave: () => void;
   showInitialBalance: boolean;
   isSaveDisabled: boolean;
+  requirementHint: string | null;
   parentAccountId: AccountId;
   parentAccountName: string;
   setParentAccountId: (value: AccountId) => void;
@@ -317,6 +319,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   // creation for both accounts and categories. Existing entities remain locked.
   const showBalance = !core.isCategory && !isParent;
   const formError = validation.formError || draft.localFormError;
+  const requirementHint = formatRequirementHint(
+    [!core.accountName.trim() && 'a name'].filter((item): item is string => Boolean(item)),
+  );
 
   const openAppearancePickerSheet = useCallback(() => {
     void openAppearancePicker({
@@ -374,6 +379,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       persistence.isCreating ||
       !!validation.formError ||
       !!draft.localFormError,
+    requirementHint,
     parentAccountId: core.parentAccountId,
     parentAccountName,
     setParentAccountId: core.setParentAccountId,
