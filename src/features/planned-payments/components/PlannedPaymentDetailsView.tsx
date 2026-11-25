@@ -1,6 +1,6 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import dayjs from 'dayjs';
-import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import {
   AppButton,
   AppCard,
@@ -16,6 +16,7 @@ import {
 } from '@/src/components/journal/JournalAccountFlow';
 import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
 import { DetailRow } from '@/src/components/shared/DetailRow';
+import { titleAmountFit } from '@/src/components/shared/FitText';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { confirm } from '@/src/services/feedback/alerts';
@@ -32,12 +33,6 @@ import {
   plannedMoneyDiffers,
   presentPlannedPaymentDetailsHeader,
 } from '../hooks/plannedPaymentDetailsPresentation';
-
-const TITLE_AMOUNT_FIT = {
-  maxFontSize: Typography.roles.title.fontSize,
-  minFontSize: Typography.sizes.xl,
-  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
-};
 
 const copy = AppConfig.strings.plannedDetailRedesign;
 
@@ -117,7 +112,7 @@ export function PlannedPaymentDetailsView({
                 amount={total.amount}
                 currencyCode={total.currencyCode}
                 variant="title"
-                fit={TITLE_AMOUNT_FIT}
+                fit={titleAmountFit}
               />
             ))}
             <AppText variant="body" color="secondary">
@@ -139,7 +134,7 @@ export function PlannedPaymentDetailsView({
                   : (occurrence?.currencyCode ?? vm.currencyCode)
               }
               variant="title"
-              fit={TITLE_AMOUNT_FIT}
+              fit={titleAmountFit}
               color={isPaused || isEndedWithoutOutstanding ? 'secondary' : 'text'}
             />
           )

@@ -2,11 +2,12 @@ import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader
 import { useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/components/core';
+import { titleAmountFit } from '@/src/components/shared/FitText';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { Stack, Inline, Separator } from '@/src/design-system';
-import { AppConfig, Size, Typography } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type {
   PlannedPaymentActivitySummary,
@@ -20,12 +21,6 @@ import {
   getPlannedPaymentHistoryPresentation,
   plannedMoneyDiffers,
 } from '../hooks/plannedPaymentDetailsPresentation';
-
-const TITLE_AMOUNT_FIT = {
-  maxFontSize: Typography.roles.title.fontSize,
-  minFontSize: Typography.sizes.xl,
-  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
-};
 
 const copy = AppConfig.strings.plannedDetailRedesign;
 
@@ -237,7 +232,7 @@ export function PlannedPaymentActivityOverview({
                       amount={total.amount}
                       currencyCode={total.currencyCode}
                       variant="title"
-                      fit={TITLE_AMOUNT_FIT}
+                      fit={titleAmountFit}
                     />
                   ))}
                   <AppText variant="caption" color="secondary">

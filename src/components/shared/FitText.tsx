@@ -9,14 +9,6 @@ import { AppText, type AppTextProps } from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { useCallback, useState } from 'react';
 
-/** Hero / summary amounts that use the title type role. */
-export const titleAmountFit: FitTextSizing = {
-  maxFontSize: Typography.roles.title.fontSize,
-  minFontSize: Typography.sizes.xl,
-  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
-  hug: true,
-};
-
 /** Fraction of the container the text may fill, so sub-pixel rounding never clips a glyph. */
 const FIT_SAFETY = 0.98;
 
@@ -60,6 +52,14 @@ export type FitTextSizing = Pick<
   FitTextProps,
   'maxFontSize' | 'minFontSize' | 'lineHeightRatio' | 'containerStyle' | 'hug'
 >;
+
+/** Hero / summary amounts that use the title type role. */
+export const titleAmountFit: FitTextSizing = {
+  maxFontSize: Typography.roles.title.fontSize,
+  minFontSize: Typography.sizes.xl,
+  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+  hug: true,
+};
 
 /** Track width; far wider than any screen so the text never wraps or truncates while measuring. */
 const TRACK_WIDTH = 10000;

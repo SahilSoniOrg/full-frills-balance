@@ -1,4 +1,5 @@
 import { AppCard, AppText } from '@/src/components/core';
+import { titleAmountFit } from '@/src/components/shared/FitText';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -63,12 +64,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
           currencyCode={outgoing.mainCurrency.currencyCode}
           formatStyle="compact"
           variant="title"
-          fit={{
-            maxFontSize: Typography.roles.title.fontSize,
-            minFontSize: Typography.sizes.xl,
-            lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
-            hug: true,
-          }}
+          fit={titleAmountFit}
           style={{ color: theme.text }}
           weight="bold"
         />
