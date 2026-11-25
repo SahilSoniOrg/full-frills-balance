@@ -1,12 +1,10 @@
-import { AppButton, AppIcon, AppText, Icon, type IconName } from '@/src/components/core';
+import { Icon, ListGroup, ListRow, type IconName } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { PrivacyToggleButton } from './PrivacyToggleButton';
 import { ScreenHeaderActions, type ScreenHeaderActionItem } from './ScreenHeaderActions';
-import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Stack } from '@/src/design-system';
+import { AppConfig } from '@/src/constants';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 export interface DetailMenuAction {
   label: string;
@@ -57,50 +55,28 @@ export function DetailHeaderMenuActions({
         accessibilityCloseLabel={strings.closeActions}
         position="bottomSheet"
         fixedHeight={false}
-        scrollable={false}
       >
-        <Stack gap="sm">
+        <ListGroup variant="plain" dividerInset="none">
           {actions.map(action => (
-            <AppButton
+            <ListRow
               key={action.label}
-              variant="ghost"
+              title={action.label}
+              icon={action.icon}
+              destructive={action.destructive}
+              chevron={false}
+              wrap
               accessibilityRole="button"
               accessibilityLabel={action.label}
               testID={action.testID}
               disabled={action.disabled}
-              buttonStyle={{ minHeight: Size.touchTarget, alignItems: 'stretch' }}
               onPress={() => {
                 afterDismiss.run(action.onPress);
                 setOpen(false);
               }}
-            >
-              <View style={styles.actionRow}>
-                {action.icon ? (
-                  <AppIcon
-                    name={action.icon}
-                    size={Size.iconSm}
-                    color={action.destructive ? 'error' : 'textSecondary'}
-                  />
-                ) : null}
-                <AppText style={styles.actionLabel} color={action.destructive ? 'error' : 'text'}>
-                  {action.label}
-                </AppText>
-              </View>
-            </AppButton>
+            />
           ))}
-        </Stack>
+        </ListGroup>
       </ModalSurface>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  actionLabel: {
-    flex: 1,
-  },
-});

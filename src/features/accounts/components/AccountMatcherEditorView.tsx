@@ -17,8 +17,9 @@ import { AppConfig } from '@/src/constants/app-config';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useTheme } from '@/src/hooks/use-theme';
+import { confirm } from '@/src/services/feedback/alerts';
 import { useMemo, useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SelectableSmsText, SmsBodyPreview } from './SelectableSmsText';
 import { MatcherMessageChoice } from './AccountMatcherMessageViews';
 import { AccountMatcherEvidencePreview } from './AccountMatcherEvidencePreview';
@@ -445,10 +446,14 @@ export function AccountMatcherEditorView({
           <AppButton
             variant="ghost"
             onPress={() =>
-              Alert.alert(copy.forgetTitle, copy.forgetMessage, [
-                { text: copy.cancel, style: 'cancel' },
-                { text: copy.forget, style: 'destructive', onPress: onForget },
-              ])
+              confirm.show({
+                title: copy.forgetTitle,
+                message: copy.forgetMessage,
+                cancelText: copy.cancel,
+                confirmText: copy.forget,
+                destructive: true,
+                onConfirm: onForget,
+              })
             }
             testID="forget-account-matcher"
           >

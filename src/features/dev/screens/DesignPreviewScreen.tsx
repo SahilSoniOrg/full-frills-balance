@@ -1,5 +1,6 @@
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
+import { PopupActionsPreview } from '@/src/features/dev/components/PopupActionsPreview';
 import {
   Icon,
   AppButton,
@@ -148,6 +149,9 @@ export default function DesignPreviewScreen() {
       >
         <Box paddingHorizontal="lg" paddingVertical="xl">
           <Stack gap="xl">
+            <PreviewSectionCard title="Popup actions">
+              <PopupActionsPreview />
+            </PreviewSectionCard>
             {/* Typography Section */}
             <AppCard elevation="sm" padding="xl">
               <Stack gap="md">

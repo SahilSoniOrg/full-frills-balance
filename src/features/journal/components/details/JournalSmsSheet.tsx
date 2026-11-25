@@ -178,7 +178,7 @@ export function JournalSmsSheet({
         footerDetachId && onDetachSms
           ? {
               label: strings.detachSms,
-              variant: 'destructive',
+              variant: 'destructive-outline',
               testID: 'journal-sms-detach',
               onPress: () => {
                 afterDismiss.run(() => onDetachSms(footerDetachId));
@@ -191,7 +191,7 @@ export function JournalSmsSheet({
         onOpenSmsInbox
           ? {
               label: strings.inbox,
-              variant: 'outline',
+              variant: 'primary',
               onPress: () => {
                 afterDismiss.run(onOpenSmsInbox);
                 onClose();

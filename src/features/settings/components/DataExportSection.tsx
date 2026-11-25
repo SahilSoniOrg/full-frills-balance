@@ -66,7 +66,6 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               {
                 label: AppConfig.strings.common.cancel,
                 role: 'secondary',
-                variant: 'secondary',
                 onPress: () => vm.setIsNamingExport(false),
                 disabled: vm.isExporting,
               },

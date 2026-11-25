@@ -39,8 +39,7 @@ export function DayOfMonthSheet({
           actions={[
             {
               label: copy.done,
-              role: 'secondary',
-              variant: 'secondary',
+              role: 'primary',
               onPress: onClose,
               accessibilityLabel: copy.doneAccessibility,
             },

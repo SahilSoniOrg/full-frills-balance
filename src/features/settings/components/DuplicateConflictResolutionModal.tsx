@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
-import { Icon, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, Badge, ListGroup, ListRow } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -61,37 +60,6 @@ export function DuplicateConflictResolutionModal({
       accessibilityCloseLabel="Close duplicate conflict dialog"
       maxHeightPercent={90}
       fixedHeight={false}
-      footer={
-        <ModalActions
-          layout="grid"
-          actions={[
-            {
-              label: 'Merge into Journal',
-              variant: 'outline',
-              onPress: () => executeAction(onMerge),
-              testID: 'duplicate-modal-merge-btn',
-            },
-            {
-              label: 'Mark Duplicate & Dismiss',
-              variant: 'secondary',
-              onPress: () => executeAction(onMarkDuplicateAndDismiss),
-              testID: 'duplicate-modal-dismiss-btn',
-            },
-            {
-              label: 'Post as Separate Entry',
-              variant: 'outline',
-              onPress: () => executeAction(onPostAnyway),
-              testID: 'duplicate-modal-post-anyway-btn',
-            },
-            {
-              label: 'View Existing Journal',
-              variant: 'ghost',
-              onPress: () => executeAction(onViewJournal),
-              testID: 'duplicate-modal-view-journal-btn',
-            },
-          ]}
-        />
-      }
     >
       <View style={styles.container}>
         {/* Match Header / Confidence Banner */}
@@ -262,6 +230,36 @@ export function DuplicateConflictResolutionModal({
             </View>
           </AppCard>
         </View>
+        <ListGroup variant="plain" dividerInset="none">
+          <ListRow
+            title="Merge into Journal"
+            onPress={() => executeAction(onMerge)}
+            chevron={false}
+            wrap
+            testID="duplicate-modal-merge-btn"
+          />
+          <ListRow
+            title="Mark Duplicate & Dismiss"
+            onPress={() => executeAction(onMarkDuplicateAndDismiss)}
+            chevron={false}
+            wrap
+            testID="duplicate-modal-dismiss-btn"
+          />
+          <ListRow
+            title="Post as Separate Entry"
+            onPress={() => executeAction(onPostAnyway)}
+            chevron={false}
+            wrap
+            testID="duplicate-modal-post-anyway-btn"
+          />
+          <ListRow
+            title="View Existing Journal"
+            onPress={() => executeAction(onViewJournal)}
+            chevron={false}
+            wrap
+            testID="duplicate-modal-view-journal-btn"
+          />
+        </ListGroup>
       </View>
     </ModalSurface>
   );

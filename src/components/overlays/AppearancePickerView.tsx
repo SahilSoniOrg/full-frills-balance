@@ -264,6 +264,7 @@ export function AppearancePickerView({
       </ScrollView>
 
       <ModalActions
+        layout="stacked"
         actions={[
           {
             label: mode === 'both' ? 'Done' : AppConfig.strings.common.cancel,

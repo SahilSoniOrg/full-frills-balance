@@ -1,9 +1,13 @@
 import { AppButton } from '@/src/components/core';
 import type { AppButtonProps } from '@/src/components/core/AppButton';
 import { Shape, Size, Spacing } from '@/src/constants';
+import { createContext, useContext } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export type ModalActionsLayout = 'inline' | 'primary' | 'stacked' | 'grid';
+
+/** ModalSurface supplies the presentation, including actions rendered inside its body. */
+export const ModalActionsSurfaceContext = createContext<'center' | 'bottomSheet'>('center');
 
 export interface ModalAction {
   label: string;
@@ -21,15 +25,23 @@ const isDestructive = (action: ModalAction) =>
 
 /**
  * Picks a footer shape when the caller does not name one.
- * Irreversibility gets the full-width target, because a mis-tap is expensive.
- * Everything else keeps the compact right-aligned row.
+ * Sheets anchor actions across their width; short dialogs keep a compact row.
+ * A destructive primary stays separate from its dismissal action.
  */
-function defaultLayout(actions: ModalAction[]): 'inline' | 'primary' {
+function defaultLayout(
+  actions: ModalAction[],
+  surface: 'center' | 'bottomSheet',
+): ModalActionsLayout {
   const hasSecondary = actions.some(action => action.role === 'secondary');
+  const hasPrimary = actions.some(action => action.role !== 'secondary');
   const hasDestructivePrimary = actions.some(
     action => action.role !== 'secondary' && isDestructive(action),
   );
-  return hasSecondary && hasDestructivePrimary ? 'primary' : 'inline';
+  if (hasSecondary && hasDestructivePrimary) return 'primary';
+  if (surface === 'bottomSheet') {
+    return actions.length === 2 && hasSecondary && hasPrimary ? 'primary' : 'stacked';
+  }
+  return actions.length > 2 ? 'stacked' : 'inline';
 }
 
 /** Shared action footer for app-owned modal surfaces. */
@@ -41,24 +53,28 @@ export function ModalActions({
   layout?: ModalActionsLayout;
 }) {
   const { fontScale } = useWindowDimensions();
+  const surface = useContext(ModalActionsSurfaceContext);
+  const preferredLayout = layout ?? defaultLayout(actions, surface);
   const resolvedLayout: ModalActionsLayout =
-    fontScale > 1.3 ? 'stacked' : (layout ?? defaultLayout(actions));
+    fontScale > 1.3 && (preferredLayout === 'inline' || preferredLayout === 'grid')
+      ? 'stacked'
+      : preferredLayout;
 
   const primaryAction = actions.find(action => action.role !== 'secondary');
-  const isCompact = resolvedLayout === 'inline' || resolvedLayout === 'primary';
+  const isBottomSheet = surface === 'bottomSheet';
 
-  // Keep a full platform-sized hit area around the compact visual surface.
+  // The visible surface fills the platform-sized target, including Android's 48pt minimum.
   const minimumHeight = Platform.OS === 'android' ? Size.touchTargetLg : Size.touchTarget;
 
   const renderAction = (action: ModalAction, index: number, width: 'content' | 'full' | 'half') => {
     const secondary = action.role === 'secondary';
-    const variant = action.variant ?? (secondary ? (isCompact ? 'ghost' : 'outline') : 'primary');
+    const variant = action.variant ?? (secondary ? 'ghost' : 'primary');
 
     return (
       <AppButton
         key={`${action.testID ?? action.label}-${index}`}
         variant={variant}
-        size="sm"
+        size={isBottomSheet ? 'md' : 'sm'}
         onPress={action.onPress}
         disabled={action.disabled}
         loading={action.loading}
@@ -72,8 +88,8 @@ export function ModalActions({
           { minHeight: minimumHeight },
         ]}
         buttonStyle={[
-          isCompact ? styles.compactSurface : styles.stackedSurface,
-          !secondary && resolvedLayout !== 'inline' && styles.primarySurface,
+          styles.buttonSurface,
+          { minHeight: isBottomSheet ? Size.buttonLg : minimumHeight },
         ]}
       >
         {action.label}
@@ -158,20 +174,9 @@ const styles = StyleSheet.create({
   hitTarget: {
     justifyContent: 'center',
   },
-  compactSurface: {
-    minHeight: 30,
-    borderRadius: Shape.radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 0,
-  },
-  stackedSurface: {
-    minHeight: Size.buttonSm,
-    borderRadius: Shape.radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-  },
-  primarySurface: {
-    minHeight: 40,
-    borderRadius: Shape.radius.lg,
+  buttonSurface: {
+    borderRadius: Shape.radius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
 });

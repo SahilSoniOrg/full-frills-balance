@@ -260,7 +260,6 @@ export function AmountCalculatorSheet({
           actions={[
             {
               label: 'Done',
-              variant: evaluation.canSubmit ? 'primary' : 'secondary',
               onPress: handleDone,
               disabled: !evaluation.canSubmit,
               accessibilityLabel: 'Done',

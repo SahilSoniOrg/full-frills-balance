@@ -3,6 +3,7 @@ import { AppConfig, ChromeMotion, Shape, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ModalHost } from './ModalHost';
+import { ModalActionsSurfaceContext } from './ModalActions';
 import { MotiView } from 'moti';
 import React from 'react';
 import {
@@ -93,7 +94,7 @@ export function ModalSurface({
       ]}
     >
       <View style={styles.header}>
-        <AppText variant="heading" fontRole="display">
+        <AppText variant="heading" fontRole="display" style={styles.title}>
           {title}
         </AppText>
         <IconButton
@@ -130,6 +131,7 @@ export function ModalSurface({
         <View
           style={[
             styles.footerSlot,
+            (fixedHeight || isBottomSheet) && styles.footerDivider,
             { borderTopColor: theme.border },
             isBottomSheet && { paddingBottom: bottomSpacing.sheet },
           ]}
@@ -178,7 +180,9 @@ export function ModalSurface({
         accessibilityLabel={accessibilityCloseLabel}
       />
       <SafeAreaScope window consumedEdges={isBottomSheet ? ['bottom'] : []}>
-        {sheet}
+        <ModalActionsSurfaceContext.Provider value={position}>
+          {sheet}
+        </ModalActionsSurfaceContext.Provider>
       </SafeAreaScope>
     </Overlay>
   );
@@ -251,6 +255,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
     flexShrink: 0,
+    gap: Spacing.sm,
+  },
+  title: {
+    flex: 1,
   },
   scrollFixed: {
     marginTop: Spacing.md,
@@ -278,9 +286,11 @@ const styles = StyleSheet.create({
   footerSlot: {
     flexShrink: 0,
     marginHorizontal: -Spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
+  },
+  footerDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

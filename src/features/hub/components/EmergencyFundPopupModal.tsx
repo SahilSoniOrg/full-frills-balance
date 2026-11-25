@@ -27,7 +27,7 @@ export function EmergencyFundPopupModal({
       fixedHeight={false}
       scrollable={false}
       accessibilityCloseLabel={strings.title}
-      secondaryAction={{ label: strings.actionClose, variant: 'secondary', onPress: onClose }}
+      secondaryAction={{ label: strings.actionClose, onPress: onClose }}
       primaryAction={{ label: strings.actionCreate, variant: 'primary', onPress: onCreateAccount }}
     >
       <View style={styles.modalSection}>

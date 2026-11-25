@@ -1,14 +1,8 @@
 import React from 'react';
-import { ModalActions } from './ModalActions';
+import { ModalActions, type ModalAction } from './ModalActions';
 import { ModalSurface } from './ModalSurface';
 
-type InfoSheetAction = {
-  label: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
-  disabled?: boolean;
-  testID?: string;
-};
+type InfoSheetAction = Omit<ModalAction, 'role'>;
 
 interface InfoSheetProps {
   visible: boolean;
@@ -54,7 +48,6 @@ export function InfoSheet({
                 {
                   ...secondaryAction,
                   role: 'secondary' as const,
-                  variant: secondaryAction.variant ?? 'secondary',
                 },
               ]
             : []),

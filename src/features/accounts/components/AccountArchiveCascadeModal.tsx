@@ -64,7 +64,6 @@ function CascadeSelectionEditor({
       secondaryAction={{
         label: AppConfig.strings.common.cancel,
         onPress: onClose,
-        variant: 'outline',
       }}
     >
       <AppText variant="body" color="secondary" style={styles.description}>

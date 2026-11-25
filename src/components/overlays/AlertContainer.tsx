@@ -97,7 +97,7 @@ export function AlertContainer() {
               setActiveAlert(null);
             }
           },
-          variant: payload.destructiveCancel ? 'destructive-outline' : 'outline',
+          variant: payload.destructiveCancel ? 'destructive-outline' : 'ghost',
         }}
         primaryAction={{
           label: payload.confirmText || AppConfig.strings.common.confirm,

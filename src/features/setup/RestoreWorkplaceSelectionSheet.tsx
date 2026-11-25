@@ -1,7 +1,8 @@
-import { AppButton, AppText, ListGroup, ListRow } from '@/src/components/core';
+import { AppText, ListGroup, ListRow } from '@/src/components/core';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { Size, Spacing } from '@/src/constants';
+import { Size } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 
 export interface RestoreWorkplaceCandidate {
@@ -50,6 +51,21 @@ export function RestoreWorkplaceSelectionSheet({
       fixedHeight={false}
       maxHeightPercent={82}
       accessibilityCloseLabel="Close restore workplace selection"
+      footer={
+        <ModalActions
+          actions={[
+            {
+              label:
+                selectedIndexes.length === 0
+                  ? 'Discard all'
+                  : `Save ${selectedIndexes.length} workplace${selectedIndexes.length === 1 ? '' : 's'}`,
+              variant: selectedIndexes.length === 0 ? 'destructive' : 'primary',
+              onPress: onConfirm,
+              testID: 'restore-selected-workplaces',
+            },
+          ]}
+        />
+      }
     >
       <Stack gap="sm">
         <AppText variant="caption" color="secondary">
@@ -90,16 +106,6 @@ export function RestoreWorkplaceSelectionSheet({
             );
           })}
         </ListGroup>
-        <AppButton
-          variant={selectedIndexes.length === 0 ? 'destructive' : 'primary'}
-          onPress={onConfirm}
-          style={{ marginTop: Spacing.md }}
-          testID="restore-selected-workplaces"
-        >
-          {selectedIndexes.length === 0
-            ? 'Discard all'
-            : `Save ${selectedIndexes.length} workplace${selectedIndexes.length === 1 ? '' : 's'}`}
-        </AppButton>
       </Stack>
     </ModalSurface>
   );
