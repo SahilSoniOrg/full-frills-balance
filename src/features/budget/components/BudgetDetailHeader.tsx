@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
-import { titleAmountFit } from '@/src/components/shared/FitText';
+import { titleAmountFitHug } from '@/src/components/shared/FitText';
 import { AppCard, AppText, Badge } from '@/src/components/core';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
@@ -96,7 +96,7 @@ export function BudgetDetailHeader({
             prefix={usage.hasUnvaluedEntries ? '≈' : undefined}
             variant="title"
             color={usageVm.isOver ? statusTone('overBudget') : 'text'}
-            fit={titleAmountFit}
+            fit={titleAmountFitHug}
           />
           <View style={styles.limitLine}>
             <AppText variant="caption" color="secondary">

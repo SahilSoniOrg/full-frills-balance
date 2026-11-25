@@ -52,7 +52,7 @@ describe('JournalSearchView report drill-down scope', () => {
     render(<JournalSearchView chrome={{} as ScreenNavChrome} {...vm} />);
 
     expect(screen.getByText('Report drill-down · Category: Food')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Clear report drill-down scope' }));
+    fireEvent.press(screen.getByTestId('journal-search-clear-report-scope'));
 
     expect(clearReportScope).toHaveBeenCalledTimes(1);
   });

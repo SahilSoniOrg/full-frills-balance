@@ -58,6 +58,11 @@ export const titleAmountFit: FitTextSizing = {
   maxFontSize: Typography.roles.title.fontSize,
   minFontSize: Typography.sizes.xl,
   lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+};
+
+/** Same sizing with hug layout for amounts beside sibling labels. */
+export const titleAmountFitHug: FitTextSizing = {
+  ...titleAmountFit,
   hug: true,
 };
 

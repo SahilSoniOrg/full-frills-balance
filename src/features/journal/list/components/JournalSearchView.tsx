@@ -3,12 +3,12 @@ import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountIn
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
-  AppButton,
   Icon,
   AppSegmentedControl,
   AppText,
   FilterChipButton,
   IconButton,
+  PressScaleTouchable,
   SearchField,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
@@ -16,7 +16,7 @@ import { transactionCaptureStrings as captureCopy } from '@/src/constants/copy/d
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
-import { useTheme } from '@/src/hooks/use-theme';
+import { Inline } from '@/src/design-system';
 import { useMemo } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -25,9 +25,9 @@ type JournalSearchViewProps = JournalSearchViewModel & {
   chrome: ScreenNavChrome;
 };
 
-export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
-  const { theme } = useTheme();
+const searchCopy = AppConfig.strings.journal.search;
 
+export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
   const filterHeader = useMemo(
     () => (
       <View style={styles.filterContainer} testID="journal-search-screen">
@@ -37,23 +37,31 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           </AppText>
         ) : null}
         {vm.reportScopeLabel ? (
-          <View style={styles.reportScopeRow}>
+          <Inline
+            align="center"
+            justify="space-between"
+            gap="sm"
+            paddingHorizontal="sm"
+            paddingVertical="xs"
+          >
             <AppText variant="caption" weight="semibold" style={styles.reportScopeLabel}>
-              Report drill-down · {vm.reportScopeLabel}
+              {searchCopy.reportScopeLabel(vm.reportScopeLabel)}
             </AppText>
-            <AppButton
-              variant="ghost"
-              size="sm"
-              accessibilityLabel="Clear report drill-down scope"
+            <PressScaleTouchable
+              accessibilityRole="button"
+              accessibilityLabel={searchCopy.clearReportScopeA11y}
               testID="journal-search-clear-report-scope"
               onPress={vm.clearReportScope}
+              hitSlop={8}
             >
-              Clear scope
-            </AppButton>
-          </View>
+              <AppText variant="caption" color="primary" weight="semibold">
+                {searchCopy.clearReportScope}
+              </AppText>
+            </PressScaleTouchable>
+          </Inline>
         ) : null}
         <SearchField
-          placeholder="Search description or notes..."
+          placeholder={searchCopy.placeholder}
           value={vm.searchQuery}
           onChangeText={vm.setSearchQuery}
           autoFocus
@@ -76,7 +84,11 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           />
 
           <FilterChipButton
-            label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
+            label={
+              vm.accountIds.length > 0
+                ? searchCopy.accountsCount(vm.accountIds.length)
+                : searchCopy.allAccounts
+            }
             icon={Icon.Wallet}
             isActive={vm.accountIds.length > 0}
             onPress={() => {
@@ -100,19 +112,19 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           />
         </ScrollView>
 
-        <View style={styles.amountRangeRow}>
+        <Inline align="center" gap="sm">
           <CalculatorAmountInput
-            placeholder="Min Amount"
+            placeholder={searchCopy.minAmount}
             value={vm.minAmount}
             onChangeText={vm.setMinAmount}
             containerStyle={{ flex: 1 }}
             testID="journal-search-min-amount"
           />
-          <AppText variant="caption" style={{ color: theme.textSecondary }}>
-            to
+          <AppText variant="caption" color="secondary">
+            {searchCopy.amountRangeTo}
           </AppText>
           <CalculatorAmountInput
-            placeholder="Max Amount"
+            placeholder={searchCopy.maxAmount}
             value={vm.maxAmount}
             onChangeText={vm.setMaxAmount}
             containerStyle={{ flex: 1 }}
@@ -133,10 +145,10 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
               style={styles.clearButton}
             />
           )}
-        </View>
+        </Inline>
       </View>
     ),
-    [vm, theme],
+    [vm],
   );
 
   return (
@@ -149,10 +161,12 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           error: vm.error,
           retry: vm.retry,
           loadingMoreText: AppConfig.strings.common.loading,
-          emptyTitle: 'No entries found',
-          emptySubtitle: 'Try adjusting your filters or search terms',
+          emptyTitle: searchCopy.emptyTitle,
+          emptySubtitle: searchCopy.emptySubtitle,
           onEndReached: vm.onEndReached,
           listHeader: filterHeader,
+          // Search is a pushed nav screen — no tab bar; override tab-list inset.
+          listContentStyle: styles.searchListContent,
         }}
         chrome={chrome}
         selection={vm.selection}
@@ -165,7 +179,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
         selectedIds={vm.accountIds}
         onSelect={vm.setAccountIds}
         accounts={vm.accounts}
-        title="Filter by Accounts"
+        title={searchCopy.filterByAccounts}
       />
 
       <DateRangePicker
@@ -183,14 +197,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
   },
-  reportScopeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
   reportScopeLabel: {
     flex: 1,
   },
@@ -199,12 +205,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     alignItems: 'center',
   },
-  amountRangeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   clearButton: {
     marginLeft: 'auto',
+  },
+  searchListContent: {
+    paddingBottom: Spacing.xxl,
   },
 });

@@ -272,6 +272,8 @@ export const transactionCaptureStrings = {
   sourcesHeader: 'Message sources',
   inboxTitle: 'Transaction inbox',
   inboxDescription: 'Messages waiting to be imported, duplicates, and messages with import errors.',
+  inboxLoadingMore: 'Loading more…',
+  inboxScanningOlder: 'Scanning older messages…',
   smsTitle: 'SMS settings',
   smsDescription: 'Manage SMS access, automatic import, and review alerts on this device.',
   shortcutSms: {

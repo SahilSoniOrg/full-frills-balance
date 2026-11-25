@@ -187,7 +187,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                     <LoadingView
                       loading
                       variant="inline"
-                      text={isScanningOlder ? 'Scanning older messages…' : 'Loading more…'}
+                      text={isScanningOlder ? strings.inboxScanningOlder : strings.inboxLoadingMore}
                     />
                   )}
                   {hasMore && (

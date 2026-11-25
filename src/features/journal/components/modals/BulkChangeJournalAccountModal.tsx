@@ -1,5 +1,6 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { Icon, AppIcon, AppText, LoadingView, PressScaleTouchable } from '@/src/components/core';
+import { AppConfig } from '@/src/constants/app-config';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -80,7 +81,8 @@ function BulkChangeJournalAccountModalContent({
         {loading ? (
           <LoadingView
             loading
-            text="Checking transaction structure..."
+            variant="inline"
+            text={AppConfig.strings.journal.bulk.changeAccountChecking}
             style={styles.loadingContainer}
           />
         ) : !eligibility ? (

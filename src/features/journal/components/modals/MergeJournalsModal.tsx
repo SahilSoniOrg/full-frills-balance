@@ -1,6 +1,7 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppIcon, AppInput, AppText, Badge, LoadingView } from '@/src/components/core';
+import { AppConfig } from '@/src/constants/app-config';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -78,7 +79,12 @@ function MergeJournalsModalContent({
       testID="merge-journals-modal"
     >
       {loading ? (
-        <LoadingView loading text="Analyzing merge preview..." style={styles.loadingContainer} />
+        <LoadingView
+          loading
+          variant="inline"
+          text={AppConfig.strings.journal.bulk.mergeAnalyzing}
+          style={styles.loadingContainer}
+        />
       ) : !preview ? (
         <View style={styles.emptyContainer}>
           <AppText style={{ color: theme.textTertiary }}>Unable to load merge preview.</AppText>
