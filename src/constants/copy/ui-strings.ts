@@ -745,10 +745,10 @@ export const UI_STRINGS = {
     modeHelpAccessibility: (mode: string) => `How ${mode} mode works`,
     closeModeHelpAccessibility: 'Close mode help',
     headers: {
-      edit: 'Edit entry',
-      copy: 'Copy entry',
-      new: 'New entry',
-      default: 'New entry',
+      edit: 'Edit Entry',
+      copy: 'Copy Entry',
+      new: 'New Entry',
+      default: 'New Entry',
     },
     banners: {
       editing: 'Editing this entry',
@@ -894,6 +894,8 @@ export const UI_STRINGS = {
     popularCurrencies: 'Popular',
     allCurrencies: 'All currencies',
     form: {
+      formTitleNew: 'New Account',
+      formTitleEdit: 'Edit Account',
       accountName: 'Account Name',
       accountNamePlaceholder: 'e.g., Bank',
       accountType: 'Type',
@@ -909,6 +911,8 @@ export const UI_STRINGS = {
       colorAuto: 'Auto (from type)',
       currencyLockedTooltip:
         'To keep past records accurate, an account’s currency can’t be changed after it has any transactions, including deleted ones.',
+      saveChanges: 'Save Changes',
+      createAccount: 'Create Account',
     },
     balanceClassify: {
       title: 'Classify balance change',
@@ -959,7 +963,7 @@ export const UI_STRINGS = {
       searchPlaceholder: 'Search accounts...',
       noResults: (query: string) => `No accounts found for "${query}"`,
       noAccountsInCategory: 'No accounts available in this category',
-      createAccount: 'Create New Account',
+      createAccount: 'New Account',
       applySelection: (count: number) => `Apply Selection (${count})`,
     },
     archive: {

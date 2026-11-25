@@ -23,20 +23,25 @@ describe('accountFormHelpers', () => {
     ).toBe(AccountType.EXPENSE);
   });
 
-  it('resolveAccountFormHeroCopy varies by category and edit mode', () => {
+  it('resolveAccountFormHeroCopy uses New X / Edit X titles', () => {
     const categoryNew = resolveAccountFormHeroCopy({
       isEditMode: false,
       accountType: AccountType.EXPENSE,
-      hasExistingAccounts: true,
     });
+    expect(categoryNew.heroTitle).toBe('New Category');
     expect(categoryNew.saveLabel).toContain('Category');
 
-    const accountFirst = resolveAccountFormHeroCopy({
+    const accountNew = resolveAccountFormHeroCopy({
       isEditMode: false,
       accountType: AccountType.ASSET,
-      hasExistingAccounts: false,
     });
-    expect(accountFirst.heroTitle).toContain('First');
+    expect(accountNew.heroTitle).toBe('New Account');
+
+    const accountEdit = resolveAccountFormHeroCopy({
+      isEditMode: true,
+      accountType: AccountType.ASSET,
+    });
+    expect(accountEdit.heroTitle).toBe('Edit Account');
   });
 
   it('returns all eligible parent candidates and excludes accounts with transactions', () => {

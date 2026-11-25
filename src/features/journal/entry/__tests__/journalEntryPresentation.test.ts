@@ -78,8 +78,8 @@ describe('journalEntryPresentation', () => {
   });
 
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
-    expect(resolveJournalEntryHeaderTitle({ isEdit: false })).toBe('New entry');
-    expect(resolveJournalEntryHeaderTitle({ isEdit: true })).toBe('Edit entry');
+    expect(resolveJournalEntryHeaderTitle({ isEdit: false })).toBe('New Entry');
+    expect(resolveJournalEntryHeaderTitle({ isEdit: true })).toBe('Edit Entry');
   });
 
   it('requires a valid basic plan before submit', () => {

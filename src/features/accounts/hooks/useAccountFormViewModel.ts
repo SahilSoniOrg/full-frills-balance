@@ -285,11 +285,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accounts,
     handleSave: persistence.handleSave,
   });
-  const hasExistingAccounts = accounts.length > 0;
   const { heroTitle, saveLabel } = resolveAccountFormHeroCopy({
     isEditMode,
     accountType: core.accountType,
-    hasExistingAccounts,
   });
 
   const potentialParents = useMemo(

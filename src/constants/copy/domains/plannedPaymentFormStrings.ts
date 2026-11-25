@@ -1,6 +1,6 @@
 export const plannedPaymentFormStrings = {
-  formTitleNew: 'New planned payment',
-  formTitleEdit: 'Edit planned payment',
+  formTitleNew: 'New Planned Payment',
+  formTitleEdit: 'Edit Planned Payment',
   amount: 'Amount',
   fxAutomatic: 'Estimate at today’s rate. The final conversion is calculated when posted.',
   fxFixed: 'These two amounts repeat unchanged, using your conversion.',

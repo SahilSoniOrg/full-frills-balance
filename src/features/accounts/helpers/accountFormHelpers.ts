@@ -33,27 +33,24 @@ export interface AccountFormHeroCopy {
 export function resolveAccountFormHeroCopy(input: {
   isEditMode: boolean;
   accountType: AccountType;
-  hasExistingAccounts: boolean;
 }): AccountFormHeroCopy {
   const isCategory = isCategoryAccountType(input.accountType);
 
   const heroTitle = input.isEditMode
     ? isCategory
       ? AppConfig.strings.accounts.categoryForm.formTitleEdit
-      : 'Edit Account'
+      : AppConfig.strings.accounts.form.formTitleEdit
     : isCategory
       ? AppConfig.strings.accounts.categoryForm.formTitleNew
-      : input.hasExistingAccounts
-        ? 'Create New Account'
-        : 'Create Your First Account';
+      : AppConfig.strings.accounts.form.formTitleNew;
 
   const saveLabel = input.isEditMode
     ? isCategory
       ? AppConfig.strings.accounts.categoryForm.saveChanges
-      : 'Save Changes'
+      : AppConfig.strings.accounts.form.saveChanges
     : isCategory
       ? AppConfig.strings.accounts.categoryForm.createCategory
-      : 'Create Account';
+      : AppConfig.strings.accounts.form.createAccount;
 
   return { heroTitle, saveLabel };
 }
