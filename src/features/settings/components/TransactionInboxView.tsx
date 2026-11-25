@@ -16,10 +16,9 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import { useTheme } from '@/src/hooks/use-theme';
 import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 interface TransactionInboxViewProps {
   vm: TransactionInboxViewModel;
@@ -27,7 +26,6 @@ interface TransactionInboxViewProps {
 }
 
 export function TransactionInboxView({ vm, headerActions }: TransactionInboxViewProps) {
-  const { theme } = useTheme();
   const {
     filter,
     setFilter,
@@ -186,7 +184,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
               ) : hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
                 <Stack gap="lg" style={styles.footer}>
                   {(isLoadingMore || isScanningOlder) && (
-                    <ActivityIndicator color={theme.primary} />
+                    <LoadingView
+                      loading
+                      variant="inline"
+                      text={isScanningOlder ? 'Scanning older messages…' : 'Loading more…'}
+                    />
                   )}
                   {hasMore && (
                     <AppButton
