@@ -4,7 +4,6 @@ import { AccountSectionViewModel, AccountCardViewModel } from '../../utils/trans
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { fireEvent, render } from '@/src/testing/render';
-import { StyleSheet } from 'react-native';
 
 jest.mock('@shopify/flash-list', () => {
   const { FlatList } = jest.requireActual<typeof import('react-native')>('react-native');
@@ -194,32 +193,18 @@ describe('AccountsListView', () => {
       />
     );
     const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
-    const originalControlStyle = StyleSheet.flatten(
-      getByTestId('section-control-asset').props.style,
-    );
-    const originalHeaderStyle = StyleSheet.flatten(
-      getByTestId('section-control-asset').parent!.props.style,
-    );
-    fireEvent.press(getByLabelText('Collapse Asset section'));
+    fireEvent.press(getByLabelText('Asset section, 1 accounts'));
     expect(onToggleSection).toHaveBeenCalledWith('Asset');
+    expect(queryByTestId('section-select-asset')).toBeNull();
 
     rerender(view(true));
-    expect(StyleSheet.flatten(getByTestId('section-control-asset').props.style)).toEqual(
-      originalControlStyle,
-    );
-    expect(StyleSheet.flatten(getByTestId('section-control-asset').parent!.props.style)).toEqual(
-      originalHeaderStyle,
-    );
-
     const sectionSelectButton = getByTestId('section-select-asset');
     expect(sectionSelectButton).toBeTruthy();
     fireEvent.press(sectionSelectButton);
     expect(onToggleSectionSelect).toHaveBeenCalledWith(['acc-1']);
     rerender(view(false));
-    expect(StyleSheet.flatten(getByTestId('section-control-asset').props.style)).toEqual(
-      originalControlStyle,
-    );
     expect(queryByTestId('section-select-asset')).toBeNull();
+    expect(getByTestId('section-control-asset')).toBeTruthy();
   });
 
   it('shows selection indicators on selected rows', () => {

@@ -10,8 +10,7 @@ interface ScreenSectionHeaderProps {
 }
 
 /**
- * ScreenSectionHeader - A modernized header for screen sections.
- * Uses design-system primitives for layout and spacing.
+ * Screen-level section title (Phase 2.3 heading role). Optional trailing action.
  */
 export function ScreenSectionHeader({ title, action, style }: ScreenSectionHeaderProps) {
   return (

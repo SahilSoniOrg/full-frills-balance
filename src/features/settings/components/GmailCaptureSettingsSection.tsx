@@ -8,14 +8,17 @@ import { AppNavigation } from '@/src/navigation/AppNavigation';
 export function GmailCaptureSettingsSection({
   gmail,
   featureEnabled,
+  header,
 }: {
   gmail: ReturnType<typeof useGmailCaptureViewModel>;
   featureEnabled: boolean;
+  /** Settings-group overline when this is the first connected source. */
+  header?: string;
 }) {
   if (!isGmailCaptureSectionVisible(featureEnabled, gmail.connected)) return null;
 
   return (
-    <ListGroup variant="plain">
+    <ListGroup variant="plain" header={header}>
       <ListRow
         focusId="transaction-capture-gmail"
         icon={Icon.Mail}

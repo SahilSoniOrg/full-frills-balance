@@ -1,6 +1,7 @@
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { AppButton, AppText, ErrorStateView } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Stack, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -41,11 +42,7 @@ export function BudgetSpendingInsights({
 
   return (
     <Stack gap="sm">
-      <Inline align="baseline" justify="space-between" gap="sm" flexWrap="wrap">
-        <AppText variant="heading" weight="semibold">
-          {strings.whereItWent}
-        </AppText>
-      </Inline>
+      <ScreenSectionHeader title={strings.whereItWent} />
 
       {isLoading ? (
         <AppText variant="caption" color="secondary">

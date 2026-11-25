@@ -5,12 +5,10 @@ import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
 import {
   EmptyStateView,
   ErrorStateView,
-  Icon,
-  IconButton,
-  AppText,
+  DisclosureToggle,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { AppConfig, Layout, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
@@ -24,6 +22,7 @@ import {
   buildAccountListRows,
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
+import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -107,81 +106,58 @@ export function AccountsListView({
         sectionAccountIds.length > 0 && sectionAccountIds.every(id => selectedAccountIds.has(id));
       const isSomeSectionSelected =
         !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
+      const selectionTrailing =
+        isSelectionModeActive && sectionAccountIds.length > 0 ? (
+          <PressScaleTouchable
+            onPress={() => onToggleSectionSelect(sectionAccountIds)}
+            hitSlop={{
+              top: Spacing.sm,
+              bottom: Spacing.sm,
+              left: Spacing.sm,
+              right: Spacing.sm,
+            }}
+            style={styles.sectionSelectButton}
+            accessibilityRole="checkbox"
+            accessibilityState={{
+              checked: isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false,
+            }}
+            accessibilityLabel={`Select all ${section.title} accounts`}
+            testID={`section-select-${section.title.toLowerCase()}`}
+          >
+            <SelectionIndicator
+              selected={isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false}
+            />
+          </PressScaleTouchable>
+        ) : undefined;
 
       return (
-        <View style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}>
-          <PressScaleTouchable
-            onPress={() => handleToggleSection(section.title)}
+        <Inline
+          align="center"
+          gap="sm"
+          style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
+        >
+          <DisclosureToggle
+            label={section.title}
+            meta={section.count}
+            expanded={!section.isCollapsed}
+            onToggle={() => handleToggleSection(section.title)}
             onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
             delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
-            style={styles.sectionHeaderPressable}
             accessibilityLabel={`${section.title} section, ${section.count} accounts`}
             accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: !section.isCollapsed }}
-          >
-            <View style={[styles.summaryRow, { flex: 1 }]}>
-              <View style={styles.flexRowGapSm}>
-                <AppText variant="subheading" weight="bold" color="secondary">
-                  {section.title}
-                </AppText>
-                <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
-                  <AppText variant="caption" weight="bold" color="tertiary">
-                    {section.count}
-                  </AppText>
-                </View>
-              </View>
-              <View style={styles.flexRowGapMd}>
-                <MoneyText
-                  amount={section.total}
-                  currencyCode={currencyCode}
-                  formatStyle="short"
-                  variant="body"
-                  weight="bold"
-                  style={{ color: section.totalColor }}
-                />
-              </View>
-            </View>
-          </PressScaleTouchable>
-
-          <View
-            style={styles.sectionSelectButton}
+            style={styles.sectionHeaderPressable}
             testID={`section-control-${section.title.toLowerCase()}`}
-          >
-            {isSelectionModeActive && sectionAccountIds.length > 0 ? (
-              <PressScaleTouchable
-                onPress={() => onToggleSectionSelect(sectionAccountIds)}
-                hitSlop={{
-                  top: Spacing.sm,
-                  bottom: Spacing.sm,
-                  left: Spacing.sm,
-                  right: Spacing.sm,
-                }}
-                style={styles.sectionSelectButton}
-                accessibilityRole="checkbox"
-                accessibilityState={{
-                  checked: isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false,
-                }}
-                accessibilityLabel={`Select all ${section.title} accounts`}
-                testID={`section-select-${section.title.toLowerCase()}`}
-              >
-                <SelectionIndicator
-                  selected={isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false}
-                />
-              </PressScaleTouchable>
-            ) : (
-              <IconButton
-                name={section.isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
-                size={Size.iconSm}
-                style={styles.sectionSelectButton}
-                variant="clear"
-                iconColor={theme.textSecondary}
-                onPress={() => handleToggleSection(section.title)}
-                accessibilityLabel={`${section.isCollapsed ? 'Expand' : 'Collapse'} ${section.title} section`}
-              />
-            )}
-          </View>
-        </View>
+            trailing={selectionTrailing}
+          />
+          <MoneyText
+            amount={section.total}
+            currencyCode={currencyCode}
+            formatStyle="short"
+            variant="body"
+            weight="bold"
+            style={{ color: section.totalColor }}
+          />
+        </Inline>
       );
     },
     [
@@ -190,8 +166,6 @@ export function AccountsListView({
       isSelectionModeActive,
       onToggleSectionSelect,
       selectedAccountIds,
-      theme.surfaceSecondary,
-      theme.textSecondary,
     ],
   );
 
@@ -313,41 +287,18 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.lg,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  flexRowGapSm: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  flexRowGapMd: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
   sectionHeaderContainer: {
     marginTop: Spacing.xl,
     marginBottom: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   sectionHeaderPressable: {
     flex: 1,
+    minWidth: 0,
   },
   sectionSelectButton: {
     minWidth: Size.touchTarget,
     minHeight: Size.touchTarget,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  countBadge: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.xs / 2,
-    borderRadius: Shape.radius.sm,
-    minWidth: Size.iconSm,
     alignItems: 'center',
   },
   emptyState: {

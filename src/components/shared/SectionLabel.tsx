@@ -9,8 +9,7 @@ interface SectionLabelProps {
 }
 
 /**
- * Standardized label for form sections and pickers.
- * Ensures consistent hierarchy, weight, and letter spacing across the app.
+ * Form-section overline (Phase 2.3 heading role for forms).
  */
 export const SectionLabel = ({ label, marginTop = 'lg', style }: SectionLabelProps) => {
   return (

@@ -2,10 +2,8 @@ import {
   AppButton,
   AppCard,
   AppSegmentedControl,
-  Badge,
   AppText,
-  AppIcon,
-  PressScaleTouchable,
+  DisclosureToggle,
   ListGroup,
   ListRow,
   ErrorStateView,
@@ -35,10 +33,7 @@ import type {
   CaptureReviewItem,
   HistoricalCategoryPattern,
 } from '@/src/services/transaction-intelligence/captureReviewService';
-import { Icon } from '@/src/types/domainIcons';
 import { formatDate } from '@/src/utils/dateFormatting';
-import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, View } from 'react-native';
 import { useMemo, useState } from 'react';
 
 const PAGE_SIZE = 20;
@@ -504,39 +499,25 @@ function SuggestionGroup({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
-  const { theme } = useTheme();
   if (count === 0) return null;
   return (
     <Stack gap="sm">
-      <PressScaleTouchable
-        onPress={onToggle}
-        accessibilityRole="button"
+      <DisclosureToggle
+        label={title}
+        meta={count}
+        expanded={expanded}
+        onToggle={onToggle}
         accessibilityLabel={`${title}, ${count}`}
-        accessibilityState={{ expanded }}
         testID={`matching-group-toggle-${id}`}
-        style={styles.groupHeader}
-        pressScale="subtle"
-      >
-        <View style={styles.groupTitleRow}>
-          <AppText variant="body" weight="semibold" style={styles.groupTitle}>
-            {title}
-          </AppText>
-          <Badge variant="primary" size="sm">
-            {count}
-          </Badge>
-        </View>
-        <AppIcon
-          name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={16}
-          color={theme.textSecondary}
-        />
-      </PressScaleTouchable>
+      />
       {expanded ? (
         <>
-          <AppText variant="caption" color="secondary" style={styles.groupDescription}>
+          <AppText variant="caption" color="secondary">
             {description}
           </AppText>
-          <View style={[styles.groupCard, { backgroundColor: theme.surface }]}>{children}</View>
+          <Box background="surface" borderRadius="lg" overflow="hidden">
+            {children}
+          </Box>
         </>
       ) : null}
     </Stack>
@@ -684,24 +665,3 @@ function CaptureSuggestionsScreen() {
 }
 
 export default withPrivacyScope(CaptureSuggestionsScreen);
-
-const styles = StyleSheet.create({
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minHeight: 44,
-    paddingHorizontal: 4,
-  },
-  groupTitleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    minWidth: 0,
-  },
-  groupTitle: { flexShrink: 1 },
-  groupDescription: { paddingHorizontal: 4 },
-  groupCard: { borderRadius: 16, overflow: 'hidden' },
-});

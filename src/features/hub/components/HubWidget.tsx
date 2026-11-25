@@ -1,6 +1,8 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppCard, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
+import { Inline } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
@@ -64,40 +66,41 @@ export const HubWidget = ({
   return (
     <>
       <View style={styles.container}>
-        <View style={styles.titleRow}>
-          <View style={styles.titleGroup}>
-            <AppText variant="subheading" color="secondary" style={styles.title}>
-              {AppConfig.strings.dashboard.insightsTitle}
-            </AppText>
-            <View
-              style={[
-                styles.countChip,
-                { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
-              ]}
-            >
-              <AppText
-                variant="caption"
-                style={{ color: theme.textSecondary, fontFamily: fonts.medium }}
+        <ScreenSectionHeader
+          title={AppConfig.strings.dashboard.insightsTitle}
+          style={styles.titleRow}
+          action={
+            <Inline gap="sm" align="center">
+              <View
+                style={[
+                  styles.countChip,
+                  { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
+                ]}
               >
-                {insights.length}
-              </AppText>
-            </View>
-          </View>
-          {!hideManageDismissed && (
-            <PressScaleTouchable
-              pressScale="subtle"
-              onPress={handleManageDismissed}
-              style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
-              accessibilityRole="button"
-              accessibilityLabel="Manage dismissed notifications"
-            >
-              <AppIcon name={Icon.History} size={14} color={theme.textSecondary} />
-              <AppText variant="caption" color="secondary">
-                {AppConfig.strings.dashboard.manageDismissed}
-              </AppText>
-            </PressScaleTouchable>
-          )}
-        </View>
+                <AppText
+                  variant="caption"
+                  style={{ color: theme.textSecondary, fontFamily: fonts.medium }}
+                >
+                  {insights.length}
+                </AppText>
+              </View>
+              {!hideManageDismissed ? (
+                <PressScaleTouchable
+                  pressScale="subtle"
+                  onPress={handleManageDismissed}
+                  style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Manage dismissed notifications"
+                >
+                  <AppIcon name={Icon.History} size={14} color={theme.textSecondary} />
+                  <AppText variant="caption" color="secondary">
+                    {AppConfig.strings.dashboard.manageDismissed}
+                  </AppText>
+                </PressScaleTouchable>
+              ) : null}
+            </Inline>
+          }
+        />
         <View style={styles.listContent}>
           {insights.map(insight => {
             const presentation = insightTypePresentation(insight.type);
@@ -278,18 +281,9 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.xl,
   },
-  titleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
-  title: {},
   countChip: {
     minWidth: 28,
     height: 24,

@@ -1,6 +1,7 @@
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { Icon } from '@/src/types/domainIcons';
-import { StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { AppText } from './AppText';
 import { PressScaleTouchable } from './PressScaleTouchable';
@@ -11,8 +12,14 @@ export interface DisclosureToggleProps {
   meta?: string | number;
   expanded: boolean;
   onToggle: () => void;
+  onLongPress?: () => void;
+  delayLongPress?: number;
+  /** Replaces the default chevron (e.g. a selection checkbox). */
+  trailing?: ReactNode;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   testID?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
 /** In-section row that shows or hides the content below it. */
@@ -21,17 +28,25 @@ export function DisclosureToggle({
   meta,
   expanded,
   onToggle,
+  onLongPress,
+  delayLongPress,
+  trailing,
   accessibilityLabel,
+  accessibilityHint,
   testID,
+  style,
 }: DisclosureToggleProps) {
   return (
     <PressScaleTouchable
       onPress={onToggle}
+      onLongPress={onLongPress}
+      delayLongPress={delayLongPress}
       pressScale="subtle"
-      style={styles.row}
+      style={[styles.row, style]}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
       accessibilityLabel={accessibilityLabel ?? (meta === undefined ? label : `${label}, ${meta}`)}
+      accessibilityHint={accessibilityHint}
       testID={testID}
     >
       <AppText variant="bodySmall" weight="medium" style={styles.label}>
@@ -42,11 +57,15 @@ export function DisclosureToggle({
           {meta}
         </AppText>
       ) : null}
-      <AppIcon
-        name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-        size={Size.iconXs}
-        color="textSecondary"
-      />
+      {trailing !== undefined ? (
+        trailing
+      ) : (
+        <AppIcon
+          name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
+          size={Size.iconXs}
+          color="textSecondary"
+        />
+      )}
     </PressScaleTouchable>
   );
 }
