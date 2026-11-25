@@ -1,7 +1,8 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppShellTestProvider, type AppShellValue } from '@/src/contexts/UIContext';
+import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
 import { useBudgetEditViewModel } from '@/src/features/budget/hooks/useBudgetEditViewModel';
 import BudgetEditScreen from '../BudgetEditScreen';
 import { minimalBudgetEditViewModel } from './budgetEditScreen.fixtures';
@@ -15,12 +16,37 @@ jest.mock('@/src/features/accounts', () => ({
 jest.mock('@/src/components/forms/EntityFormScreen', () => ({
   EntityFormScreen: ({ children }: { children: React.ReactNode }) => children,
 }));
+jest.mock('@/src/components/forms/schedule/ScheduleField', () => ({
+  ScheduleField: () => null,
+}));
 jest.mock('@/src/hooks/useConfirmUnsavedChanges', () => ({
   useConfirmUnsavedChanges: () => ({ onBack: jest.fn() }),
 }));
 jest.mock('@/src/features/budget/hooks/useBudgetEditViewModel', () => ({
   useBudgetEditViewModel: jest.fn(),
 }));
+jest.mock('@/src/components/account-selection', () => {
+  const { createElement } = require('react') as typeof import('react');
+  const { Pressable } = require('react-native') as typeof import('react-native');
+  return {
+    MultiAccountPickerModal: ({
+      visible,
+      title,
+      onClose,
+    }: {
+      visible: boolean;
+      title: string;
+      onClose: () => void;
+    }) =>
+      visible
+        ? createElement(
+            Pressable,
+            { testID: 'budget-asset-picker', accessibilityLabel: title, onPress: onClose },
+            title,
+          )
+        : null,
+  };
+});
 
 const shellValue: AppShellValue = {
   hasCompletedOnboarding: true,
@@ -69,5 +95,21 @@ describe('BudgetEditScreen privacy scope', () => {
     const screen = render(<BudgetEditScreen />, { wrapper: ProvidersWithoutPrivacyScope });
 
     expect(screen.getByTestId('hero-name-input')).toBeTruthy();
+  });
+});
+
+describe('BudgetEditScreen field chrome', () => {
+  it('uses SectionLabel headings and opens set-aside from a ListGroup FormRow', () => {
+    jest.mocked(useBudgetEditViewModel).mockReturnValue(minimalBudgetEditViewModel());
+
+    const screen = render(<BudgetEditScreen />, { wrapper: ProvidersWithoutPrivacyScope });
+
+    expect(screen.getByRole('header', { name: copy.whatCounts.toUpperCase() })).toBeTruthy();
+    expect(screen.getByRole('header', { name: copy.settings.toUpperCase() })).toBeTruthy();
+    expect(screen.queryByTestId('budget-asset-picker')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('budget-set-aside-from'));
+
+    expect(screen.getByTestId('budget-asset-picker')).toBeTruthy();
   });
 });

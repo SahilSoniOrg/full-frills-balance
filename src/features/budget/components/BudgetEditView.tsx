@@ -1,10 +1,16 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
-import { AppIcon, AppText, FilterChipButton, Icon, LoadingView } from '@/src/components/core';
+import {
+  AppIcon,
+  AppText,
+  FilterChipButton,
+  Icon,
+  ListGroup,
+  LoadingView,
+} from '@/src/components/core';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
-import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import {
   CurrencyPickerSheet,
@@ -16,14 +22,14 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
-import { FadeIn, Stack } from '@/src/design-system';
+import { FadeIn, Inline, Stack } from '@/src/design-system';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { getReadableColor } from '@/src/design-system/colorMath';
 import { toast } from '@/src/services/feedback/alerts';
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { BudgetSpendingHistoryChart } from './BudgetSpendingHistoryChart';
 import type { BudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
@@ -132,22 +138,19 @@ export function BudgetEditView({
             placeholder={copy.namePlaceholder}
           />
 
-          <FormSectionGroup title={copy.whatCounts} contentStyle={{ gap: Spacing.sm }}>
+          <Stack gap="sm">
+            <SectionLabel label={copy.whatCounts} marginTop="none" />
             {selectedCategories.length ? (
-              <View
-                testID="budget-selected-categories"
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}
-              >
+              <Inline testID="budget-selected-categories" gap="sm" wrap>
                 {selectedCategories.map(account => (
-                  <View
+                  <Inline
                     key={account.id}
                     testID={`budget-category-chip-${account.id}`}
+                    gap="xs"
+                    alignItems="center"
+                    paddingHorizontal="sm"
                     style={{
                       minHeight: Size.touchTarget - Spacing.xs,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: Spacing.xs,
-                      paddingHorizontal: Spacing.sm,
                       borderRadius: Shape.radius.full,
                       backgroundColor: theme.errorLight,
                     }}
@@ -169,15 +172,15 @@ export function BudgetEditView({
                     >
                       <AppIcon name={Icon.Close} size={Size.iconXs} color={expenseInk} />
                     </PressScaleTouchable>
-                  </View>
+                  </Inline>
                 ))}
-              </View>
+              </Inline>
             ) : (
-              <>
+              <Stack gap="sm">
                 <AppText variant="bodySmall" color="secondary">
                   {copy.whatCountsHint}
                 </AppText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                <Inline gap="sm" wrap>
                   {categorySuggestions.map((account, index) => (
                     <FilterChipButton
                       key={account.id}
@@ -191,8 +194,8 @@ export function BudgetEditView({
                       onPress={() => addCategory(account.id)}
                     />
                   ))}
-                </View>
-              </>
+                </Inline>
+              </Stack>
             )}
             <FilterChipButton
               testID="budget-category-add"
@@ -202,7 +205,7 @@ export function BudgetEditView({
               onPress={() => setIsAccountPickerVisible(true)}
               style={styles.addChip}
             />
-          </FormSectionGroup>
+          </Stack>
 
           {spendingHistory.length > 0 ? (
             <FadeIn fromY={4} duration={180}>
@@ -215,11 +218,11 @@ export function BudgetEditView({
             </FadeIn>
           ) : null}
 
-          <View style={styles.amountSection}>
+          <Stack gap="sm">
             <AppText variant="bodySmall" color="secondary" weight="medium">
               {amountLabel}
             </AppText>
-            <View style={styles.amountRow}>
+            <Inline gap="sm" alignItems="center">
               <CurrencySideControl
                 code={currencyCode}
                 symbol={currencySymbol}
@@ -238,7 +241,7 @@ export function BudgetEditView({
                 containerStyle={styles.amountInput}
                 testID="hero-amount-input"
               />
-            </View>
+            </Inline>
             {averageSpend != null ? (
               <SuggestionHint
                 message={copy.yourAverage(formatMoney(averageSpend, currencyCode))}
@@ -247,7 +250,7 @@ export function BudgetEditView({
                 testID="budget-use-average"
               />
             ) : null}
-          </View>
+          </Stack>
           <CurrencyPickerSheet
             visible={isCurrencyPickerVisible}
             currencies={currencies}
@@ -256,7 +259,7 @@ export function BudgetEditView({
             onClose={() => setIsCurrencyPickerVisible(false)}
           />
         </Stack>
-        <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.xl }}>
+        <Stack gap="sm" paddingHorizontal="lg" marginTop="xl">
           <SectionLabel label={copy.settings} marginTop="none" />
           <ScheduleField
             value={schedule}
@@ -266,15 +269,17 @@ export function BudgetEditView({
             intervalTestIDPrefix="budget-interval-type-item-"
             testID="budget-schedule-field"
           />
-        </View>
-        <FormRow
-          icon={Icon.Shield}
-          title={copy.setAsideFrom}
-          subtitle={copy.setAsideSubtitle}
-          value={fundingLabel}
-          onPress={() => setIsAssetPickerVisible(true)}
-          testID="budget-set-aside-from"
-        />
+        </Stack>
+        <ListGroup variant="plain">
+          <FormRow
+            icon={Icon.Shield}
+            title={copy.setAsideFrom}
+            subtitle={copy.setAsideSubtitle}
+            value={fundingLabel}
+            onPress={() => setIsAssetPickerVisible(true)}
+            testID="budget-set-aside-from"
+          />
+        </ListGroup>
       </EntityFormScreen>
 
       <MultiAccountPickerModal
@@ -305,14 +310,6 @@ export function BudgetEditView({
 }
 
 const styles = StyleSheet.create({
-  amountSection: {
-    gap: Spacing.sm,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   amountInput: {
     flex: 1,
     paddingHorizontal: 0,
