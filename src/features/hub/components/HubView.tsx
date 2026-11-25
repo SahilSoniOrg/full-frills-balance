@@ -6,10 +6,11 @@ import {
   EmptyStateView,
   ListGroup,
   ListRow,
+  LoadingView,
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
@@ -23,6 +24,7 @@ export function HubView({
   tabOptions,
   activeInsights,
   dismissedInsights,
+  isInsightsLoading,
   unreadSmsCount,
   currencyCode,
   strings,
@@ -34,6 +36,75 @@ export function HubView({
   chrome,
 }: HubViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
+
+  const renderActiveContent = () => {
+    if (activeInsights.length > 0) {
+      return (
+        <HubWidget
+          insights={activeInsights}
+          currencyCode={currencyCode}
+          onDismiss={dismissInsight}
+          onOpenInsight={onOpenInsight}
+          onCreateEmergencyAccount={onCreateEmergencyAccount}
+          hideManageDismissed
+        />
+      );
+    }
+    if (isInsightsLoading) {
+      return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
+    }
+    if (unreadSmsCount === 0) {
+      return (
+        <EmptyStateView
+          icon={Icon.Info}
+          title={strings.emptyState}
+          style={{ marginTop: Spacing.xxxl }}
+        />
+      );
+    }
+    return null;
+  };
+
+  const renderDismissedContent = () => {
+    if (dismissedInsights.length > 0) {
+      return (
+        <ListGroup
+          items={dismissedInsights}
+          toRow={(item: Insight) => ({
+            id: item.id,
+            leading: (
+              <AppIcon
+                name={insightTypePresentation(item.type).icon}
+                size={Size.xs}
+                color={theme.text}
+              />
+            ),
+            title: item.message,
+            subtitle: item.description,
+            trailing: (
+              <AppButton
+                size="sm"
+                onPress={() => restoreInsight(item.id)}
+                style={{ borderRadius: 20 }}
+              >
+                {strings.restore}
+              </AppButton>
+            ),
+          })}
+        />
+      );
+    }
+    if (isInsightsLoading) {
+      return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
+    }
+    return (
+      <EmptyStateView
+        icon={Icon.Info}
+        title={strings.noDismissed}
+        style={{ marginTop: Spacing.xxxl }}
+      />
+    );
+  };
 
   return (
     <ScreenWithChrome chrome={chrome} withPadding={false} scrollable>
@@ -55,55 +126,7 @@ export function HubView({
           </Box>
         ) : null}
 
-        {activeTab === 'active' ? (
-          activeInsights.length > 0 ? (
-            <HubWidget
-              insights={activeInsights}
-              currencyCode={currencyCode}
-              onDismiss={dismissInsight}
-              onOpenInsight={onOpenInsight}
-              onCreateEmergencyAccount={onCreateEmergencyAccount}
-              hideManageDismissed
-            />
-          ) : unreadSmsCount === 0 ? (
-            <EmptyStateView
-              icon={Icon.Info}
-              title={strings.emptyState}
-              style={{ marginTop: Spacing.xxxl }}
-            />
-          ) : null
-        ) : dismissedInsights.length > 0 ? (
-          <ListGroup
-            items={dismissedInsights}
-            toRow={(item: Insight) => ({
-              id: item.id,
-              leading: (
-                <AppIcon
-                  name={insightTypePresentation(item.type).icon}
-                  size={Size.xs}
-                  color={theme.text}
-                />
-              ),
-              title: item.message,
-              subtitle: item.description,
-              trailing: (
-                <AppButton
-                  size="sm"
-                  onPress={() => restoreInsight(item.id)}
-                  style={{ borderRadius: 20 }}
-                >
-                  {strings.restore}
-                </AppButton>
-              ),
-            })}
-          />
-        ) : (
-          <EmptyStateView
-            icon={Icon.Info}
-            title={strings.noDismissed}
-            style={{ marginTop: Spacing.xxxl }}
-          />
-        )}
+        {activeTab === 'active' ? renderActiveContent() : renderDismissedContent()}
       </Box>
     </ScreenWithChrome>
   );

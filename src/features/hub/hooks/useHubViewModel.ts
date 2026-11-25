@@ -22,6 +22,8 @@ export interface HubViewModel {
   tabOptions: { id: HubTab; label: string; badge: number }[];
   activeInsights: Insight[];
   dismissedInsights: Insight[];
+  /** True until the visible tab's insight observable emits once. */
+  isInsightsLoading: boolean;
   unreadSmsCount: number;
   currencyCode: string;
   strings: typeof AppConfig.strings.dashboard.hub;
@@ -42,8 +44,10 @@ export function useHubViewModel(): HubViewModel {
     analytics.trackFeatureUsage('hub', 'change_tab', { tab });
   }, []);
 
-  const { data: activeInsights } = useInsightPatterns(workplaceId);
-  const { data: dismissedInsights } = useDismissedInsightPatterns(workplaceId);
+  const { data: activeInsights, isLoading: isActiveInsightsLoading } =
+    useInsightPatterns(workplaceId);
+  const { data: dismissedInsights, isLoading: isDismissedInsightsLoading } =
+    useDismissedInsightPatterns(workplaceId);
   const supplementalInsights = useSupplementalInsights(workplaceId);
   const dismissedSupplementalInsights = useSupplementalInsights(workplaceId, true);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
@@ -148,6 +152,8 @@ export function useHubViewModel(): HubViewModel {
     tabOptions,
     activeInsights: [...(activeInsights ?? []), ...supplementalInsights],
     dismissedInsights: [...(dismissedInsights ?? []), ...dismissedSupplementalInsights],
+    isInsightsLoading:
+      activeTab === 'active' ? isActiveInsightsLoading : isDismissedInsightsLoading,
     unreadSmsCount: unreadSmsCount ?? 0,
     currencyCode: defaultCurrencyCode,
     strings: hubStrings,
