@@ -1,8 +1,5 @@
-import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
-import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
-import { AppConfig, Size } from '@/src/constants';
-import { Icon } from '@/src/types/domainIcons';
+import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { ReportsView } from '@/src/features/reports/components/ReportsView';
 import { useReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
@@ -14,24 +11,7 @@ function ReportsScreen() {
   const vm = useReportsViewModel();
 
   const chrome = useMemo<ScreenNavChrome>(
-    () => ({
-      ...privacyNavChrome(AppConfig.strings.reports.title, AppNavigation.back),
-      headerActions: (
-        <ScreenHeaderActions
-          actions={[
-            {
-              name: Icon.PieChart,
-              size: Size.iconSm,
-              variant: 'surface',
-              onPress: AppNavigation.toReportsV2,
-              accessibilityLabel: `Open ${AppConfig.strings.reportsV2.title}`,
-              testID: 'reports-v2-header-button',
-            },
-          ]}
-          trailing={<PrivacyToggleButton />}
-        />
-      ),
-    }),
+    () => privacyNavChrome(AppConfig.strings.reports.title, AppNavigation.back),
     [],
   );
 

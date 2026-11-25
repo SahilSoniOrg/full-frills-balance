@@ -4,7 +4,8 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
+import { Icon } from '@/src/types/domainIcons';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { reportsV2Engine } from '@/src/services/reports-v2/reportQueryEngine';
 import { observeReportInputChanges } from '@/src/services/reports-v2/reportInputChanges';
@@ -25,7 +26,19 @@ function ReportsV2Screen() {
     }, []),
   );
   const chrome = useMemo<ScreenNavChrome>(
-    () => privacyNavChrome(AppConfig.strings.reportsV2.title, AppNavigation.back),
+    () =>
+      privacyNavChrome(AppConfig.strings.reportsV2.title, AppNavigation.back, {
+        actions: [
+          {
+            name: Icon.PieChart,
+            size: Size.iconSm,
+            variant: 'surface',
+            onPress: AppNavigation.toReports,
+            accessibilityLabel: `Open ${AppConfig.strings.reports.title}`,
+            testID: 'reports-header-button',
+          },
+        ],
+      }),
     [],
   );
   return (

@@ -85,6 +85,7 @@ jest.mock('@/src/hooks/useObservable', () => ({
 jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     toReports: jest.fn(),
+    toReportsV2: jest.fn(),
     toHub: jest.fn(),
     toPersonalizationSettings: jest.fn(),
     toAppearanceSettings: jest.fn(),
@@ -155,6 +156,14 @@ describe('NavigationDrawer shell', () => {
     expect(AppNavigation.toHub).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Review')).toBeTruthy();
+  });
+
+  it('opens Money overview from Explore as the primary Reports entry', () => {
+    const { onClose } = renderDrawer();
+    fireEvent.press(screen.getByText('Money overview'));
+    expect(AppNavigation.toReportsV2).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.toReports).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('honours reduced motion and turns swiping off while the selector is open', () => {

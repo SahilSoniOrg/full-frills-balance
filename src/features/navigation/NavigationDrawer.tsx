@@ -81,9 +81,9 @@ const NAV_SECTIONS: {
     items: [
       {
         id: 'reports',
-        label: AppConfig.strings.reports.title,
+        label: AppConfig.strings.reportsV2.title,
         icon: Icon.PieChart,
-        onPress: AppNavigation.toReports,
+        onPress: AppNavigation.toReportsV2,
         accent: 'asset',
       },
       {
