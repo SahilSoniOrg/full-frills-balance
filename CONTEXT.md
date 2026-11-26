@@ -366,12 +366,20 @@ An ordinary ledger Account associated with a Person for transaction entry and pe
 _Avoid_: Person account (as a distinct account type); gift account; people parent
 
 **Person balance**:
-The amount the Person owes the User or the User owes the Person, derived from the Person's linked receivable Asset and payable Liability accounts. Native balances remain visible by currency; any converted net estimate is informational and never settles the ledger.
+The amount the Person owes the User or the User owes the Person, derived from the Person's linked receivable Asset and payable Liability accounts (including explicitly attached `LOAN` accounts). Native balances remain visible by currency; any converted net estimate is informational and never settles the ledger.
 _Avoid_: Automatically settled balance; cross-currency ledger balance
 
-**Repayment link**:
-An explicit relationship between a repayment journal and one or more earlier repayable items. It changes which items appear open or settled on the Person page, not the posted journal amounts.
-_Avoid_: Repayment journal as a separate journal type; automatic match
+**Open item**:
+A durable Workplace-scoped record of one amount owed by or to a Person, originated by a debt-increasing posting on a journal for a linked receivable or payable Account. Its remainder equals that original posting less active Repayment allocations and explicit Settlement write-off allocations.
+_Avoid_: Derived-only IOU; synthetic account balance
+
+**Repayment allocation**:
+An explicit link from a posted repayment journal to one or more Open items (plus any remaining unassigned Account balance), tracking how much of that repayment reduces each item without altering posted journal totals.
+_Avoid_: Repayment link; repayment journal as a separate journal type; automatic FX match
+
+**Settlement**:
+Applying a repayment journal or an explicit closing adjustment (**We're settled**) to a Person's Open items or unassigned balances. Opt-in Workplace auto-settle applies only same-currency offsets; cross-currency settlement and write-offs always require explicit confirmation.
+_Avoid_: Status-only close; implicit cross-currency write-off
 
 ### Time display
 
