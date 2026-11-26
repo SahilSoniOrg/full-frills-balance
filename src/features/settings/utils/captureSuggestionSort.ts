@@ -1,10 +1,17 @@
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
-import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
-import { descriptionScope } from '@/src/features/settings/components/CaptureSuggestionDetails';
+import { descriptionScope } from '@/src/features/settings/utils/descriptionScope';
 import type {
   CaptureReviewItem,
   HistoricalCategoryPattern,
 } from '@/src/services/transaction-intelligence/captureReviewService';
+
+export interface CaptureSuggestionsInput {
+  defaulted: readonly CaptureReviewItem[];
+  categoryCandidates: readonly CaptureReviewItem[];
+  historicalCategorySuggestions: readonly HistoricalCategoryPattern[];
+  mixedHistoricalCategoryPatterns: readonly HistoricalCategoryPattern[];
+  descriptionCandidates: readonly CaptureReviewItem[];
+}
 
 export type CaptureSuggestionSort = 'latest' | 'alphabetical' | 'repeats';
 
@@ -91,13 +98,13 @@ export function filterAndSortHistoricalPatterns(
 }
 
 export function filterAndSortCaptureSuggestions(
-  capture: TransactionCaptureViewModel,
+  capture: CaptureSuggestionsInput,
   search: string,
   sort: CaptureSuggestionSort,
 ) {
   const query = search.trim().toLocaleLowerCase();
   const reviewItems = (
-    values: CaptureReviewItem[],
+    values: readonly CaptureReviewItem[],
     fields: (item: CaptureReviewItem) => (string | number | undefined)[],
     title: (item: CaptureReviewItem) => string = item => item.merchantKey || item.description || '',
   ) =>

@@ -1,8 +1,12 @@
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import {
+  filterAndSortCaptureSuggestions,
   filterAndSortHistoricalPatterns,
   sortHistoricalPatterns,
   sortReviewRows,
 } from '@/src/features/settings/utils/captureSuggestionSort';
+import { descriptionScope } from '@/src/features/settings/utils/descriptionScope';
+import { captureDescriptionKey } from '@/src/domain/transaction-intelligence/descriptionDefaults';
 import type {
   CaptureReviewItem,
   HistoricalCategoryPattern,
@@ -74,5 +78,45 @@ describe('captureSuggestionSort', () => {
 
     expect(filterAndSortHistoricalPatterns(patterns, 'coffee', 'latest')).toHaveLength(1);
     expect(filterAndSortHistoricalPatterns(patterns, 'education', 'latest')[0]?.key).toBe('2');
+  });
+
+  it('extracts description scope from valid keys and falls back for invalid keys', () => {
+    const key = captureDescriptionKey('Cafe', 420, 'USD', 'expense');
+    expect(descriptionScope({ descriptionDefaultKey: key, currencyCode: 'INR' })).toEqual({
+      amount: 420,
+      currencyCode: 'USD',
+      kind: 'expense',
+    });
+
+    expect(descriptionScope({ descriptionDefaultKey: 'not-json', currencyCode: 'INR' })).toEqual({
+      amount: undefined,
+      currencyCode: 'INR',
+      kind: transactionCaptureStrings.unknownType,
+    });
+  });
+
+  it('filters capture suggestions with narrow input including parsed description scope', () => {
+    const key = captureDescriptionKey('Cafe', 420, 'USD', 'income');
+    const result = filterAndSortCaptureSuggestions(
+      {
+        defaulted: [],
+        categoryCandidates: [],
+        historicalCategorySuggestions: [],
+        mixedHistoricalCategoryPatterns: [],
+        descriptionCandidates: [
+          reviewItem({
+            journalId: asJournalId('d1'),
+            description: 'Morning coffee',
+            merchantKey: 'Cafe',
+            currencyCode: 'INR',
+            descriptionDefaultKey: key,
+          }),
+        ],
+      },
+      'income',
+      'latest',
+    );
+
+    expect(result.names.map(item => item.journalId)).toEqual([asJournalId('d1')]);
   });
 });

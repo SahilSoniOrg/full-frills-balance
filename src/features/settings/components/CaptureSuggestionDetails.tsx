@@ -15,6 +15,7 @@ import {
 } from './HistoricalEvidenceChart';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { descriptionScope } from '@/src/features/settings/utils/descriptionScope';
 import { Box, Inline, Stack } from '@/src/design-system';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import { categoryDefaultKey } from '@/src/domain/transaction-intelligence/categoryDefaults';
@@ -35,24 +36,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
 
 const EVIDENCE_PAGE_SIZE = 8;
-
-export function descriptionScope(item: CaptureReviewItem) {
-  if (!item.descriptionDefaultKey)
-    return { amount: undefined, currencyCode: item.currencyCode, kind: strings.unknownType };
-  try {
-    const parts: unknown = JSON.parse(item.descriptionDefaultKey);
-    if (Array.isArray(parts)) {
-      return {
-        amount: typeof parts[1] === 'number' ? parts[1] : undefined,
-        currencyCode: typeof parts[2] === 'string' ? parts[2] : item.currencyCode,
-        kind: typeof parts[3] === 'string' ? parts[3] : strings.unknownType,
-      };
-    }
-  } catch {
-    // The candidate remains reviewable even if its legacy key cannot be parsed.
-  }
-  return { amount: undefined, currencyCode: item.currencyCode, kind: strings.unknownType };
-}
 
 function smsCount(count: number) {
   return `${count} ${count === 1 ? strings.smsSingular : strings.smsPlural}`;

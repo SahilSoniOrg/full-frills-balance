@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@/src/testing/render';
+import { fireEvent, render, within } from '@/src/testing/render';
 import { DuplicateConflictResolutionModal } from '../DuplicateConflictResolutionModal';
 import { JournalId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -58,6 +58,12 @@ describe('DuplicateConflictResolutionModal', () => {
     expect(getByTestId('duplicate-modal-dismiss-btn')).toBeTruthy();
     expect(getByTestId('duplicate-modal-post-anyway-btn')).toBeTruthy();
     expect(getByTestId('duplicate-modal-view-journal-btn')).toBeTruthy();
+
+    const body = within(getByTestId('duplicate-modal-body'));
+    expect(body.queryByTestId('duplicate-modal-merge-btn')).toBeNull();
+    expect(body.queryByTestId('duplicate-modal-dismiss-btn')).toBeNull();
+    expect(body.queryByTestId('duplicate-modal-post-anyway-btn')).toBeNull();
+    expect(body.queryByTestId('duplicate-modal-view-journal-btn')).toBeNull();
   });
 
   it('triggers onMerge and closes when Merge button is pressed', () => {

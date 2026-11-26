@@ -26,14 +26,7 @@ import { useGmailCaptureViewModel } from '@/src/features/settings/hooks/useGmail
 import { isGmailCaptureSectionVisible } from '@/src/features/settings/utils/gmailCaptureVisibility';
 import { shortcutSmsIntakeService } from '@/src/services/sms/ShortcutSmsIntakeService';
 import { AppState, Platform } from 'react-native';
-import {
-  cloneElement,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-  useEffect,
-  useState,
-} from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 interface CaptureWorkspaceViewProps {
   onOpenSmsSettings: () => void;
@@ -292,20 +285,16 @@ function ConnectedSourcesSection({
   if (!showSms && !showGmail && !showShortcutSms) return null;
 
   const sourcesHeader = strings.sourcesHeader;
-  // Shortcut-only has its own ListGroup title; keep a ListGroup-styled overline above it.
-  const shortcutOnly = !showSms && !showGmail && showShortcutSms;
 
   return (
     <Stack gap="sm">
-      {shortcutOnly ? (
-        <Box paddingHorizontal="md">
-          <AppText variant="overline" color="secondary" accessibilityRole="header">
-            {sourcesHeader}
-          </AppText>
-        </Box>
-      ) : null}
+      <Box paddingHorizontal="md">
+        <AppText variant="overline" color="secondary" accessibilityRole="header">
+          {sourcesHeader}
+        </AppText>
+      </Box>
       {showSms ? (
-        <ListGroup variant="plain" header={sourcesHeader}>
+        <ListGroup variant="plain">
           <ListRow
             focusId="sms-settings"
             icon={Icon.MessageSquare}
@@ -317,13 +306,7 @@ function ConnectedSourcesSection({
           />
         </ListGroup>
       ) : null}
-      {showGmail
-        ? isValidElement(gmailSection)
-          ? cloneElement(gmailSection as ReactElement<{ header?: string }>, {
-              header: showSms ? undefined : sourcesHeader,
-            })
-          : gmailSection
-        : null}
+      {showGmail ? gmailSection : null}
       {showShortcutSms ? <ShortcutSmsSetup /> : null}
     </Stack>
   );

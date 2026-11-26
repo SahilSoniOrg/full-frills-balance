@@ -21,10 +21,10 @@ import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/us
 import {
   CategoryCandidateDetail,
   DefaultedDetail,
-  descriptionScope,
   HistoricalPatternRow,
   NameCandidateDetail,
 } from '@/src/features/settings/components/CaptureSuggestionDetails';
+import { descriptionScope } from '@/src/features/settings/utils/descriptionScope';
 import {
   countUnrepresentedPausedMerchants,
   SavedCaptureDefaults,

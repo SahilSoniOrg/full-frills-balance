@@ -4,7 +4,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { createContext, useContext } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-export type ModalActionsLayout = 'inline' | 'primary' | 'stacked' | 'grid';
+export type ModalActionsLayout = 'inline' | 'primary' | 'stacked';
 
 /** ModalSurface supplies the presentation, including actions rendered inside its body. */
 export const ModalActionsSurfaceContext = createContext<'center' | 'bottomSheet'>('center');
@@ -56,9 +56,7 @@ export function ModalActions({
   const surface = useContext(ModalActionsSurfaceContext);
   const preferredLayout = layout ?? defaultLayout(actions, surface);
   const resolvedLayout: ModalActionsLayout =
-    fontScale > 1.3 && (preferredLayout === 'inline' || preferredLayout === 'grid')
-      ? 'stacked'
-      : preferredLayout;
+    fontScale > 1.3 && preferredLayout === 'inline' ? 'stacked' : preferredLayout;
 
   const primaryAction = actions.find(action => action.role !== 'secondary');
   const isBottomSheet = surface === 'bottomSheet';
@@ -66,7 +64,7 @@ export function ModalActions({
   // The visible surface fills the platform-sized target, including Android's 48pt minimum.
   const minimumHeight = Platform.OS === 'android' ? Size.touchTargetLg : Size.touchTarget;
 
-  const renderAction = (action: ModalAction, index: number, width: 'content' | 'full' | 'half') => {
+  const renderAction = (action: ModalAction, index: number, width: 'content' | 'full') => {
     const secondary = action.role === 'secondary';
     const variant = action.variant ?? (secondary ? 'ghost' : 'primary');
 
@@ -82,7 +80,6 @@ export function ModalActions({
         testID={action.testID}
         style={[
           width === 'full' && styles.fullWidth,
-          width === 'half' && styles.halfWidth,
           width === 'content' && styles.inlineButton,
           styles.hitTarget,
           { minHeight: minimumHeight },
@@ -117,15 +114,10 @@ export function ModalActions({
         styles.actions,
         resolvedLayout === 'inline' && styles.inline,
         resolvedLayout === 'stacked' && styles.stacked,
-        resolvedLayout === 'grid' && styles.grid,
       ]}
     >
       {actions.map((action, index) =>
-        renderAction(
-          action,
-          index,
-          resolvedLayout === 'inline' ? 'content' : resolvedLayout === 'grid' ? 'half' : 'full',
-        ),
+        renderAction(action, index, resolvedLayout === 'inline' ? 'content' : 'full'),
       )}
     </View>
   );
@@ -145,10 +137,6 @@ const styles = StyleSheet.create({
   stacked: {
     flexDirection: 'column',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
   primaryGroup: {
     width: '100%',
     gap: Spacing.xs,
@@ -163,13 +151,6 @@ const styles = StyleSheet.create({
   },
   fullWidth: {
     width: '100%',
-  },
-  halfWidth: {
-    width: 0,
-    minWidth: 0,
-    flexBasis: '48%',
-    flexGrow: 1,
-    flexShrink: 1,
   },
   hitTarget: {
     justifyContent: 'center',
