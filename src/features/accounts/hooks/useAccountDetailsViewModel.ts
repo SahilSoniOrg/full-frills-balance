@@ -1,3 +1,4 @@
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import {
   AccountDetailsViewModel,
   PeriodMetrics,
@@ -286,10 +287,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: journalList.selectionChrome && {
-      ...journalList.selectionChrome,
-      actions: bulkOperations.actions,
-    },
+    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
     modals: bulkOperations.modals,
   };
 }

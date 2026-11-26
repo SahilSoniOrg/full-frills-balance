@@ -27,17 +27,25 @@ export type SelectionAmountSection = {
   colorKey?: AccountTypeColorKey;
 };
 
-export type SelectionAmountSummary = {
+type SelectionAmountSummaryBase = {
   label: string;
-  amounts: readonly MoneyAmount[];
   incomplete?: boolean;
   /** Number of selected items that contributed to `amounts` (defaults to `selectedCount`). */
   includedCount?: number;
   /** Signed flow amounts use presentationPolicy prefixes and income/expense ink. */
   signed?: boolean;
-  /** When multiple account types are selected, render each type as its own labeled block. */
-  sections?: readonly SelectionAmountSection[];
 };
+
+export type SelectionAmountSummary =
+  | (SelectionAmountSummaryBase & {
+      amounts: readonly MoneyAmount[];
+      sections?: never;
+    })
+  | (SelectionAmountSummaryBase & {
+      /** When multiple account types are selected, render each type as its own labeled block. */
+      sections: readonly SelectionAmountSection[];
+      amounts?: never;
+    });
 
 type SelectionSummaryProps = {
   selection: ReturnType<typeof getSelectionState>;
@@ -79,6 +87,63 @@ function joinMeta(parts: readonly (string | undefined)[]): string | undefined {
   return filtered.length > 0 ? filtered.join(' · ') : undefined;
 }
 
+type FormattedSummaryMoney = {
+  displayAmount: number;
+  prefix: string | undefined;
+  color: string;
+};
+
+function formatSummaryMoney(
+  amount: number,
+  currencyCode: string,
+  signed: boolean,
+  theme: ReturnType<typeof useSelectionBarSurface>['theme'],
+): FormattedSummaryMoney {
+  // Round to currency precision before deriving sign so tiny averages (e.g. -0.01 / 3) don't render "− $0.00".
+  const rounded = Money.from(amount, currencyCode).round().amount || 0;
+  if (!signed) {
+    return { displayAmount: rounded, prefix: undefined, color: theme.text };
+  }
+  const sign = flowSignFor(rounded);
+  return {
+    displayAmount: Math.abs(rounded),
+    prefix: signPrefix(sign),
+    color: theme[signColorKey(sign)],
+  };
+}
+
+function SummaryMoneyList({
+  amounts,
+  signed,
+  theme,
+  keyPrefix,
+}: {
+  amounts: readonly MoneyAmount[];
+  signed: boolean;
+  theme: ReturnType<typeof useSelectionBarSurface>['theme'];
+  keyPrefix?: string;
+}) {
+  return (
+    <>
+      {amounts.map(({ amount, currencyCode }) => {
+        const formatted = formatSummaryMoney(amount, currencyCode, signed, theme);
+        return (
+          <MoneyText
+            key={keyPrefix ? `${keyPrefix}-${currencyCode}` : currencyCode}
+            amount={formatted.displayAmount}
+            currencyCode={currencyCode}
+            prefix={formatted.prefix}
+            variant="body"
+            weight="bold"
+            numberOfLines={1}
+            style={{ color: formatted.color }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 export function SelectionSummary({
   selection,
   amountSummary,
@@ -108,15 +173,17 @@ export function SelectionSummary({
   const countWithType = `${compactCount} ${itemLabel}`;
   const remaining = Math.max(0, selectableCount - selectedSelectableCount);
   const {
-    amounts = [],
+    amounts,
+    sections,
     label,
     incomplete,
     includedCount,
     signed = false,
-    sections = [],
   } = amountSummary ?? {};
-  const showSections = sections.length > 1;
-  const displayAmounts = showSections ? [] : amounts;
+  const showSections = (sections?.length ?? 0) > 1;
+  const displayAmounts = showSections
+    ? []
+    : (amounts ?? (sections?.length === 1 ? sections[0].amounts : []));
   const multipleCurrencies = displayAmounts.length > 1;
   const hasAmounts = displayAmounts.length > 0 || showSections;
   const amountLabel =
@@ -128,24 +195,10 @@ export function SelectionSummary({
         ? copy.totalUnavailable
         : undefined;
 
-  const formatSummaryMoney = (amount: number, currencyCode: string) => {
-    // Round to currency precision before deriving sign so tiny averages (e.g. -0.01 / 3) don't render "− $0.00".
-    const rounded = Money.from(amount, currencyCode).round().amount || 0;
-    if (!signed) {
-      return { displayAmount: rounded, prefix: undefined, color: theme.text };
-    }
-    const sign = flowSignFor(rounded);
-    return {
-      displayAmount: Math.abs(rounded),
-      prefix: signPrefix(sign),
-      color: theme[signColorKey(sign)],
-    };
-  };
-
   const singleAmount =
     hasAmounts && !multipleCurrencies && !showSections ? displayAmounts[0] : null;
   const singleMoney = singleAmount
-    ? formatSummaryMoney(singleAmount.amount, singleAmount.currencyCode)
+    ? formatSummaryMoney(singleAmount.amount, singleAmount.currencyCode, signed, theme)
     : null;
   const contributingCount = includedCount ?? selectedCount;
   // Skip "N currencies" — stacked amounts already show that. Only average when every
@@ -156,6 +209,8 @@ export function SelectionSummary({
           const avg = formatSummaryMoney(
             singleAmount.amount / selectedCount,
             singleAmount.currencyCode,
+            signed,
+            theme,
           );
           return copy.average(
             formatMoney(avg.displayAmount, singleAmount.currencyCode, { prefix: avg.prefix }),
@@ -235,72 +290,40 @@ export function SelectionSummary({
           </PressScaleTouchable>
 
           <View style={styles.summaryContent} accessibilityLiveRegion="polite">
-            {showSections ? (
-              <Inline align="flex-start" gap="xs">
+            {showSections || multipleCurrencies ? (
+              <Inline align={showSections ? 'flex-start' : 'center'} gap="xs">
                 <ScrollView
                   style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
-                  contentContainerStyle={styles.sectionStack}
+                  contentContainerStyle={showSections ? styles.sectionStack : styles.amountStack}
                   nestedScrollEnabled
                   showsVerticalScrollIndicator
                   testID="selection-summary-breakdown"
                 >
-                  {sections.map(section => (
-                    <View key={section.label} style={styles.sectionBlock}>
-                      <AppText
-                        variant="caption"
-                        weight="bold"
-                        style={{
-                          color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
-                        }}
-                      >
-                        {section.label}
-                      </AppText>
-                      <View style={styles.amountStack}>
-                        {section.amounts.map(({ amount, currencyCode }) => {
-                          const formatted = formatSummaryMoney(amount, currencyCode);
-                          return (
-                            <MoneyText
-                              key={`${section.label}-${currencyCode}`}
-                              amount={formatted.displayAmount}
-                              currencyCode={currencyCode}
-                              prefix={formatted.prefix}
-                              variant="body"
-                              weight="bold"
-                              numberOfLines={1}
-                              style={{ color: formatted.color }}
-                            />
-                          );
-                        })}
+                  {showSections && sections ? (
+                    sections.map(section => (
+                      <View key={section.label} style={styles.sectionBlock}>
+                        <AppText
+                          variant="caption"
+                          weight="bold"
+                          style={{
+                            color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
+                          }}
+                        >
+                          {section.label}
+                        </AppText>
+                        <View style={styles.amountStack}>
+                          <SummaryMoneyList
+                            amounts={section.amounts}
+                            signed={signed}
+                            theme={theme}
+                            keyPrefix={section.label}
+                          />
+                        </View>
                       </View>
-                    </View>
-                  ))}
-                </ScrollView>
-                {partialBadge}
-              </Inline>
-            ) : multipleCurrencies ? (
-              <Inline align="center" gap="xs">
-                <ScrollView
-                  style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
-                  contentContainerStyle={styles.amountStack}
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator
-                  testID="selection-summary-breakdown"
-                >
-                  {displayAmounts.map(({ amount, currencyCode }) => {
-                    const formatted = formatSummaryMoney(amount, currencyCode);
-                    return (
-                      <MoneyText
-                        key={currencyCode}
-                        amount={formatted.displayAmount}
-                        currencyCode={currencyCode}
-                        prefix={formatted.prefix}
-                        variant="body"
-                        weight="bold"
-                        numberOfLines={1}
-                        style={{ color: formatted.color }}
-                      />
-                    );
-                  })}
+                    ))
+                  ) : (
+                    <SummaryMoneyList amounts={displayAmounts} signed={signed} theme={theme} />
+                  )}
                 </ScrollView>
                 {partialBadge}
               </Inline>

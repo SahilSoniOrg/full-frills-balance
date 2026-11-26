@@ -49,12 +49,7 @@ const requiredViewProps = {
   onAccountActionPress: jest.fn(),
   selectedAccountIds: new Set<AccountId>(),
   isSelectionModeActive: false,
-  selectionChrome: {
-    exitSelectionMode: jest.fn(),
-    selectAll: jest.fn(),
-    clearItems: jest.fn(),
-    actions: [],
-  },
+  selectionChrome: undefined,
   selectableAccountIds: [],
   modals: {
     activeModal: null,

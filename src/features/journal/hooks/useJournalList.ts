@@ -5,6 +5,7 @@ import {
   type JournalSelectionBundle,
 } from '@/src/features/journal/components/JournalListView';
 import type { JournalListModalsProps } from '@/src/features/journal/components/JournalListModals';
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import { AppConfig } from '@/src/constants';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
@@ -159,7 +160,7 @@ export function useJournalList(
       selectedIds: core.selectedIds,
       isSelectionModeActive: core.isSelectionModeActive,
       onLongPressItem: core.onLongPressItem,
-      chrome: core.selectionChrome && { ...core.selectionChrome, actions: bulkOperations.actions },
+      chrome: attachSelectionActions(core.selectionChrome, bulkOperations.actions),
     }),
     [
       core.selectedIds,

@@ -1,4 +1,4 @@
-import type { ListSelectionChrome } from '@/src/components/shared/SelectionOverlay';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type {
   AccountCardViewModel,
@@ -37,7 +37,7 @@ export interface AccountsListViewModel {
   onAccountActionPress: (account: AccountCardViewModel) => void;
   selectedAccountIds: Set<AccountId>;
   isSelectionModeActive: boolean;
-  selectionChrome: ListSelectionChrome;
+  selectionChrome?: SelectionOverlayProps;
   selectableAccountIds: AccountId[];
   modals: AccountsListModalsProps;
   onCollapseAccount: (accountId: AccountId) => void;

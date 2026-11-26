@@ -1,3 +1,4 @@
+import { buildListSelectionChrome } from '@/src/components/shared/buildSelectionChrome';
 import { AppConfig } from '@/src/constants';
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -359,29 +360,44 @@ export function useAccountsListViewModel(
   );
 
   const selectionChrome = useMemo(() => {
+    if (!selection.isSelectionModeActive) return undefined;
     const singleSection = selectedTotal.sections.length === 1 ? selectedTotal.sections[0] : null;
-    return {
+    const amountSummary =
+      selectedTotal.sections.length > 1
+        ? {
+            label: AppConfig.strings.selection.directBalances,
+            incomplete: selectedTotal.incomplete,
+            sections: selectedTotal.sections.map(section => ({
+              label: getAccountTypeSectionTitle(section.accountType),
+              amounts: section.amounts,
+              colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
+            })),
+          }
+        : {
+            label: singleSection
+              ? getAccountTypeSectionTitle(singleSection.accountType)
+              : AppConfig.strings.selection.directBalances,
+            amounts: selectedTotal.amounts,
+            incomplete: selectedTotal.incomplete,
+          };
+    return buildListSelectionChrome({
+      selectedIds: selection.selectedIds,
+      selectableIds: allSelectableAccountIds,
+      itemTypeLabel:
+        activeTab === 'categories'
+          ? AppConfig.strings.selection.itemTypes.category
+          : AppConfig.strings.selection.itemTypes.account,
       exitSelectionMode: selection.exitSelectionMode,
       selectAll: handleSelectAll,
       clearItems: selection.clearItems,
-      amountSummary: {
-        amounts: selectedTotal.amounts,
-        incomplete: selectedTotal.incomplete,
-        label: singleSection
-          ? getAccountTypeSectionTitle(singleSection.accountType)
-          : AppConfig.strings.selection.directBalances,
-        sections:
-          selectedTotal.sections.length > 1
-            ? selectedTotal.sections.map(section => ({
-                label: getAccountTypeSectionTitle(section.accountType),
-                amounts: section.amounts,
-                colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
-              }))
-            : undefined,
-      },
+      amountSummary,
       actions: bulk.selectionActions,
-    };
+    });
   }, [
+    selection.isSelectionModeActive,
+    selection.selectedIds,
+    allSelectableAccountIds,
+    activeTab,
     selection.exitSelectionMode,
     handleSelectAll,
     selection.clearItems,

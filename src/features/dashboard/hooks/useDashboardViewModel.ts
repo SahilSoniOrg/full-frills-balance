@@ -3,6 +3,7 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import {
   useJournalEntryList,
@@ -187,10 +188,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       selectedIds: journalListCore.selectedIds,
       isSelectionModeActive: journalListCore.isSelectionModeActive,
       onLongPressItem: journalListCore.onLongPressItem,
-      selectionChrome: journalListCore.selectionChrome && {
-        ...journalListCore.selectionChrome,
-        actions: journalBulk.actions,
-      },
+      selectionChrome: attachSelectionActions(journalListCore.selectionChrome, journalBulk.actions),
       modals: journalBulk.modals,
     }),
     [

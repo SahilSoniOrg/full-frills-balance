@@ -1,3 +1,4 @@
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { AppConfig } from '@/src/constants';
@@ -80,10 +81,7 @@ export function useInsightDetailsViewModel(
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: journalList.selectionChrome && {
-      ...journalList.selectionChrome,
-      actions: bulkOperations.actions,
-    },
+    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
     modals: bulkOperations.modals,
   };
 }

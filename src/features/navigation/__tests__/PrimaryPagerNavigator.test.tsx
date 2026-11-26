@@ -85,7 +85,6 @@ function renderPager(selecting: boolean) {
                     itemTypeLabel: 'account',
                     amountSummary: {
                       label: 'Direct balances',
-                      amounts: [],
                       sections: [
                         {
                           label: 'Assets',

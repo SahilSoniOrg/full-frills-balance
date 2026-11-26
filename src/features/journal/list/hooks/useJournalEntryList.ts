@@ -3,8 +3,10 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
-import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
-import { getSelectionState } from '@/src/hooks/selectionState';
+import {
+  buildListSelectionChrome,
+  type SelectionChromeBase,
+} from '@/src/components/shared/buildSelectionChrome';
 import { selectableJournalIds } from '@/src/components/journal/selectableJournalIds';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
@@ -77,7 +79,7 @@ export interface JournalEntryListCore {
   hasMore: boolean;
   onEndReached?: () => void;
   selectedIds: Set<JournalId>;
-  selectionChrome?: Omit<SelectionOverlayProps, 'actions'>;
+  selectionChrome?: SelectionChromeBase;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
   toggleSelection: (id: JournalId) => void;
@@ -265,8 +267,9 @@ export function useJournalEntryList({
   const selectionChrome = useMemo<JournalEntryListCore['selectionChrome']>(
     () =>
       selectionActive
-        ? {
-            state: getSelectionState(selectedIds, selectableIds),
+        ? buildListSelectionChrome({
+            selectedIds,
+            selectableIds,
             amountSummary: selectedTotal && {
               ...selectedTotal,
               label: AppConfig.strings.selection.signedTotal,
@@ -277,7 +280,7 @@ export function useJournalEntryList({
             clearItems,
             exitSelectionMode,
             onShareSelected,
-          }
+          })
         : undefined,
     [
       selectionActive,

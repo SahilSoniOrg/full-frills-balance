@@ -119,7 +119,6 @@ it('renders mixed account-type totals as labeled sections', () => {
       selection={getSelectionState(new Set(['a', 'l']), ['a', 'l', 'x'])}
       amountSummary={{
         label: 'Direct balances',
-        amounts: [],
         sections: [
           {
             label: 'Assets',
@@ -239,7 +238,6 @@ it('preserves negative sign in unsigned averages, omits averages when items are 
       amountSummary={{
         label: 'Direct balances',
         incomplete: true,
-        amounts: [],
         sections: [
           { label: 'Assets', colorKey: 'asset', amounts: [{ amount: 200, currencyCode: 'USD' }] },
           {
@@ -398,7 +396,6 @@ it('reserves layout space for the action dock and bounds tall amount breakdowns'
       selection={getSelectionState(new Set(['a', 'l']), ['a', 'l'])}
       amountSummary={{
         label: 'Direct balances',
-        amounts: [],
         sections: [
           {
             label: 'Assets',

@@ -1,3 +1,4 @@
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import { AppConfig } from '@/src/constants';
 import type { JournalSelectionBundle } from '../../components/JournalListView';
 import type { JournalListModalsProps } from '../../components/JournalListModals';
@@ -281,7 +282,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       selectedIds: core.selectedIds,
       isSelectionModeActive: core.isSelectionModeActive,
       onLongPressItem: core.onLongPressItem,
-      chrome: core.selectionChrome && { ...core.selectionChrome, actions: bulkOperations.actions },
+      chrome: attachSelectionActions(core.selectionChrome, bulkOperations.actions),
     },
     modals: attachMode ? undefined : bulkOperations.modals,
   };

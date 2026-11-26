@@ -1,8 +1,8 @@
+import { buildListSelectionChrome } from '@/src/components/shared/buildSelectionChrome';
 import {
   DetailHeaderMenuActions,
   type DetailMenuAction,
 } from '@/src/components/shared/DetailHeaderMenuActions';
-import { getSelectionState } from '@/src/hooks/selectionState';
 import { selectedPlannedPaymentTotal } from '../hooks/plannedPaymentDetailsPresentation';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -65,11 +65,9 @@ function PlannedPaymentDetailsScreen() {
     );
     return {
       ...detailChrome,
-      selection: {
-        state: getSelectionState(
-          vm.selectedIds,
-          history.map(journal => journal.id),
-        ),
+      selection: buildListSelectionChrome({
+        selectedIds: vm.selectedIds,
+        selectableIds: history.map(journal => journal.id),
         amountSummary: {
           label: AppConfig.strings.selection.paymentAmounts,
           ...selectedTotal,
@@ -80,7 +78,7 @@ function PlannedPaymentDetailsScreen() {
         exitSelectionMode: vm.exitSelectionMode,
         actions: vm.actions,
         onShareSelected: vm.onShareSelected,
-      },
+      }),
     };
   }, [
     strings,

@@ -1,3 +1,4 @@
+import { attachSelectionActions } from '@/src/components/shared/buildSelectionChrome';
 import { AppConfig } from '@/src/constants';
 import { getBudgetPreviousComparisonSpent } from '../components/budgetSpendingChartGeometry';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -372,10 +373,7 @@ export function useBudgetDetailViewModel() {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: journalList.selectionChrome && {
-      ...journalList.selectionChrome,
-      actions: bulkOperations.actions,
-    },
+    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
     modals: bulkOperations.modals,
   };
 }
