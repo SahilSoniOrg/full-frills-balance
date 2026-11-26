@@ -14,7 +14,7 @@ import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { accountMatcherStrings as copy } from '@/src/constants/copy/domains/accountMatcherStrings';
 import { AppConfig } from '@/src/constants/app-config';
-import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { BorderWidth, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useTheme } from '@/src/hooks/use-theme';
 import { confirm } from '@/src/services/feedback/alerts';
@@ -445,6 +445,8 @@ export function AccountMatcherEditorView({
         {vm.matcherId ? (
           <AppButton
             variant="ghost"
+            disabled={vm.isSaving || vm.isLoading}
+            loading={vm.isSaving}
             onPress={() =>
               confirm.show({
                 title: copy.forgetTitle,
@@ -472,7 +474,7 @@ const styles = StyleSheet.create({
   introduction: { gap: Spacing.sm },
   section: { gap: Spacing.md },
   field: { gap: Spacing.xs },
-  inputLine: { borderBottomWidth: StyleSheet.hairlineWidth },
+  inputLine: { borderBottomWidth: BorderWidth.thin },
   fragmentsInput: { minHeight: Size.textareaHeight, textAlignVertical: 'top' },
   patternHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   messageAction: {

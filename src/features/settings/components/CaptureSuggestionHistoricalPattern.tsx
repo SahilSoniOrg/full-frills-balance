@@ -301,35 +301,72 @@ function HistoricalEvidenceList({
 }) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
-  const [entries, setEntries] = useState<HistoricalEvidenceEntry[]>([]);
-  const [pagesLoaded, setPagesLoaded] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(false);
-  const [stale, setStale] = useState(false);
-  const activeRef = useRef(true);
+  const listScopeKey = `${workplaceId}:${pattern.key}:${pattern.journalIds.join(',')}`;
+  const [listState, setListState] = useState<{
+    scopeKey: string;
+    entries: HistoricalEvidenceEntry[];
+    pagesLoaded: number;
+    loading: boolean;
+    error: boolean;
+    stale: boolean;
+  }>({
+    scopeKey: listScopeKey,
+    entries: [],
+    pagesLoaded: 0,
+    loading: true,
+    error: false,
+    stale: false,
+  });
+  const [loadingMoreState, setLoadingMoreState] = useState<{ scopeKey: string; active: boolean }>({
+    scopeKey: listScopeKey,
+    active: false,
+  });
+  const requestIdRef = useRef(0);
   const loadingMoreRef = useRef(false);
 
+  const isCurrentScope = listState.scopeKey === listScopeKey;
+  const entries = useMemo(
+    () => (isCurrentScope ? listState.entries : []),
+    [isCurrentScope, listState.entries],
+  );
+  const pagesLoaded = isCurrentScope ? listState.pagesLoaded : 0;
+  const loading = !isCurrentScope || listState.loading;
+  const loadingMore = loadingMoreState.scopeKey === listScopeKey && loadingMoreState.active;
+  const error = isCurrentScope && listState.error;
+  const stale = isCurrentScope && listState.stale;
+
   useEffect(() => {
-    activeRef.current = true;
+    const reqId = ++requestIdRef.current;
     loadingMoreRef.current = false;
     void listHistoricalPatternEvidenceEntries(workplaceId, pattern, 0, EVIDENCE_PAGE_SIZE)
       .then(page => {
-        if (!activeRef.current) return;
-        setEntries(page);
-        setPagesLoaded(1);
-        setLoading(false);
-        setStale(page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length));
+        if (requestIdRef.current !== reqId) return;
+        setListState({
+          scopeKey: listScopeKey,
+          entries: page,
+          pagesLoaded: 1,
+          loading: false,
+          error: false,
+          stale: page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length),
+        });
+        setLoadingMoreState({ scopeKey: listScopeKey, active: false });
       })
       .catch(() => {
-        if (!activeRef.current) return;
-        setError(true);
-        setLoading(false);
+        if (requestIdRef.current !== reqId) return;
+        setListState({
+          scopeKey: listScopeKey,
+          entries: [],
+          pagesLoaded: 0,
+          loading: false,
+          error: true,
+          stale: false,
+        });
+        setLoadingMoreState({ scopeKey: listScopeKey, active: false });
       });
     return () => {
-      activeRef.current = false;
+      if (requestIdRef.current === reqId) requestIdRef.current += 1;
     };
-  }, [workplaceId, pattern]);
+  }, [workplaceId, pattern, listScopeKey]);
 
   const loadMore = async () => {
     if (
@@ -341,10 +378,12 @@ function HistoricalEvidenceList({
     ) {
       return;
     }
+    const reqId = requestIdRef.current;
+    const reqScopeKey = listScopeKey;
     const pagesAtStart = pagesLoaded;
     const offset = pagesAtStart * EVIDENCE_PAGE_SIZE;
     loadingMoreRef.current = true;
-    setLoadingMore(true);
+    setLoadingMoreState({ scopeKey: reqScopeKey, active: true });
     try {
       const page = await listHistoricalPatternEvidenceEntries(
         workplaceId,
@@ -352,18 +391,42 @@ function HistoricalEvidenceList({
         offset,
         EVIDENCE_PAGE_SIZE,
       );
-      if (!activeRef.current) return;
-      setEntries(current => [...current, ...page]);
-      setPagesLoaded(pagesAtStart + 1);
-      setLoadingMore(false);
-      setStale(
-        current =>
-          current || page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length - offset),
-      );
+      if (requestIdRef.current !== reqId) return;
+      setListState(current => {
+        const base =
+          current.scopeKey === reqScopeKey
+            ? current
+            : {
+                scopeKey: reqScopeKey,
+                entries: [],
+                pagesLoaded: 0,
+                loading: false,
+                error: false,
+                stale: false,
+              };
+        return {
+          scopeKey: reqScopeKey,
+          entries: [...base.entries, ...page],
+          pagesLoaded: pagesAtStart + 1,
+          loading: false,
+          error: false,
+          stale:
+            base.stale ||
+            page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length - offset),
+        };
+      });
+      setLoadingMoreState({ scopeKey: reqScopeKey, active: false });
     } catch {
-      if (!activeRef.current) return;
-      setError(true);
-      setLoadingMore(false);
+      if (requestIdRef.current !== reqId) return;
+      setListState(current => ({
+        scopeKey: reqScopeKey,
+        entries: current.scopeKey === reqScopeKey ? current.entries : [],
+        pagesLoaded: current.scopeKey === reqScopeKey ? current.pagesLoaded : 0,
+        loading: false,
+        error: true,
+        stale: current.scopeKey === reqScopeKey ? current.stale : false,
+      }));
+      setLoadingMoreState({ scopeKey: reqScopeKey, active: false });
     } finally {
       loadingMoreRef.current = false;
     }
@@ -509,8 +572,14 @@ function HistoricalPatternDetail({
     [pattern, activeCategoryId],
   );
   const { resolvedHourCycle } = useHourCyclePrefs();
-  const [selectedDayMs, setSelectedDayMs] = useState<number | null>(null);
-  const [dayEntries, setDayEntries] = useState<HistoricalEvidenceEntry[]>([]);
+  const daySelectionScope = `${capture.workplaceId}:${capture.changeRevision}:${pattern.key}:${activeCategoryId ?? 'all'}`;
+  const [daySelection, setDaySelection] = useState<{
+    scope: string;
+    dayMs: number | null;
+    entries: HistoricalEvidenceEntry[];
+  }>({ scope: daySelectionScope, dayMs: null, entries: [] });
+  const selectedDayMs = daySelection.scope === daySelectionScope ? daySelection.dayMs : null;
+  const dayEntries = daySelection.scope === daySelectionScope ? daySelection.entries : [];
   const [entriesOpen, setEntriesOpen] = useState(false);
   const [requestKey, setRequestKey] = useState(0);
   const existing = capture.categoryDefaults?.find(value => value.key === pattern.key);
@@ -521,8 +590,11 @@ function HistoricalPatternDetail({
 
   const handleSelectCategory = (categoryId: AccountId | null) => {
     setSelectedCategoryId(categoryId);
-    setSelectedDayMs(null);
-    setDayEntries([]);
+    setDaySelection({
+      scope: `${capture.workplaceId}:${capture.changeRevision}:${pattern.key}:${categoryId ?? 'all'}`,
+      dayMs: null,
+      entries: [],
+    });
   };
 
   const showEntryCategory = mixed && !activeCategoryId;
@@ -570,8 +642,11 @@ function HistoricalPatternDetail({
             selectedCategoryId={activeCategoryId}
             selectedDayMs={selectedDayMs}
             onSelectDay={(dayMs, nextEntries) => {
-              setSelectedDayMs(dayMs);
-              setDayEntries(nextEntries);
+              setDaySelection({
+                scope: daySelectionScope,
+                dayMs,
+                entries: nextEntries,
+              });
             }}
           />
           {mixed ? (
@@ -640,7 +715,7 @@ function HistoricalPatternDetail({
           </View>
           {entriesOpen ? (
             <HistoricalEvidenceList
-              key={`${currentEvidenceKey}:${requestKey}`}
+              key={`${currentEvidenceKey}:${filteredPattern.journalIds.join(',')}:${requestKey}`}
               workplaceId={capture.workplaceId}
               pattern={filteredPattern}
               showEntryCategory={showEntryCategory}

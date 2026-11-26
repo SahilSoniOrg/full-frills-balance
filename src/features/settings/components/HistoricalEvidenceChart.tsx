@@ -1,6 +1,6 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import type { Theme } from '@/src/constants/design-tokens';
+import { BorderWidth, Shape, Size, Spacing, type Theme } from '@/src/constants/design-tokens';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { blendColors, isValidHexColor } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -16,8 +16,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View, type ViewToken } from 'react-native';
 
 const DAYS_PER_PAGE = 30;
+const MS_PER_DAY = 86_400_000;
 const CHART_HEIGHT = 72;
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 60 };
+
+function calendarDayNumber(date: Dayjs) {
+  return Date.UTC(date.year(), date.month(), date.date()) / MS_PER_DAY;
+}
 
 function pageWindow(timelineEndMs: number, page: number) {
   const end = dayjs(timelineEndMs)
@@ -105,13 +110,13 @@ export function HistoricalEvidenceChart({
   const { theme } = useTheme();
   const listRef = useRef<FlatList<number>>(null);
   const [width, setWidth] = useState(0);
-  const [activePage, setActivePage] = useState(0);
   const today = dayjs().startOf('day');
   const lastEntry = dayjs(pattern.latestJournalDate).startOf('day');
   // Right edge is today so the first page always starts from now; keep future-dated entries visible.
   const latest = lastEntry.isAfter(today) ? lastEntry : today;
   const earliest = dayjs(pattern.earliestJournalDate ?? pattern.latestJournalDate).startOf('day');
-  const pageCount = Math.max(1, Math.floor(latest.diff(earliest, 'day') / DAYS_PER_PAGE) + 1);
+  const calendarDaySpan = Math.max(0, calendarDayNumber(latest) - calendarDayNumber(earliest));
+  const pageCount = Math.max(1, Math.floor(calendarDaySpan / DAYS_PER_PAGE) + 1);
   const pages = useMemo(() => Array.from({ length: pageCount }, (_, index) => index), [pageCount]);
   const timelineEndMs = latest.valueOf();
   const pagesWithActivity = useMemo(
@@ -119,27 +124,29 @@ export function HistoricalEvidenceChart({
     [pages, timelineEndMs, earliest, lastEntry],
   );
   const timelineIdentity = `${pattern.key}:${timelineEndMs}:${pageCount}`;
-  const [seenIdentity, setSeenIdentity] = useState(timelineIdentity);
-  let page = activePage;
-  if (seenIdentity !== timelineIdentity) {
-    setSeenIdentity(timelineIdentity);
-    setActivePage(0);
-    page = 0;
-  }
+  const timelineIdentityRef = useRef(timelineIdentity);
+  useEffect(() => {
+    timelineIdentityRef.current = timelineIdentity;
+  }, [timelineIdentity]);
+  const [pageState, setPageState] = useState<{ identity: string; page: number }>({
+    identity: timelineIdentity,
+    page: 0,
+  });
+  const page = pageState.identity === timelineIdentity ? pageState.page : 0;
   const activeHasActivity = pageOverlapsActivity(timelineEndMs, page, earliest, lastEntry);
   // inverted FlatList breaks contentOffset→page math; track the visible item instead.
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const index = viewableItems.find(token => token.isViewable && token.index != null)?.index;
       if (index == null) return;
-      setActivePage(index);
+      setPageState({ identity: timelineIdentityRef.current, page: index });
     },
     [],
   );
-  const goToPage = (page: number) => {
+  const goToPage = (targetPage: number) => {
     if (width <= 0) return;
-    // activePage updates from onViewableItemsChanged once the page is actually visible.
-    listRef.current?.scrollToIndex({ index: page, animated: true });
+    // pageState updates from onViewableItemsChanged once the page is actually visible.
+    listRef.current?.scrollToIndex({ index: targetPage, animated: true });
   };
   const onScrollToIndexFailed = (info: {
     index: number;
@@ -151,22 +158,26 @@ export function HistoricalEvidenceChart({
       listRef.current?.scrollToIndex({ index: info.index, animated: true });
     });
   };
+  const timelineAccessibilitySummary = `Daily amount in ${pattern.currencyCode}. Timeline page ${page + 1} of ${pageCount}.${
+    pagesWithActivity.length
+      ? ` Activity on ${pagesWithActivity.length} ${pagesWithActivity.length === 1 ? 'page' : 'pages'}.`
+      : ''
+  }`;
   return (
-    <View onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+    <View
+      testID="historical-evidence-chart"
+      onLayout={event => setWidth(event.nativeEvent.layout.width)}
+    >
       <View style={styles.chartHeader}>
-        <AppText variant="caption" color="secondary">
+        <AppText
+          variant="caption"
+          color="secondary"
+          accessibilityLabel={pageCount > 1 ? timelineAccessibilitySummary : undefined}
+        >
           Daily amount · {pattern.currencyCode}
         </AppText>
         {pageCount > 1 ? (
-          <View
-            style={styles.dots}
-            accessible
-            accessibilityLabel={`Timeline page ${page + 1} of ${pageCount}. ${
-              pagesWithActivity.length
-                ? `Activity on ${pagesWithActivity.length} ${pagesWithActivity.length === 1 ? 'page' : 'pages'}. `
-                : ''
-            }Swipe or tap a dot for earlier dates.`}
-          >
+          <View style={styles.dots}>
             {pages.map(dotPage => {
               const active = dotPage === page;
               const hasActivity = pagesWithActivity.includes(dotPage);
@@ -181,7 +192,7 @@ export function HistoricalEvidenceChart({
                       ? `Go to timeline page ${dotPage + 1}, has activity`
                       : `Go to timeline page ${dotPage + 1}, no activity`
                   }
-                  hitSlop={6}
+                  hitSlop={{ left: Spacing.sm, right: Spacing.sm }}
                   style={styles.dotHit}
                 >
                   <View
@@ -212,6 +223,7 @@ export function HistoricalEvidenceChart({
       ) : null}
       {width > 0 ? (
         <FlatList
+          key={timelineIdentity}
           ref={listRef}
           horizontal
           inverted
@@ -289,6 +301,13 @@ function ChartPage({
       active = false;
     };
   }, [workplaceId, pattern, revision, startMs, endMs, retry, requestKey]);
+  const categoryOrder = useMemo(
+    () =>
+      new Map<string, number>(
+        pattern.categories.map((category, index) => [category.accountId, index]),
+      ),
+    [pattern.categories],
+  );
   const days = Array.from({ length: DAYS_PER_PAGE }, (_, index) => {
     const date = start.add(index, 'day');
     const next = date.add(1, 'day');
@@ -354,30 +373,35 @@ function ChartPage({
         </View>
       ) : null}
       {state === 'ready' ? (
-        <View
-          accessible
-          accessibilityRole="image"
-          accessibilityLabel={`${formatDate(startMs)} to ${formatDate(end.subtract(1, 'day').valueOf())}. ${description || 'No entries in this period.'}`}
-        >
+        <View>
           <View
+            accessibilityLabel={`${formatDate(startMs)} to ${formatDate(end.subtract(1, 'day').valueOf())}. ${description || 'No entries in this period.'}`}
             style={[
               styles.chart,
-              { borderBottomColor: theme.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              { borderBottomColor: theme.border, borderBottomWidth: BorderWidth.thin },
             ]}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
           >
             {days.map(day => {
               const dayMs = day.date.valueOf();
               const selected = selectedDayMs === dayMs;
-              const visibleAmounts = [...day.amounts].filter(
-                ([id]) => !selectedCategoryId || selectedCategoryId === id,
+              const visibleAmounts = [...day.amounts]
+                .filter(([id]) => !selectedCategoryId || selectedCategoryId === id)
+                .sort((a, b) => {
+                  const orderA = categoryOrder.get(a[0]) ?? Number.MAX_SAFE_INTEGER;
+                  const orderB = categoryOrder.get(b[0]) ?? Number.MAX_SAFE_INTEGER;
+                  return orderA !== orderB ? orderA - orderB : b[1] - a[1];
+                });
+              const rawHeights = visibleAmounts.map(([, amount]) =>
+                scale > 0 ? Math.max(2, (CHART_HEIGHT * amount) / scale) : 0,
               );
+              const rawSum = rawHeights.reduce((sum, height) => sum + height, 0);
+              const heightScale = rawSum > CHART_HEIGHT ? CHART_HEIGHT / rawSum : 1;
               return (
                 <Pressable
                   key={dayMs}
                   onPress={() => selectDay(dayMs, day.dayEntries)}
                   disabled={day.filteredTotal <= 0}
+                  accessible={day.filteredTotal > 0}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={
@@ -387,17 +411,17 @@ function ChartPage({
                   }
                   style={[styles.day, selected ? { backgroundColor: theme.primaryLight } : null]}
                 >
-                  {visibleAmounts.map(([id, amount]) => (
+                  {visibleAmounts.map(([id], segmentIndex) => (
                     <View
                       key={id}
-                      style={{
-                        width: '100%',
-                        height: scale > 0 ? Math.max(3, (CHART_HEIGHT * amount) / scale) : 0,
-                        backgroundColor: historicalCategoryChartFill(pattern, id, theme, true),
-                        opacity: selectedCategoryId === id ? 1 : 0.92,
-                        borderTopLeftRadius: 1.5,
-                        borderTopRightRadius: 1.5,
-                      }}
+                      style={[
+                        styles.barSegment,
+                        {
+                          height: rawHeights[segmentIndex] * heightScale,
+                          backgroundColor: historicalCategoryChartFill(pattern, id, theme, true),
+                          opacity: selectedCategoryId === id ? 1 : 0.92,
+                        },
+                      ]}
                     />
                   ))}
                 </Pressable>
@@ -444,43 +468,64 @@ function ChartPage({
   );
 }
 
+const DOT_ACTIVITY_SIZE = 7;
+const DOT_EMPTY_SIZE = 5;
+const DOT_CURRENT_SIZE = 8;
+
 const styles = StyleSheet.create({
   chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dotHit: { minWidth: 20, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { borderRadius: 4 },
-  dotWithActivity: { width: 7, height: 7 },
-  dotEmpty: { width: 5, height: 5 },
-  dotCurrent: { width: 8, height: 8 },
-  swipeHint: { marginBottom: 2 },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  dotHit: {
+    minWidth: Size.sm,
+    minHeight: Size.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: { borderRadius: Shape.radius.full },
+  dotWithActivity: { width: DOT_ACTIVITY_SIZE, height: DOT_ACTIVITY_SIZE },
+  dotEmpty: { width: DOT_EMPTY_SIZE, height: DOT_EMPTY_SIZE },
+  dotCurrent: { width: DOT_CURRENT_SIZE, height: DOT_CURRENT_SIZE },
+  swipeHint: { marginBottom: Spacing.xs / 2 },
   chart: {
     height: CHART_HEIGHT,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
-    marginTop: 2,
+    gap: Spacing.xs / 2,
+    marginTop: Spacing.xs / 2,
   },
-  day: { flex: 1, justifyContent: 'flex-end', overflow: 'hidden', borderRadius: 2, minHeight: 8 },
+  day: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    borderRadius: Shape.radius.xs / 2,
+    minHeight: Spacing.sm,
+  },
+  barSegment: {
+    width: '100%',
+    borderTopLeftRadius: Shape.radius.xs / 2,
+    borderTopRightRadius: Shape.radius.xs / 2,
+  },
   ticks: {
     flexDirection: 'row',
-    gap: 2,
-    height: 7,
-    marginTop: 2,
+    gap: Spacing.xs / 2,
+    height: DOT_ACTIVITY_SIZE,
+    marginTop: Spacing.xs / 2,
     alignItems: 'flex-start',
   },
-  tick: { flex: 1, height: 4, borderRadius: 2 },
+  tick: { flex: 1, height: Spacing.xs, borderRadius: Shape.radius.xs / 2 },
   axis: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 2,
+    gap: Spacing.xs,
+    marginTop: Spacing.xs / 2,
   },
   message: { minHeight: CHART_HEIGHT, justifyContent: 'center', alignItems: 'flex-start' },
 });

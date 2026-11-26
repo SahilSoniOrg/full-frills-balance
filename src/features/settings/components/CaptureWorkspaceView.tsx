@@ -156,7 +156,7 @@ export function CaptureWorkspaceView({
           subtitle={
             capture.loading
               ? strings.reviewLoading
-              : capture.error
+              : capture.error && !capture.hasSnapshot
                 ? strings.loadError
                 : capture.reviewCount > 0
                   ? strings.reviewCount(capture.reviewCount)
@@ -165,7 +165,7 @@ export function CaptureWorkspaceView({
           trailing={
             <Badge
               variant={
-                capture.loading || capture.error
+                capture.loading || (capture.error && !capture.hasSnapshot)
                   ? 'default'
                   : capture.reviewCount > 0
                     ? 'warning'
@@ -173,12 +173,16 @@ export function CaptureWorkspaceView({
               }
               size="sm"
               icon={
-                !capture.loading && !capture.error && capture.reviewCount === 0
+                !capture.loading &&
+                (!capture.error || capture.hasSnapshot) &&
+                capture.reviewCount === 0
                   ? Icon.Check
                   : undefined
               }
             >
-              {capture.loading || capture.error ? '—' : capture.reviewCount}
+              {capture.loading || (capture.error && !capture.hasSnapshot)
+                ? '—'
+                : capture.reviewCount}
             </Badge>
           }
           onPress={AppNavigation.toCategorizationReview}
@@ -201,7 +205,7 @@ export function CaptureWorkspaceView({
           icon={Icon.Zap}
           title={strings.suggestionsTitle}
           subtitle={strings.suggestionsOverviewDescription}
-          disabled={capture.loading || capture.error}
+          disabled={capture.loading || (!capture.hasSnapshot && Boolean(capture.error))}
           onPress={AppNavigation.toCaptureSuggestions}
           testID="transaction-capture-suggestions"
           wrap

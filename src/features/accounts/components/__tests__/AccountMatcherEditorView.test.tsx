@@ -196,4 +196,26 @@ describe('AccountMatcherEditorView older-message affordance', () => {
     expect(screen.queryByText('Choose older messages')).toBeNull();
     expect(screen.queryByTestId('account-matcher-older-sms-picker')).toBeNull();
   });
+
+  it('disables the forget action while saving or loading', () => {
+    const vm = makeViewModel();
+    vm.matcherId = 'matcher-1' as unknown as AccountMatcherEditorViewModel['matcherId'];
+    vm.isSaving = true;
+
+    render(
+      <AccountMatcherEditorView
+        vm={vm}
+        chrome={{} as never}
+        showOverlapWarning={false}
+        onSave={jest.fn()}
+        onResolveOverlap={jest.fn()}
+        onForget={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByTestId('forget-account-matcher').props.accessibilityState?.disabled ??
+        screen.getByTestId('forget-account-matcher').props.disabled,
+    ).toBeTruthy();
+  });
 });
