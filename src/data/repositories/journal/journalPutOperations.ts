@@ -36,6 +36,10 @@ import { isActiveJournalStatus } from '@/src/domain/journal/journalStatus';
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import { parseJSONRecord } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
+import {
+  guardAndSyncJournalDeleteOrReverseInSession,
+  syncPutJournalPeopleInSession,
+} from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
 export interface PreparedJournalWrite {
   ops: () => readonly Model[];
@@ -116,6 +120,16 @@ export async function preparePutOperations(
       record.updatedAt = now;
       if (initialDeletedAt) record.deletedAt = initialDeletedAt;
     });
+
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId: journal.id,
+    status,
+    accountsById: balance.accountsById,
+    beforeTransactions: oldTransactions,
+    newLines: lines,
+  });
 
   await stagePutCaptureMetadata({
     session,
@@ -259,12 +273,21 @@ export async function stagePost(
   const originalPlannedDate = journal.journalDate;
 
   const transactions = await fetchJournalTransactions(workplaceId, [journalId]);
-  await validateJournal({
+  const validated = await validateJournal({
     currencyCode: journal.currencyCode,
     status: JournalStatus.POSTED,
     workplaceId,
     transactions: transactions.map(toPersistenceLine),
     session,
+  });
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId,
+    status: JournalStatus.POSTED,
+    accountsById: validated.accountsById,
+    beforeTransactions: transactions,
+    newLines: transactions.map(toPersistenceLine),
   });
 
   const now = new Date();
@@ -349,6 +372,12 @@ export async function stageReverse(
   if (originalStatus !== JournalStatus.POSTED || originalReversingJournalId) {
     throw new Error('Only a posted journal without an existing reversal can be reversed');
   }
+  await guardAndSyncJournalDeleteOrReverseInSession({
+    session,
+    workplaceId,
+    journalIds: [originalJournalId],
+    action: 'reverse',
+  });
   const originalTransactions = await fetchJournalTransactions(workplaceId, [originalJournalId]);
 
   const prepared = await preparePutOperations(

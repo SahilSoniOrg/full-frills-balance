@@ -33,6 +33,10 @@ import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
+import {
+  guardAndSyncJournalDeleteOrReverseInSession,
+  syncPutJournalPeopleInSession,
+} from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
 export interface BulkDeleteResult extends JournalRebuildImpact {
   undoToken: BulkDeleteUndoToken;
@@ -95,6 +99,12 @@ export async function stageDelete(
     const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
     assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
   }
+  await guardAndSyncJournalDeleteOrReverseInSession({
+    session,
+    workplaceId,
+    journalIds: [journalId],
+    action: 'delete',
+  });
   const { transactions } = await stageSoftDelete(session, workplaceId, [journal], auditMetadata);
   return rebuildImpactFor([journal], transactions);
 }
@@ -108,6 +118,12 @@ export async function stageBulkDelete(
   if (journals.length === 0) {
     return { ...emptyRebuildImpact(), undoToken: { journals: [], transactions: [] } };
   }
+  await guardAndSyncJournalDeleteOrReverseInSession({
+    session,
+    workplaceId,
+    journalIds: journals.map(journal => journal.id),
+    action: 'delete',
+  });
   const { deletedAt, transactions } = await stageSoftDelete(session, workplaceId, journals);
   return {
     ...rebuildImpactFor(journals, transactions),
@@ -337,6 +353,15 @@ export async function stageRevertToPlanned(
       ? storedDate
       : localStartOfDay(currentJournalDate);
   const transactions = await fetchJournalTransactions(workplaceId, [journalId]);
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId,
+    status: JournalStatus.PLANNED,
+    accountsById: new Map(),
+    beforeTransactions: transactions,
+    newLines: [],
+  });
   const now = new Date();
 
   stageModelWrite(session, () => [
