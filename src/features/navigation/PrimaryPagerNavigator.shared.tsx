@@ -2,6 +2,7 @@ import {
   PrimaryPrivacyScopeStoreProvider,
   PrivacyScopeProvider,
 } from '@/src/contexts/PrivacyScope';
+import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
 import { SelectionDock, SelectionHeader } from '@/src/components/shared/SelectionOverlay';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { AccountsGroupProvider } from '@/src/features/accounts';
@@ -328,9 +329,7 @@ function PrimaryPagerFrame({
           >
             <View
               style={selection ? styles.coveredHeaderLayer : undefined}
-              pointerEvents={selection ? 'none' : 'auto'}
-              accessibilityElementsHidden={Boolean(selection)}
-              importantForAccessibility={selection ? 'no-hide-descendants' : 'auto'}
+              {...coveredInteractionProps(Boolean(selection))}
             >
               <HomeV2Header
                 activeRouteName={activeRouteName}
@@ -365,9 +364,7 @@ function PrimaryPagerFrame({
       >
         <View
           style={selection ? styles.coveredFooterLayer : undefined}
-          pointerEvents={selection ? 'none' : 'auto'}
-          accessibilityElementsHidden={Boolean(selection)}
-          importantForAccessibility={selection ? 'no-hide-descendants' : 'auto'}
+          {...coveredInteractionProps(Boolean(selection))}
         >
           <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
         </View>

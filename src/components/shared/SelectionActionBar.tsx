@@ -79,9 +79,6 @@ export const SelectionActionBar = ({
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const afterDismiss = useAfterDismiss();
   const isBarActive = selectedCount > 0;
-  if (!isBarActive && isOverflowOpen) {
-    setIsOverflowOpen(false);
-  }
   const isModalVisible = isOverflowOpen && isBarActive;
   const copy = AppConfig.strings.selection;
 
@@ -110,7 +107,12 @@ export const SelectionActionBar = ({
   );
 
   useEffect(() => {
-    if (!isBarActive) afterDismiss.cancel();
+    if (!isBarActive) {
+      afterDismiss.cancel();
+      // Reset overflow state when selection clears so re-selecting starts closed.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsOverflowOpen(false);
+    }
   }, [afterDismiss, isBarActive]);
 
   const resolveDockTone = (action: SelectionAction, disabled: boolean) => {

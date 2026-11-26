@@ -1,4 +1,5 @@
 import { NavigationBar, type NavigationBarLeft } from '@/src/components/layout/NavigationBar';
+import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
 import {
   SelectionDock,
   SelectionHeader,
@@ -68,9 +69,7 @@ export function Screen({
           headerCovered ? styles.coveredHeader : undefined,
           selection ? styles.coveredHeaderLayer : undefined,
         ]}
-        pointerEvents={headerCovered ? 'none' : 'auto'}
-        accessibilityElementsHidden={headerCovered}
-        importantForAccessibility={headerCovered ? 'no-hide-descendants' : 'auto'}
+        {...coveredInteractionProps(headerCovered)}
       >
         <NavigationBar
           title={title || ''}

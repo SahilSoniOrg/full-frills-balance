@@ -337,6 +337,9 @@ it('closes the overflow action sheet when selectedCount drops to zero and shows 
 
   view.rerender(<SelectionActionBar selectedCount={1} actions={actions} />);
   expect(view.queryByText('Actions (1 selected)')).toBeNull();
+
+  fireEvent.press(view.getByLabelText('More bulk actions'));
+  expect(view.getByText('Actions (1 selected)')).toBeTruthy();
 });
 
 it('rounds signed averages to currency precision before deriving sign so tiny totals do not render minus-zero', () => {

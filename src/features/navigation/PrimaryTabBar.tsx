@@ -1,4 +1,5 @@
 import { AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
@@ -94,9 +95,7 @@ export function PrimaryTabBar({
   return (
     <View
       testID="primary-tab-bar"
-      pointerEvents={covered ? 'none' : 'auto'}
-      accessibilityElementsHidden={covered}
-      importantForAccessibility={covered ? 'no-hide-descendants' : 'auto'}
+      {...coveredInteractionProps(covered)}
       style={[
         styles.tabBar,
         covered && styles.coveredTabBar,

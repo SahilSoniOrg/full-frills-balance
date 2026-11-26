@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
 import { usePersistentTabChrome } from '@/src/components/layout/PersistentTabChrome';
 import { PrivacyScopeProvider } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -56,9 +57,7 @@ export function HomeV2Header({
   return (
     <View
       testID="home-v2-header"
-      pointerEvents={headerCovered ? 'none' : 'auto'}
-      accessibilityElementsHidden={headerCovered}
-      importantForAccessibility={headerCovered ? 'no-hide-descendants' : 'auto'}
+      {...coveredInteractionProps(headerCovered)}
       style={[
         styles.toolbar,
         headerCovered && styles.coveredToolbar,
@@ -192,9 +191,7 @@ function HeaderActions({
   return (
     <Animated.View
       style={[styles.actionLayer, expanded && styles.expandedLayer, animation]}
-      pointerEvents={interactive ? 'auto' : 'none'}
-      accessibilityElementsHidden={!interactive}
-      importantForAccessibility={interactive ? 'auto' : 'no-hide-descendants'}
+      {...coveredInteractionProps(!interactive)}
     >
       <PrivacyScopeProvider scopeKey={page.group}>
         <View
