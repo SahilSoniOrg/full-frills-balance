@@ -3,16 +3,13 @@ import { AccountSubtype, AccountType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { PeopleListScreen } from '../screens/PeopleListScreen';
 import { PersonDetailsScreen } from '../screens/PersonDetailsScreen';
-import { SplitExpenseScreen } from '../screens/SplitExpenseScreen';
-import { SettleUpScreen } from '../screens/SettleUpScreen';
 
 const mockWorkplaceId = 'wp-1' as WorkplaceId;
 const mockBack = jest.fn();
 const mockToPersonDetails = jest.fn();
-const mockToSplitExpense = jest.fn();
+const mockToSplitJournalEntry = jest.fn();
+const mockToTransferRepayment = jest.fn();
 const mockToSettleUp = jest.fn();
-const mockSaveSplitExpense = jest.fn(async () => ({ id: 'j-new' }));
-const mockRecordRepayment = jest.fn(async () => ({ id: 'j-repay' }));
 const mockCreatePerson = jest.fn(async () => ({ id: 'p-new', name: 'New Person' }));
 
 let mockParams: Record<string, string> = {};
@@ -68,7 +65,8 @@ jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: () => mockBack(),
     toPersonDetails: (id: string) => mockToPersonDetails(id),
-    toSplitExpense: (params?: Record<string, string>) => mockToSplitExpense(params),
+    toSplitJournalEntry: (params?: Record<string, string>) => mockToSplitJournalEntry(params),
+    toTransferRepayment: (params?: Record<string, string>) => mockToTransferRepayment(params),
     toSettleUp: (params?: Record<string, string>) => mockToSettleUp(params),
     toJournalDetails: jest.fn(),
   },
@@ -96,11 +94,7 @@ jest.mock('@/src/services/people', () => {
     setPersonArchived: jest.fn(),
     softDeletePerson: jest.fn(),
     linkExistingAccount: jest.fn(),
-    saveSplitExpense: (...args: unknown[]) =>
-      (mockSaveSplitExpense as (...a: unknown[]) => unknown)(...args),
     saveFriendPaidBill: jest.fn(),
-    recordRepayment: (...args: unknown[]) =>
-      (mockRecordRepayment as (...a: unknown[]) => unknown)(...args),
     allocateUnassignedRepayment: jest.fn(),
     executeWeAreSettled: jest.fn(),
     peopleReadService: {
@@ -198,46 +192,11 @@ describe('People screens', () => {
     const { getByTestId, getByText } = render(<PersonDetailsScreen />);
     await waitFor(() => expect(getByText(/Ari owes you/)).toBeTruthy());
     fireEvent.press(getByTestId('person-split-expense-button'));
-    expect(mockToSplitExpense).toHaveBeenCalledWith({ personId: mockPersonAri.id });
+    expect(mockToSplitJournalEntry).toHaveBeenCalledWith({ personId: mockPersonAri.id });
     fireEvent.press(getByTestId('person-settle-up-button'));
-    expect(mockToSettleUp).toHaveBeenCalledWith({ personId: mockPersonAri.id });
-  });
-
-  it('computes equal split preview and submits saveSplitExpense', async () => {
-    mockParams = { personId: mockPersonAri.id };
-    const { getByTestId } = render(<SplitExpenseScreen />);
-    await waitFor(() => expect(getByTestId('split-total-input')).toBeTruthy());
-    fireEvent.changeText(getByTestId('split-description-input'), 'Lunch');
-    fireEvent.changeText(getByTestId('split-total-input'), '100');
-    await waitFor(() => expect(getByTestId('split-breakdown-preview')).toBeTruthy());
-    fireEvent.press(getByTestId('split-expense-submit-button'));
-    await waitFor(() =>
-      expect(mockSaveSplitExpense).toHaveBeenCalledWith(
-        mockWorkplaceId,
-        expect.objectContaining({
-          userShare: 50,
-          participants: [{ personId: mockPersonAri.id, amount: 50 }],
-        }),
-      ),
-    );
-  });
-
-  it('submits repayment against open item in SettleUpScreen', async () => {
-    mockParams = { personId: mockPersonAri.id, openItemId: mockOpenItem.id };
-    const { getByTestId } = render(<SettleUpScreen />);
-    await waitFor(() => expect(getByTestId('settle-up-amount-input')).toBeTruthy());
-    fireEvent.press(getByTestId('settle-up-submit-button'));
-    await waitFor(() =>
-      expect(mockRecordRepayment).toHaveBeenCalledWith(
-        mockWorkplaceId,
-        expect.objectContaining({
-          personId: mockPersonAri.id,
-          targetAccountId: mockRecvAccount.id,
-          cashAccountId: mockBankAccount.id,
-          cashAmount: 500,
-          allocations: [{ openItemId: mockOpenItem.id, amount: 500 }],
-        }),
-      ),
-    );
+    expect(mockToTransferRepayment).toHaveBeenCalledWith({
+      personId: mockPersonAri.id,
+      openItemId: undefined,
+    });
   });
 });

@@ -319,14 +319,14 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
                     splitLabel: peopleMeta.alreadyShared
                       ? 'Edit split with people'
                       : 'Split with people',
-                    onSplitWithPeople: () => AppNavigation.toSplitExpense({ journalId }),
+                    onSplitWithPeople: () => AppNavigation.toSplitJournalEntry({ journalId }),
                   }
                 : {}),
               ...(peopleMeta.linkedPerson
                 ? {
                     settlePersonName: peopleMeta.linkedPerson.personName,
                     onSettleWithPerson: () =>
-                      AppNavigation.toSettleUp({
+                      AppNavigation.toTransferRepayment({
                         personId: peopleMeta.linkedPerson!.personId,
                       }),
                   }

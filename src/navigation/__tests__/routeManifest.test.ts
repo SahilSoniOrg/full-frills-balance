@@ -17,11 +17,11 @@ describe('route manifest', () => {
       presentation: 'tab',
     });
     expect(workplaceSwitchFallback('person-details')?.name).toBe('people');
-    for (const name of ['split-expense', 'settle-up'])
-      expect(ROUTE_MANIFEST.find(route => route.name === name)).toMatchObject({
-        presentation: 'composer',
-        isModal: true,
-      });
+    expect(ROUTE_MANIFEST.find(route => route.name === 'split-expense')).toBeUndefined();
+    expect(ROUTE_MANIFEST.find(route => route.name === 'settle-up')).toMatchObject({
+      presentation: 'composer',
+      isModal: true,
+    });
   });
 
   it('marks composer flows as modal routes', () => {

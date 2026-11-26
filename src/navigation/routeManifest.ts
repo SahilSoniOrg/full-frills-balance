@@ -52,7 +52,6 @@ const tabRoutes = [
 
 const composerRoutes = [
   ['journal-entry', 'journal', 'transaction_creation'],
-  ['split-expense', 'people', 'split_expense'],
   ['settle-up', 'people', 'settlement'],
   ['onboarding', 'onboarding', 'cash_clarity_setup'],
   ['account-creation', 'account', 'account_setup'],

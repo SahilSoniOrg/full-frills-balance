@@ -301,13 +301,10 @@ export function usePersonDetailsViewModel() {
     fxRatesDraft,
     setFxRatesDraft,
     onBack: AppNavigation.back,
-    onSplitExpense: () => detail && AppNavigation.toSplitExpense({ personId: detail.person.id }),
+    onSplitExpense: () =>
+      detail && AppNavigation.toSplitJournalEntry({ personId: detail.person.id }),
     onSettleUp: (openItemId?: OpenItemId) =>
-      detail &&
-      AppNavigation.toSettleUp({
-        personId: detail.person.id,
-        ...(openItemId ? { openItemId } : {}),
-      }),
+      detail && AppNavigation.toTransferRepayment({ personId: detail.person.id, openItemId }),
     onMatchExisting: () =>
       detail && AppNavigation.toSettleUp({ personId: detail.person.id, mode: 'match' }),
     onOpenJournal: (journalId: JournalId) => AppNavigation.toJournalDetails(journalId),
