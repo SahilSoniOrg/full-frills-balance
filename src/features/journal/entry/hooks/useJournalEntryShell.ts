@@ -33,11 +33,22 @@ import {
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { TransactionType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
+import {
+  autoSettlePerson,
+  allocateUnassignedRepayment,
+  createPerson,
+  ensurePersonAccount,
+  peopleReadService,
+} from '@/src/services/people';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
+import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
+import type { JournalId, OpenItemId, PersonId } from '@/src/types/ids';
+import { useObservable } from '@/src/hooks/useObservable';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -88,6 +99,19 @@ export interface JournalEntryShell {
   /** True briefly after a successful save so the CTA can pulse before leave. */
   saveSuccessPulse: boolean;
   inboxItems: PlainInboxRecord[];
+  people: SplitParticipant[];
+  peopleGroups: PersonPickerGroup[];
+  initialPersonId?: PersonId;
+  initialOpenItemId?: OpenItemId;
+  onQuickAddPerson: (name: string) => Promise<void>;
+  onTransferOpenItemPlanChange: (
+    plan: {
+      personId: PersonId;
+      targetAccountId: AccountId;
+      allocationMode: 'fifo' | 'pick';
+      allocations: readonly { openItemId: OpenItemId; amount: number }[];
+    } | null,
+  ) => void;
 }
 
 export function useJournalEntryShell(): JournalEntryShell {
@@ -97,9 +121,62 @@ export function useJournalEntryShell(): JournalEntryShell {
   const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
 
   const { accounts } = useAccounts(workplaceId);
+  const { data: peopleTick } = useObservable(
+    () => peopleReadService.observePeopleTick(workplaceId),
+    [workplaceId],
+    null,
+  );
+  const [peopleGroups, setPeopleGroups] = useState<PersonPickerGroup[]>([]);
+  const [people, setPeople] = useState<SplitParticipant[]>([]);
+  useEffect(() => {
+    let current = true;
+    void Promise.all([
+      peopleReadService.listPersonPickerGroups(workplaceId),
+      peopleReadService.listPeopleWithBalances(workplaceId, workplaceCurrency),
+    ])
+      .then(([groups, entries]) => {
+        if (current) {
+          setPeopleGroups(groups);
+          setPeople(
+            entries.map(entry => ({
+              id: entry.person.id,
+              name: entry.person.name,
+              color: entry.person.color,
+            })),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [peopleTick, workplaceId, workplaceCurrency]);
+  const transferOpenItemPlanRef = useRef<{
+    personId: PersonId;
+    targetAccountId: AccountId;
+    allocationMode: 'fifo' | 'pick';
+    allocations: readonly { openItemId: OpenItemId; amount: number }[];
+  } | null>(null);
+  const onTransferOpenItemPlanChange = useCallback(
+    (plan: typeof transferOpenItemPlanRef.current) => {
+      transferOpenItemPlanRef.current = plan;
+    },
+    [],
+  );
+  const onQuickAddPerson = useCallback(
+    async (name: string) => {
+      const person = await createPerson(workplaceId, { name });
+      await ensurePersonAccount(workplaceId, person.id, 'receivable', workplaceCurrency);
+    },
+    [workplaceId, workplaceCurrency],
+  );
 
   const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
   const saveLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onAfterSaveRef = useRef<
+    (result: { journalId?: JournalId; action?: 'created' | 'updated' }) => Promise<void>
+  >(async () => {});
+  const transferSeededRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [saveSuccessPulse, setSaveSuccessPulse] = useState(false);
   const onSuccess = useCallback(() => {
@@ -144,9 +221,11 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialDate: seed.date,
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,
+    onAfterSave: result => onAfterSaveRef.current(result),
     onSuccess,
   });
   const { editor, splitState } = session;
+  const { lines, updateLines } = editor;
 
   const inboxItems = useInboxSourceRecords({
     workplaceId,
@@ -157,6 +236,105 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
     useJournalEntryModeState(editor, seed.editorMode);
+
+  useEffect(() => {
+    onAfterSaveRef.current = async result => {
+      if (!result.journalId) return;
+      const plan = transferOpenItemPlanRef.current;
+      if (
+        activeMode === 'basic' &&
+        editor.transactionType === 'transfer' &&
+        plan?.allocations.length
+      ) {
+        await allocateUnassignedRepayment(workplaceId, {
+          personId: plan.personId,
+          targetAccountId: plan.targetAccountId,
+          settlementJournalId: result.journalId,
+          allocations: plan.allocations,
+        });
+      }
+      if (activeMode === 'allocation') {
+        const personIds = new Set(
+          peopleGroups
+            .filter(group => editor.lines.some(line => group.accountIds.includes(line.accountId)))
+            .map(group => group.personId as PersonId),
+        );
+        await Promise.all(
+          [...personIds].map(personId => autoSettlePerson(workplaceId, personId, Date.now())),
+        );
+      }
+    };
+  }, [activeMode, editor.lines, editor.transactionType, peopleGroups, workplaceId]);
+
+  useEffect(() => {
+    if (
+      transferSeededRef.current ||
+      seed.journalId ||
+      seed.type !== 'transfer' ||
+      !seed.personId ||
+      !accounts.length ||
+      !peopleGroups.length
+    )
+      return;
+    transferSeededRef.current = true;
+    void peopleReadService
+      .getPersonDetail(workplaceId, seed.personId, workplaceCurrency)
+      .then(detail => {
+        if (!detail) return;
+        const personAccountIds = new Set(
+          peopleGroups.find(group => group.personId === seed.personId)?.accountIds ?? [],
+        );
+        const linked = detail.linkedAccounts;
+        const item = seed.openItemId
+          ? detail.openItems.find(row => row.item.id === seed.openItemId)
+          : undefined;
+        const personAccount =
+          (item && accounts.find(account => account.id === item.item.accountId)) ||
+          linked.find(entry => entry.account.accountSubtype === AccountSubtype.RECEIVABLE)
+            ?.account ||
+          linked.find(entry => entry.account.accountSubtype === AccountSubtype.PAYABLE)?.account;
+        const cashAccount = accounts.find(
+          account =>
+            account.accountType === AccountType.ASSET &&
+            !personAccountIds.has(account.id) &&
+            [AccountSubtype.CASH, AccountSubtype.BANK_CHECKING].includes(
+              account.accountSubtype as AccountSubtype,
+            ),
+        );
+        if (!personAccount || !cashAccount) return;
+        const personAsSource = personAccount.accountSubtype === AccountSubtype.RECEIVABLE;
+        const source = personAsSource ? personAccount : cashAccount;
+        const destination = personAsSource ? cashAccount : personAccount;
+        updateLines(
+          Object.fromEntries(
+            lines.map(line => [
+              line.id,
+              line.transactionType === TransactionType.CREDIT
+                ? { accountId: source.id }
+                : {
+                    accountId: destination.id,
+                    ...(item && !seed.amount && item.remainder > 0
+                      ? { amount: String(item.remainder) }
+                      : {}),
+                  },
+            ]),
+          ),
+        );
+      })
+      .catch(() => {});
+  }, [
+    accounts,
+    lines,
+    updateLines,
+    peopleGroups,
+    seed.amount,
+    seed.journalId,
+    seed.openItemId,
+    seed.personId,
+    seed.type,
+    workplaceCurrency,
+    workplaceId,
+  ]);
 
   const {
     batchEditor,
@@ -264,6 +442,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   return {
     editor,
     inboxItems,
+    people,
+    peopleGroups,
+    initialPersonId: seed.personId,
+    initialOpenItemId: seed.openItemId,
+    onQuickAddPerson,
+    onTransferOpenItemPlanChange,
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     validationIssues: session.validationIssues,
