@@ -73,6 +73,48 @@ export function PeopleListScreen() {
                 </Stack>
                 <IconTile icon={Icon.Handshake} tint="primary" size="lg" shape="circle" />
               </Inline>
+              <Stack gap="xs">
+                <Inline justifyContent="space-between" alignItems="center">
+                  <AppText variant="caption" color="secondary">
+                    Active people
+                  </AppText>
+                  <Badge size="sm">{vm.activePeopleCount}</Badge>
+                </Inline>
+                <Inline gap="sm">
+                  <Box flex={1}>
+                    <Stack gap="xs">
+                      <AppText variant="caption" color="secondary">
+                        Owed to you
+                      </AppText>
+                      <AppText variant="body" weight="semibold">
+                        {vm.balanceTotals.owedToYou.length
+                          ? vm.balanceTotals.owedToYou
+                              .map(([currency, amount]) =>
+                                formatMoneyAmount(amount, currency, isPrivacyMode),
+                              )
+                              .join(' · ')
+                          : formatMoneyAmount(0, vm.defaultCurrencyCode, isPrivacyMode)}
+                      </AppText>
+                    </Stack>
+                  </Box>
+                  <Box flex={1}>
+                    <Stack gap="xs">
+                      <AppText variant="caption" color="secondary">
+                        You owe
+                      </AppText>
+                      <AppText variant="body" weight="semibold">
+                        {vm.balanceTotals.youOwe.length
+                          ? vm.balanceTotals.youOwe
+                              .map(([currency, amount]) =>
+                                formatMoneyAmount(amount, currency, isPrivacyMode),
+                              )
+                              .join(' · ')
+                          : formatMoneyAmount(0, vm.defaultCurrencyCode, isPrivacyMode)}
+                      </AppText>
+                    </Stack>
+                  </Box>
+                </Inline>
+              </Stack>
               <ActionButtonPair
                 primary={{ label: 'Add person', onPress: vm.openCreate }}
                 secondary={{ label: 'Link existing account', onPress: vm.openLink }}

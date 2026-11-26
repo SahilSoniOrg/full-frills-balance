@@ -24,6 +24,7 @@ import { AccountType } from '@/src/types/enums';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { View } from 'react-native';
+import { useTheme } from '@/src/hooks/use-theme';
 import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
 import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
@@ -31,6 +32,7 @@ import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
 function PersonDetailsScreenContent() {
   const vm = usePersonDetailsViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
+  const { theme } = useTheme();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
   const detail = vm.detail;
 
@@ -139,6 +141,13 @@ function PersonDetailsScreenContent() {
                 testID: 'person-settle-up-button',
               }}
             />
+            <AppButton
+              variant="outline"
+              onPress={vm.onMatchExisting}
+              testID="person-match-repayment-button"
+            >
+              Match existing
+            </AppButton>
 
             <AppButton
               variant="outline"
@@ -161,8 +170,49 @@ function PersonDetailsScreenContent() {
                 <ListRow
                   key={entry.item.id}
                   leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                  title={formatMoneyAmount(entry.remainder, entry.item.currencyCode, isPrivacyMode)}
-                  subtitle={`Original ${formatMoneyAmount(entry.item.originalAmount, entry.item.currencyCode, isPrivacyMode)}`}
+                  title={
+                    <Stack gap="xs">
+                      <Inline gap="sm" alignItems="center">
+                        <AppText variant="body">
+                          {formatMoneyAmount(
+                            entry.remainder,
+                            entry.item.currencyCode,
+                            isPrivacyMode,
+                          )}{' '}
+                          left of{' '}
+                          {formatMoneyAmount(
+                            entry.item.originalAmount,
+                            entry.item.currencyCode,
+                            isPrivacyMode,
+                          )}
+                        </AppText>
+                        <Badge
+                          size="sm"
+                          variant={
+                            entry.remainder < entry.item.originalAmount ? 'warning' : 'default'
+                          }
+                        >
+                          {entry.remainder < entry.item.originalAmount ? 'Partial' : 'Open'}
+                        </Badge>
+                      </Inline>
+                      <View
+                        style={{
+                          height: 4,
+                          backgroundColor: theme.border,
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <View
+                          style={{
+                            height: 4,
+                            width: `${Math.max(0, Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100))}%`,
+                            backgroundColor: theme.income,
+                          }}
+                        />
+                      </View>
+                    </Stack>
+                  }
                   trailing={
                     <AppButton
                       size="sm"

@@ -52,6 +52,29 @@ export function usePeopleListViewModel() {
     const normalized = query.trim().toLocaleLowerCase();
     return people.filter(row => row.person.name.toLocaleLowerCase().includes(normalized));
   }, [people, query]);
+  const activePeopleCount = useMemo(
+    () => people.filter(row => !row.person.archivedAt).length,
+    [people],
+  );
+  const balanceTotals = useMemo(() => {
+    const owedToYou = new Map<string, number>();
+    const youOwe = new Map<string, number>();
+    for (const row of people.filter(entry => !entry.person.archivedAt)) {
+      for (const currency of row.currencies) {
+        if (currency.owedToYou > 0)
+          owedToYou.set(
+            currency.currencyCode,
+            (owedToYou.get(currency.currencyCode) ?? 0) + currency.owedToYou,
+          );
+        if (currency.youOwe > 0)
+          youOwe.set(
+            currency.currencyCode,
+            (youOwe.get(currency.currencyCode) ?? 0) + currency.youOwe,
+          );
+      }
+    }
+    return { owedToYou: [...owedToYou], youOwe: [...youOwe] };
+  }, [people]);
   const closeModal = () => setModal(null);
   const openCreate = () => {
     setPersonName('');
@@ -90,7 +113,10 @@ export function usePeopleListViewModel() {
     }
   };
   return {
+    defaultCurrencyCode,
     people: filteredPeople,
+    activePeopleCount,
+    balanceTotals,
     accounts,
     query,
     setQuery,

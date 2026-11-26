@@ -308,6 +308,8 @@ export function usePersonDetailsViewModel() {
         personId: detail.person.id,
         ...(openItemId ? { openItemId } : {}),
       }),
+    onMatchExisting: () =>
+      detail && AppNavigation.toSettleUp({ personId: detail.person.id, mode: 'match' }),
     onOpenJournal: (journalId: JournalId) => AppNavigation.toJournalDetails(journalId),
     onRename: handleRename,
     onToggleArchive: handleToggleArchive,
