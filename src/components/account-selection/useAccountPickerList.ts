@@ -2,7 +2,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
-import { getAccountSections } from '@/src/design-system/accountPresentation';
+import { buildJournalPickerSections, type PersonPickerGroup } from './personAccountGrouping';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const EMPTY_ACCOUNTS: (AccountFields | PlainAccount)[] = [];
@@ -21,11 +21,15 @@ export function useAccountPickerList({
   excludeParentAccounts,
   pinnedAccountIds = new Set<AccountId>(),
   enabled = true,
+  peopleGroups,
+  includeArchivedPeople = false,
 }: {
   accounts: (AccountFields | PlainAccount)[];
   excludeParentAccounts: boolean;
   pinnedAccountIds?: ReadonlySet<AccountId>;
   enabled?: boolean;
+  peopleGroups?: readonly PersonPickerGroup[];
+  includeArchivedPeople?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 150);
@@ -44,7 +48,13 @@ export function useAccountPickerList({
         a =>
           a.name.toLowerCase().includes(q) ||
           a.accountType.toLowerCase().includes(q) ||
-          (a.currencyCode && a.currencyCode.toLowerCase().includes(q)),
+          (a.currencyCode && a.currencyCode.toLowerCase().includes(q)) ||
+          Boolean(
+            peopleGroups?.some(
+              group =>
+                group.personName.toLowerCase().includes(q) && group.accountIds.includes(a.id),
+            ),
+          ),
       );
     }
 
@@ -56,11 +66,20 @@ export function useAccountPickerList({
     }
 
     return result;
-  }, [accounts, visibleAccounts, debouncedSearch, isSearchMode, excludeParentAccounts]);
+  }, [
+    accounts,
+    visibleAccounts,
+    debouncedSearch,
+    isSearchMode,
+    excludeParentAccounts,
+    peopleGroups,
+  ]);
 
   const sections = useMemo(() => {
-    return enabled ? getAccountSections(filteredAccounts) : [];
-  }, [enabled, filteredAccounts]);
+    return enabled
+      ? buildJournalPickerSections(filteredAccounts, peopleGroups, includeArchivedPeople)
+      : [];
+  }, [enabled, filteredAccounts, peopleGroups, includeArchivedPeople]);
 
   const toggleSection = useCallback((sectionKey: string) => {
     setCollapsedSections(prev => {

@@ -30,6 +30,7 @@ import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useAccountPickerList } from './useAccountPickerList';
+import type { PersonPickerGroup } from './personAccountGrouping';
 
 export type CreateAccountIntent = {
   suggestedName: string;
@@ -200,6 +201,8 @@ type AccountPickerListProps = {
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   onClose: () => void;
   excludeParentAccounts?: boolean;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonAccountRequest?: (personId?: string) => void;
 } & (
   | {
       isMultiple: true;
@@ -229,6 +232,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
     onClose,
     isMultiple,
     excludeParentAccounts = false,
+    peopleGroups,
+    onCreatePersonAccountRequest,
   } = props;
   const { theme } = useTheme();
   const { useCompactAccountPicker } = useAccountDisplayPrefs();
@@ -252,7 +257,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     isSearchMode,
     totalCount,
     filteredCount,
-  } = useAccountPickerList({ accounts, excludeParentAccounts, pinnedAccountIds });
+  } = useAccountPickerList({ accounts, excludeParentAccounts, pinnedAccountIds, peopleGroups });
   const displaySections = useMemo<DisplaySection[]>(
     () =>
       sections.map(section => {
@@ -332,16 +337,26 @@ export function AccountPickerList(props: AccountPickerListProps) {
               </View>
             </View>
             <View style={styles.sectionActions}>
-              {onCreateRequest && !isSearchMode && (
+              {(onCreateRequest || onCreatePersonAccountRequest) && !isSearchMode && (
                 <PressScaleTouchable
                   pressScale="subtle"
                   onPress={event => {
                     event.stopPropagation();
                     onClose();
-                    requestAnimationFrame(() => onCreateRequest({ suggestedName: '', type }));
+                    requestAnimationFrame(() => {
+                      if (key.startsWith('person:') && onCreatePersonAccountRequest) {
+                        onCreatePersonAccountRequest(key.slice('person:'.length));
+                      } else {
+                        onCreateRequest?.({ suggestedName: '', type });
+                      }
+                    });
                   }}
                   style={styles.actionButton}
-                  accessibilityLabel={`Create ${title} account`}
+                  accessibilityLabel={
+                    key.startsWith('person:')
+                      ? `Add account for ${title.replace('People · ', '')}`
+                      : `Create ${title} account`
+                  }
                 >
                   <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
                 </PressScaleTouchable>
@@ -358,7 +373,15 @@ export function AccountPickerList(props: AccountPickerListProps) {
         </View>
       );
     },
-    [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
+    [
+      collapsedSections,
+      isSearchMode,
+      theme,
+      toggleSection,
+      onCreateRequest,
+      onCreatePersonAccountRequest,
+      onClose,
+    ],
   );
   const renderItem = useCallback(
     ({ item, section }: { item: PickerAccount | PickerAccount[]; section: DisplaySection }) => {

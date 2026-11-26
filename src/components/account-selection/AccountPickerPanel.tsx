@@ -28,6 +28,7 @@ import Svg, { Path } from 'react-native-svg';
 import { AccountPickerDropdown } from './AccountPickerPanel.parts';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 import { FOLDER_STROKE_WIDTH, useFolderLayoutAnimation } from './useFolderLayoutAnimation';
+import type { PersonPickerGroup } from './personAccountGrouping';
 
 export type ExpansionPosition = 'left' | 'right' | null;
 
@@ -59,6 +60,8 @@ export interface AccountPickerPanelProps {
   expansionPosition: ExpansionPosition;
   lazyDropdown?: boolean;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonAccountRequest?: (personId?: string) => void;
   renderNodes: (layout: AccountPickerPanelLayout) => ReactNode;
 }
 
@@ -75,6 +78,8 @@ export function AccountPickerPanel({
   expansionPosition,
   lazyDropdown = false,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonAccountRequest,
   renderNodes,
 }: AccountPickerPanelProps) {
   const { theme } = useTheme();
@@ -101,6 +106,7 @@ export function AccountPickerPanel({
     excludeParentAccounts: true,
     pinnedAccountIds,
     enabled: listEnabled,
+    peopleGroups,
   });
   const hasSelectedAccount = Boolean(account && account.id !== EMPTY_ACCOUNT_ID);
   const hasArchivedAccounts = useMemo(
@@ -154,6 +160,7 @@ export function AccountPickerPanel({
         isExpanded={isExpanded}
         onClear={handleClear}
         onCreateAccountRequest={onCreateAccountRequest}
+        onCreatePersonAccountRequest={onCreatePersonAccountRequest}
         onSelect={handleSelect}
         sections={sections}
         setShowArchived={setShowArchived}

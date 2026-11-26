@@ -140,6 +140,7 @@ export interface AccountPickerDropdownProps {
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  onCreatePersonAccountRequest?: (personId?: string) => void;
   onSelect: (id: AccountId) => void;
   sections: AccountPickerSections;
   setShowArchived: (show: boolean) => void;
@@ -159,6 +160,7 @@ export function AccountPickerDropdown({
   isExpanded,
   onClear,
   onCreateAccountRequest,
+  onCreatePersonAccountRequest,
   onSelect,
   sections,
   setShowArchived,
@@ -280,6 +282,20 @@ export function AccountPickerDropdown({
               hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
             >
               <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
+            </PressScaleTouchable>
+          )}
+          {onCreatePersonAccountRequest && (
+            <PressScaleTouchable
+              onPress={() => onCreatePersonAccountRequest()}
+              accessibilityRole="button"
+              accessibilityLabel="Add person or account"
+              testID="add-person-or-account-button"
+              style={styles.headerPlusButton}
+            >
+              <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
+              <AppText variant="caption" weight="semibold" color="primary">
+                Add person or account
+              </AppText>
             </PressScaleTouchable>
           )}
         </View>
