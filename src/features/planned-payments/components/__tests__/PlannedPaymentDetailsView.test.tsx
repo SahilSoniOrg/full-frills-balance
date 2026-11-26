@@ -10,6 +10,10 @@ import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { Page } from '@/src/design-system/Page';
+import { SafeAreaOverlay } from '@/src/design-system/SafeArea';
+import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
+import { SelectionSummary } from '@/src/components/shared/SelectionSummary';
 import { StyleSheet } from 'react-native';
 
 jest.mock('@/src/features/journal', () => ({ JournalListModals: () => null }));
@@ -488,5 +492,56 @@ describe('PlannedPaymentDetailsView', () => {
     expect(screen.getByText('Planned payment not found')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Go back' }));
     expect(vm.onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('reserves header and footer layout space during selection so Pause schedule stays outside the dock', () => {
+    const paid = row('paid', 'POSTED', day(1), 321.23);
+    const selectedIds = new Set([paid.id]);
+    const onShareSelected = jest.fn();
+    const screen = render(
+      <PlannedPaymentDetailsView
+        {...vm}
+        chrome={{
+          ...chrome,
+          selection: {
+            state: getSelectionState(selectedIds, [paid.id]),
+            amountSummary: {
+              label: AppConfig.strings.selection.paymentAmounts,
+              amounts: [
+                { amount: 321.23, currencyCode: 'USD' },
+                { amount: 150, currencyCode: 'EUR' },
+              ],
+            },
+            itemTypeLabel: AppConfig.strings.selection.itemTypes.payment,
+            selectAll: vm.selectAll,
+            clearItems: vm.clearItems,
+            exitSelectionMode: vm.exitSelectionMode,
+            actions: [
+              {
+                name: Icon.Share,
+                label: 'Share',
+                onPress: onShareSelected,
+                isPrimary: true,
+              },
+            ],
+          },
+        }}
+        history={[paid]}
+        isSelectionModeActive
+        selectedIds={selectedIds}
+      />,
+    );
+
+    const page = screen.UNSAFE_getByType(Page);
+    expect(page.props.overlay).toBeUndefined();
+    expect(page.props.header).toBeTruthy();
+    expect(page.props.footer).toBeTruthy();
+    expect(screen.UNSAFE_queryAllByType(SafeAreaOverlay)).toHaveLength(0);
+    expect(screen.UNSAFE_getByType(SelectionSummary)).toBeTruthy();
+    expect(screen.UNSAFE_getByType(SelectionActionBar)).toBeTruthy();
+
+    const pauseButton = screen.getByRole('button', { name: 'Pause schedule' });
+    fireEvent.press(pauseButton);
+    expect(vm.onToggleStatus).toHaveBeenCalledTimes(1);
   });
 });

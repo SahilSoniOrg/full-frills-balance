@@ -13,9 +13,12 @@ import { getSelectionState } from '@/src/hooks/selectionState';
 import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 import { Icon } from '@/src/types/domainIcons';
 import { render, screen } from '@/src/testing/render';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Screen } from '@/src/components/layout/Screen';
-import { SafeAreaFrame } from '@/src/design-system/SafeArea';
+import { Page } from '@/src/design-system/Page';
+import { SafeAreaFrame, SafeAreaOverlay } from '@/src/design-system/SafeArea';
+import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
+import { SelectionSummary } from '@/src/components/shared/SelectionSummary';
 import {
   PrimaryNavigationProvider,
   primaryTabFromRouteName,
@@ -204,6 +207,38 @@ describe('ScreenWithChrome selection overlay', () => {
     expect(screen.UNSAFE_getByType(NavigationBar)).toBe(navigationBar);
     expect(screen.queryByText('1 of 1 transaction selected')).toBeNull();
     expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(chrome.onBack);
+  });
+
+  it('mounts selection summary and action dock in Page header and footer slots instead of an overlay', () => {
+    const chrome: ScreenChrome = {
+      kind: 'nav',
+      screenTitle: 'Details',
+      onBack: jest.fn(),
+      selection: {
+        ...selection,
+        onShareSelected: jest.fn(),
+      },
+    };
+
+    render(
+      <ScreenWithChrome chrome={chrome}>
+        <Text>Content</Text>
+      </ScreenWithChrome>,
+    );
+
+    const page = screen.UNSAFE_getByType(Page);
+    expect(page.props.overlay).toBeUndefined();
+    expect(page.props.header).toBeTruthy();
+    expect(page.props.footer).toBeTruthy();
+    expect(screen.UNSAFE_queryAllByType(SafeAreaOverlay)).toHaveLength(0);
+    expect(screen.UNSAFE_getByType(SelectionSummary)).toBeTruthy();
+    expect(screen.UNSAFE_getByType(SelectionActionBar)).toBeTruthy();
+
+    const navBarWrapper = screen.UNSAFE_getByType(NavigationBar).parent;
+    expect(StyleSheet.flatten(navBarWrapper?.props.style)).toMatchObject({
+      opacity: 0,
+      position: 'absolute',
+    });
   });
 
   it('publishes a retained leaf overlay only under that leaf’s route', () => {

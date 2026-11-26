@@ -4,7 +4,7 @@ import { SelectionSummary } from '../SelectionSummary';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render } from '@/src/testing/render';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { getSelectionState } from '@/src/hooks/selectionState';
 import { triggerPressHaptic } from '@/src/design-system/haptics';
 
@@ -378,4 +378,50 @@ it('rounds signed averages to currency precision before deriving sign so tiny to
   expect(
     view.getByText('3 of 3 transactions · Signed total · Avg − $0.01 · All selected'),
   ).toBeTruthy();
+});
+
+it('reserves layout space for the action dock and bounds tall amount breakdowns', () => {
+  const bar = render(
+    <SelectionActionBar
+      selectedCount={2}
+      actions={[{ name: Icon.Share, label: 'Share', onPress: jest.fn() }]}
+    />,
+  );
+  const animatedWrapper = bar.UNSAFE_getAllByType(View).find(node => node.props.from);
+  expect(StyleSheet.flatten(animatedWrapper?.props.style)?.position).not.toBe('absolute');
+
+  const multiSection = render(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['a', 'l']), ['a', 'l'])}
+      amountSummary={{
+        label: 'Direct balances',
+        amounts: [],
+        sections: [
+          {
+            label: 'Assets',
+            colorKey: 'asset',
+            amounts: [
+              { amount: 100, currencyCode: 'USD' },
+              { amount: 200, currencyCode: 'EUR' },
+            ],
+          },
+          {
+            label: 'Liabilities',
+            colorKey: 'liability',
+            amounts: [
+              { amount: 50, currencyCode: 'USD' },
+              { amount: 75, currencyCode: 'GBP' },
+            ],
+          },
+        ],
+      }}
+      itemTypeLabel="account"
+      onClear={jest.fn()}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+  const breakdown = multiSection.getByTestId('selection-summary-breakdown');
+  expect(StyleSheet.flatten(breakdown.props.style)?.maxHeight).toBeLessThanOrEqual(144);
+  expect(breakdown.props.nestedScrollEnabled).toBe(true);
 });

@@ -2,7 +2,7 @@ import {
   PrimaryPrivacyScopeStoreProvider,
   PrivacyScopeProvider,
 } from '@/src/contexts/PrivacyScope';
-import { SelectionOverlay } from '@/src/components/shared/SelectionOverlay';
+import { SelectionDock, SelectionHeader } from '@/src/components/shared/SelectionOverlay';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { AccountsGroupProvider } from '@/src/features/accounts';
 import { PrimaryTabBar, type PrimaryTabBarProps } from './PrimaryTabBar';
@@ -24,6 +24,7 @@ import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { useTheme } from '@/src/hooks/use-theme';
 import type { NavigatorContentProps } from 'expo-router';
 import { unstable_useReconcileTabHistory, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
@@ -35,12 +36,7 @@ import {
   PersistentTabLeaf,
   usePersistentTabChrome,
 } from '@/src/components/layout/PersistentTabChrome';
-import {
-  SafeAreaFrame,
-  SafeAreaOverlay,
-  SafeAreaScope,
-  useSafeAreaLayout,
-} from '@/src/design-system/SafeArea';
+import { SafeAreaFrame, SafeAreaScope, useSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { HomeV2Header } from './HomeV2Header';
 import { usePrimaryPageTransitions } from './usePrimaryPageTransitions';
 
@@ -312,6 +308,7 @@ function PrimaryPagerFrame({
   const reportSelectionMode = usePrimaryNavigation()?.reportSelectionMode;
   const selectionModeActive = isFocused && Boolean(selection);
   const { insets } = useSafeAreaLayout();
+  const { theme } = useTheme();
   const page = primaryPageFromRouteName(activeRouteName);
 
   useLayoutEffect(() => {
@@ -322,25 +319,82 @@ function PrimaryPagerFrame({
     <View style={styles.container}>
       <SafeAreaFrame edges={['top', 'left', 'right']} style={styles.container}>
         <SafeAreaScope consumedEdges={['bottom']}>
-          <HomeV2Header
-            activeRouteName={activeRouteName}
-            pageProgress={pageProgress}
-            onNavigate={onNavigateToPage}
-            isTransitioning={isTransitioning}
-          />
+          <View
+            style={
+              selection
+                ? [styles.selectionHeaderSlot, { backgroundColor: theme.background }]
+                : undefined
+            }
+          >
+            <View
+              style={selection ? styles.coveredHeaderLayer : undefined}
+              pointerEvents={selection ? 'none' : 'auto'}
+              accessibilityElementsHidden={Boolean(selection)}
+              importantForAccessibility={selection ? 'no-hide-descendants' : 'auto'}
+            >
+              <HomeV2Header
+                activeRouteName={activeRouteName}
+                pageProgress={pageProgress}
+                onNavigate={onNavigateToPage}
+                isTransitioning={isTransitioning}
+              />
+            </View>
+            {selection ? (
+              <PrivacyScopeProvider key={activeRouteName} scopeKey={page?.group}>
+                <SelectionHeader {...selection} />
+              </PrivacyScopeProvider>
+            ) : null}
+          </View>
           {children}
         </SafeAreaScope>
       </SafeAreaFrame>
-      <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
-      {selection ? (
-        <SafeAreaOverlay insets={insets}>
+      <View
+        style={
+          selection
+            ? [
+                styles.selectionFooterSlot,
+                {
+                  backgroundColor: theme.background,
+                  paddingBottom: insets.bottom,
+                  paddingLeft: insets.left,
+                  paddingRight: insets.right,
+                },
+              ]
+            : undefined
+        }
+      >
+        <View
+          style={selection ? styles.coveredFooterLayer : undefined}
+          pointerEvents={selection ? 'none' : 'auto'}
+          accessibilityElementsHidden={Boolean(selection)}
+          importantForAccessibility={selection ? 'no-hide-descendants' : 'auto'}
+        >
+          <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
+        </View>
+        {selection ? (
           <PrivacyScopeProvider key={activeRouteName} scopeKey={page?.group}>
-            <SelectionOverlay {...selection} />
+            <SelectionDock {...selection} />
           </PrivacyScopeProvider>
-        </SafeAreaOverlay>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1 } });
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  selectionHeaderSlot: { zIndex: 1 },
+  selectionFooterSlot: { zIndex: 1 },
+  coveredHeaderLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  coveredFooterLayer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+});

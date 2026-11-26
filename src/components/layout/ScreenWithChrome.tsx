@@ -1,5 +1,4 @@
 import { FloatingActionButton } from '@/src/components/core';
-import { SelectionOverlay } from '@/src/components/shared/SelectionOverlay';
 import { Screen } from '@/src/components/layout/Screen';
 import type { ScreenProps } from '@/src/components/layout/Screen';
 import type { NavBackIcon, ScreenChrome } from '@/src/components/layout/screenChrome';
@@ -15,7 +14,7 @@ import { useRouteBackIcon } from '@/src/navigation/RoutePresentationContext';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
-  'title' | 'left' | 'overlay' | 'headerActions' | 'isSearchActive'
+  'title' | 'left' | 'overlay' | 'selection' | 'headerActions' | 'isSearchActive'
 > & {
   chrome: ScreenChrome;
 };
@@ -62,9 +61,7 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
       edges={leafRoute ? edges.filter(edge => edge !== 'top') : edges}
       title={leafRoute ? undefined : chrome.screenTitle}
       left={leafRoute ? undefined : leftFromChrome(chrome, isPrimaryTabRoot, routeBackIcon)}
-      overlay={
-        !leafRoute && chrome.selection ? <SelectionOverlay {...chrome.selection} /> : undefined
-      }
+      selection={!leafRoute ? chrome.selection : undefined}
       headerActions={leafRoute ? undefined : chrome.headerActions}
       isSearchActive={chrome.isSearchActive}
     >

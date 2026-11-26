@@ -1,4 +1,9 @@
 import { NavigationBar, type NavigationBarLeft } from '@/src/components/layout/NavigationBar';
+import {
+  SelectionDock,
+  SelectionHeader,
+  type SelectionOverlayProps,
+} from '@/src/components/shared/SelectionOverlay';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
@@ -20,6 +25,7 @@ export type ScreenProps = ViewProps & {
   isSearchActive?: boolean;
   // Layout
   overlay?: React.ReactNode;
+  selection?: SelectionOverlayProps;
   scrollable?: boolean;
   withPadding?: boolean;
   edges?: Edge[];
@@ -32,6 +38,7 @@ export type ScreenProps = ViewProps & {
 export function Screen({
   children,
   overlay,
+  selection,
   title,
   subtitle,
   left,
@@ -47,17 +54,20 @@ export function Screen({
   style,
   ...rest
 }: ScreenProps) {
-  const { themeMode } = useTheme();
+  const { theme, themeMode } = useTheme();
 
   const content = (
     <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
   );
 
-  const headerCovered = Boolean(overlay);
+  const headerCovered = Boolean(overlay || selection);
   const navigationBar =
     left || title || headerActions ? (
       <View
-        style={headerCovered ? styles.coveredHeader : undefined}
+        style={[
+          headerCovered ? styles.coveredHeader : undefined,
+          selection ? styles.coveredHeaderLayer : undefined,
+        ]}
         pointerEvents={headerCovered ? 'none' : 'auto'}
         accessibilityElementsHidden={headerCovered}
         importantForAccessibility={headerCovered ? 'no-hide-descendants' : 'auto'}
@@ -73,6 +83,36 @@ export function Screen({
       </View>
     ) : undefined;
 
+  const header =
+    navigationBar || selection ? (
+      <View
+        style={
+          selection
+            ? [styles.selectionHeaderHost, { backgroundColor: theme.background }]
+            : undefined
+        }
+      >
+        {navigationBar}
+        {selection ? <SelectionHeader {...selection} /> : null}
+      </View>
+    ) : undefined;
+
+  const selectionFooter = selection ? (
+    <View style={[styles.selectionFooterHost, { backgroundColor: theme.background }]}>
+      <SelectionDock {...selection} />
+    </View>
+  ) : undefined;
+
+  const resolvedFooter =
+    selectionFooter && footer ? (
+      <>
+        {footer}
+        {selectionFooter}
+      </>
+    ) : (
+      (selectionFooter ?? footer)
+    );
+
   return (
     <Page
       background="background"
@@ -80,8 +120,8 @@ export function Screen({
       scrollable={scrollable}
       statusBar={themeMode === 'dark' ? 'light' : 'dark'}
       keyboardAvoiding={keyboardAvoiding}
-      footer={footer}
-      header={navigationBar}
+      footer={resolvedFooter}
+      header={header}
       overlay={overlay}
       scrollViewProps={scrollViewProps}
       scrollViewRef={scrollViewRef}
@@ -94,6 +134,18 @@ export function Screen({
 
 const styles = StyleSheet.create({
   coveredHeader: { opacity: 0 },
+  coveredHeaderLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  selectionHeaderHost: {
+    zIndex: 1,
+  },
+  selectionFooterHost: {
+    zIndex: 1,
+  },
   content: {
     flex: 1,
   },

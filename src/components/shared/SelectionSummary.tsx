@@ -15,7 +15,7 @@ import type { getSelectionState } from '@/src/hooks/selectionState';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { MoneyAmount } from '@/src/types/domainReadModels';
 import { MotiView } from 'moti';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SelectionEdgeShadow, useSelectionBarSurface } from './selectionBarChrome';
 
 export type SelectionItemLabel = string | { singular: string; plural: string };
@@ -89,6 +89,8 @@ export function SelectionSummary({
 }: SelectionSummaryProps) {
   const { selectedCount, selectedSelectableCount, selectableCount, checked } = selection;
   const { cardStyle, isDark, theme } = useSelectionBarSurface('top');
+  const { height: windowHeight } = useWindowDimensions();
+  const maxBreakdownHeight = Math.min(144, Math.max(84, Math.round(windowHeight * 0.2)));
   const reduceMotion = useReducedMotion();
   const formatMoney = useMoneyFormat();
   const copy = AppConfig.strings.selection;
@@ -235,7 +237,13 @@ export function SelectionSummary({
           <View style={styles.summaryContent} accessibilityLiveRegion="polite">
             {showSections ? (
               <Inline align="flex-start" gap="xs">
-                <View style={styles.sectionStack}>
+                <ScrollView
+                  style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
+                  contentContainerStyle={styles.sectionStack}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  testID="selection-summary-breakdown"
+                >
                   {sections.map(section => (
                     <View key={section.label} style={styles.sectionBlock}>
                       <AppText
@@ -266,12 +274,18 @@ export function SelectionSummary({
                       </View>
                     </View>
                   ))}
-                </View>
+                </ScrollView>
                 {partialBadge}
               </Inline>
             ) : multipleCurrencies ? (
               <Inline align="center" gap="xs">
-                <View style={styles.amountStack}>
+                <ScrollView
+                  style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
+                  contentContainerStyle={styles.amountStack}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  testID="selection-summary-breakdown"
+                >
                   {displayAmounts.map(({ amount, currencyCode }) => {
                     const formatted = formatSummaryMoney(amount, currencyCode);
                     return (
@@ -287,7 +301,7 @@ export function SelectionSummary({
                       />
                     );
                   })}
-                </View>
+                </ScrollView>
                 {partialBadge}
               </Inline>
             ) : singleMoney && singleAmount ? (
@@ -361,8 +375,10 @@ export function SelectionSummary({
 
 const styles = StyleSheet.create({
   wrapper: {
+    width: '100%',
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xs,
+    paddingBottom: Spacing.xs,
     alignItems: 'center',
   },
   summaryCard: {
@@ -390,6 +406,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
     justifyContent: 'center',
     gap: 2,
+  },
+  breakdownScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minWidth: 0,
   },
   sectionStack: {
     gap: Spacing.xs,

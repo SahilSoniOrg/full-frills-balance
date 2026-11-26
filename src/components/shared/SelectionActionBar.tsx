@@ -259,12 +259,11 @@ export const SelectionActionBar = ({
 
 const styles = StyleSheet.create({
   bottomWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    width: '100%',
     paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.xs,
     alignItems: 'center',
-    bottom: Spacing.xs,
   },
   actionsCard: {
     borderRadius: Shape.radius.xl,
