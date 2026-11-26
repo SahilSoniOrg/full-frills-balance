@@ -111,6 +111,29 @@ describe('useInboxSourceRecords', () => {
     expect(result.current).toEqual([]);
   });
 
+  it('prefers edit journal lookup over smsRecordId when both are present', async () => {
+    const wp1 = asWorkplaceId('wp-1');
+    const journalId = asJournalId('j-1');
+    const linked = [makeRecord('rec-linked', 'LINKED-BANK')];
+    const smsOnly = makeRecord('rec-sms', 'SMS-BANK');
+
+    (smsService.findAllByLinkedJournalId as jest.Mock).mockResolvedValue(linked);
+    (smsService.findInboxRecord as jest.Mock).mockResolvedValue(smsOnly);
+
+    const { result } = renderHook(() =>
+      useInboxSourceRecords({
+        workplaceId: wp1,
+        journalId,
+        smsRecordId: 'rec-sms',
+        isEdit: true,
+      }),
+    );
+
+    await waitFor(() => expect(result.current).toEqual(linked));
+    expect(smsService.findAllByLinkedJournalId).toHaveBeenCalledWith(wp1, journalId);
+    expect(smsService.findInboxRecord).not.toHaveBeenCalled();
+  });
+
   it('logs a warning and returns empty array when lookup fails', async () => {
     const wp1 = asWorkplaceId('wp-1');
     (smsService.findInboxRecord as jest.Mock).mockRejectedValue(new Error('db read failed'));

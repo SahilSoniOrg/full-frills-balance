@@ -7,7 +7,7 @@ import { useGuidedModeController } from '@/src/features/journal/entry/hooks/useG
 import type { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ReactNode, RefObject } from 'react';
+import type { RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export type SimpleModePanelProps = Pick<
@@ -27,7 +27,6 @@ export type SimpleModePanelProps = Pick<
   onScrollBeginDrag?: () => void;
   onCalculatorDone?: () => void;
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
-  inboxSource?: ReactNode;
 };
 
 export function SimpleModePanel({
@@ -43,7 +42,6 @@ export function SimpleModePanel({
   onScrollBeginDrag,
   onCalculatorDone,
   accountFlowRef,
-  inboxSource,
 }: SimpleModePanelProps) {
   const { theme } = useTheme();
   const { simpleEditor, precision, handleApplyVoiceInput, autopilotActive, firstAutopilotRole } =
@@ -71,7 +69,6 @@ export function SimpleModePanel({
           autopilotFirstRole={firstAutopilotRole}
           onCalculatorDone={onCalculatorDone}
           accountFlowRef={accountFlowRef}
-          bottomContent={inboxSource}
         />
       </View>
 

@@ -1,6 +1,7 @@
 import {
   AppIcon,
   AppText,
+  Badge,
   Icon,
   IconTile,
   PressScaleTouchable,
@@ -16,7 +17,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 function getInboxChannelIcon(channel: PlainInboxRecord['channel']): IconName {
   switch (channel) {
@@ -115,22 +116,9 @@ export function JournalEntryInboxSource({
             </AppText>
           </Stack>
 
-          <Box
-            paddingHorizontal="sm"
-            paddingVertical="xs"
-            borderRadius="full"
-            borderWidth={StyleSheet.hairlineWidth}
-            alignItems="center"
-            justifyContent="center"
-            minWidth={Size.sm}
-            background="surface"
-            backgroundOpacity="strong"
-            style={softBorderStyle}
-          >
-            <AppText variant="caption" color="secondary" weight="medium" tabular>
-              {items.length}
-            </AppText>
-          </Box>
+          <Badge size="sm" variant="default">
+            {items.length}
+          </Badge>
 
           <AppIcon
             name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
@@ -216,13 +204,17 @@ export function JournalEntryInboxSource({
   );
 }
 
+const caption = Typography.roles.caption;
+const messageLineHeight =
+  Platform.OS === 'android' ? Math.round(caption.lineHeight) : caption.lineHeight;
+
 const styles = StyleSheet.create({
   senderText: {
     flexShrink: 1,
   },
   messageText: {
-    fontSize: Typography.sizes.xs,
-    lineHeight: 18,
-    letterSpacing: 0.2,
+    fontSize: caption.fontSize,
+    lineHeight: messageLineHeight,
+    letterSpacing: caption.letterSpacing,
   },
 });

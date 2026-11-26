@@ -18,13 +18,14 @@ export function useInboxSourceRecords({
   journalId,
   isEdit,
 }: UseInboxSourceRecordsParams): PlainInboxRecord[] {
+  // Edit mode always prefers the journal link over a stale smsRecordId route param.
   const editJournalId = isEdit ? journalId : undefined;
   const lookupKey = !workplaceId
     ? undefined
-    : smsRecordId
-      ? `${workplaceId}:record:${smsRecordId}`
-      : editJournalId
-        ? `${workplaceId}:journal:${editJournalId}`
+    : editJournalId
+      ? `${workplaceId}:journal:${editJournalId}`
+      : smsRecordId
+        ? `${workplaceId}:record:${smsRecordId}`
         : undefined;
 
   const [lookup, setLookup] = useState<{
@@ -37,12 +38,12 @@ export function useInboxSourceRecords({
     let isActive = true;
     const loadInboxItems = async () => {
       try {
-        const items = smsRecordId
-          ? [await smsService.findInboxRecord(workplaceId, smsRecordId)].filter(
-              (item): item is PlainInboxRecord => item !== null,
-            )
-          : editJournalId
-            ? await smsService.findAllByLinkedJournalId(workplaceId, editJournalId)
+        const items = editJournalId
+          ? await smsService.findAllByLinkedJournalId(workplaceId, editJournalId)
+          : smsRecordId
+            ? [await smsService.findInboxRecord(workplaceId, smsRecordId)].filter(
+                (item): item is PlainInboxRecord => item !== null,
+              )
             : [];
         if (isActive) setLookup({ key: lookupKey, items });
       } catch (error) {

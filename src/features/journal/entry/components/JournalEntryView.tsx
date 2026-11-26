@@ -323,7 +323,6 @@ export function JournalEntryView(props: JournalEntryShell) {
       }
     >
       <View style={styles.bodyContent}>
-        {/* Simple mode */}
         {activeMode === 'basic' ? (
           <SimpleModePanel
             accounts={accounts}
@@ -339,9 +338,6 @@ export function JournalEntryView(props: JournalEntryShell) {
             onScrollBeginDrag={dismissDescriptionOnScroll}
             onCalculatorDone={focusDescription}
             accountFlowRef={accountFlowRef}
-            inboxSource={
-              <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
-            }
           />
         ) : activeMode === 'allocation' ? (
           <>
@@ -352,7 +348,6 @@ export function JournalEntryView(props: JournalEntryShell) {
               editor={editor}
               onCreateAccountForTarget={onCreateAccountForTarget}
             />
-            <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
           </>
         ) : activeMode === 'expert' ? (
           <>
@@ -364,7 +359,6 @@ export function JournalEntryView(props: JournalEntryShell) {
               onCreateAccountForTarget={onCreateAccountForTarget}
               showLineNotes={showEntryNotes}
             />
-            <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
           </>
         ) : (
           <BatchModePanel
@@ -378,6 +372,9 @@ export function JournalEntryView(props: JournalEntryShell) {
             onCreateAccountForTarget={onCreateAccountForTarget}
           />
         )}
+        {activeMode !== 'batch' ? (
+          <JournalEntryInboxSource items={props.inboxItems} isEdit={editor.isEdit} />
+        ) : null}
       </View>
 
       {/* Account Picker Modal */}
