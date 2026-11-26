@@ -72,7 +72,7 @@ export function ReportsV2View({
       endDate: number;
     }) => {
       AppNavigation.toJournalSearch({
-        ...(startDate > 0 ? { startDate, endDate } : {}),
+        ...(endDate > 0 ? { startDate, endDate } : {}),
         accountIds: accountIds ? [...accountIds] : undefined,
         journalIds: journalIds.length > 0 ? [...journalIds] : undefined,
       });

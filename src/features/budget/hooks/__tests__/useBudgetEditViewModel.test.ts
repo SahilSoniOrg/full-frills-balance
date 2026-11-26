@@ -176,4 +176,14 @@ describe('budget repeat count editing', () => {
       'USD',
     );
   });
+
+  it('rejects zero and non-numeric amounts cleanly', async () => {
+    const { result } = renderHook(() => useBudgetEditViewModel({ id: budget.id }));
+
+    for (const bad of ['0', '-20', 'abc']) {
+      act(() => result.current.setAmount(bad));
+      expect(result.current.isFormValid).toBe(false);
+      await expect(result.current.save()).rejects.toThrow('Please fill all required fields');
+    }
+  });
 });

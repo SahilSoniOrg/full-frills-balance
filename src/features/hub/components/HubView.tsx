@@ -4,6 +4,7 @@ import {
   AppIcon,
   AppTabs,
   EmptyStateView,
+  ErrorStateView,
   ListGroup,
   ListRow,
   LoadingView,
@@ -22,6 +23,8 @@ import { StyleSheet } from 'react-native';
 function HubActiveContent({
   activeInsights,
   isInsightsLoading,
+  insightsError,
+  retryInsights,
   unreadSmsCount,
   currencyCode,
   emptyStateTitle,
@@ -31,6 +34,8 @@ function HubActiveContent({
 }: {
   activeInsights: Insight[];
   isInsightsLoading: boolean;
+  insightsError?: Error | null;
+  retryInsights?: () => void;
   unreadSmsCount: number;
   currencyCode: string;
   emptyStateTitle: string;
@@ -53,6 +58,11 @@ function HubActiveContent({
   if (isInsightsLoading) {
     return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
   }
+  if (insightsError) {
+    return (
+      <ErrorStateView variant="inline" message={insightsError.message} onRetry={retryInsights} />
+    );
+  }
   if (unreadSmsCount === 0) {
     return <EmptyStateView icon={Icon.Info} title={emptyStateTitle} style={styles.emptyState} />;
   }
@@ -62,12 +72,16 @@ function HubActiveContent({
 function HubDismissedContent({
   dismissedInsights,
   isInsightsLoading,
+  insightsError,
+  retryInsights,
   noDismissedTitle,
   restoreLabel,
   restoreInsight,
 }: {
   dismissedInsights: Insight[];
   isInsightsLoading: boolean;
+  insightsError?: Error | null;
+  retryInsights?: () => void;
   noDismissedTitle: string;
   restoreLabel: string;
   restoreInsight: (id: string) => void;
@@ -105,6 +119,11 @@ function HubDismissedContent({
   if (isInsightsLoading) {
     return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
   }
+  if (insightsError) {
+    return (
+      <ErrorStateView variant="inline" message={insightsError.message} onRetry={retryInsights} />
+    );
+  }
   return <EmptyStateView icon={Icon.Info} title={noDismissedTitle} style={styles.emptyState} />;
 }
 
@@ -115,6 +134,8 @@ export function HubView({
   activeInsights,
   dismissedInsights,
   isInsightsLoading,
+  insightsError,
+  retryInsights,
   unreadSmsCount,
   currencyCode,
   strings,
@@ -149,6 +170,8 @@ export function HubView({
           <HubActiveContent
             activeInsights={activeInsights}
             isInsightsLoading={isInsightsLoading}
+            insightsError={insightsError}
+            retryInsights={retryInsights}
             unreadSmsCount={unreadSmsCount}
             currencyCode={currencyCode}
             emptyStateTitle={strings.emptyState}
@@ -160,6 +183,8 @@ export function HubView({
           <HubDismissedContent
             dismissedInsights={dismissedInsights}
             isInsightsLoading={isInsightsLoading}
+            insightsError={insightsError}
+            retryInsights={retryInsights}
             noDismissedTitle={strings.noDismissed}
             restoreLabel={strings.restore}
             restoreInsight={restoreInsight}

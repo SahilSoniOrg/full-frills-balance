@@ -92,7 +92,7 @@ export const HubWidget = ({
                   accessibilityRole="button"
                   accessibilityLabel="Manage dismissed notifications"
                 >
-                  <AppIcon name={Icon.History} size={14} color={theme.textSecondary} />
+                  <AppIcon name={Icon.History} size={Size.iconXs} color={theme.textSecondary} />
                   <AppText variant="caption" color="secondary">
                     {AppConfig.strings.dashboard.manageDismissed}
                   </AppText>
@@ -124,99 +124,106 @@ export const HubWidget = ({
                   },
                 ]}
               >
-                <PressScaleTouchable
-                  pressScale="subtle"
-                  onPress={() => handlePress(insight)}
-                  style={styles.cardPressable}
-                >
-                  <View style={styles.metaRow}>
-                    <View style={[styles.severityChip, { backgroundColor: severity.chipBg }]}>
-                      <AppIcon name={Icon.Alert} size={12} color={severity.color} />
-                      <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
-                        {severity.label}
-                      </AppText>
+                <View style={styles.cardPressable}>
+                  <PressScaleTouchable
+                    pressScale="subtle"
+                    onPress={() => handlePress(insight)}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.metaRow}>
+                      <View style={[styles.severityChip, { backgroundColor: severity.chipBg }]}>
+                        <AppIcon name={Icon.Alert} size={Size.xxs} color={severity.color} />
+                        <AppText
+                          variant="caption"
+                          weight="medium"
+                          style={{ color: severity.color }}
+                        >
+                          {severity.label}
+                        </AppText>
+                      </View>
                     </View>
-                  </View>
 
-                  <View style={styles.header}>
-                    <View style={styles.iconTitle}>
+                    <View style={styles.header}>
+                      <View style={styles.iconTitle}>
+                        <View
+                          style={[
+                            styles.iconBadge,
+                            { backgroundColor: withOpacity(severity.color, Opacity.hover) },
+                          ]}
+                        >
+                          <AppIcon name={presentation.icon} size={Size.xs} color={severity.color} />
+                        </View>
+                        <AppText
+                          variant="body"
+                          weight="semibold"
+                          numberOfLines={2}
+                          style={styles.headline}
+                        >
+                          {insight.message}
+                        </AppText>
+                      </View>
+                    </View>
+
+                    {typeof insight.amount === 'number' ? (
                       <View
                         style={[
-                          styles.iconBadge,
+                          styles.amountCard,
                           { backgroundColor: withOpacity(severity.color, Opacity.hover) },
                         ]}
                       >
-                        <AppIcon name={presentation.icon} size={Size.xs} color={severity.color} />
+                        <AppText
+                          variant="caption"
+                          weight="medium"
+                          style={{ color: severity.color }}
+                        >
+                          {AppConfig.strings.dashboard.notifications.impact}
+                        </AppText>
+                        <MoneyText
+                          amount={insight.amount}
+                          currencyCode={insight.currencyCode || currencyCode}
+                          variant="subheading"
+                          style={[
+                            styles.amountValue,
+                            { color: severity.color, fontFamily: fonts.bold },
+                          ]}
+                        />
                       </View>
-                      <AppText
-                        variant="body"
-                        weight="semibold"
-                        numberOfLines={2}
-                        style={styles.headline}
-                      >
-                        {insight.message}
-                      </AppText>
-                    </View>
-                  </View>
+                    ) : null}
 
-                  {typeof insight.amount === 'number' ? (
-                    <View
-                      style={[
-                        styles.amountCard,
-                        { backgroundColor: withOpacity(severity.color, Opacity.hover) },
-                      ]}
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      style={styles.reason}
+                      numberOfLines={2}
                     >
-                      <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
-                        {AppConfig.strings.dashboard.notifications.impact}
-                      </AppText>
-                      <MoneyText
-                        amount={insight.amount}
-                        currencyCode={insight.currencyCode || currencyCode}
-                        variant="subheading"
-                        style={[
-                          styles.amountValue,
-                          { color: severity.color, fontFamily: fonts.bold },
-                        ]}
-                      />
-                    </View>
-                  ) : null}
+                      {AppConfig.strings.dashboard.notifications.whyThisAppeared}
+                      {insight.description}
+                    </AppText>
 
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    style={styles.reason}
-                    numberOfLines={2}
-                  >
-                    {AppConfig.strings.dashboard.notifications.whyThisAppeared}
-                    {insight.description}
-                  </AppText>
-
-                  {insight.context ? (
-                    <View style={styles.contextRow}>
-                      {insight.context.basis?.kind === 'lookback' ? (
-                        <AppText variant="caption" color="secondary" numberOfLines={1}>
-                          {AppConfig.strings.dashboard.notifications.basedOnLastDays(
-                            insight.context.basis.days,
-                          )}
-                        </AppText>
-                      ) : null}
-                      {insight.context.triggersCount ? (
-                        <AppText variant="caption" color="secondary">
-                          {AppConfig.strings.dashboard.notifications.triggersCount(
-                            insight.context.triggersCount,
-                          )}
-                        </AppText>
-                      ) : null}
-                    </View>
-                  ) : null}
+                    {insight.context ? (
+                      <View style={styles.contextRow}>
+                        {insight.context.basis?.kind === 'lookback' ? (
+                          <AppText variant="caption" color="secondary" numberOfLines={1}>
+                            {AppConfig.strings.dashboard.notifications.basedOnLastDays(
+                              insight.context.basis.days,
+                            )}
+                          </AppText>
+                        ) : null}
+                        {insight.context.triggersCount ? (
+                          <AppText variant="caption" color="secondary">
+                            {AppConfig.strings.dashboard.notifications.triggersCount(
+                              insight.context.triggersCount,
+                            )}
+                          </AppText>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </PressScaleTouchable>
 
                   <View style={[styles.footer, { borderTopColor: theme.border }]}>
                     <PressScaleTouchable
                       pressScale="subtle"
-                      onPress={e => {
-                        e.stopPropagation();
-                        handlePress(insight);
-                      }}
+                      onPress={() => handlePress(insight)}
                       style={[
                         styles.primaryCta,
                         { backgroundColor: withOpacity(severity.color, Opacity.hover) },
@@ -227,21 +234,18 @@ export const HubWidget = ({
                       <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
                         {presentation.actionLabel}
                       </AppText>
-                      <AppIcon name={Icon.ChevronRight} size={14} color={severity.color} />
+                      <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={severity.color} />
                     </PressScaleTouchable>
 
                     {presentation.dismissible ? (
                       <PressScaleTouchable
                         pressScale="subtle"
-                        onPress={e => {
-                          e.stopPropagation();
-                          onDismiss(insight.id);
-                        }}
+                        onPress={() => onDismiss(insight.id)}
                         style={[styles.dismissPill, { backgroundColor: theme.surfaceSecondary }]}
                         accessibilityRole="button"
                         accessibilityLabel="Dismiss insight"
                       >
-                        <AppIcon name={Icon.Close} size={14} color={theme.textSecondary} />
+                        <AppIcon name={Icon.Close} size={Size.iconXs} color={theme.textSecondary} />
                         <AppText variant="caption" color="secondary">
                           {AppConfig.strings.dashboard.hub.dismiss}
                         </AppText>
@@ -258,7 +262,7 @@ export const HubWidget = ({
                     {AppConfig.strings.dashboard.notifications.nextStep}
                     {insight.suggestion}
                   </AppText>
-                </PressScaleTouchable>
+                </View>
               </AppCard>
             );
           })}

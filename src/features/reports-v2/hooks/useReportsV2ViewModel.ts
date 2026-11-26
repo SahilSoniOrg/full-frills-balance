@@ -24,6 +24,7 @@ import {
   shouldShiftInitialReportRange,
 } from '@/src/services/reports/initialReportRange';
 import { confirm, toast } from '@/src/services/feedback/alerts';
+import { logger } from '@/src/services/observability/logger';
 
 const EMPTY_ACCOUNT_IDS: readonly string[] = [];
 const FILTER_SETTLE_DELAY_MS = 220;
@@ -102,6 +103,44 @@ export function useReportsV2ViewModel({
     initialAccountIdsKey ? initialAccountIdsKey.split('\u001f').map(asAccountId) : [],
   );
   const [includeArchivedAccounts, setIncludeArchivedAccounts] = useState(true);
+  const previousWorkplaceIdRef = useRef(workplaceId);
+
+  useEffect(() => {
+    if (previousWorkplaceIdRef.current === workplaceId) return;
+    previousWorkplaceIdRef.current = workplaceId;
+    const defaultRange = periodRangeForPreset(initialPeriodPreset);
+    initialPeriodRange.current = defaultRange;
+    rangeSelectionVersion.current = 0;
+    runSequence.current += 1;
+    pendingFxConfirmation.current = null;
+    hasLoaded.current = false;
+    if (scheduledRun.current !== null) {
+      clearTimeout(scheduledRun.current);
+      scheduledRun.current = null;
+    }
+    setPeriodPreset(initialPeriodPreset);
+    setPeriodRange(defaultRange);
+    setBasis(initialBasis);
+    setComparison(initialPeriodPreset === 'all-time' ? 'NONE' : initialComparison);
+    setGranularity(initialGranularity);
+    setActiveSection(initialSection);
+    setSelectedAccountIds(
+      initialAccountIdsKey ? initialAccountIdsKey.split('\u001f').map(asAccountId) : [],
+    );
+    setIncludeArchivedAccounts(true);
+    setSuccessfulRun(null);
+    setState('idle');
+    setError(null);
+    setIsFetchingMissingRates(false);
+  }, [
+    initialAccountIdsKey,
+    initialBasis,
+    initialComparison,
+    initialGranularity,
+    initialPeriodPreset,
+    initialSection,
+    workplaceId,
+  ]);
 
   useEffect(() => {
     if (!inputChanges) return;
@@ -147,7 +186,11 @@ export function useReportsV2ViewModel({
         setPeriodPreset('custom');
         setPeriodRange(shiftedRange);
       })
-      .catch(() => undefined);
+      .catch(lookupError => {
+        logger.warn('[ReportsV2] Failed to resolve latest active journal date', {
+          error: lookupError,
+        });
+      });
 
     return () => {
       isCurrent = false;
@@ -318,7 +361,15 @@ export function useReportsV2ViewModel({
               endDate,
             }),
         )
-        .catch(() => undefined);
+        .catch(drilldownError => {
+          logger.warn('[ReportsV2] Failed to resolve drilldown transactions', {
+            error: drilldownError,
+            label: input.label,
+          });
+          if (currentQuery.current === query) {
+            toast.error('Unable to open transactions for this item.');
+          }
+        });
     },
     [engine, onJournalDrilldown, query, resultIsCurrent, visibleRun],
   );

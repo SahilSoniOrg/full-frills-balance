@@ -14,9 +14,9 @@ import {
   type JournalListModalsProps,
 } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import type { JournalId } from '@/src/types/ids';
 import type { JournalListItem } from '@/src/types/ui';
-import { getNow } from '@/src/utils/dateFormatting';
 import { useMemo } from 'react';
 
 export interface InsightDetailsViewModel {
@@ -40,20 +40,25 @@ export function useInsightDetailsViewModel(
 ): InsightDetailsViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { theme } = useTheme();
+  const today = useCalendarDay();
   const strings = AppConfig.strings.dashboard.insightDetails;
 
   const journalIds = useMemo(
     () => (params.journalIds ? (params.journalIds.split(',') as JournalId[]) : []),
     [params.journalIds],
   );
+  const dateRange = useMemo(
+    () => ({
+      startDate: 0,
+      endDate: today + AppConfig.time.msPerDay,
+    }),
+    [today],
+  );
 
   const journalList = useJournalEntryList({
     workplaceId,
     pageSize: AppConfig.defaults.insightDetailsFetchLimit,
-    dateRange: {
-      startDate: 0,
-      endDate: getNow() + AppConfig.time.msPerDay,
-    },
+    dateRange,
     queryOptions: { journalIds },
     shareTitle: 'Insight transactions',
     baseCurrency: params.currencyCode || workplaceCurrency,

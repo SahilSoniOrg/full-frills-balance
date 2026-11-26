@@ -43,7 +43,8 @@ export function ReportsV2Breakdown({
   interactive?: boolean;
 }) {
   const { theme } = useTheme();
-  const [expanded, setExpanded] = useState(false);
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
+  const expanded = expandedSectionId === section.id;
   if (!section.rows?.length)
     return (
       <EmptyStateView
@@ -140,7 +141,9 @@ export function ReportsV2Breakdown({
         <AppButton
           variant="ghost"
           size="sm"
-          onPress={() => setExpanded(value => !value)}
+          onPress={() =>
+            setExpandedSectionId(current => (current === section.id ? null : section.id))
+          }
           accessibilityLabel={
             expanded ? 'Show fewer details' : `Show all ${section.rows.length} details`
           }

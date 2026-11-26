@@ -15,7 +15,7 @@ import { BudgetSpendingChart } from './BudgetSpendingChart';
 import { BudgetSpendingInsights } from './BudgetSpendingInsights';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
-import { getNow } from '@/src/utils/dateFormatting';
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { Stack, Inline } from '@/src/design-system';
 
 export function BudgetDetailView({
@@ -23,6 +23,7 @@ export function BudgetDetailView({
   ...vm
 }: BudgetDetailViewModel & { chrome: ScreenNavChrome }) {
   const { budget, usage, periodRange } = vm;
+  const now = useCalendarDay();
   const strings = AppConfig.strings.budgetDetailRedesign;
 
   if (vm.isLoading) {
@@ -51,7 +52,6 @@ export function BudgetDetailView({
     ? vm.chartData?.categories.find(category => category.accountId === vm.activityCategory?.id)
         ?.entryCount
     : vm.chartData?.entryCount;
-  const now = getNow();
   const period = presentBudgetPeriod(periodRange, usage, now);
   const activityCountLabel =
     activityCount === undefined

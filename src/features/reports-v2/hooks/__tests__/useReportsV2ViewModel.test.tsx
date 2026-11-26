@@ -356,4 +356,40 @@ describe('useReportsV2ViewModel load lifecycle', () => {
     expect(toast.success).toHaveBeenCalled();
     await waitFor(() => expect(engine.run.mock.calls.length).toBeGreaterThan(1));
   });
+
+  it('resets query filters when workplaceId changes and toasts on drillDown errors', async () => {
+    const engine = engineMock();
+    engine.drillDown.mockRejectedValueOnce(new Error('drilldown boom'));
+    const { result, rerender } = renderHook(
+      ({ workplaceId }: { workplaceId: string }) =>
+        useReportsV2ViewModel({
+          engine,
+          workplaceId,
+          targetCurrency: 'USD',
+        }),
+      { initialProps: { workplaceId: 'wp-1' } },
+    );
+
+    await waitFor(() => {
+      expect(engine.run).toHaveBeenCalledTimes(1);
+      expect(result.current.resultIsCurrent).toBe(true);
+    });
+    act(() => {
+      result.current.filters.onAccountIdsChange(['acc-1']);
+      result.current.filters.onComparisonChange('NONE');
+    });
+    expect(result.current.filters.accountIds).toEqual(['acc-1']);
+
+    await waitFor(() => {
+      expect(engine.run).toHaveBeenCalledTimes(2);
+      expect(result.current.resultIsCurrent).toBe(true);
+    });
+
+    act(() => result.current.onDrilldown({ label: 'Expense' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    rerender({ workplaceId: 'wp-2' });
+    await waitFor(() => expect(result.current.filters.accountIds).toEqual([]));
+    expect(result.current.filters.comparison).toBe('PREVIOUS_PERIOD');
+  });
 });

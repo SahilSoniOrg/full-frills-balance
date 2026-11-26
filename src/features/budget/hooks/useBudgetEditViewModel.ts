@@ -11,7 +11,6 @@ import {
   createEmptyBudgetDraft,
   formatBudgetAmountLabel,
   mapBudgetToEditDraft,
-  shouldSeedBudgetDraft,
 } from '@/src/features/budget/hooks/budgetEditDraft';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -27,7 +26,7 @@ import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { isValidRepeatCount } from '@/src/domain/planned-payment/recurrenceRules';
 import type { BudgetSpendingHistoryEntry } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { type SetStateAction, useCallback, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
 export type BudgetEditRouteParams = {
@@ -52,11 +51,13 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     () => accountQueries.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
     [],
+    { keepPreviousData: false, resetKey: workplaceId },
   );
   const { data: assetAccounts = [] } = useObservable(
     () => accountQueries.observeByType(workplaceId, AccountType.ASSET),
     [workplaceId],
     [],
+    { keepPreviousData: false, resetKey: workplaceId },
   );
   const liquidAssetAccounts = assetAccounts.filter(a => isLiquidAssetSubtype(a.accountSubtype));
 
@@ -65,22 +66,50 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   const pName = params.pName || '';
   const pAmount = params.pAmount || '';
   const pCurrency = params.pCurrency || workplaceCurrency;
+  const entityResetKey = `${workplaceId}:${budgetId ?? ''}`;
 
   const { data: observedBudget, isLoading: budgetLoading } = useObservable<PlainBudget | null>(
     () => (budgetId ? budgetReadService.observeById(workplaceId, budgetId) : of(null)),
     [workplaceId, budgetId],
     null,
+    { keepPreviousData: false, resetKey: entityResetKey },
   );
 
   const { data: scopes = [], isLoading: scopesLoading } = useObservable<PlainBudgetScope[]>(
     () => (budgetId ? budgetReadService.observeScopes(workplaceId, budgetId) : of([])),
     [workplaceId, budgetId],
     [],
+    { keepPreviousData: false, resetKey: entityResetKey },
   );
 
-  const [seededBudgetId, setSeededBudgetId] = useState<BudgetId | null>(null);
-  const [draft, setDraft] = useState<BudgetEditDraft>(() =>
-    createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }),
+  const scopesReady = !budgetId || !scopesLoading;
+  const isSeededEntity = Boolean(
+    budgetId && observedBudget && scopesReady && observedBudget.id === budgetId,
+  );
+  const seededDraft = useMemo(
+    () =>
+      budgetId && observedBudget && scopesReady && observedBudget.id === budgetId
+        ? mapBudgetToEditDraft(observedBudget, scopes, workplaceCurrency)
+        : createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }),
+    [budgetId, observedBudget, pAmount, pCurrency, pName, scopes, scopesReady, workplaceCurrency],
+  );
+
+  const [draftState, setDraftState] = useState<{
+    key: string;
+    draft: BudgetEditDraft;
+  } | null>(null);
+  const draft = draftState?.key === entityResetKey ? draftState.draft : seededDraft;
+  const setDraft = useCallback(
+    (updater: SetStateAction<BudgetEditDraft>) => {
+      setDraftState(current => {
+        const base = current?.key === entityResetKey ? current.draft : seededDraft;
+        return {
+          key: entityResetKey,
+          draft: typeof updater === 'function' ? updater(base) : updater,
+        };
+      });
+    },
+    [entityResetKey, seededDraft],
   );
   const [isSaving, setIsSaving] = useState(false);
   const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
@@ -108,22 +137,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       : (liquidAssetAccounts[0]?.name ?? budgetFormStrings.automaticAccount);
   }, [draft.assetAccountIds, liquidAssetAccounts]);
 
-  const scopesReady = !budgetId || !scopesLoading;
-  const canSeed = shouldSeedBudgetDraft({
-    budgetId,
-    seededBudgetId,
-    observedBudget,
-    scopesReady,
-  });
-
-  // Seed once per entity id during render — never on every observe tick.
-  if (canSeed && observedBudget && budgetId) {
-    setSeededBudgetId(budgetId);
-    setDraft(mapBudgetToEditDraft(observedBudget, scopes, workplaceCurrency));
-  } else if (!budgetId && seededBudgetId !== null) {
-    setSeededBudgetId(null);
-    setDraft(createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }));
-  }
+  const isDraftInitialized = !budgetId || isSeededEntity;
 
   const spendingHistory$ = useMemo(
     () =>
@@ -167,21 +181,21 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     if (averageSpend == null) return;
     const precision = getCurrencyPrecision(draft.currencyCode);
     setDraft(d => ({ ...d, amount: roundToPrecision(averageSpend, precision).toFixed(precision) }));
-  }, [averageSpend, draft.currencyCode]);
+  }, [averageSpend, draft.currencyCode, setDraft]);
   const amountLabel = formatBudgetAmountLabel(draft.intervalType, draft.intervalN);
   const scheduleStartDate = draft.startDate ?? draft.startMonth.getTime();
 
   const loading =
     !!budgetId &&
     !pName &&
-    seededBudgetId !== budgetId &&
+    !isDraftInitialized &&
     (budgetLoading || scopesLoading || observedBudget != null);
 
-  const setName = useCallback((name: string) => setDraft(d => ({ ...d, name })), []);
-  const setAmount = useCallback((amount: string) => setDraft(d => ({ ...d, amount })), []);
+  const setName = useCallback((name: string) => setDraft(d => ({ ...d, name })), [setDraft]);
+  const setAmount = useCallback((amount: string) => setDraft(d => ({ ...d, amount })), [setDraft]);
   const setCurrencyCode = useCallback(
     (currencyCode: string) => setDraft(d => ({ ...d, currencyCode })),
-    [],
+    [setDraft],
   );
   const setSchedule = useCallback(
     (value: ScheduleValue) =>
@@ -192,11 +206,11 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
         recurrenceDay: value.intervalType === 'DAILY' ? undefined : value.recurrenceDay,
         recurrenceMonth: value.intervalType === 'YEARLY' ? value.recurrenceMonth : undefined,
       })),
-    [],
+    [setDraft],
   );
   const setSelectedAccountIds = useCallback(
     (selectedAccountIds: AccountId[]) => setDraft(d => ({ ...d, selectedAccountIds })),
-    [],
+    [setDraft],
   );
   const addCategory = useCallback(
     (id: AccountId) =>
@@ -205,7 +219,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
           ? d
           : { ...d, selectedAccountIds: [...d.selectedAccountIds, id] },
       ),
-    [],
+    [setDraft],
   );
   const removeCategory = useCallback(
     (id: AccountId) =>
@@ -213,18 +227,24 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
         ...d,
         selectedAccountIds: d.selectedAccountIds.filter(selectedId => selectedId !== id),
       })),
-    [],
+    [setDraft],
   );
   const setAssetAccountIds = useCallback(
     (assetAccountIds: AccountId[]) => setDraft(d => ({ ...d, assetAccountIds })),
-    [],
+    [setDraft],
   );
+
+  const parsedAmount = Number.parseFloat(draft.amount);
+  const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
 
   const save = useCallback(async () => {
     assertBound();
     if (isSubmittingRef.current) return;
-    if (!draft.name.trim() || !draft.amount || draft.selectedAccountIds.length === 0) {
+    if (!draft.name.trim() || !hasValidAmount || draft.selectedAccountIds.length === 0) {
       throw new Error('Please fill all required fields and select at least one account.');
+    }
+    if (budgetId && !observedBudget) {
+      throw new Error('This budget could not be found.');
     }
     if (!isValidRepeatCount(draft.intervalN)) {
       throw new Error('Enter a whole number from 1 to 9999.');
@@ -233,7 +253,6 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     isSubmittingRef.current = true;
     setIsSaving(true);
     try {
-      const parsedAmount = parseFloat(draft.amount);
       const monthStr = `${draft.startMonth.getFullYear()}-${String(draft.startMonth.getMonth() + 1).padStart(2, '0')}`;
 
       const resolvedStartDate =
@@ -271,7 +290,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       setIsSaving(false);
       throw error;
     }
-  }, [assertBound, draft, observedBudget, workplaceId]);
+  }, [assertBound, budgetId, draft, hasValidAmount, observedBudget, parsedAmount, workplaceId]);
 
   return {
     leaveAfterSave,
@@ -312,9 +331,10 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     isSaving,
     isFormValid: Boolean(
       draft.name.trim() &&
-      draft.amount &&
+      hasValidAmount &&
       draft.selectedAccountIds.length > 0 &&
-      isValidRepeatCount(draft.intervalN),
+      isValidRepeatCount(draft.intervalN) &&
+      (!budgetId || observedBudget != null),
     ),
     requirementHint: formatRequirementHint(
       [

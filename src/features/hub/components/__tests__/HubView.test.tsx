@@ -2,7 +2,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { HubView } from '@/src/features/hub/components/HubView';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
-import { render, screen } from '@/src/testing/render';
+import { fireEvent, render, screen } from '@/src/testing/render';
 
 const chrome: ScreenNavChrome = {
   kind: 'nav',
@@ -63,5 +63,22 @@ describe('HubView', () => {
 
     expect(screen.getByLabelText(AppConfig.strings.common.loading)).toBeTruthy();
     expect(screen.queryByText(AppConfig.strings.dashboard.hub.noDismissed)).toBeNull();
+  });
+
+  it('shows ErrorStateView when insights loading errors with no cached items', () => {
+    const retryInsights = jest.fn();
+    render(
+      <HubView
+        {...baseProps({
+          isInsightsLoading: false,
+          insightsError: new Error('Unable to load'),
+          retryInsights,
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Unable to load')).toBeTruthy();
+    fireEvent.press(screen.getByText('Try again'));
+    expect(retryInsights).toHaveBeenCalledTimes(1);
   });
 });

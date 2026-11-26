@@ -41,8 +41,23 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   const initialDateRange = useRef(dateRange);
   const rangeSelectionVersion = useRef(0);
   const [accountIds, setAccountIds] = useState<AccountId[]>([]);
+  const previousWorkplaceIdRef = useRef(workplaceId);
 
   useEffect(() => {
+    if (previousWorkplaceIdRef.current !== workplaceId) {
+      previousWorkplaceIdRef.current = workplaceId;
+      const defaultRange = getLastNRange(AppConfig.defaults.reportDays, 'days');
+      initialDateRange.current = defaultRange;
+      rangeSelectionVersion.current = 0;
+      setPeriodFilter({
+        type: 'LAST_N',
+        lastN: AppConfig.defaults.reportDays,
+        lastNUnit: 'days',
+      });
+      setDateRange(defaultRange);
+      setAccountIds([]);
+    }
+
     let isCurrent = true;
     const selectionVersion = rangeSelectionVersion.current;
 
@@ -67,7 +82,9 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
           endDate: shiftedRange.endDate,
         });
       })
-      .catch(() => undefined);
+      .catch(error => {
+        logger.warn('[useReports] Failed to resolve latest activity date', { error });
+      });
 
     return () => {
       isCurrent = false;

@@ -4,6 +4,7 @@ import { BarChart, type BarChartDataPoint } from '@/src/components/charts/BarCha
 import { LineChart, type DataPoint } from '@/src/components/charts/LineChart';
 import { buildLineChartAccessibilitySummary } from '@/src/components/charts/line/lineChartAccessibility';
 import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
+import { reportChartWidth } from '@/src/components/reports/reportChartWidth';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -11,7 +12,7 @@ import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportTrendVisualization } from '@/src/services/reports-v2/types/result';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
   explanationContextItems,
   explanationForVisualization,
@@ -35,12 +36,25 @@ export function ReportsV2TrendCard({
 }) {
   const privateMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
+  const chartWidth = reportChartWidth(windowWidth);
   const formatMoney = useMoneyFormat();
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>();
   const waterfall = visualization.kind === 'WATERFALL' ? visualization : null;
   const reportSeries = visualization.kind === 'WATERFALL' ? null : visualization.series;
   const series = useMemo(() => reportSeries ?? [], [reportSeries]);
-  const explanation = explanationForVisualization(sectionId, visualization);
+  const explanation = useMemo(
+    () => explanationForVisualization(sectionId, visualization),
+    [sectionId, visualization],
+  );
+  const seriesPalette = useMemo(
+    () => [theme.primary, theme.asset, theme.equity, theme.warning, theme.transfer],
+    [theme.asset, theme.equity, theme.primary, theme.transfer, theme.warning],
+  );
+  const seriesColor = useCallback(
+    (index: number) => seriesPalette[index % seriesPalette.length],
+    [seriesPalette],
+  );
   const chartSeries = useMemo(
     () =>
       waterfall
@@ -65,14 +79,16 @@ export function ReportsV2TrendCard({
       }));
     }
     const points = series[0]?.points ?? [];
+    const multiSeries = series.length > 1;
     return points.map((point, index) => ({
       label: chartLabel(point.date),
       values: series.map(item => item.points[index]?.value.amount ?? 0),
-      colors: series.map(item =>
-        item.points[index]?.value.amount < 0 ? theme.error : theme.primary,
-      ),
+      colors: series.map((item, seriesIndex) => {
+        if (multiSeries) return seriesColor(seriesIndex);
+        return (item.points[index]?.value.amount ?? 0) < 0 ? theme.error : theme.primary;
+      }),
     }));
-  }, [chartSeries, series, theme.error, theme.primary]);
+  }, [chartSeries, series, seriesColor, theme.error, theme.primary]);
   const lineData = useMemo<DataPoint[]>(
     () => (series[0]?.points ?? []).map(point => ({ x: point.date, y: point.value.amount })),
     [series],
@@ -81,14 +97,19 @@ export function ReportsV2TrendCard({
     () => (series[1]?.points ?? []).map(point => ({ x: point.date, y: point.value.amount })),
     [series],
   );
-  const lineCurrencyCode = series[0]?.points[0]?.value.currencyCode ?? '';
-  const lineAccessibilitySummary = buildLineChartAccessibilitySummary({
-    chartName: explanation?.title ?? 'Trend',
-    data: lineData,
-    formatValue: value => formatMoney(value, lineCurrencyCode),
-    formatDate: chartLabel,
-    additionalSeries: series.slice(1).map(item => item.label),
-  });
+  const lineCurrencyCode = series[0]?.points[0]?.value.currencyCode ?? context.currencyCode;
+  const chartTitle = explanation?.title ?? 'Trend';
+  const lineAccessibilitySummary = useMemo(
+    () =>
+      buildLineChartAccessibilitySummary({
+        chartName: chartTitle,
+        data: lineData,
+        formatValue: value => formatMoney(value, lineCurrencyCode),
+        formatDate: chartLabel,
+        additionalSeries: series.slice(1).map(item => item.label),
+      }),
+    [chartTitle, formatMoney, lineCurrencyCode, lineData, series],
+  );
   const tooltip = useCallback(
     (index: number) => {
       if (chartSeries) {
@@ -113,6 +134,7 @@ export function ReportsV2TrendCard({
     <BarChart
       data={barData}
       currencyCode={waterfall!.closing.currencyCode}
+      width={chartWidth}
       selectedIndex={selectedIndex}
       onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
       renderTooltipContent={tooltip}
@@ -121,6 +143,9 @@ export function ReportsV2TrendCard({
     <LineChart
       data={lineData}
       secondaryData={secondaryLineData.length > 0 ? secondaryLineData : undefined}
+      color={seriesColor(0)}
+      secondaryColor={seriesColor(1)}
+      width={chartWidth}
       currencyCode={lineCurrencyCode}
       accessibilitySummary={lineAccessibilitySummary}
       selectedIndex={selectedIndex}
@@ -130,7 +155,8 @@ export function ReportsV2TrendCard({
   ) : (
     <BarChart
       data={barData}
-      currencyCode={series[0]?.points[0]?.value.currencyCode ?? ''}
+      currencyCode={series[0]?.points[0]?.value.currencyCode ?? context.currencyCode}
+      width={chartWidth}
       stacked={visualization.kind === 'STACKED_BAR'}
       selectedIndex={selectedIndex}
       onPress={index => setSelectedIndex(index < 0 ? undefined : index)}
@@ -144,11 +170,23 @@ export function ReportsV2TrendCard({
       headerContent={
         <View style={styles.chartHeader}>
           <View style={styles.chartLegend} accessibilityLabel="Trend series">
-            {(chartSeries ?? series).map(item => (
-              <AppText key={item.id} variant="caption" color="secondary">
-                ● {item.label}
-              </AppText>
-            ))}
+            {(chartSeries ?? series).map((item, index) => {
+              const dotColor = chartSeries
+                ? (chartSeries[index]?.value.amount ?? 0) < 0
+                  ? theme.error
+                  : theme.primary
+                : series.length > 1 || visualization.kind === 'LINE'
+                  ? seriesColor(index)
+                  : theme.primary;
+              return (
+                <AppText key={item.id} variant="caption" color="secondary">
+                  <AppText variant="caption" style={{ color: dotColor }}>
+                    ●
+                  </AppText>{' '}
+                  {item.label}
+                </AppText>
+              );
+            })}
           </View>
           {explanation ? (
             <ContextualExplanation

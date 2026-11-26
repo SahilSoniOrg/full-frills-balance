@@ -6,6 +6,7 @@ import { ContextualExplanation } from '@/src/components/shared/ContextualExplana
 import { MoneyFlowWidget } from '@/src/components/reports/MoneyFlowWidget';
 import { reportChartWidth } from '@/src/components/reports/reportChartWidth';
 import { AppConfig } from '@/src/constants';
+import { getEndOfDay } from '@/src/domain/calendar/dateRanges';
 import type {
   ReportTrendVisualization,
   ReportVisualization,
@@ -105,7 +106,7 @@ export function ReportsV2VisualizationCard({
                 interactive
                   ? point => {
                       if (point.timestamp === undefined) return;
-                      const periodEnd = point.periodEndTimestamp ?? point.timestamp;
+                      const periodEnd = point.periodEndTimestamp ?? getEndOfDay(point.timestamp);
                       onDrilldown({
                         label: title,
                         startDate: point.timestamp,

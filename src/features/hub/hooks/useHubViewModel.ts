@@ -8,6 +8,7 @@ import { insightService } from '@/src/services/insight/InsightService';
 import type { Insight } from '@/src/services/insight/insightTypes';
 import { journalBalanceInsightService } from '@/src/services/integrity';
 import { logger } from '@/src/services/observability/logger';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { appUpdateService } from '@/src/services/update/appUpdateService';
@@ -24,6 +25,8 @@ export interface HubViewModel {
   dismissedInsights: Insight[];
   /** True until the visible tab's insight observable emits once. */
   isInsightsLoading: boolean;
+  insightsError?: Error | null;
+  retryInsights?: () => void;
   unreadSmsCount: number;
   currencyCode: string;
   strings: typeof AppConfig.strings.dashboard.hub;
@@ -44,10 +47,18 @@ export function useHubViewModel(): HubViewModel {
     analytics.trackFeatureUsage('hub', 'change_tab', { tab });
   }, []);
 
-  const { data: activeInsights, isLoading: isActiveInsightsLoading } =
-    useInsightPatterns(workplaceId);
-  const { data: dismissedInsights, isLoading: isDismissedInsightsLoading } =
-    useDismissedInsightPatterns(workplaceId);
+  const {
+    data: activeInsights,
+    isLoading: isActiveInsightsLoading,
+    error: activeInsightsError,
+    retry: retryActiveInsights,
+  } = useInsightPatterns(workplaceId);
+  const {
+    data: dismissedInsights,
+    isLoading: isDismissedInsightsLoading,
+    error: dismissedInsightsError,
+    retry: retryDismissedInsights,
+  } = useDismissedInsightPatterns(workplaceId);
   const supplementalInsights = useSupplementalInsights(workplaceId);
   const dismissedSupplementalInsights = useSupplementalInsights(workplaceId, true);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
@@ -69,7 +80,12 @@ export function useHubViewModel(): HubViewModel {
         return;
       }
       analytics.trackFeatureUsage('hub', 'dismiss_insight', { pattern_id: id });
-      await insightService.dismissPattern(workplaceId, id);
+      try {
+        await insightService.dismissPattern(workplaceId, id);
+      } catch (error) {
+        logger.warn('[Hub] Failed to dismiss insight', { error, id });
+        showErrorAlert(error, 'Failed to dismiss insight');
+      }
     },
     [supplementalInsights, workplaceId],
   );
@@ -81,7 +97,12 @@ export function useHubViewModel(): HubViewModel {
         return;
       }
       analytics.trackFeatureUsage('hub', 'restore_insight', { pattern_id: id });
-      await insightService.undismissPattern(workplaceId, id);
+      try {
+        await insightService.undismissPattern(workplaceId, id);
+      } catch (error) {
+        logger.warn('[Hub] Failed to restore insight', { error, id });
+        showErrorAlert(error, 'Failed to restore insight');
+      }
     },
     [dismissedSupplementalInsights, workplaceId],
   );
@@ -154,6 +175,8 @@ export function useHubViewModel(): HubViewModel {
     dismissedInsights: [...(dismissedInsights ?? []), ...dismissedSupplementalInsights],
     isInsightsLoading:
       activeTab === 'active' ? isActiveInsightsLoading : isDismissedInsightsLoading,
+    insightsError: activeTab === 'active' ? activeInsightsError : dismissedInsightsError,
+    retryInsights: activeTab === 'active' ? retryActiveInsights : retryDismissedInsights,
     unreadSmsCount: unreadSmsCount ?? 0,
     currencyCode: defaultCurrencyCode,
     strings: hubStrings,

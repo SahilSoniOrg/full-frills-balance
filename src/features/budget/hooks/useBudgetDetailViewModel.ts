@@ -22,12 +22,12 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { PlainBudget } from '@/src/types/plainDtos';
-import { confirm } from '@/src/services/feedback/alerts';
+import { confirm, showErrorAlert } from '@/src/services/feedback/alerts';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { logger } from '@/src/services/observability/logger';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import type { BudgetLineValuationTx } from '@/src/services/budget/budgetCalculationHelpers';
@@ -71,6 +71,18 @@ export function useBudgetDetailViewModel() {
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const [activityCategoryId, setActivityCategoryId] = useState<AccountId | null>(null);
+  const previousIdentityRef = useRef({ workplaceId, budgetId });
+  useEffect(() => {
+    if (
+      previousIdentityRef.current.workplaceId === workplaceId &&
+      previousIdentityRef.current.budgetId === budgetId
+    ) {
+      return;
+    }
+    previousIdentityRef.current = { workplaceId, budgetId };
+    setRefTimestamp(Date.now());
+    setActivityCategoryId(null);
+  }, [workplaceId, budgetId]);
 
   const budgetData$ = useMemo(() => {
     return budgetReadService.observeById(workplaceId, budgetId).pipe(
@@ -160,6 +172,7 @@ export function useBudgetDetailViewModel() {
 
   const journalList = useJournalEntryList({
     workplaceId,
+    enabled: Boolean(budget && budgetDateRange),
     pageSize: AppConfig.pagination.budgetDetailsTransactionsPageSize,
     dateRange: budgetDateRange,
     statuses: [...ACTIVE_JOURNAL_STATUSES],
@@ -263,11 +276,11 @@ export function useBudgetDetailViewModel() {
 
   const nextMonth = useCallback(() => {
     if (!budget) return;
-    const { startDate: nowStart } = getBudgetCurrentPeriod(budget);
+    const { startDate: nowStart } = getBudgetCurrentPeriod(budget, today);
     const { startDate: refStart, endDate } = getBudgetCurrentPeriod(budget, refTimestamp);
     if (nowStart === refStart) return;
     setRefTimestamp(endDate + 1);
-  }, [budget, refTimestamp]);
+  }, [budget, refTimestamp, today]);
 
   const prevMonth = useCallback(() => {
     if (!budget) return;
@@ -281,10 +294,10 @@ export function useBudgetDetailViewModel() {
 
   const isCurrentPeriod = useMemo(() => {
     if (!budget) return true;
-    const { startDate } = getBudgetCurrentPeriod(budget);
+    const { startDate } = getBudgetCurrentPeriod(budget, today);
     const { startDate: currentRefStart } = getBudgetCurrentPeriod(budget, refTimestamp);
     return startDate === currentRefStart;
-  }, [budget, refTimestamp]);
+  }, [budget, refTimestamp, today]);
 
   const handleDelete = useCallback(() => {
     if (!budget) return;
@@ -302,6 +315,7 @@ export function useBudgetDetailViewModel() {
             'Failed to delete budget',
             error instanceof Error ? error : new Error(String(error)),
           );
+          showErrorAlert(error, 'Failed to delete budget');
         }
       },
     });

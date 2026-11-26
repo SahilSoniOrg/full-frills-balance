@@ -17,6 +17,7 @@ export function useInsightPatterns(workplaceId: WorkplaceId, options: { enabled?
     () => (enabled ? insightService.observePatterns(workplaceId) : EMPTY),
     [workplaceId, enabled],
     [],
+    { keepPreviousData: false, resetKey: workplaceId },
   );
 }
 
@@ -29,5 +30,6 @@ export function useDismissedInsightPatterns(workplaceId: WorkplaceId) {
     () => insightService.observeDismissedPatterns(workplaceId),
     [workplaceId],
     [],
+    { keepPreviousData: false, resetKey: workplaceId },
   );
 }
