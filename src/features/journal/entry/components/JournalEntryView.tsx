@@ -1,4 +1,5 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import {
   AppIcon,
   AppText,
@@ -11,6 +12,8 @@ import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout'
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
+import { peopleReadService } from '@/src/services/people';
+import { useObservable } from '@/src/hooks/useObservable';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import {
@@ -28,7 +31,7 @@ import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/Simpl
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/design-system/colorMath';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
@@ -190,6 +193,25 @@ export function JournalEntryView(props: JournalEntryShell) {
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
   const valuationCurrency = editor.valuationCurrency;
+  const { data: peopleTick } = useObservable(
+    () => peopleReadService.observePeopleTick(props.workplaceId),
+    [props.workplaceId],
+    null,
+  );
+  const [peopleGroups, setPeopleGroups] = useState<PersonPickerGroup[]>([]);
+  useEffect(() => {
+    let active = true;
+    if (typeof peopleReadService?.listPersonPickerGroups !== 'function') return undefined;
+    void peopleReadService
+      .listPersonPickerGroups(props.workplaceId)
+      .then(groups => {
+        if (active) setPeopleGroups(groups);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [peopleTick, props.workplaceId]);
   const journalMetaProps = useMemo<JournalMetaCardProps>(
     () => ({
       description: editor.description,
@@ -370,6 +392,7 @@ export function JournalEntryView(props: JournalEntryShell) {
             onSelectAccountRequest={onSelectAccountRequest}
             workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
+            peopleGroups={peopleGroups}
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
@@ -420,6 +443,7 @@ export function JournalEntryView(props: JournalEntryShell) {
         visible={showAccountPicker}
         title={accountPickerTitle}
         accounts={selectableAccounts}
+        peopleGroups={peopleGroups}
         selectedId={selectedAccountId}
         onSelect={onAccountSelected}
         onClose={onCloseAccountPicker}

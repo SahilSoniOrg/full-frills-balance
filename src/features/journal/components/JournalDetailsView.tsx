@@ -1,6 +1,6 @@
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { LoadingView } from '@/src/components/shared/LoadingView';
-import { Icon } from '@/src/components/core';
+import { AppButton, Icon } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Box, Stack } from '@/src/design-system';
@@ -62,6 +62,29 @@ export function JournalDetailsView({
           <JournalNote note={details.note} />
           {details.planned && <JournalPlannedActions planned={details.planned} />}
           <JournalEntries entries={details.entries} />
+          {(details.peopleActions?.splitLabel || details.peopleActions?.settlePersonName) && (
+            <Stack gap="sm">
+              {details.peopleActions?.splitLabel && details.peopleActions.onSplitWithPeople && (
+                <AppButton
+                  variant="outline"
+                  onPress={details.peopleActions.onSplitWithPeople}
+                  testID="journal-split-people-button"
+                >
+                  {details.peopleActions.splitLabel}
+                </AppButton>
+              )}
+              {details.peopleActions?.settlePersonName &&
+                details.peopleActions.onSettleWithPerson && (
+                  <AppButton
+                    variant="secondary"
+                    onPress={details.peopleActions.onSettleWithPerson}
+                    testID="journal-settle-person-button"
+                  >
+                    Settle up with {details.peopleActions.settlePersonName}
+                  </AppButton>
+                )}
+            </Stack>
+          )}
           <JournalAccountingIssues evaluation={details.balanceEvaluation} />
           <JournalBudgetImpact budget={details.budget} />
           {details.schedule && <JournalSchedule schedule={details.schedule} />}

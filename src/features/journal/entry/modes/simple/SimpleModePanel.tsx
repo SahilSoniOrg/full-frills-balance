@@ -1,3 +1,4 @@
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { Spacing } from '@/src/constants/design-tokens';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
@@ -21,6 +22,7 @@ export type SimpleModePanelProps = Pick<
   | 'workplaceId'
 > & {
   meta: JournalMetaCardProps;
+  peopleGroups?: readonly PersonPickerGroup[];
   /** Controlled by the screen because JournalMetaCard owns the voice trigger. */
   voiceModalVisible: boolean;
   onVoiceModalVisibleChange: (visible: boolean) => void;
@@ -36,6 +38,7 @@ export function SimpleModePanel({
   onCreateAccountForTarget,
   onSelectAccountRequest,
   workplaceId,
+  peopleGroups,
   voiceModalVisible,
   onVoiceModalVisibleChange,
   meta,
@@ -59,6 +62,7 @@ export function SimpleModePanel({
         <SimpleForm
           editor={simpleEditor}
           meta={meta}
+          peopleGroups={peopleGroups}
           onScrollBeginDrag={onScrollBeginDrag}
           accentColor={activeColor}
           precision={precision}

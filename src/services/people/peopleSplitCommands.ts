@@ -2,7 +2,6 @@ import {
   runAccountingWriteSession,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
-import { personWriteRepository } from '@/src/data/repositories/people';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -12,7 +11,7 @@ import {
   buildUserPaidSplit,
 } from '@/src/domain/people/personSplitPlanner';
 import { ensurePersonAccountInSession } from './peopleLifecycleCommands';
-import { autoSettlePersonInSession } from './peopleSettlementCommands';
+import { autoSettlePerson } from './peopleSettlementCommands';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
 
@@ -34,7 +33,7 @@ export async function saveSplitExpense(
     }[];
   },
 ) {
-  return runAccountingWriteSession(async session => {
+  const journal = await runAccountingWriteSession(async session => {
     const existingJournal = input.existingJournalId
       ? await journalQueryRepository.find(workplaceId, input.existingJournalId)
       : null;
@@ -82,26 +81,15 @@ export async function saveSplitExpense(
       },
       workplaceId,
     );
-    for (let i = 0; i < input.participants.length; i++) {
-      const p = input.participants[i]!;
-      if (p.amount > 0)
-        await personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
-          personId: p.personId,
-          originatingJournalId: result.journal.id,
-          accountId: participantReceivableIds[i]!,
-          direction: 'receivable',
-          originalAmount: p.amount,
-          currencyCode,
-        });
-    }
-    for (const personId of new Set(input.participants.map(p => p.personId))) {
-      await autoSettlePersonInSession(session, workplaceId, personId, result.journal.journalDate);
-    }
     return result.journal;
   });
+  for (const personId of new Set(input.participants.map(p => p.personId))) {
+    await autoSettlePerson(workplaceId, personId, journal.journalDate);
+  }
+  return journal;
 }
 
-export function saveFriendPaidBill(
+export async function saveFriendPaidBill(
   workplaceId: WorkplaceId,
   input: {
     journalDate: number;
@@ -115,7 +103,7 @@ export function saveFriendPaidBill(
     repayable: boolean;
   },
 ) {
-  return runAccountingWriteSession(async session => {
+  const journal = await runAccountingWriteSession(async session => {
     const personAccountId =
       input.payerAccountId ??
       (
@@ -147,27 +135,15 @@ export function saveFriendPaidBill(
       },
       workplaceId,
     );
-    if (input.repayable && input.userShare > 0) {
-      await personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
-        personId: input.payerPersonId,
-        originatingJournalId: result.journal.id,
-        accountId: personAccountId,
-        direction: 'payable',
-        originalAmount: input.userShare,
-        currencyCode: input.currencyCode,
-      });
-      await autoSettlePersonInSession(
-        session,
-        workplaceId,
-        input.payerPersonId,
-        result.journal.journalDate,
-      );
-    }
     return result.journal;
   });
+  if (input.repayable && input.userShare > 0) {
+    await autoSettlePerson(workplaceId, input.payerPersonId, journal.journalDate);
+  }
+  return journal;
 }
 
-export function recordPersonMovement(
+export async function recordPersonMovement(
   workplaceId: WorkplaceId,
   input: {
     journalDate: number;
@@ -181,7 +157,7 @@ export function recordPersonMovement(
     flow: 'lend' | 'gift_paid' | 'borrow' | 'gift_received';
   },
 ) {
-  return runAccountingWriteSession(async (session: AccountingWriteSession) => {
+  const journal = await runAccountingWriteSession(async (session: AccountingWriteSession) => {
     const role = {
       lend: 'receivable',
       gift_paid: 'expense',
@@ -218,22 +194,10 @@ export function recordPersonMovement(
       },
       workplaceId,
     );
-    if ((input.flow === 'lend' || input.flow === 'borrow') && input.amount > 0) {
-      await personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
-        personId: input.personId,
-        originatingJournalId: result.journal.id,
-        accountId: personAccountId,
-        direction: input.flow === 'lend' ? 'receivable' : 'payable',
-        originalAmount: input.amount,
-        currencyCode: input.currencyCode,
-      });
-      await autoSettlePersonInSession(
-        session,
-        workplaceId,
-        input.personId,
-        result.journal.journalDate,
-      );
-    }
     return result.journal;
   });
+  if ((input.flow === 'lend' || input.flow === 'borrow') && input.amount > 0) {
+    await autoSettlePerson(workplaceId, input.personId, journal.journalDate);
+  }
+  return journal;
 }

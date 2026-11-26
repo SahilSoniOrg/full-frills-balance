@@ -225,4 +225,130 @@ describe('Journal People integrity', () => {
       ).find(row => row.id === allocation.id)?.isActive,
     ).toBe(false);
   });
+
+  it('deactivates settlement allocations when the settlement journal is reversed', async () => {
+    const receivable = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Receivable',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const equity = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Equity',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
+    });
+    const person = await runAccountingWriteSession(s =>
+      personWriteRepository.createPersonInSession(s, workplaceId, { name: 'Ada' }),
+    );
+    await runAccountingWriteSession(s =>
+      personWriteRepository.linkAccountInSession(s, workplaceId, person.id, receivable.id),
+    );
+    const origin = await repository.put(
+      {
+        journalDate: 1,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivable.id, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: equity.id, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
+    const settlement = await repository.put(
+      {
+        journalDate: 2,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivable.id, amount: 30, transactionType: TransactionType.CREDIT },
+          { accountId: equity.id, amount: 30, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      workplaceId,
+    );
+    const [item] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: origin.journal.id,
+    });
+    await runAccountingWriteSession(s =>
+      personWriteRepository.createSettlementAllocationsInSession(s, workplaceId, [
+        {
+          personId: person.id,
+          openItemId: item.id,
+          settlementJournalId: settlement.journal.id,
+          accountId: receivable.id,
+          allocationKind: 'repayment',
+          amount: 30,
+        },
+      ]),
+    );
+    await repository.reverse(settlement.journal.id, 'Correction', workplaceId);
+    expect(
+      await personQueryRepository.listSettlementAllocations(workplaceId, {
+        openItemId: item.id,
+        activeOnly: true,
+      }),
+    ).toHaveLength(0);
+  });
+
+  it('blocks reversal of an originating journal with active allocations', async () => {
+    const receivable = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Receivable',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const equity = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Equity',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
+    });
+    const person = await runAccountingWriteSession(s =>
+      personWriteRepository.createPersonInSession(s, workplaceId, { name: 'Ada' }),
+    );
+    await runAccountingWriteSession(s =>
+      personWriteRepository.linkAccountInSession(s, workplaceId, person.id, receivable.id),
+    );
+    const origin = await repository.put(
+      {
+        journalDate: 1,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivable.id, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: equity.id, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
+    const settlement = await repository.put(
+      {
+        journalDate: 2,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivable.id, amount: 30, transactionType: TransactionType.CREDIT },
+          { accountId: equity.id, amount: 30, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      workplaceId,
+    );
+    const [item] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: origin.journal.id,
+    });
+    await runAccountingWriteSession(s =>
+      personWriteRepository.createSettlementAllocationsInSession(s, workplaceId, [
+        {
+          personId: person.id,
+          openItemId: item.id,
+          settlementJournalId: settlement.journal.id,
+          accountId: receivable.id,
+          allocationKind: 'repayment',
+          amount: 30,
+        },
+      ]),
+    );
+    await expect(
+      repository.reverse(origin.journal.id, 'Correction', workplaceId),
+    ).rejects.toThrow();
+  });
 });

@@ -104,6 +104,41 @@ async function buildPrecisionMap(): Promise<Map<string, number>> {
   return currencyReadService.getAllPrecisions();
 }
 
+/** Runs same-currency auto-settle in a new write session when Workplace opt-in is enabled. */
+export async function autoSettlePerson(
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  journalDate = Date.now(),
+): Promise<Journal | null> {
+  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
+    return null;
+  }
+  return runAccountingWriteSession(session =>
+    autoSettlePersonInSession(session, workplaceId, personId, journalDate),
+  );
+}
+
+/** Auto-settles any People linked to `accountIds` after an originating write commits. */
+export async function autoSettleTouchedPeople(
+  workplaceId: WorkplaceId,
+  accountIds: Iterable<AccountId>,
+  journalDate = Date.now(),
+): Promise<void> {
+  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
+    return;
+  }
+  const links = await personQueryRepository.listPersonAccounts(workplaceId);
+  const linkByAccount = new Map(links.map(link => [link.accountId, link.personId]));
+  const personIds = new Set(
+    Array.from(accountIds)
+      .map(id => linkByAccount.get(id))
+      .filter((personId): personId is PersonId => Boolean(personId)),
+  );
+  for (const personId of personIds) {
+    await autoSettlePerson(workplaceId, personId, journalDate);
+  }
+}
+
 /** Runs same-currency auto-settle inside an open write session when Workplace opt-in is enabled. */
 export async function autoSettlePersonInSession(
   session: AccountingWriteSession,

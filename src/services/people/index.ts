@@ -9,7 +9,9 @@ export {
 } from './peopleLifecycleCommands';
 export { saveSplitExpense, saveFriendPaidBill, recordPersonMovement } from './peopleSplitCommands';
 export {
+  autoSettlePerson,
   autoSettlePersonInSession,
+  autoSettleTouchedPeople,
   recordRepayment,
   allocateUnassignedRepayment,
   executeWeAreSettled,

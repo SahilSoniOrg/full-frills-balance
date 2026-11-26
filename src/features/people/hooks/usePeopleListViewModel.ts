@@ -1,7 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
-import { peopleReadService } from '@/src/services/people/peopleReadService';
-import { createPerson, linkExistingAccount } from '@/src/services/people';
+import { createPerson, linkExistingAccount, peopleReadService } from '@/src/services/people';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import type { PersonId, AccountId } from '@/src/types/ids';

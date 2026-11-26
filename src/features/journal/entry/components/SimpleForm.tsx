@@ -1,9 +1,13 @@
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { type CreateAccountIntent } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { Size, Spacing } from '@/src/constants/design-tokens';
+import { expectedPersonAccount } from '@/src/domain/people';
+import { AccountType } from '@/src/types/enums';
 import type { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
+import { PersonRepayableChoice } from './PersonRepayableChoice';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
 import type { AccountRole } from '@/src/types/domainJournal';
 import React, { type RefObject, useCallback, useEffect, useRef } from 'react';
@@ -14,6 +18,7 @@ export interface SimpleFormProps {
   accentColor: string;
   precision?: number;
   meta: JournalMetaCardProps;
+  peopleGroups?: readonly PersonPickerGroup[];
   onScrollBeginDrag?: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   autoFocusAmount?: boolean;
@@ -27,6 +32,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   accentColor,
   precision = 2,
   meta,
+  peopleGroups,
   onScrollBeginDrag,
   onCreateAccountRequest,
   autoFocusAmount = false,
@@ -73,6 +79,58 @@ export const SimpleForm = React.memo(function SimpleForm({
     };
   }, [accountFlowRef, startAutopilotAccountFlow]);
 
+  const activePersonLegRole =
+    editor.type === 'expense' ? 'destination' : editor.type === 'income' ? 'source' : null;
+  const activePersonAccountId =
+    activePersonLegRole === 'destination'
+      ? editor.destinationId
+      : activePersonLegRole === 'source'
+        ? editor.sourceId
+        : undefined;
+  const activePersonGroup = activePersonAccountId
+    ? peopleGroups?.find(group => group.accountIds.includes(activePersonAccountId))
+    : undefined;
+  const activePersonAccount = activePersonAccountId
+    ? editor.allAccounts.find(account => account.id === activePersonAccountId)
+    : undefined;
+  const personFlow = activePersonLegRole === 'source' ? 'inflow' : 'outflow';
+  const isPersonRepayable = Boolean(
+    activePersonAccount &&
+    (personFlow === 'outflow'
+      ? activePersonAccount.accountType === AccountType.ASSET
+      : activePersonAccount.accountType === AccountType.LIABILITY),
+  );
+
+  const handleTogglePersonRepayable = useCallback(
+    (nextRepayable: boolean) => {
+      if (!activePersonGroup || !activePersonLegRole) return;
+      const expected = expectedPersonAccount(personFlow, nextRepayable);
+      const matchingAccount = editor.allAccounts.find(
+        account =>
+          activePersonGroup.accountIds.includes(account.id) &&
+          account.accountType === expected.type,
+      );
+      if (matchingAccount) {
+        if (activePersonLegRole === 'destination') handleSelectDestination(matchingAccount.id);
+        else handleSelectSource(matchingAccount.id);
+        return;
+      }
+      onCreateAccountRequest?.(activePersonLegRole, {
+        suggestedName: `${activePersonGroup.personName} (${expected.role})`,
+        type: expected.type,
+      });
+    },
+    [
+      activePersonGroup,
+      activePersonLegRole,
+      editor.allAccounts,
+      handleSelectDestination,
+      handleSelectSource,
+      onCreateAccountRequest,
+      personFlow,
+    ],
+  );
+
   return (
     <KeyboardAwareScrollView
       style={styles.scrollView}
@@ -101,6 +159,7 @@ export const SimpleForm = React.memo(function SimpleForm({
         onResetToApiRate={editor.resetToApiRate}
         accountSections={editor.accountSections}
         accounts={editor.allAccounts}
+        peopleGroups={peopleGroups}
         sourceId={editor.sourceId}
         destinationId={editor.destinationId}
         expansionPosition={expansionPosition}
@@ -111,6 +170,14 @@ export const SimpleForm = React.memo(function SimpleForm({
         onCreateAccountRequest={onCreateAccountRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
+      {activePersonGroup && activePersonAccount && (
+        <PersonRepayableChoice
+          flow={personFlow}
+          personName={activePersonGroup.personName}
+          repayable={isPersonRepayable}
+          onChange={handleTogglePersonRepayable}
+        />
+      )}
     </KeyboardAwareScrollView>
   );
 });

@@ -16,6 +16,7 @@ import {
   type PlannedOccurrenceSettlement,
 } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
+import { autoSettleTouchedPeople } from '@/src/services/people/peopleSettlementCommands';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
@@ -39,9 +40,17 @@ async function settleManualOccurrence(
     occurrenceDate,
     action,
   );
-  return runAccountingWriteSession(session =>
+  const settlement = await runAccountingWriteSession(session =>
     settlePlannedOccurrence(session, workplaceId, plannedPaymentId, occurrenceDate, action, quote),
   );
+  if (settlement.journal && settlement.journal.status === JournalStatus.POSTED) {
+    await autoSettleTouchedPeople(
+      workplaceId,
+      settlement.journal.affectedAccountIds,
+      settlement.journal.journal.journalDate,
+    );
+  }
+  return settlement;
 }
 
 async function postOccurrence(
