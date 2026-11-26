@@ -1,11 +1,12 @@
-import { Opacity, SelectionEdgeScrim, Shape, Spacing } from '@/src/constants';
+import { Opacity, SelectionEdgeScrim, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useId } from 'react';
 import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-const SCRIM_HEIGHT = 72;
+export const SELECTION_BAR_MAX_WIDTH = 440;
+const SCRIM_HEIGHT = Size.fab + Spacing.sm;
 
 export function useSelectionBarSurface(edge: 'top' | 'bottom') {
   const { theme, themeMode } = useTheme();

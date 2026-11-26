@@ -14,7 +14,7 @@ import { useRouteBackIcon } from '@/src/navigation/RoutePresentationContext';
 
 type ScreenWithChromeProps = Omit<
   ScreenProps,
-  'title' | 'left' | 'overlay' | 'selection' | 'headerActions' | 'isSearchActive'
+  'title' | 'left' | 'selection' | 'headerActions' | 'isSearchActive'
 > & {
   chrome: ScreenChrome;
 };
@@ -52,7 +52,8 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
   const routeBackIcon = useRouteBackIcon();
 
   const edges: ScreenProps['edges'] =
-    rest.edges ?? (chrome.kind === 'nav' ? ['top', 'bottom'] : ['top']);
+    rest.edges ??
+    (chrome.kind === 'nav' ? ['top', 'bottom', 'left', 'right'] : ['top', 'left', 'right']);
   const fab = chrome.kind === 'nav' && !chrome.selection ? chrome.fab : undefined;
 
   return (

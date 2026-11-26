@@ -122,7 +122,7 @@ export function FitText({
         alignSelf: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'auto',
         maxWidth: '100%',
         flexShrink: 1,
-        width: Math.ceil(naturalWidth / FIT_SAFETY) + 1,
+        width: naturalWidth > 0 ? Math.ceil(naturalWidth / FIT_SAFETY) + 1 : undefined,
       }
     : undefined;
 
@@ -141,6 +141,7 @@ export function FitText({
       <View
         style={[styles.track, styles.measurement]}
         pointerEvents="none"
+        aria-hidden
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
@@ -170,7 +171,7 @@ export function FitText({
 
 const styles = StyleSheet.create({
   // Clips the wide track; its own width is what the text must fit.
-  container: { alignSelf: 'stretch', overflow: 'hidden' },
+  container: { alignSelf: 'stretch', overflow: 'hidden', flexShrink: 1, maxWidth: '100%' },
   // Wide, unconstrained track so the text always lays out at its natural single-line width.
   track: { width: TRACK_WIDTH, flexDirection: 'row', alignItems: 'flex-start' },
   // Absolute positioning keeps the measurement out of the visible text's height and hug width.

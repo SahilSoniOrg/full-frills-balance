@@ -9,13 +9,25 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import {
+  AppConfig,
+  BorderWidth,
+  ChromeMotion,
+  Opacity,
+  Shape,
+  Size,
+  Spacing,
+} from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { MotiView } from 'moti';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SelectionEdgeShadow, useSelectionBarSurface } from './selectionBarChrome';
+import {
+  SELECTION_BAR_MAX_WIDTH,
+  SelectionEdgeShadow,
+  useSelectionBarSurface,
+} from './selectionBarChrome';
 
 export interface SelectionAction {
   name: IconName;
@@ -74,23 +86,24 @@ export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionAct
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const afterDismiss = useAfterDismiss();
   const isBarActive = selectedCount > 0;
-  const isModalVisible = isOverflowOpen && isBarActive;
   const copy = AppConfig.strings.selection;
-
-  // Adjust overflow state during render when selection clears (React-recommended pattern).
-  if (!isBarActive && isOverflowOpen) {
-    setIsOverflowOpen(false);
-  }
-
-  useEffect(() => {
-    if (!isBarActive) afterDismiss.cancel();
-  }, [afterDismiss, isBarActive]);
 
   // Split actions between direct bar buttons and overflow bottom sheet
   const { barActions, overflowActions } = useMemo(
     () => partitionSelectionActions(actions),
     [actions],
   );
+  const canOpenOverflow = isBarActive && overflowActions.length > 0;
+  const isModalVisible = isOverflowOpen && canOpenOverflow;
+
+  // Adjust overflow state during render when selection clears or overflow shrinks to zero.
+  if (!canOpenOverflow && isOverflowOpen) {
+    setIsOverflowOpen(false);
+  }
+
+  useEffect(() => {
+    if (!canOpenOverflow) afterDismiss.cancel();
+  }, [afterDismiss, canOpenOverflow]);
 
   const resolveDockTone = (action: SelectionAction, disabled: boolean) => {
     if (disabled) return theme.textTertiary;
@@ -106,26 +119,23 @@ export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionAct
         <MotiView
           pointerEvents="box-none"
           from={{
-            opacity: 0,
-            scale: reduceMotion ? 1 : 0.96,
-            translateY: reduceMotion ? 0 : 18,
+            opacity: Opacity.none,
+            scale: reduceMotion ? 1 : ChromeMotion.dialogFromScale,
+            translateY: reduceMotion ? 0 : ChromeMotion.sheetRisePx,
           }}
-          animate={{ opacity: 1, scale: 1, translateY: 0 }}
-          transition={{
-            type: 'timing',
-            duration: 180,
-          }}
+          animate={{ opacity: Opacity.solid, scale: 1, translateY: 0 }}
+          transition={ChromeMotion.fade}
           style={styles.bottomWrapper}
         >
           <SelectionEdgeShadow edge="bottom" />
           <View style={[styles.actionsCard, cardStyle]}>
             <Inline align="stretch" justify="space-between" style={styles.dockRow}>
-              {barActions.map((action, index) => {
+              {barActions.map(action => {
                 const disabled = selectedCount === 0 || !!action.disabled;
                 const tone = resolveDockTone(action, disabled);
                 return (
                   <PressScaleTouchable
-                    key={`${action.name}-${index}`}
+                    key={action.testID ?? `${action.name}-${action.label}`}
                     onPress={action.onPress}
                     disabled={disabled}
                     pressScale="subtle"
@@ -200,8 +210,10 @@ export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionAct
         >
           <Box paddingBottom="lg">
             <ListGroup
+              variant="plain"
+              dividerInset="none"
               items={overflowActions}
-              toRow={(action, index) => {
+              toRow={action => {
                 const destructive = action.variant === 'error';
                 const disabled = selectedCount === 0 || !!action.disabled;
                 const iconColor =
@@ -211,7 +223,7 @@ export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionAct
                     : undefined;
 
                 return {
-                  id: `${action.name}-${index}`,
+                  id: action.testID ?? `${action.name}-${action.label}`,
                   title: action.label || action.accessibilityLabel || action.name,
                   subtitle: disabled ? action.disabledHint : undefined,
                   icon: iconColor ? undefined : action.name,
@@ -222,6 +234,8 @@ export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionAct
                     afterDismiss.run(action.onPress);
                     setIsOverflowOpen(false);
                   },
+                  chevron: false,
+                  wrap: true,
                   destructive,
                   disabled,
                   accessibilityLabel: action.accessibilityLabel || action.label,
@@ -246,9 +260,9 @@ const styles = StyleSheet.create({
   },
   actionsCard: {
     borderRadius: Shape.radius.xl,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     width: '100%',
-    maxWidth: 440,
+    maxWidth: SELECTION_BAR_MAX_WIDTH,
   },
   dockRow: {
     paddingHorizontal: Spacing.xs,
@@ -262,7 +276,7 @@ const styles = StyleSheet.create({
     minHeight: Size.touchTarget + Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: Spacing.xs / 2,
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
     borderRadius: Shape.radius.md,

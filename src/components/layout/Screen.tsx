@@ -44,7 +44,7 @@ export function Screen({
   isSearchActive = false,
   scrollable = false,
   withPadding = false,
-  edges = ['top', 'bottom'],
+  edges = ['top', 'bottom', 'left', 'right'],
   keyboardAvoiding = false,
   footer,
   scrollViewProps,

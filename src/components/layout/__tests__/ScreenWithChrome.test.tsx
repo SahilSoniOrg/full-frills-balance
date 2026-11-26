@@ -70,7 +70,12 @@ describe('ScreenWithChrome safe-area ownership', () => {
       </ScreenWithChrome>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top', 'bottom']);
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual([
+      'top',
+      'bottom',
+      'left',
+      'right',
+    ]);
   });
 
   it('leaves the bottom safe area to the tab bar on tab roots', () => {
@@ -85,7 +90,7 @@ describe('ScreenWithChrome safe-area ownership', () => {
       </ScreenWithChrome>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top']);
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top', 'left', 'right']);
   });
 
   it('preserves explicitly configured edges', () => {
@@ -280,5 +285,28 @@ describe('ScreenWithChrome selection overlay', () => {
     rerender(view('accounts'));
     expect(screen.getByText('Activity content')).toBeTruthy();
     expect(screen.queryByText('1 of 1 transaction selected')).toBeNull();
+  });
+
+  it('omits the action dock when selection has no actions and hides the covered nav bar', () => {
+    const chrome: ScreenChrome = {
+      kind: 'nav',
+      screenTitle: 'Details',
+      onBack: jest.fn(),
+      selection: {
+        ...selection,
+        actions: [],
+      },
+    };
+
+    render(
+      <ScreenWithChrome chrome={chrome}>
+        <Text>Content</Text>
+      </ScreenWithChrome>,
+    );
+
+    expect(screen.UNSAFE_queryByType(SelectionActionBar)).toBeNull();
+    const navBarWrapper = screen.UNSAFE_getByType(NavigationBar).parent;
+    expect(navBarWrapper?.props['aria-hidden']).toBe(true);
+    expect(StyleSheet.flatten(navBarWrapper?.props.style)).toMatchObject({ opacity: 0 });
   });
 });

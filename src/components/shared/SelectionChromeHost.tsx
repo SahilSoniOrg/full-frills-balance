@@ -40,7 +40,10 @@ function SelectionEdgeHost({
         paddingRight: edgePadding.right,
       }
     : undefined;
-  const coveredLayerStyle = edge === 'top' ? styles.coveredHeaderLayer : styles.coveredFooterLayer;
+  const coveredLayerStyle = [
+    edge === 'top' ? styles.coveredHeaderLayer : styles.coveredFooterLayer,
+    styles.coveredHidden,
+  ];
 
   return (
     <View style={[active ? [styles.slot, { backgroundColor }, paddingStyle] : undefined, style]}>
@@ -99,13 +102,15 @@ export function SelectionFooterHost({
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const hasActions = Boolean(selection?.actions?.length);
+  const active = Boolean(selection) && (Boolean(children) || hasActions);
   return (
     <SelectionEdgeHost
-      active={Boolean(selection)}
+      active={active}
       edge="bottom"
       backgroundColor={backgroundColor}
-      edgePadding={edgePadding}
-      overlay={selection ? <SelectionDock {...selection} /> : null}
+      edgePadding={hasActions ? edgePadding : undefined}
+      overlay={selection && hasActions ? <SelectionDock {...selection} /> : null}
       style={style}
     >
       {children}
@@ -115,6 +120,7 @@ export function SelectionFooterHost({
 
 const styles = StyleSheet.create({
   slot: { zIndex: 1 },
+  coveredHidden: { opacity: 0 },
   coveredHeaderLayer: {
     position: 'absolute',
     top: 0,

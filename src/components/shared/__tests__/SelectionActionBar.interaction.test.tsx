@@ -371,6 +371,25 @@ it('closes the overflow action sheet when selectedCount drops to zero and shows 
   expect(view.getByText('Actions (1 selected)')).toBeTruthy();
 });
 
+it('closes the overflow action sheet when overflowActions shrinks to zero', () => {
+  const manyActions = [
+    { name: Icon.Edit, label: 'Rename', isPrimary: true, onPress: jest.fn() },
+    { name: Icon.Share, label: 'Share', isPrimary: true, onPress: jest.fn() },
+    { name: Icon.Delete, label: 'Delete', isPrimary: true, onPress: jest.fn() },
+    { name: Icon.Merge, label: 'Merge', onPress: jest.fn() },
+  ];
+  const view = render(<SelectionActionBar selectedCount={2} actions={manyActions} />);
+
+  fireEvent.press(view.getByLabelText('More bulk actions'));
+  expect(view.getByText('Actions (2 selected)')).toBeTruthy();
+
+  view.rerender(<SelectionActionBar selectedCount={2} actions={manyActions.slice(0, 3)} />);
+  expect(view.queryByText('Actions (2 selected)')).toBeNull();
+
+  view.rerender(<SelectionActionBar selectedCount={2} actions={manyActions} />);
+  expect(view.queryByText('Actions (2 selected)')).toBeNull();
+});
+
 it('rounds signed averages to currency precision before deriving sign so tiny totals do not render minus-zero', () => {
   const view = render(
     <SelectionSummary

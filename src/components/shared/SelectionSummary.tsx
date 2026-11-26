@@ -1,7 +1,16 @@
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import {
+  AppConfig,
+  BorderWidth,
+  ChromeMotion,
+  Opacity,
+  Shape,
+  Size,
+  Spacing,
+  Typography,
+} from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import type { AccountTypeColorKey } from '@/src/design-system/accountPresentation';
@@ -16,7 +25,11 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { MoneyAmount } from '@/src/types/domainReadModels';
 import { MotiView } from 'moti';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { SelectionEdgeShadow, useSelectionBarSurface } from './selectionBarChrome';
+import {
+  SELECTION_BAR_MAX_WIDTH,
+  SelectionEdgeShadow,
+  useSelectionBarSurface,
+} from './selectionBarChrome';
 
 export type SelectionItemLabel = string | { singular: string; plural: string };
 
@@ -60,14 +73,22 @@ const SUMMARY_AMOUNT_FIT = {
   maxFontSize: Typography.roles.heading.fontSize,
   minFontSize: Typography.sizes.sm,
   lineHeightRatio: Typography.roles.heading.lineHeight / Typography.roles.heading.fontSize,
-};
+  hug: true,
+} as const;
 
 const CONTROL_HIT_SLOP = {
   top: Spacing.sm,
   bottom: Spacing.sm,
-  left: Spacing.xs,
-  right: Spacing.xs,
-};
+  left: Spacing.sm,
+  right: Spacing.sm,
+} as const;
+
+const SUMMARY_ROW_MIN_HEIGHT = Size.xl + Spacing.lg;
+const SUMMARY_CHIP_SIZE = Size.lg + BorderWidth.medium;
+const BREAKDOWN_MIN_HEIGHT = Size.appearancePreviewHeight;
+const BREAKDOWN_MAX_HEIGHT = Size.fab + Size.textareaHeight;
+const BREAKDOWN_HEIGHT_RATIO = Opacity.active;
+const SUMMARY_ENTER_OFFSET_Y = -(Spacing.md + BorderWidth.medium);
 
 function resolveItemTypeLabel(itemTypeLabel: SelectionItemLabel, count: number): string {
   if (typeof itemTypeLabel === 'string') {
@@ -132,7 +153,8 @@ function SummaryMoneyList({
             variant="body"
             weight="bold"
             numberOfLines={1}
-            style={{ color: formatted.color }}
+            ellipsizeMode="tail"
+            style={[styles.breakdownMoneyText, { color: formatted.color }]}
           />
         );
       })}
@@ -157,7 +179,8 @@ function resolveDisplayAmounts(amountSummary: SelectionAmountSummary | undefined
     includedCount,
     signed = false,
   } = amountSummary ?? {};
-  const showSections = (sections?.length ?? 0) > 1;
+  const hasSectionAmounts = Boolean(sections?.some(section => section.amounts.length > 0));
+  const showSections = (sections?.length ?? 0) > 1 && hasSectionAmounts;
   const displayAmounts = showSections
     ? []
     : (amounts ?? (sections?.length === 1 ? sections[0].amounts : []));
@@ -293,6 +316,7 @@ function PartialAmountBadge({
   if (!incomplete) return null;
   return (
     <View
+      style={styles.partialBadge}
       accessible
       accessibilityRole="image"
       accessibilityLabel={copy.partialAmount(label ?? copy.signedTotal)}
@@ -375,7 +399,10 @@ export function SelectionSummary({
   const { selectedCount, selectedSelectableCount, selectableCount, checked } = selection;
   const { cardStyle, isDark, theme } = useSelectionBarSurface('top');
   const { height: windowHeight } = useWindowDimensions();
-  const maxBreakdownHeight = Math.min(144, Math.max(84, Math.round(windowHeight * 0.2)));
+  const maxBreakdownHeight = Math.min(
+    BREAKDOWN_MAX_HEIGHT,
+    Math.max(BREAKDOWN_MIN_HEIGHT, Math.round(windowHeight * BREAKDOWN_HEIGHT_RATIO)),
+  );
   const reduceMotion = useReducedMotion();
   const formatMoney = useMoneyFormat();
   const copy = AppConfig.strings.selection;
@@ -411,15 +438,12 @@ export function SelectionSummary({
     <MotiView
       pointerEvents="box-none"
       from={{
-        opacity: 0,
-        scale: reduceMotion ? 1 : 0.96,
-        translateY: reduceMotion ? 0 : -14,
+        opacity: Opacity.none,
+        scale: reduceMotion ? 1 : ChromeMotion.dialogFromScale,
+        translateY: reduceMotion ? 0 : SUMMARY_ENTER_OFFSET_Y,
       }}
-      animate={{ opacity: 1, scale: 1, translateY: 0 }}
-      transition={{
-        type: 'timing',
-        duration: 180,
-      }}
+      animate={{ opacity: Opacity.solid, scale: 1, translateY: 0 }}
+      transition={ChromeMotion.fade}
       style={styles.wrapper}
     >
       <SelectionEdgeShadow edge="top" />
@@ -464,7 +488,7 @@ export function SelectionSummary({
                   variant="heading"
                   weight="bold"
                   fit={SUMMARY_AMOUNT_FIT}
-                  style={[styles.amountText, { color: singleMoney.color }]}
+                  style={{ color: singleMoney.color }}
                 />
                 <PartialAmountBadge
                   incomplete={incomplete}
@@ -476,7 +500,7 @@ export function SelectionSummary({
               <AppText
                 variant="body"
                 weight="semibold"
-                numberOfLines={1}
+                numberOfLines={2}
                 style={{ color: theme.text }}
               >
                 {countLabel}
@@ -538,21 +562,21 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     borderRadius: Shape.radius.xl,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     width: '100%',
-    maxWidth: 440,
+    maxWidth: SELECTION_BAR_MAX_WIDTH,
   },
   row: {
-    minHeight: 56,
+    minHeight: SUMMARY_ROW_MIN_HEIGHT,
     paddingVertical: Spacing.sm,
     paddingLeft: Spacing.sm,
     paddingRight: Spacing.sm,
   },
   exitChip: {
-    width: 34,
-    height: 34,
+    width: SUMMARY_CHIP_SIZE,
+    height: SUMMARY_CHIP_SIZE,
     borderRadius: Shape.radius.full,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -560,7 +584,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     justifyContent: 'center',
-    gap: 2,
+    gap: Spacing.xs / 2,
   },
   breakdownScroll: {
     flexGrow: 0,
@@ -571,13 +595,16 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   sectionBlock: {
-    gap: 1,
+    gap: Spacing.none,
   },
   amountStack: {
-    gap: 1,
+    gap: Spacing.none,
   },
-  amountText: {
+  breakdownMoneyText: {
     flexShrink: 1,
+  },
+  partialBadge: {
+    flexShrink: 0,
   },
   metaLine: {
     flexShrink: 1,
@@ -586,9 +613,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    minHeight: 34,
+    minHeight: SUMMARY_CHIP_SIZE,
     paddingHorizontal: Spacing.md,
     borderRadius: Shape.radius.full,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
   },
 });

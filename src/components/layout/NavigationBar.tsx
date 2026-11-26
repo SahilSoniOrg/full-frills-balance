@@ -169,11 +169,11 @@ const styles = StyleSheet.create({
   },
   /** Optical balance for centered titles (matches back-button / actions column). */
   sideSpacer: {
-    width: 48,
+    width: Size.xxl,
   },
   left: {
     alignItems: 'flex-start',
-    minWidth: 48,
+    minWidth: Size.xxl,
   },
   center: {
     flex: 1,

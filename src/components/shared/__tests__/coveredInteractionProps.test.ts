@@ -6,6 +6,7 @@ describe('coveredInteractionProps', () => {
       pointerEvents: 'none',
       accessibilityElementsHidden: true,
       importantForAccessibility: 'no-hide-descendants',
+      'aria-hidden': true,
     });
   });
 
@@ -14,6 +15,7 @@ describe('coveredInteractionProps', () => {
       pointerEvents: 'auto',
       accessibilityElementsHidden: false,
       importantForAccessibility: 'auto',
+      'aria-hidden': false,
     });
   });
 });
