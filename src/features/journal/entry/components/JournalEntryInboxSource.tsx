@@ -1,13 +1,48 @@
-import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
+import {
+  AppIcon,
+  AppText,
+  Icon,
+  IconTile,
+  PressScaleTouchable,
+  type IconName,
+} from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { BorderWidth, Opacity, Size, Typography } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { Box, Inline, Separator, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { PlainInboxRecord } from '@/src/types/plainDtos';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+
+function getInboxChannelIcon(channel: PlainInboxRecord['channel']): IconName {
+  switch (channel) {
+    case 'sms':
+      return Icon.MessageSquare;
+    case 'email':
+      return Icon.Mail;
+    case 'voice':
+      return Icon.Mic;
+    default:
+      return Icon.Inbox;
+  }
+}
+
+function getInboxChannelLabel(channel: PlainInboxRecord['channel']): string {
+  switch (channel) {
+    case 'sms':
+      return transactionCaptureStrings.inboxChannelSms;
+    case 'email':
+      return transactionCaptureStrings.inboxChannelEmail;
+    case 'voice':
+      return transactionCaptureStrings.inboxChannelSpoken;
+    default:
+      return AppConfig.strings.transactionFlow.inboxSource.inboxFallback;
+  }
+}
 
 export function JournalEntryInboxSource({
   items,
@@ -21,146 +56,145 @@ export function JournalEntryInboxSource({
   const [isExpanded, setIsExpanded] = useState(false);
   if (items.length === 0) return null;
 
+  const strings = AppConfig.strings.transactionFlow.inboxSource;
   const isSms = items.some(item => item.channel === 'sms');
   const label = isSms
     ? isEdit
-      ? 'Tagged SMS'
-      : 'SMS to tag'
+      ? strings.taggedSms
+      : strings.smsToTag
     : isEdit
-      ? 'Tagged inbox item'
-      : 'Inbox item to tag';
+      ? strings.taggedInboxItem
+      : strings.inboxItemToTag;
 
   const firstItem = items[0];
-  const firstSender = firstItem.senderAddress || (firstItem.channel === 'sms' ? 'SMS' : 'Inbox');
+  const firstSender = firstItem.senderAddress || getInboxChannelLabel(firstItem.channel);
   const displaySender = privateMode ? AppConfig.privacyMask : firstSender;
   const previewSubtitle =
     items.length === 1
       ? `${displaySender} · ${formatDate(firstItem.inputDate)}`
-      : `${items.length} linked items`;
+      : strings.linkedItemsCount(items.length);
 
-  const channelIcon = isSms
-    ? Icon.MessageSquare
-    : firstItem.channel === 'email'
-      ? Icon.Mail
-      : firstItem.channel === 'voice'
-        ? Icon.Mic
-        : Icon.Inbox;
+  const headerIcon = getInboxChannelIcon(isSms ? 'sms' : firstItem.channel);
+  const softBorderStyle = { borderColor: withOpacity(theme.border, Opacity.soft) };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.background,
-          borderColor: withOpacity(theme.border, Opacity.soft),
-        },
-      ]}
+    <Box
+      marginHorizontal="md"
+      marginTop="md"
+      marginBottom="sm"
+      background="background"
+      borderRadius="md"
+      borderWidth={StyleSheet.hairlineWidth}
+      overflow="hidden"
+      style={softBorderStyle}
       testID="journal-entry-inbox-source"
     >
       <PressScaleTouchable
         onPress={() => setIsExpanded(value => !value)}
         pressScale="subtle"
-        style={styles.disclosure}
         accessibilityRole="button"
         accessibilityState={{ expanded: isExpanded }}
-        accessibilityLabel={`${label}, ${items.length} ${items.length === 1 ? 'item' : 'items'}`}
+        accessibilityLabel={strings.accessibilitySummary(label, items.length)}
         testID="journal-entry-inbox-source-toggle"
       >
-        <View
-          style={[
-            styles.iconTile,
-            {
-              backgroundColor: withOpacity(theme.primary, Opacity.soft),
-            },
-          ]}
+        <Inline
+          align="center"
+          gap="sm"
+          paddingHorizontal="md"
+          paddingVertical="sm"
+          minHeight={Size.touchTargetLg}
         >
-          <AppIcon name={channelIcon} size={Size.iconXs} color={theme.primary} />
-        </View>
+          <IconTile icon={headerIcon} tint="primary" size="md" />
 
-        <View style={styles.headerTextGroup}>
-          <AppText variant="caption" color="primary" weight="semibold" style={styles.label}>
-            {label}
-          </AppText>
-          <AppText variant="caption" color="tertiary" numberOfLines={1}>
-            {previewSubtitle}
-          </AppText>
-        </View>
+          <Stack flex={1} justify="center" gap="xs">
+            <AppText variant="caption" color="primary" weight="semibold">
+              {label}
+            </AppText>
+            <AppText variant="caption" color="tertiary" numberOfLines={1}>
+              {previewSubtitle}
+            </AppText>
+          </Stack>
 
-        <View
-          style={[
-            styles.countPill,
-            {
-              backgroundColor: withOpacity(theme.surface, Opacity.strong),
-              borderColor: withOpacity(theme.border, Opacity.soft),
-            },
-          ]}
-        >
-          <AppText variant="caption" color="secondary" weight="medium" tabular>
-            {items.length}
-          </AppText>
-        </View>
+          <Box
+            paddingHorizontal="sm"
+            paddingVertical="xs"
+            borderRadius="full"
+            borderWidth={StyleSheet.hairlineWidth}
+            alignItems="center"
+            justifyContent="center"
+            minWidth={Size.sm}
+            background="surface"
+            backgroundOpacity="strong"
+            style={softBorderStyle}
+          >
+            <AppText variant="caption" color="secondary" weight="medium" tabular>
+              {items.length}
+            </AppText>
+          </Box>
 
-        <AppIcon
-          name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={Size.xs}
-          color={theme.textSecondary}
-        />
+          <AppIcon
+            name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
+            size={Size.iconXs}
+            color="textSecondary"
+          />
+        </Inline>
       </PressScaleTouchable>
 
       {isExpanded ? (
-        <View style={styles.expandedContainer}>
-          <View
-            style={[styles.divider, { backgroundColor: withOpacity(theme.border, Opacity.soft) }]}
-          />
-          <View style={styles.items}>
+        <Stack width="100%">
+          <Separator space={StyleSheet.hairlineWidth} opacity={Opacity.soft} />
+          <Stack padding="sm" gap="sm">
             {items.map(item => {
-              const itemSender = item.senderAddress || (item.channel === 'sms' ? 'SMS' : 'Inbox');
+              const itemSender = item.senderAddress || getInboxChannelLabel(item.channel);
               const itemDisplaySender = privateMode ? AppConfig.privacyMask : itemSender;
               const rawMessageText = privateMode
-                ? 'Message hidden in privacy mode'
-                : item.rawBody || 'Message content unavailable';
+                ? AppConfig.strings.journalDetails.hiddenSms
+                : item.rawBody || strings.messageUnavailable;
 
               return (
-                <View
+                <Stack
                   key={item.id}
-                  style={[
-                    styles.itemCard,
-                    {
-                      backgroundColor: withOpacity(theme.surface, Opacity.medium),
-                      borderColor: withOpacity(theme.border, Opacity.soft),
-                    },
-                  ]}
+                  padding="sm"
+                  borderRadius="sm"
+                  borderWidth={StyleSheet.hairlineWidth}
+                  gap="xs"
+                  background="surface"
+                  backgroundOpacity="medium"
+                  style={softBorderStyle}
                   testID={`journal-entry-inbox-item-${item.id}`}
                 >
-                  <View style={styles.metadata}>
-                    <View style={styles.senderBadge}>
+                  <Inline align="center" justify="space-between" gap="sm">
+                    <Inline align="center" gap="xs" flex={1}>
                       <AppIcon
-                        name={item.channel === 'sms' ? Icon.MessageSquare : Icon.Inbox}
+                        name={getInboxChannelIcon(item.channel)}
                         size={Size.xxs}
-                        color={theme.textTertiary}
+                        color="textTertiary"
                       />
                       <AppText
                         variant="caption"
                         color="secondary"
                         weight="semibold"
                         numberOfLines={1}
+                        style={styles.senderText}
                       >
                         {itemDisplaySender}
                       </AppText>
-                    </View>
+                    </Inline>
                     <AppText variant="caption" color="tertiary">
                       {formatDate(item.inputDate)}
                     </AppText>
-                  </View>
+                  </Inline>
 
-                  <View
+                  <Box
+                    padding="sm"
+                    borderRadius="xs"
+                    borderWidth={StyleSheet.hairlineWidth}
+                    borderLeftWidth={BorderWidth.focus}
+                    background="background"
+                    backgroundOpacity="heavy"
                     style={[
-                      styles.messageBubble,
-                      {
-                        backgroundColor: withOpacity(theme.background, Opacity.heavy),
-                        borderColor: withOpacity(theme.border, Opacity.soft),
-                        borderLeftColor: withOpacity(theme.primary, Opacity.heavy),
-                      },
+                      softBorderStyle,
+                      { borderLeftColor: withOpacity(theme.primary, Opacity.heavy) },
                     ]}
                   >
                     <AppText
@@ -171,92 +205,20 @@ export function JournalEntryInboxSource({
                     >
                       {rawMessageText}
                     </AppText>
-                  </View>
-                </View>
+                  </Box>
+                </Stack>
               );
             })}
-          </View>
-        </View>
+          </Stack>
+        </Stack>
       ) : null}
-    </View>
+    </Box>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: Shape.radius.md,
-    overflow: 'hidden',
-  },
-  disclosure: {
-    minHeight: Size.touchTargetLg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  iconTile: {
-    width: Size.lg,
-    height: Size.lg,
-    borderRadius: Shape.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTextGroup: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 2,
-  },
-  label: {
-    lineHeight: 16,
-  },
-  countPill: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Shape.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 20,
-  },
-  expandedContainer: {
-    width: '100%',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    width: '100%',
-  },
-  items: {
-    padding: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  itemCard: {
-    padding: Spacing.sm,
-    borderRadius: Shape.radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.xs,
-  },
-  metadata: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  senderBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    flex: 1,
-  },
-  messageBubble: {
-    padding: Spacing.sm,
-    borderRadius: Shape.radius.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: 3,
+  senderText: {
+    flexShrink: 1,
   },
   messageText: {
     fontSize: Typography.sizes.xs,

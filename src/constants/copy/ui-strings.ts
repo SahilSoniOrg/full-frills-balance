@@ -772,6 +772,17 @@ export const UI_STRINGS = {
       editing: 'Editing this entry',
       copying: 'Copying this entry',
     },
+    inboxSource: {
+      taggedSms: 'Tagged SMS',
+      smsToTag: 'SMS to tag',
+      taggedInboxItem: 'Tagged inbox item',
+      inboxItemToTag: 'Inbox item to tag',
+      linkedItemsCount: (count: number) => `${count} linked items`,
+      accessibilitySummary: (label: string, count: number) =>
+        `${label}, ${count} ${count === 1 ? 'item' : 'items'}`,
+      inboxFallback: 'Inbox',
+      messageUnavailable: 'Message content unavailable',
+    },
     bulkEntryHint:
       'Each row is a separate transaction. Add the first one, then add rows to carry repeated details forward.',
     bulkEntryMaxRows: (max: number) => `Maximum ${max} entries per post.`,

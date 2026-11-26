@@ -37,7 +37,7 @@ import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { smsService } from '@/src/services/sms-service';
+import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -148,39 +148,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   });
   const { editor, splitState } = session;
 
-  const smsRecordId = seed.sourceContext?.smsRecordId;
-  const inboxLookupKey = smsRecordId
-    ? `record:${smsRecordId}`
-    : editor.isEdit && seed.journalId
-      ? `journal:${seed.journalId}`
-      : undefined;
-  const [inboxLookup, setInboxLookup] = useState<{
-    key: string;
-    items: PlainInboxRecord[];
-  } | null>(null);
-
-  useEffect(() => {
-    if (!inboxLookupKey) return;
-    let isActive = true;
-    const loadInboxItems = async () => {
-      try {
-        const items = smsRecordId
-          ? [await smsService.findInboxRecord(workplaceId, smsRecordId)].filter(
-              (item): item is PlainInboxRecord => item !== null,
-            )
-          : seed.journalId
-            ? await smsService.findAllByLinkedJournalId(workplaceId, seed.journalId)
-            : [];
-        if (isActive) setInboxLookup({ key: inboxLookupKey, items });
-      } catch {
-        if (isActive) setInboxLookup({ key: inboxLookupKey, items: [] });
-      }
-    };
-    void loadInboxItems();
-    return () => {
-      isActive = false;
-    };
-  }, [inboxLookupKey, seed.journalId, smsRecordId, workplaceId]);
+  const inboxItems = useInboxSourceRecords({
+    workplaceId,
+    smsRecordId: seed.sourceContext?.smsRecordId,
+    journalId: seed.journalId,
+    isEdit: editor.isEdit,
+  });
 
   const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
     useJournalEntryModeState(editor, seed.editorMode);
@@ -290,7 +263,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   return {
     editor,
-    inboxItems: inboxLookup && inboxLookup.key === inboxLookupKey ? inboxLookup.items : [],
+    inboxItems,
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     validationIssues: session.validationIssues,
