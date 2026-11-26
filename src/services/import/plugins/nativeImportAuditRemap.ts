@@ -30,6 +30,8 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   assetAccountIds: 'account',
   scopedAccountIds: 'account',
   journalId: 'journal',
+  originatingJournalId: 'journal',
+  settlementJournalId: 'journal',
   journalIds: 'journal',
   originalJournalId: 'journal',
   reversingJournalId: 'journal',
@@ -49,6 +51,9 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   matcherIds: 'account_matcher',
   inboxRecordId: 'transaction_inbox_record',
   transactionInboxRecordId: 'transaction_inbox_record',
+  personId: 'person',
+  openItemId: 'open_item',
+  settlementAllocationId: 'settlement_allocation',
   revertsLogId: 'auditLogs',
 };
 

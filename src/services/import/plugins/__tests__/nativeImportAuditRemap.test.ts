@@ -21,6 +21,33 @@ function budgetLog(changes: unknown): CanonicalAuditLog {
 }
 
 describe('remapNativeAuditLog funding account IDs', () => {
+  it('remaps People entity references inside audit payloads', () => {
+    const remapped = remapNativeAuditLog(
+      budgetLog({
+        personId: 'old-person',
+        openItemId: 'old-item',
+        settlementAllocationId: 'old-allocation',
+        originatingJournalId: 'old-journal',
+      }),
+      {
+        entities: {
+          ...emptyEntityMaps(),
+          person: new Map([['old-person', 'new-person']]),
+          open_item: new Map([['old-item', 'new-item']]),
+          settlement_allocation: new Map([['old-allocation', 'new-allocation']]),
+          journal: new Map([['old-journal', 'new-journal']]),
+        },
+        auditLogs: new Map(),
+      },
+    );
+    expect(JSON.parse(String(remapped.changes))).toEqual({
+      personId: 'new-person',
+      openItemId: 'new-item',
+      settlementAllocationId: 'new-allocation',
+      originatingJournalId: 'new-journal',
+    });
+  });
+
   it('remaps assetAccountIds string collections through JSON persist form', () => {
     const account = new Map([
       ['old-a', 'new-a'],
