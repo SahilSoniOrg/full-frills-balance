@@ -11,4 +11,13 @@ export default class Person extends BaseScopedModel<PersonId> {
   @date('updated_at') updatedAt!: Date;
   @date('deleted_at') deletedAt?: Date;
 }
-export const toPlainPerson = (x: Person) => ({ id:x.id, name:x.name, notes:x.notes, color:x.color, archivedAt:x.archivedAt?.getTime(), createdAt:x.createdAt?.getTime(), updatedAt:x.updatedAt?.getTime(), deletedAt:x.deletedAt?.getTime() });
+export const toPlainPerson = (x: Person) => ({
+  id: x.id,
+  name: x.name,
+  notes: x.notes,
+  color: x.color,
+  archivedAt: x.archivedAt?.getTime(),
+  createdAt: x.createdAt?.getTime(),
+  updatedAt: x.updatedAt?.getTime(),
+  deletedAt: x.deletedAt?.getTime(),
+});

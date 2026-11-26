@@ -368,7 +368,7 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     field: 'accountId',
     column: 'account_id',
     cardinality: 'scalar',
-    mergeBehavior: 'retarget',
+    mergeBehavior: 'none',
     deletePolicy: 'block',
     importPolicy: 'reject',
     extractImportRefs: data => collectScalarRefs(key, data[source] || [], row => row.accountId),

@@ -25,7 +25,8 @@ export const asPlannedPaymentId = (id: string): PlannedPaymentId => id as Planne
 export const asPersonId = (id: string): PersonId => id as PersonId;
 export const asPersonAccountId = (id: string): PersonAccountId => id as PersonAccountId;
 export const asOpenItemId = (id: string): OpenItemId => id as OpenItemId;
-export const asSettlementAllocationId = (id: string): SettlementAllocationId => id as SettlementAllocationId;
+export const asSettlementAllocationId = (id: string): SettlementAllocationId =>
+  id as SettlementAllocationId;
 
 export const EMPTY_ACCOUNT_ID: AccountId = asAccountId('');
 

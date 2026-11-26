@@ -11,6 +11,10 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import Person from '@/src/data/models/Person';
+import PersonAccount from '@/src/data/models/PersonAccount';
+import OpenItem from '@/src/data/models/OpenItem';
+import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import {
   pickImportedSubtype,
   toAccountType,
@@ -193,6 +197,79 @@ export function prepareAuxiliaryImportRecords(
     'transaction_inbox_records',
   );
   const balanceSnapshots = database.collections.get<BalanceSnapshot>('balance_snapshots');
+  const people = database.collections.get<Person>('people');
+  const personAccounts = database.collections.get<PersonAccount>('person_accounts');
+  const openItems = database.collections.get<OpenItem>('open_items');
+  const settlementAllocations =
+    database.collections.get<SettlementAllocation>('settlement_allocations');
+
+  const peoplePrepares = (data.people ?? []).map(x =>
+    people.prepareCreate(r => {
+      r._raw.id = x.id;
+      r.workplaceId = workplaceId;
+      r.name = x.name;
+      r.notes = x.notes;
+      r.color = x.color;
+      r.archivedAt = x.archivedAt == null ? undefined : new Date(x.archivedAt);
+      r._raw._status = 'synced';
+      setRecordTimestamps(r, {
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        deletedAt: x.deletedAt,
+      });
+    }),
+  );
+  const personAccountPrepares = (data.personAccounts ?? []).map(x =>
+    personAccounts.prepareCreate(r => {
+      r._raw.id = x.id;
+      r.workplaceId = workplaceId;
+      setImportPersistenceRawField(r, 'person_id', x.personId);
+      setImportPersistenceRawField(r, 'account_id', x.accountId);
+      r._raw._status = 'synced';
+      setRecordTimestamps(r, {
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        deletedAt: x.deletedAt,
+      });
+    }),
+  );
+  const openItemPrepares = (data.openItems ?? []).map(x =>
+    openItems.prepareCreate(r => {
+      r._raw.id = x.id;
+      r.workplaceId = workplaceId;
+      setImportPersistenceRawField(r, 'person_id', x.personId);
+      setImportPersistenceRawField(r, 'originating_journal_id', x.originatingJournalId);
+      setImportPersistenceRawField(r, 'account_id', x.accountId);
+      r.direction = x.direction;
+      r.originalAmount = x.originalAmount;
+      r.currencyCode = x.currencyCode;
+      r._raw._status = 'synced';
+      setRecordTimestamps(r, {
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        deletedAt: x.deletedAt,
+      });
+    }),
+  );
+  const settlementAllocationPrepares = (data.settlementAllocations ?? []).map(x =>
+    settlementAllocations.prepareCreate(r => {
+      r._raw.id = x.id;
+      r.workplaceId = workplaceId;
+      setImportPersistenceRawField(r, 'person_id', x.personId);
+      setImportPersistenceRawField(r, 'open_item_id', x.openItemId);
+      setImportPersistenceRawField(r, 'settlement_journal_id', x.settlementJournalId);
+      setImportPersistenceRawField(r, 'account_id', x.accountId);
+      r.allocationKind = x.allocationKind;
+      r.amount = x.amount;
+      r.isActive = x.isActive;
+      r._raw._status = 'synced';
+      setRecordTimestamps(r, {
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        deletedAt: x.deletedAt,
+      });
+    }),
+  );
 
   const auditLogPrepares = (data.auditLogs || []).map(log =>
     auditLogs.prepareCreate(record => {
@@ -384,6 +461,10 @@ export function prepareAuxiliaryImportRecords(
   );
 
   return [
+    ...peoplePrepares,
+    ...personAccountPrepares,
+    ...openItemPrepares,
+    ...settlementAllocationPrepares,
     ...auditLogPrepares,
     ...budgetPrepares,
     ...budgetScopePrepares,

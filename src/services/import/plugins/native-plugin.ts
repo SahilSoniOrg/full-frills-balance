@@ -1,6 +1,16 @@
 import { generator as generateId } from '@/src/utils/idGenerator';
 import { toAccountType, toTransactionType } from '@/src/data/repositories/importValueParsers';
-import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
+import {
+  AccountId,
+  BudgetId,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+  PersonId,
+  PersonAccountId,
+  OpenItemId,
+  SettlementAllocationId,
+} from '@/src/types/ids';
 import {
   CanonicalAccount,
   CanonicalAccountMetadata,
@@ -13,6 +23,10 @@ import {
   CanonicalPlannedPayment,
   CanonicalTransaction,
   CanonicalTransactionInboxRecord,
+  CanonicalPerson,
+  CanonicalPersonAccount,
+  CanonicalOpenItem,
+  CanonicalSettlementAllocation,
 } from '@/src/types/importContracts';
 
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
@@ -61,6 +75,10 @@ interface NativeImportData {
   smsInboxRecords?: CanonicalTransactionInboxRecord[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
+  people?: CanonicalPerson[];
+  personAccounts?: CanonicalPersonAccount[];
+  openItems?: CanonicalOpenItem[];
+  settlementAllocations?: CanonicalSettlementAllocation[];
   workplace?: {
     name: string;
     icon: string;
@@ -160,6 +178,10 @@ export const nativePlugin: ImportPlugin = {
     const accountMatcherMap = new Map<string, string>();
     const inboxRecordMap = new Map<string, string>();
     const auditLogMap = new Map<string, string>();
+    const personMap = new Map<string, PersonId>();
+    const personAccountMap = new Map<string, PersonAccountId>();
+    const openItemMap = new Map<string, OpenItemId>();
+    const settlementAllocationMap = new Map<string, SettlementAllocationId>();
     const accountCurrencyMap = new Map<string, string>(); // Optimization: avoid .find() in transaction loop
 
     // Pre-populate maps with new IDs
@@ -168,6 +190,14 @@ export const nativePlugin: ImportPlugin = {
       if (acc.currencyCode) accountCurrencyMap.set(acc.id, acc.currencyCode);
     });
     data.journals.forEach(j => journalMap.set(j.id, generateId() as JournalId));
+    (data.people ?? []).forEach(x => personMap.set(x.id, generateId() as PersonId));
+    (data.personAccounts ?? []).forEach(x =>
+      personAccountMap.set(x.id, generateId() as PersonAccountId),
+    );
+    (data.openItems ?? []).forEach(x => openItemMap.set(x.id, generateId() as OpenItemId));
+    (data.settlementAllocations ?? []).forEach(x =>
+      settlementAllocationMap.set(x.id, generateId() as SettlementAllocationId),
+    );
     data.transactions.forEach(t => transactionMap.set(t.id, generateId() as TransactionId));
     (data.budgets || []).forEach(b => budgetMap.set(b.id, generateId() as BudgetId));
     (data.plannedPayments || []).forEach(pp =>
@@ -194,6 +224,9 @@ export const nativePlugin: ImportPlugin = {
       account_matcher: accountMatcherMap,
       transaction_inbox_record: inboxRecordMap,
       workplace: new Map(),
+      person: personMap,
+      open_item: openItemMap,
+      settlement_allocation: settlementAllocationMap,
     };
 
     try {
@@ -478,6 +511,48 @@ export const nativePlugin: ImportPlugin = {
           transactionCount: snapshot.transactionCount,
           createdAt: parseTimestamp(snapshot.createdAt),
           updatedAt: parseTimestamp(snapshot.updatedAt),
+        })),
+        people: (data.people ?? []).map(x => ({
+          ...x,
+          id: personMap.get(x.id)!,
+          createdAt: parseTimestamp(x.createdAt),
+          updatedAt: parseTimestamp(x.updatedAt),
+          deletedAt: parseTimestamp(x.deletedAt),
+          archivedAt: parseTimestamp(x.archivedAt),
+        })),
+        personAccounts: (data.personAccounts ?? []).map(x => ({
+          ...x,
+          id: personAccountMap.get(x.id)!,
+          personId: personMap.get(x.personId)!,
+          accountId: requireMappedAccountId(accountMap, x.accountId, `person account "${x.id}"`),
+          createdAt: parseTimestamp(x.createdAt),
+          updatedAt: parseTimestamp(x.updatedAt),
+          deletedAt: parseTimestamp(x.deletedAt),
+        })),
+        openItems: (data.openItems ?? []).map(x => ({
+          ...x,
+          id: openItemMap.get(x.id)!,
+          personId: personMap.get(x.personId)!,
+          originatingJournalId: journalMap.get(x.originatingJournalId)!,
+          accountId: requireMappedAccountId(accountMap, x.accountId, `open item "${x.id}"`),
+          createdAt: parseTimestamp(x.createdAt),
+          updatedAt: parseTimestamp(x.updatedAt),
+          deletedAt: parseTimestamp(x.deletedAt),
+        })),
+        settlementAllocations: (data.settlementAllocations ?? []).map(x => ({
+          ...x,
+          id: settlementAllocationMap.get(x.id)!,
+          personId: personMap.get(x.personId)!,
+          openItemId: openItemMap.get(x.openItemId)!,
+          settlementJournalId: journalMap.get(x.settlementJournalId)!,
+          accountId: requireMappedAccountId(
+            accountMap,
+            x.accountId,
+            `settlement allocation "${x.id}"`,
+          ),
+          createdAt: parseTimestamp(x.createdAt),
+          updatedAt: parseTimestamp(x.updatedAt),
+          deletedAt: parseTimestamp(x.deletedAt),
         })),
       };
 

@@ -56,7 +56,7 @@ describe('Account reference graph', () => {
   describe('referenceSites', () => {
     it('inventories active Account FK sites', () => {
       const sites = referenceSites();
-      expect(sites).toHaveLength(10);
+      expect(sites).toHaveLength(13);
       expect(sites.map(site => site.key)).toEqual([
         'account.parentAccountId',
         'transaction.accountId',
@@ -68,6 +68,9 @@ describe('Account reference graph', () => {
         'plannedPayment.toAccountId',
         'balanceSnapshot.accountId',
         'accountMatcher.accountId',
+        'personAccount.accountId',
+        'openItem.accountId',
+        'settlementAllocation.accountId',
       ]);
     });
 
@@ -78,6 +81,18 @@ describe('Account reference graph', () => {
       expect(byKey['accountMatcher.accountId']).toMatchObject({
         mergeBehavior: 'retarget',
         deletePolicy: 'owned',
+        importPolicy: 'reject',
+      });
+      expect(byKey['personAccount.accountId']).toMatchObject({
+        deletePolicy: 'block',
+        importPolicy: 'reject',
+      });
+      expect(byKey['openItem.accountId']).toMatchObject({
+        deletePolicy: 'block',
+        importPolicy: 'reject',
+      });
+      expect(byKey['settlementAllocation.accountId']).toMatchObject({
+        deletePolicy: 'block',
         importPolicy: 'reject',
       });
     });

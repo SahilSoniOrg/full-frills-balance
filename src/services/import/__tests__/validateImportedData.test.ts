@@ -70,6 +70,38 @@ function minimalImport(overrides?: {
 }
 
 describe('validateImportedData', () => {
+  it('validates People links and active account uniqueness', () => {
+    const data = minimalImport();
+    data.people = [{ id: 'person-1', name: 'Alex' }];
+    data.personAccounts = [{ id: 'pa-1', personId: 'person-1', accountId: 'acc-1' as AccountId }];
+    data.openItems = [
+      {
+        id: 'oi-1',
+        personId: 'person-1',
+        originatingJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        direction: 'receivable',
+        originalAmount: 10,
+        currencyCode: 'USD',
+      },
+    ];
+    data.settlementAllocations = [
+      {
+        id: 'sa-1',
+        personId: 'person-1',
+        openItemId: 'oi-1',
+        settlementJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        allocationKind: 'repayment',
+        amount: 2,
+        isActive: true,
+      },
+    ];
+    expect(() => validateImportedData(data)).not.toThrow();
+    data.personAccounts.push({ id: 'pa-2', personId: 'person-1', accountId: 'acc-1' as AccountId });
+    expect(() => validateImportedData(data)).toThrow(/multiple active people/);
+  });
+
   it('accepts structurally valid, balanced imports', () => {
     expect(() => validateImportedData(minimalImport())).not.toThrow();
   });

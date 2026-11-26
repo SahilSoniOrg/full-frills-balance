@@ -17,7 +17,7 @@ import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 39;
+const EXPECTED_SCHEMA_VERSION = 40;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);
@@ -31,6 +31,16 @@ function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): v
 }
 
 describe('database migrations (LokiJS)', () => {
+  it('includes the v40 People books tables and upgrade step', () => {
+    expect(schema.version).toBe(40);
+    for (const table of ['people', 'person_accounts', 'open_items', 'settlement_allocations']) {
+      expect(schema.tables[table]).toBeDefined();
+    }
+    const migration = migrations.sortedMigrations.find(step => step.toVersion === 40);
+    expect(migration).toBeDefined();
+    expect(migration?.steps.filter(step => step.type === 'create_table')).toHaveLength(4);
+  });
+
   const workplaceId = 'wp-migration-test' as WorkplaceId;
 
   beforeEach(async () => {

@@ -5,6 +5,15 @@ export default class PersonAccount extends BaseScopedModel<PersonAccountId> {
   static table = 'person_accounts';
   @field('person_id') personId!: PersonId;
   @field('account_id') accountId!: AccountId;
-  @date('created_at') createdAt!: Date; @date('updated_at') updatedAt!: Date; @date('deleted_at') deletedAt?: Date;
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
+  @date('deleted_at') deletedAt?: Date;
 }
-export const toPlainPersonAccount = (x: PersonAccount) => ({ id:x.id, personId:x.personId, accountId:x.accountId, createdAt:x.createdAt?.getTime(), updatedAt:x.updatedAt?.getTime(), deletedAt:x.deletedAt?.getTime() });
+export const toPlainPersonAccount = (x: PersonAccount) => ({
+  id: x.id,
+  personId: x.personId,
+  accountId: x.accountId,
+  createdAt: x.createdAt?.getTime(),
+  updatedAt: x.updatedAt?.getTime(),
+  deletedAt: x.deletedAt?.getTime(),
+});
