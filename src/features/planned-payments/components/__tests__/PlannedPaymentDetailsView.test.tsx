@@ -11,7 +11,6 @@ import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Page } from '@/src/design-system/Page';
-import { SafeAreaOverlay } from '@/src/design-system/SafeArea';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { SelectionSummary } from '@/src/components/shared/SelectionSummary';
 import { StyleSheet } from 'react-native';
@@ -533,10 +532,8 @@ describe('PlannedPaymentDetailsView', () => {
     );
 
     const page = screen.UNSAFE_getByType(Page);
-    expect(page.props.overlay).toBeUndefined();
     expect(page.props.header).toBeTruthy();
     expect(page.props.footer).toBeTruthy();
-    expect(screen.UNSAFE_queryAllByType(SafeAreaOverlay)).toHaveLength(0);
     expect(screen.UNSAFE_getByType(SelectionSummary)).toBeTruthy();
     expect(screen.UNSAFE_getByType(SelectionActionBar)).toBeTruthy();
 

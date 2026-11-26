@@ -1,8 +1,10 @@
 import { Screen } from '@/src/components/layout/Screen';
 import { render, screen } from '@/src/testing/render';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaFrame } from '@/src/design-system/SafeArea';
+import { Icon } from '@/src/types/domainIcons';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
@@ -178,7 +180,7 @@ describe('Screen', () => {
     expect(() => screen.getByTestId('navigation-bar')).toThrow();
   });
 
-  it('marks the navigation bar covered while an overlay is mounted', () => {
+  it('marks the navigation bar covered while selection chrome is active', () => {
     const { rerender } = render(
       <Screen title="Test Screen" left={{ kind: 'back', onPress: () => {} }}>
         <MockView testID="test-child" />
@@ -190,7 +192,18 @@ describe('Screen', () => {
       <Screen
         title="Test Screen"
         left={{ kind: 'back', onPress: () => {} }}
-        overlay={<MockView testID="test-overlay" />}
+        selection={{
+          state: {
+            selectedCount: 1,
+            selectedSelectableCount: 1,
+            selectableCount: 1,
+            checked: true,
+          },
+          itemTypeLabel: 'transaction',
+          exitSelectionMode: () => {},
+          selectAll: () => {},
+          clearItems: () => {},
+        }}
       >
         <MockView testID="test-child" />
       </Screen>,
@@ -198,5 +211,43 @@ describe('Screen', () => {
     expect(screen.getByTestId('nav-covered', { includeHiddenElements: true })).toHaveTextContent(
       'true',
     );
+  });
+
+  it('covers the footer with the selection dock instead of stacking both', () => {
+    render(
+      <Screen
+        title="Test Screen"
+        footer={<MockView testID="screen-footer" />}
+        selection={{
+          state: {
+            selectedCount: 1,
+            selectedSelectableCount: 1,
+            selectableCount: 1,
+            checked: true,
+          },
+          itemTypeLabel: 'transaction',
+          exitSelectionMode: () => {},
+          selectAll: () => {},
+          clearItems: () => {},
+          actions: [
+            {
+              name: Icon.Share,
+              label: 'Share',
+              onPress: () => {},
+            },
+          ],
+        }}
+      >
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+
+    expect(screen.queryByTestId('screen-footer')).toBeNull();
+    const hiddenFooter = screen.getByTestId('screen-footer', { includeHiddenElements: true });
+    expect(StyleSheet.flatten(hiddenFooter.parent?.parent?.props.style)).toMatchObject({
+      position: 'absolute',
+      bottom: 0,
+    });
+    expect(screen.getByText('Share')).toBeTruthy();
   });
 });

@@ -6,7 +6,7 @@ import {
 import { NavigationBar } from '@/src/components/layout/NavigationBar';
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import {
-  SelectionOverlay,
+  SelectionHeader,
   type SelectionOverlayProps,
 } from '@/src/components/shared/SelectionOverlay';
 import { getSelectionState } from '@/src/hooks/selectionState';
@@ -16,9 +16,13 @@ import { render, screen } from '@/src/testing/render';
 import { StyleSheet, Text } from 'react-native';
 import { Screen } from '@/src/components/layout/Screen';
 import { Page } from '@/src/design-system/Page';
-import { SafeAreaFrame, SafeAreaOverlay } from '@/src/design-system/SafeArea';
+import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { SelectionSummary } from '@/src/components/shared/SelectionSummary';
+import {
+  SelectionFooterHost,
+  SelectionHeaderHost,
+} from '@/src/components/shared/SelectionChromeHost';
 import {
   PrimaryNavigationProvider,
   primaryTabFromRouteName,
@@ -216,7 +220,13 @@ describe('ScreenWithChrome selection overlay', () => {
       onBack: jest.fn(),
       selection: {
         ...selection,
-        onShareSelected: jest.fn(),
+        actions: [
+          {
+            name: Icon.Share,
+            label: 'Share',
+            onPress: jest.fn(),
+          },
+        ],
       },
     };
 
@@ -227,16 +237,15 @@ describe('ScreenWithChrome selection overlay', () => {
     );
 
     const page = screen.UNSAFE_getByType(Page);
-    expect(page.props.overlay).toBeUndefined();
     expect(page.props.header).toBeTruthy();
     expect(page.props.footer).toBeTruthy();
-    expect(screen.UNSAFE_queryAllByType(SafeAreaOverlay)).toHaveLength(0);
+    expect(screen.UNSAFE_getByType(SelectionHeaderHost)).toBeTruthy();
+    expect(screen.UNSAFE_getByType(SelectionFooterHost)).toBeTruthy();
     expect(screen.UNSAFE_getByType(SelectionSummary)).toBeTruthy();
     expect(screen.UNSAFE_getByType(SelectionActionBar)).toBeTruthy();
 
     const navBarWrapper = screen.UNSAFE_getByType(NavigationBar).parent;
     expect(StyleSheet.flatten(navBarWrapper?.props.style)).toMatchObject({
-      opacity: 0,
       position: 'absolute',
     });
   });
@@ -250,7 +259,7 @@ describe('ScreenWithChrome selection overlay', () => {
 
     function ActiveOverlay({ routeName }: { routeName: string }) {
       const activeSelection = usePersistentTabChrome(routeName)?.selection;
-      return activeSelection ? <SelectionOverlay {...activeSelection} /> : null;
+      return activeSelection ? <SelectionHeader {...activeSelection} /> : null;
     }
 
     const view = (routeName: string) => (

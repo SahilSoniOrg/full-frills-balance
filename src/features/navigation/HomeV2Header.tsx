@@ -22,11 +22,14 @@ export function HomeV2Header({
   pageProgress,
   onNavigate,
   isTransitioning,
+  covered = false,
 }: {
   activeRouteName: string;
   pageProgress: SharedValue<number>;
   onNavigate: (routeName: string) => void;
   isTransitioning: boolean;
+  /** Covered by selection chrome in the pager frame — do not re-detect selection here. */
+  covered?: boolean;
 }) {
   const { theme } = useTheme();
   const { fontScale } = useWindowDimensions();
@@ -41,7 +44,6 @@ export function HomeV2Header({
         : { ...previous, [routeName]: width },
     );
   }, []);
-  const headerCovered = Boolean(chrome?.selection);
   const searching = !!chrome?.isSearchActive;
   const widths = PRIMARY_PAGES.map(page =>
     Math.max(Size.touchTarget, actionWidths[page.routeName] ?? 0),
@@ -57,10 +59,10 @@ export function HomeV2Header({
   return (
     <View
       testID="home-v2-header"
-      {...coveredInteractionProps(headerCovered)}
+      {...coveredInteractionProps(covered)}
       style={[
         styles.toolbar,
-        headerCovered && styles.coveredToolbar,
+        covered && styles.coveredToolbar,
         {
           backgroundColor: theme.background,
           borderBottomColor: theme.border,
@@ -72,7 +74,7 @@ export function HomeV2Header({
       {!searching ? (
         <HomeV2PagePicker
           activeRouteName={activeRouteName}
-          disabled={isTransitioning || headerCovered}
+          disabled={isTransitioning || covered}
           onNavigate={onNavigate}
         >
           <View style={{ height: Math.ceil(32 * Math.max(1, fontScale)) }}>
@@ -103,7 +105,7 @@ export function HomeV2Header({
             pageProgress={pageProgress}
             reportWidth={reportWidth}
             expanded={searching}
-            interactive={!headerCovered && !isTransitioning && activeRouteName === page.routeName}
+            interactive={!covered && !isTransitioning && activeRouteName === page.routeName}
           />
         ))}
       </View>

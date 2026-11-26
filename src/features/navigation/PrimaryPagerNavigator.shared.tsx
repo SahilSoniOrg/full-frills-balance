@@ -2,8 +2,6 @@ import {
   PrimaryPrivacyScopeStoreProvider,
   PrivacyScopeProvider,
 } from '@/src/contexts/PrivacyScope';
-import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
-import { SelectionDock, SelectionHeader } from '@/src/components/shared/SelectionOverlay';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { AccountsGroupProvider } from '@/src/features/accounts';
 import { PrimaryTabBar, type PrimaryTabBarProps } from './PrimaryTabBar';
@@ -37,7 +35,15 @@ import {
   PersistentTabLeaf,
   usePersistentTabChrome,
 } from '@/src/components/layout/PersistentTabChrome';
-import { SafeAreaFrame, SafeAreaScope, useSafeAreaLayout } from '@/src/design-system/SafeArea';
+import {
+  SelectionFooterHost,
+  SelectionHeaderHost,
+} from '@/src/components/shared/SelectionChromeHost';
+import {
+  SafeAreaFrame,
+  SafeAreaScope,
+  useWindowSafeAreaLayout,
+} from '@/src/design-system/SafeArea';
 import { HomeV2Header } from './HomeV2Header';
 import { usePrimaryPageTransitions } from './usePrimaryPageTransitions';
 
@@ -308,7 +314,7 @@ function PrimaryPagerFrame({
   const selection = usePersistentTabChrome(activeRouteName)?.selection;
   const reportSelectionMode = usePrimaryNavigation()?.reportSelectionMode;
   const selectionModeActive = isFocused && Boolean(selection);
-  const { insets } = useSafeAreaLayout();
+  const { insets } = useWindowSafeAreaLayout();
   const { theme } = useTheme();
   const page = primaryPageFromRouteName(activeRouteName);
 
@@ -320,78 +326,37 @@ function PrimaryPagerFrame({
     <View style={styles.container}>
       <SafeAreaFrame edges={['top', 'left', 'right']} style={styles.container}>
         <SafeAreaScope consumedEdges={['bottom']}>
-          <View
-            style={
-              selection
-                ? [styles.selectionHeaderSlot, { backgroundColor: theme.background }]
-                : undefined
-            }
-          >
-            <View
-              style={selection ? styles.coveredHeaderLayer : undefined}
-              {...coveredInteractionProps(Boolean(selection))}
-            >
+          <PrivacyScopeProvider key={`header-${activeRouteName}`} scopeKey={page?.group}>
+            <SelectionHeaderHost selection={selection} backgroundColor={theme.background}>
               <HomeV2Header
                 activeRouteName={activeRouteName}
                 pageProgress={pageProgress}
                 onNavigate={onNavigateToPage}
                 isTransitioning={isTransitioning}
+                covered={Boolean(selection)}
               />
-            </View>
-            {selection ? (
-              <PrivacyScopeProvider key={activeRouteName} scopeKey={page?.group}>
-                <SelectionHeader {...selection} />
-              </PrivacyScopeProvider>
-            ) : null}
-          </View>
+            </SelectionHeaderHost>
+          </PrivacyScopeProvider>
           {children}
         </SafeAreaScope>
       </SafeAreaFrame>
-      <View
-        style={
-          selection
-            ? [
-                styles.selectionFooterSlot,
-                {
-                  backgroundColor: theme.background,
-                  paddingBottom: insets.bottom,
-                  paddingLeft: insets.left,
-                  paddingRight: insets.right,
-                },
-              ]
-            : undefined
-        }
-      >
-        <View
-          style={selection ? styles.coveredFooterLayer : undefined}
-          {...coveredInteractionProps(Boolean(selection))}
+      <PrivacyScopeProvider key={`footer-${activeRouteName}`} scopeKey={page?.group}>
+        <SelectionFooterHost
+          selection={selection}
+          backgroundColor={theme.background}
+          edgePadding={{
+            bottom: insets.bottom,
+            left: insets.left,
+            right: insets.right,
+          }}
         >
           <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
-        </View>
-        {selection ? (
-          <PrivacyScopeProvider key={activeRouteName} scopeKey={page?.group}>
-            <SelectionDock {...selection} />
-          </PrivacyScopeProvider>
-        ) : null}
-      </View>
+        </SelectionFooterHost>
+      </PrivacyScopeProvider>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  selectionHeaderSlot: { zIndex: 1 },
-  selectionFooterSlot: { zIndex: 1 },
-  coveredHeaderLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  coveredFooterLayer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
 });

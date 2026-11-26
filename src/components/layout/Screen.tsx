@@ -1,10 +1,9 @@
 import { NavigationBar, type NavigationBarLeft } from '@/src/components/layout/NavigationBar';
-import { coveredInteractionProps } from '@/src/components/shared/coveredInteractionProps';
 import {
-  SelectionDock,
-  SelectionHeader,
-  type SelectionOverlayProps,
-} from '@/src/components/shared/SelectionOverlay';
+  SelectionFooterHost,
+  SelectionHeaderHost,
+} from '@/src/components/shared/SelectionChromeHost';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
@@ -25,7 +24,6 @@ export type ScreenProps = ViewProps & {
   headerActions?: React.ReactNode;
   isSearchActive?: boolean;
   // Layout
-  overlay?: React.ReactNode;
   selection?: SelectionOverlayProps;
   scrollable?: boolean;
   withPadding?: boolean;
@@ -38,7 +36,6 @@ export type ScreenProps = ViewProps & {
 
 export function Screen({
   children,
-  overlay,
   selection,
   title,
   subtitle,
@@ -61,56 +58,29 @@ export function Screen({
     <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
   );
 
-  const headerCovered = Boolean(overlay || selection);
   const navigationBar =
     left || title || headerActions ? (
-      <View
-        style={[
-          headerCovered ? styles.coveredHeader : undefined,
-          selection ? styles.coveredHeaderLayer : undefined,
-        ]}
-        {...coveredInteractionProps(headerCovered)}
-      >
-        <NavigationBar
-          title={title || ''}
-          subtitle={subtitle}
-          left={left}
-          rightActions={headerActions}
-          isSearchActive={isSearchActive}
-          covered={headerCovered}
-        />
-      </View>
+      <NavigationBar
+        title={title || ''}
+        subtitle={subtitle}
+        left={left}
+        rightActions={headerActions}
+        isSearchActive={isSearchActive}
+        covered={Boolean(selection)}
+      />
     ) : undefined;
 
-  const header =
-    navigationBar || selection ? (
-      <View
-        style={
-          selection
-            ? [styles.selectionHeaderHost, { backgroundColor: theme.background }]
-            : undefined
-        }
-      >
-        {navigationBar}
-        {selection ? <SelectionHeader {...selection} /> : null}
-      </View>
-    ) : undefined;
+  const header = (
+    <SelectionHeaderHost selection={selection} backgroundColor={theme.background}>
+      {navigationBar}
+    </SelectionHeaderHost>
+  );
 
-  const selectionFooter = selection ? (
-    <View style={[styles.selectionFooterHost, { backgroundColor: theme.background }]}>
-      <SelectionDock {...selection} />
-    </View>
-  ) : undefined;
-
-  const resolvedFooter =
-    selectionFooter && footer ? (
-      <>
-        {footer}
-        {selectionFooter}
-      </>
-    ) : (
-      (selectionFooter ?? footer)
-    );
+  const resolvedFooter = (
+    <SelectionFooterHost selection={selection} backgroundColor={theme.background}>
+      {footer}
+    </SelectionFooterHost>
+  );
 
   return (
     <Page
@@ -121,7 +91,6 @@ export function Screen({
       keyboardAvoiding={keyboardAvoiding}
       footer={resolvedFooter}
       header={header}
-      overlay={overlay}
       scrollViewProps={scrollViewProps}
       scrollViewRef={scrollViewRef}
       {...rest}
@@ -132,19 +101,6 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  coveredHeader: { opacity: 0 },
-  coveredHeaderLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  selectionHeaderHost: {
-    zIndex: 1,
-  },
-  selectionFooterHost: {
-    zIndex: 1,
-  },
   content: {
     flex: 1,
   },

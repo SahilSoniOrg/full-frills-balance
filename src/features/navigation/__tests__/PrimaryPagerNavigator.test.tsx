@@ -1,7 +1,7 @@
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { SelectionSummary } from '@/src/components/shared/SelectionSummary';
-import { SafeAreaFrame, SafeAreaOverlay } from '@/src/design-system/SafeArea';
+import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 import { createPrimaryPagerContent } from '@/src/features/navigation/PrimaryPagerNavigator.shared';
 import type { PrimaryPagerViewportProps } from '@/src/features/navigation/PrimaryPagerViewport.types';
 import { PrimaryTabBar } from '@/src/features/navigation/PrimaryTabBar';
@@ -144,7 +144,6 @@ describe('PrimaryPagerNavigator selection layout slots', () => {
 
     rerender(renderPager(true));
 
-    expect(screen.UNSAFE_queryAllByType(SafeAreaOverlay)).toHaveLength(0);
     expect(screen.UNSAFE_getByType(HomeV2Header) === initialHeader).toBe(true);
     expect(screen.UNSAFE_getByType(PrimaryTabBar) === initialTabBar).toBe(true);
 

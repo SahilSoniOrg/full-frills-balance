@@ -81,6 +81,7 @@ function Harness({ selectionActive }: { selectionActive: boolean }) {
         pageProgress={pageProgress}
         onNavigate={jest.fn()}
         isTransitioning={false}
+        covered={selectionActive}
       />
     </PersistentTabChromeProvider>
   );
