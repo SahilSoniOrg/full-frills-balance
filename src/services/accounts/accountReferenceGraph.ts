@@ -51,7 +51,10 @@ export type AccountReferenceSiteKey =
   | 'plannedPayment.fromAccountId'
   | 'plannedPayment.toAccountId'
   | 'balanceSnapshot.accountId'
-  | 'accountMatcher.accountId';
+  | 'accountMatcher.accountId'
+  | 'personAccount.accountId'
+  | 'openItem.accountId'
+  | 'settlementAllocation.accountId';
 
 export type AccountImportRef = {
   siteKey: AccountReferenceSiteKey;
@@ -88,6 +91,9 @@ export type AccountImportSourceBag = {
   }[];
   balanceSnapshots?: readonly { id: string; accountId: string }[];
   accountMatchers?: readonly { id: string; accountId: string }[];
+  personAccounts?: readonly { id: string; accountId: string }[];
+  openItems?: readonly { id: string; accountId: string }[];
+  settlementAllocations?: readonly { id: string; accountId: string }[];
 };
 
 export type AccountReferenceSite = {
@@ -345,6 +351,29 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     formatMissingImportError: missing =>
       `Import validation failed: missing account "${missing.accountId}"`,
   },
+  ...(
+    [
+      ['personAccount.accountId', 'person_accounts', 'personAccounts', 'Person account'],
+      ['openItem.accountId', 'open_items', 'openItems', 'Open item'],
+      [
+        'settlementAllocation.accountId',
+        'settlement_allocations',
+        'settlementAllocations',
+        'Settlement allocation',
+      ],
+    ] as const
+  ).map(([key, table, source, label]): AccountReferenceSite => ({
+    key,
+    table,
+    field: 'accountId',
+    column: 'account_id',
+    cardinality: 'scalar',
+    mergeBehavior: 'retarget',
+    deletePolicy: 'block',
+    importPolicy: 'reject',
+    extractImportRefs: data => collectScalarRefs(key, data[source] || [], row => row.accountId),
+    formatMissingImportError: missing => missingImportError(label, missing),
+  })),
 ];
 
 const SITES_BY_KEY: ReadonlyMap<AccountReferenceSiteKey, AccountReferenceSite> = new Map(

@@ -44,6 +44,10 @@ function validateStructuralRules(data: BatchImportData): void {
   assertUniqueIds('transaction inbox record', data.transactionInboxRecords ?? []);
   assertUniqueIds('account matcher', data.accountMatchers ?? []);
   assertUniqueIds('currency', data.currencies ?? []);
+  assertUniqueIds('person', data.people ?? []);
+  assertUniqueIds('person account', data.personAccounts ?? []);
+  assertUniqueIds('open item', data.openItems ?? []);
+  assertUniqueIds('settlement allocation', data.settlementAllocations ?? []);
 
   const journalIds = new Set(data.journals.map(journal => journal.id));
   const transactionIds = new Set(data.transactions.map(transaction => transaction.id));
@@ -52,6 +56,45 @@ function validateStructuralRules(data: BatchImportData): void {
     (data.plannedPayments ?? []).map(plannedPayment => plannedPayment.id),
   );
   const currencyCodes = new Set((data.currencies ?? []).map(currency => currency.code));
+  const people = new Set((data.people ?? []).map(person => person.id));
+  const accounts = new Set(data.accounts.map(account => account.id));
+  const activePersonAccounts = new Set<string>();
+  for (const row of data.personAccounts ?? []) {
+    if (!people.has(row.personId) || !accounts.has(row.accountId))
+      throw new Error(
+        `Import validation failed: person account "${row.id}" references a missing person or account`,
+      );
+    if (row.deletedAt == null) {
+      const key = row.accountId;
+      if (activePersonAccounts.has(key))
+        throw new Error(
+          `Import validation failed: account "${key}" is linked to multiple active people`,
+        );
+      activePersonAccounts.add(key);
+    }
+  }
+  for (const row of data.openItems ?? []) {
+    if (
+      !people.has(row.personId) ||
+      !accounts.has(row.accountId) ||
+      !journalIds.has(row.originatingJournalId)
+    )
+      throw new Error(
+        `Import validation failed: open item "${row.id}" references a missing person, account, or journal`,
+      );
+  }
+  const openItems = new Set((data.openItems ?? []).map(row => row.id));
+  for (const row of data.settlementAllocations ?? []) {
+    if (
+      !people.has(row.personId) ||
+      !openItems.has(row.openItemId) ||
+      !accounts.has(row.accountId) ||
+      !journalIds.has(row.settlementJournalId)
+    )
+      throw new Error(
+        `Import validation failed: settlement allocation "${row.id}" references a missing person, open item, account, or journal`,
+      );
+  }
 
   for (const matcher of data.accountMatchers ?? []) validateAccountMatcher(matcher);
 
