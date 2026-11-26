@@ -1,9 +1,7 @@
-import { buildListSelectionChrome } from '@/src/components/shared/buildSelectionChrome';
 import {
   DetailHeaderMenuActions,
   type DetailMenuAction,
 } from '@/src/components/shared/DetailHeaderMenuActions';
-import { selectedPlannedPaymentTotal } from '../hooks/plannedPaymentDetailsPresentation';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -55,49 +53,22 @@ function PlannedPaymentDetailsScreen() {
       onBack: vm.onBack,
       headerActions: actions.length ? <DetailHeaderMenuActions actions={actions} /> : undefined,
     });
-    if (phase !== 'ready' || !vm.isSelectionModeActive) return detailChrome;
-    const history = vm.history ?? [];
-    const selectedTotal = selectedPlannedPaymentTotal(
-      history,
-      vm.selectedIds,
-      vm.currencyCode,
-      vm.reversalJournalIds,
-    );
+    if (phase !== 'ready') return detailChrome;
     return {
       ...detailChrome,
-      selection: buildListSelectionChrome({
-        selectedIds: vm.selectedIds,
-        selectableIds: history.map(journal => journal.id),
-        amountSummary: {
-          label: AppConfig.strings.selection.paymentAmounts,
-          ...selectedTotal,
-        },
-        itemTypeLabel: AppConfig.strings.selection.itemTypes.payment,
-        selectAll: vm.selectAll,
-        clearItems: vm.clearItems,
-        exitSelectionMode: vm.exitSelectionMode,
-        actions: vm.actions,
-      }),
+      selection: vm.selectionChrome,
     };
   }, [
     strings,
-    vm.exitSelectionMode,
-    vm.selectAll,
-    vm.clearItems,
-    vm.actions,
-    vm.history,
-    vm.reversalJournalIds,
-    vm.selectedIds,
-    vm.currencyCode,
     vm.headerActions,
     vm.isLoading,
     vm.isMissing,
-    vm.isSelectionModeActive,
     vm.onBack,
     vm.nameText,
     vm.status,
     vm.pendingAction,
     vm.onToggleStatus,
+    vm.selectionChrome,
     outstandingJournalId,
     onOpenJournal,
   ]);

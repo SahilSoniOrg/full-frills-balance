@@ -15,7 +15,7 @@ export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'c
       kind: 'tab',
       screenTitle: 'Accounts',
       isSearchActive: vm.isSearching,
-      selection: vm.isSelectionModeActive ? vm.selectionChrome : undefined,
+      selection: vm.selectionChrome,
       headerActions: (
         <AccountsListHeaderActions
           isSearching={vm.isSearching}
@@ -34,7 +34,6 @@ export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'c
       vm.setIsSearching,
       vm.onManageHierarchy,
       vm.accountsForArchiveToggle,
-      vm.isSelectionModeActive,
       vm.selectionChrome,
     ],
   );

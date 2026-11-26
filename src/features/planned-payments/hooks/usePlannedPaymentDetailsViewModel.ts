@@ -1,4 +1,6 @@
 import type { SelectionAction } from '@/src/components/shared/SelectionActionBar';
+import { buildListSelectionChrome } from '@/src/components/shared/buildSelectionChrome';
+import type { SelectionOverlayProps } from '@/src/components/shared/SelectionOverlay';
 import { AppConfig } from '@/src/constants';
 import type { ProvisionalPlannedPaymentCandidate } from '@/src/services/planned-payment/provisionalPlannedPaymentCandidates';
 import { Theme } from '@/src/constants/design-tokens';
@@ -15,7 +17,10 @@ import {
   useJournalsBulkOperations,
   type JournalListModalsProps,
 } from '@/src/features/journal';
-import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import {
+  formatPlannedPaymentInterval,
+  selectedPlannedPaymentTotal,
+} from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { pruneSelectedIds } from '@/src/hooks/selectionState';
@@ -143,6 +148,7 @@ export interface PlannedPaymentDetailsViewModel {
   exitSelectionMode: () => void;
   onShareSelected: () => void;
   actions?: SelectionAction[];
+  selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }
 
@@ -422,12 +428,11 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
   useEffect(() => {
     if (selectedIds.size === 0 || isHistoryLoading) return;
-    setSelectedIds(
-      prev =>
-        pruneSelectedIds(
-          prev,
-          history.map(journal => journal.id),
-        ) as typeof prev,
+    setSelectedIds(prev =>
+      pruneSelectedIds(
+        prev,
+        history.map(journal => journal.id),
+      ),
     );
   }, [history, selectedIds, setSelectedIds, isHistoryLoading]);
 
@@ -479,6 +484,50 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     onShareSelected,
   });
 
+  const selectableHistoryIds = useMemo(() => history.map(journal => journal.id), [history]);
+  const reversalJournalIds = useMemo(
+    () =>
+      activity
+        ? new Set(
+            activity.filter(journal => !!journal.originalJournalId).map(journal => journal.id),
+          )
+        : undefined,
+    [activity],
+  );
+  const selectionChrome = useMemo(() => {
+    if (!isSelectionModeActive) return undefined;
+    const selectedTotal = selectedPlannedPaymentTotal(
+      history,
+      selectedIds,
+      item?.currencyCode,
+      reversalJournalIds,
+    );
+    return buildListSelectionChrome({
+      selectedIds,
+      selectableIds: selectableHistoryIds,
+      amountSummary: {
+        label: AppConfig.strings.selection.paymentAmounts,
+        ...selectedTotal,
+      },
+      itemTypeLabel: AppConfig.strings.selection.itemTypes.payment,
+      selectAll,
+      clearItems,
+      exitSelectionMode,
+      actions: bulkOperations.actions,
+    });
+  }, [
+    isSelectionModeActive,
+    history,
+    selectedIds,
+    item?.currencyCode,
+    reversalJournalIds,
+    selectableHistoryIds,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    bulkOperations.actions,
+  ]); // selectionChrome
+
   const onOpenJournal = useCallback((journalId: JournalId) => {
     AppNavigation.toJournalDetails(journalId);
   }, []);
@@ -498,6 +547,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       exitSelectionMode,
       onShareSelected,
       actions: bulkOperations.actions,
+      selectionChrome,
       modals: bulkOperations.modals,
       onOpenJournal,
       onOpenAccount,
@@ -513,6 +563,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       exitSelectionMode,
       onShareSelected,
       bulkOperations.actions,
+      selectionChrome,
       bulkOperations.modals,
       onOpenJournal,
       onOpenAccount,

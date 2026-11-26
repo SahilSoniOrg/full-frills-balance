@@ -37,6 +37,7 @@ import {
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
+import { pruneSelectedIds } from '@/src/hooks/selectionState';
 import { useSelection } from '@/src/hooks/useSelection';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
@@ -257,6 +258,12 @@ export function useAccountsListViewModel(
     return tabAccounts.map(a => a.id);
   }, [displayAccounts, activeTab]);
 
+  const { selectedIds, setSelectedIds } = selection;
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+    setSelectedIds(prev => pruneSelectedIds(prev, allSelectableAccountIds));
+  }, [allSelectableAccountIds, selectedIds, setSelectedIds]);
+
   const onAccountPress = useCallback(
     (accountId: AccountId) => {
       if (selection.isSelectionModeActive) {
@@ -361,25 +368,16 @@ export function useAccountsListViewModel(
 
   const selectionChrome = useMemo(() => {
     if (!selection.isSelectionModeActive) return undefined;
-    const singleSection = selectedTotal.sections.length === 1 ? selectedTotal.sections[0] : null;
-    const amountSummary =
-      selectedTotal.sections.length > 1
-        ? {
-            label: AppConfig.strings.selection.directBalances,
-            incomplete: selectedTotal.incomplete,
-            sections: selectedTotal.sections.map(section => ({
-              label: getAccountTypeSectionTitle(section.accountType),
-              amounts: section.amounts,
-              colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
-            })),
-          }
-        : {
-            label: singleSection
-              ? getAccountTypeSectionTitle(singleSection.accountType)
-              : AppConfig.strings.selection.directBalances,
-            amounts: selectedTotal.amounts,
-            incomplete: selectedTotal.incomplete,
-          };
+    const sections = selectedTotal.sections.map(section => ({
+      label: getAccountTypeSectionTitle(section.accountType),
+      amounts: section.amounts,
+      colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
+    }));
+    const amountSummary = {
+      label: sections.length === 1 ? sections[0].label : AppConfig.strings.selection.directBalances,
+      incomplete: selectedTotal.incomplete,
+      sections,
+    };
     return buildListSelectionChrome({
       selectedIds: selection.selectedIds,
       selectableIds: allSelectableAccountIds,
