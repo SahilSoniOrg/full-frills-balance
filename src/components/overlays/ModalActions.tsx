@@ -58,7 +58,8 @@ export function ModalActions({
   const resolvedLayout: ModalActionsLayout =
     fontScale > 1.3 && preferredLayout === 'inline' ? 'stacked' : preferredLayout;
 
-  const primaryAction = actions.find(action => action.role !== 'secondary');
+  const primaryActions = actions.filter(action => action.role !== 'secondary');
+  const secondaryActions = actions.filter(action => action.role === 'secondary');
   const isBottomSheet = surface === 'bottomSheet';
 
   // The visible surface fills the platform-sized target, including Android's 48pt minimum.
@@ -95,13 +96,12 @@ export function ModalActions({
   };
 
   if (resolvedLayout === 'primary') {
-    const secondaryActions = actions.filter(action => action !== primaryAction);
     return (
       <View style={styles.primaryGroup}>
-        {primaryAction ? renderAction(primaryAction, 0, 'full') : null}
+        {primaryActions.map((action, index) => renderAction(action, index, 'full'))}
         {secondaryActions.map((action, index) => (
           <View key={`${action.testID ?? action.label}-${index}`} style={styles.dismissRow}>
-            {renderAction(action, index + 1, 'content')}
+            {renderAction(action, primaryActions.length + index, 'content')}
           </View>
         ))}
       </View>
