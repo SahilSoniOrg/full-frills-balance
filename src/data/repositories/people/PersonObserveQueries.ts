@@ -11,10 +11,14 @@ const base = (workplaceId: WorkplaceId, personId?: PersonId): Q.Clause[] => [
   ...(personId ? [Q.where('person_id', personId)] : []),
 ];
 export class PersonObserveQueries {
-  observePeople(workplaceId: WorkplaceId) {
+  observePeople(workplaceId: WorkplaceId, options: { includeArchived?: boolean } = {}) {
     return database.collections
       .get<Person>('people')
-      .query(...base(workplaceId), Q.where('archived_at', Q.eq(null)), Q.sortBy('name', Q.asc))
+      .query(
+        ...base(workplaceId),
+        ...(!options.includeArchived ? [Q.where('archived_at', Q.eq(null))] : []),
+        Q.sortBy('name', Q.asc),
+      )
       .observeWithColumns(['name', 'notes', 'color', 'archived_at', 'deleted_at', 'updated_at']);
   }
   observePerson(workplaceId: WorkplaceId, personId: PersonId) {

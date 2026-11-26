@@ -173,17 +173,27 @@ export class PersonWriteRepository {
       )
       .fetch();
     let x = rows.find(r => !r.deletedAt);
-    if (x)
+    if (x) {
       stageModelWrite(s, () => [
         x!.prepareUpdate(r => {
-          Object.assign(r, i);
+          r.personId = i.personId;
+          r.originatingJournalId = i.originatingJournalId;
+          r.accountId = i.accountId;
+          r.direction = i.direction;
+          r.originalAmount = i.originalAmount;
+          r.currencyCode = i.currencyCode;
           r.updatedAt = new Date();
         }),
       ]);
-    else {
+    } else {
       x = this.items().prepareCreate(r => {
         r.workplaceId = w;
-        Object.assign(r, i);
+        r.personId = i.personId;
+        r.originatingJournalId = i.originatingJournalId;
+        r.accountId = i.accountId;
+        r.direction = i.direction;
+        r.originalAmount = i.originalAmount;
+        r.currencyCode = i.currencyCode;
         r.createdAt = new Date();
         r.updatedAt = new Date();
       });
@@ -192,6 +202,7 @@ export class PersonWriteRepository {
     return x;
   }
   async softDeleteOpenItemsInSession(s: AccountingWriteSession, w: WorkplaceId, ids: OpenItemId[]) {
+    if (ids.length === 0) return;
     const xs = await this.items()
       .query(
         Q.where('workplace_id', w),
@@ -221,10 +232,16 @@ export class PersonWriteRepository {
       amount: number;
     }[],
   ) {
+    if (items.length === 0) return [];
     const xs = items.map(i =>
       this.allocations().prepareCreate(r => {
         r.workplaceId = w;
-        Object.assign(r, i);
+        r.personId = i.personId;
+        r.openItemId = i.openItemId;
+        r.settlementJournalId = i.settlementJournalId;
+        r.accountId = i.accountId;
+        r.allocationKind = i.allocationKind;
+        r.amount = i.amount;
         r.isActive = true;
         r.createdAt = new Date();
         r.updatedAt = new Date();
@@ -238,6 +255,7 @@ export class PersonWriteRepository {
     w: WorkplaceId,
     ids: string[],
   ) {
+    if (ids.length === 0) return;
     const xs = await this.allocations()
       .query(
         Q.where('workplace_id', w),
