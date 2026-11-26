@@ -15,16 +15,12 @@ const ALLOWED = new Set([
   'components/account-selection/AccountPickerList.tsx',
   'components/forms/schedule/ScheduleField.tsx',
   'features/accounts/components/AccountParentPath.tsx',
-  'features/accounts/components/AccountsListView.tsx',
-  'features/accounts/components/AccountSummaryCard.tsx',
   'features/accounts/components/CurrencySelector.tsx',
   'features/accounts/components/hierarchy/AccountManagementTreeRow.tsx',
   'features/dashboard/components/SafeToSpendLedger.tsx',
   'features/hub/components/HubWidget.tsx',
-  'features/reports-v2/screen/components/ReportsV2Breakdown.tsx',
   'features/reports-v2/screen/components/ReportsV2QualityBanner.tsx',
   'features/settings/components/CaptureSuggestionHistoricalPattern.tsx',
-  'features/setup/first-run/conversationUi.tsx',
 ]);
 
 const SRC = path.resolve(__dirname, '../../..');

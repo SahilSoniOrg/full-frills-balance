@@ -205,11 +205,13 @@ describe('ScreenWithChrome selection overlay', () => {
     rerender(view(true));
     expect(screen.UNSAFE_getByType(NavigationBar)).toBe(navigationBar);
     expect(screen.getByText('1 of 1 transaction selected')).toBeTruthy();
-    expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(selection.exitSelectionMode);
+    expect(screen.UNSAFE_getByType(NavigationBar).props.covered).toBe(true);
+    expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(chrome.onBack);
 
     rerender(view(false));
     expect(screen.UNSAFE_getByType(NavigationBar)).toBe(navigationBar);
     expect(screen.queryByText('1 of 1 transaction selected')).toBeNull();
+    expect(screen.UNSAFE_getByType(NavigationBar).props.covered).toBe(false);
     expect(screen.UNSAFE_getByType(Screen).props.left?.onPress).toBe(chrome.onBack);
   });
 

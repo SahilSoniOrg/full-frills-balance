@@ -27,7 +27,7 @@ function leftFromChrome(
   if (chrome.kind === 'nav') {
     return {
       kind: 'back',
-      onPress: chrome.selection?.exitSelectionMode ?? chrome.onBack,
+      onPress: chrome.onBack,
       icon: chrome.backIcon ?? routeBackIcon,
     };
   }
