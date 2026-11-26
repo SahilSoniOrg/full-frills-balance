@@ -1,6 +1,4 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
-import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { peopleReadService, recordRepayment } from '@/src/services/people';
@@ -10,9 +8,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type PersonDetailData = Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>;
-type SelectableAccount = Awaited<
-  ReturnType<typeof peopleReadService.listSelectableAccounts>
->[number];
 type CompatibleJournal = Awaited<
   ReturnType<typeof peopleReadService.listCompatibleRepaymentJournals>
 >[number];
@@ -24,23 +19,15 @@ export function useSettleUpViewModel() {
   }>();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const [detail, setDetail] = useState<PersonDetailData>(null);
-  const [accounts, setAccounts] = useState<SelectableAccount[]>([]);
   const [compatibleJournals, setCompatibleJournals] = useState<CompatibleJournal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [mode, setMode] = useState<'new' | 'match'>('new');
   const [targetAccountId, setTargetAccountId] = useState<AccountId | undefined>();
-  const [cashAccountId, setCashAccountId] = useState<AccountId | undefined>();
   const [selectedExistingJournalId, setSelectedExistingJournalId] = useState<
     JournalId | undefined
   >();
-  const [amountText, setAmountText] = useState('');
-  const [exchangeRateText, setExchangeRateText] = useState('1');
-  const [description, setDescription] = useState('Repayment');
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
-  const [journalDate, setJournalDate] = useState(() => Date.now());
-  const [journalCurrency, setJournalCurrency] = useState(defaultCurrencyCode);
 
   useEffect(() => {
     let active = true;
@@ -50,14 +37,12 @@ export function useSettleUpViewModel() {
         return;
       }
       try {
-        const [nextDetail, nextAccounts, nextCompatible] = await Promise.all([
+        const [nextDetail, nextCompatible] = await Promise.all([
           peopleReadService.getPersonDetail(workplaceId, personId, defaultCurrencyCode),
-          peopleReadService.listSelectableAccounts(workplaceId),
           peopleReadService.listCompatibleRepaymentJournals(workplaceId, personId),
         ]);
         if (!active) return;
         setDetail(nextDetail);
-        setAccounts(nextAccounts);
         setCompatibleJournals(nextCompatible);
 
         const debtLinks =
@@ -75,17 +60,8 @@ export function useSettleUpViewModel() {
           debtLinks[0]?.account.id;
         setTargetAccountId(defaultTarget);
 
-        const personAccountIds = new Set(nextDetail?.linkedAccounts.map(l => l.account.id) ?? []);
-        const defaultCash = nextAccounts.find(
-          a =>
-            !personAccountIds.has(a.id) &&
-            (a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY),
-        );
-        setCashAccountId(defaultCash?.id);
-        setJournalCurrency(defaultCash?.currencyCode ?? defaultCurrencyCode);
         if (preItem && preItem.remainder > 0) {
           setSelectedItemIds({ [preItem.item.id]: true });
-          setAmountText(String(preItem.remainder));
         }
       } finally {
         if (active) setIsLoading(false);
@@ -101,19 +77,6 @@ export function useSettleUpViewModel() {
     () => detail?.linkedAccounts.find(l => l.account.id === targetAccountId)?.account,
     [detail, targetAccountId],
   );
-  const cashAccount = useMemo(
-    () => accounts.find(a => a.id === cashAccountId),
-    [accounts, cashAccountId],
-  );
-  const cashAccounts = useMemo(() => {
-    const linkedIds = new Set(detail?.linkedAccounts.map(l => l.account.id) ?? []);
-    return accounts.filter(
-      a =>
-        !linkedIds.has(a.id) &&
-        (a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY),
-    );
-  }, [accounts, detail]);
-
   const targetOpenItems = useMemo(
     () =>
       (detail?.openItems ?? []).filter(
@@ -122,91 +85,42 @@ export function useSettleUpViewModel() {
     [detail, targetAccountId],
   );
 
-  const isCrossCurrency = Boolean(
-    targetAccount &&
-    journalCurrency &&
-    targetAccount.currencyCode.toUpperCase() !== journalCurrency.toUpperCase(),
-  );
-
   const toggleOpenItem = useCallback((id: OpenItemId) => {
     setSelectedItemIds(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   const selectMatchedJournal = useCallback((journal: CompatibleJournal) => {
     setSelectedExistingJournalId(journal.journalId);
-    setCashAccountId(journal.cashAccountId);
-    setAmountText(String(journal.cashAmount));
-    setJournalDate(journal.journalDate);
-    setJournalCurrency(journal.currencyCode);
-    if (journal.description) setDescription(journal.description);
   }, []);
 
-  const handleSelectCashAccount = useCallback(
-    (id: AccountId) => {
-      setCashAccountId(id);
-      const found = accounts.find(a => a.id === id);
-      if (found) setJournalCurrency(found.currencyCode);
-    },
-    [accounts],
-  );
-
   const handleSubmit = useCallback(async () => {
-    if (!detail || !targetAccount || !cashAccountId) {
-      showErrorAlert('Select both a person account and a cash/bank account');
+    const journal = compatibleJournals.find(item => item.journalId === selectedExistingJournalId);
+    if (!detail || !targetAccount || !journal) {
+      showErrorAlert('Select an existing repayment and a person account');
       return;
     }
-    const cashAmount = Number(amountText);
-    if (!Number.isFinite(cashAmount) || cashAmount <= 0) {
-      showErrorAlert('Enter a positive repayment amount');
-      return;
-    }
-
-    const rate = isCrossCurrency ? Number(exchangeRateText) : 1;
-    if (isCrossCurrency && (!Number.isFinite(rate) || rate <= 0)) {
-      showErrorAlert('Enter a positive exchange rate');
-      return;
-    }
-
-    const targetPrecision = getCurrencyPrecision(targetAccount.currencyCode);
-    const targetEquivalent = isCrossCurrency
-      ? fromMinorUnits(toMinorUnits(cashAmount / rate, targetPrecision), targetPrecision)
-      : cashAmount;
-    let remainingUnits = toMinorUnits(targetEquivalent, targetPrecision);
     const allocations: { openItemId: OpenItemId; amount: number }[] = [];
-
     for (const entry of targetOpenItems) {
-      if (!selectedItemIds[entry.item.id] || remainingUnits <= 0) continue;
-      const itemUnits = toMinorUnits(entry.remainder, targetPrecision);
-      const applyUnits = Math.min(remainingUnits, itemUnits);
-      if (applyUnits > 0) {
-        allocations.push({
-          openItemId: entry.item.id,
-          amount: fromMinorUnits(applyUnits, targetPrecision),
-        });
-        remainingUnits -= applyUnits;
-      }
+      if (selectedItemIds[entry.item.id])
+        allocations.push({ openItemId: entry.item.id, amount: entry.remainder });
     }
-
-    const unassignedAmount = isCrossCurrency ? 0 : fromMinorUnits(remainingUnits, targetPrecision);
-
+    if (allocations.length === 0) {
+      showErrorAlert('Select at least one open item to allocate');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await recordRepayment(workplaceId, {
         personId: detail.person.id,
         targetAccountId: targetAccount.id,
-        cashAccountId,
-        cashAmount,
-        journalDate,
-        journalCurrency,
-        description: description.trim() || 'Repayment',
-        ...(mode === 'match' && selectedExistingJournalId
-          ? { existingJournalId: selectedExistingJournalId }
-          : {}),
+        cashAccountId: journal.cashAccountId,
+        cashAmount: journal.cashAmount,
+        journalDate: journal.journalDate,
+        journalCurrency: journal.currencyCode,
+        description: journal.description || 'Repayment',
+        existingJournalId: journal.journalId,
         allocations,
-        unassignedAmount,
-        ...(isCrossCurrency
-          ? { exchangeRate: rate, targetAmount: allocations[0]?.amount ?? targetEquivalent }
-          : {}),
+        unassignedAmount: 0,
       });
       toast.success('Repayment recorded.');
       AppNavigation.back();
@@ -216,15 +130,8 @@ export function useSettleUpViewModel() {
       setIsSubmitting(false);
     }
   }, [
-    amountText,
-    cashAccountId,
-    description,
+    compatibleJournals,
     detail,
-    exchangeRateText,
-    isCrossCurrency,
-    journalCurrency,
-    journalDate,
-    mode,
     selectedExistingJournalId,
     selectedItemIds,
     targetAccount,
@@ -236,27 +143,15 @@ export function useSettleUpViewModel() {
     isLoading,
     isSubmitting,
     detail,
-    mode,
-    setMode,
+    workplaceId,
     targetAccountId,
     setTargetAccountId,
-    cashAccountId,
-    cashAccount,
-    cashAccounts,
     targetAccount,
     targetOpenItems,
     compatibleJournals,
     selectedExistingJournalId,
     selectMatchedJournal,
-    handleSelectCashAccount,
-    amountText,
-    setAmountText,
-    exchangeRateText,
-    setExchangeRateText,
-    description,
-    setDescription,
-    journalCurrency,
-    isCrossCurrency,
+    recordNewRepayment: () => AppNavigation.toSimpleJournalEntry('transfer', { workplaceId }),
     selectedItemIds,
     toggleOpenItem,
     onSubmit: handleSubmit,
