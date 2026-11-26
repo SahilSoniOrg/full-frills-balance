@@ -13,14 +13,14 @@ import {
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { Spacing } from '@/src/constants/design-tokens';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountType } from '@/src/types/enums';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
 import { useSettleUpViewModel } from '../hooks/useSettleUpViewModel';
 
-export function SettleUpScreen() {
+function SettleUpScreenContent() {
   const vm = useSettleUpViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
@@ -219,6 +219,8 @@ export function SettleUpScreen() {
     </ScreenWithChrome>
   );
 }
+
+export const SettleUpScreen = withPrivacyScope(SettleUpScreenContent);
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },

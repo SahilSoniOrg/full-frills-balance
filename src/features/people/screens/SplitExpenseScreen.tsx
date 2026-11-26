@@ -12,13 +12,13 @@ import {
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { Spacing } from '@/src/constants/design-tokens';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { StyleSheet, View } from 'react-native';
 import { SplitBreakdownPreview } from '../components/SplitBreakdownPreview';
 import { useSplitExpenseViewModel } from '../hooks/useSplitExpenseViewModel';
 
-export function SplitExpenseScreen() {
+function SplitExpenseScreenContent() {
   const vm = useSplitExpenseViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
 
@@ -259,6 +259,8 @@ export function SplitExpenseScreen() {
     </ScreenWithChrome>
   );
 }
+
+export const SplitExpenseScreen = withPrivacyScope(SplitExpenseScreenContent);
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },

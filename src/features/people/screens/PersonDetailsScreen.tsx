@@ -14,7 +14,7 @@ import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChro
 import { ModalHost } from '@/src/components/overlays/ModalHost';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { Spacing } from '@/src/constants/design-tokens';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
@@ -22,7 +22,7 @@ import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
 import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
 
-export function PersonDetailsScreen() {
+function PersonDetailsScreenContent() {
   const vm = usePersonDetailsViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
@@ -412,6 +412,8 @@ export function PersonDetailsScreen() {
     </ScreenWithChrome>
   );
 }
+
+export const PersonDetailsScreen = withPrivacyScope(PersonDetailsScreenContent);
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.lg, gap: Spacing.md, paddingBottom: Spacing.xxxxl },
