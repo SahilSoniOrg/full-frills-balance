@@ -1,6 +1,5 @@
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { Icon } from '@/src/types/domainIcons';
-import type { ReactNode } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { AppText } from './AppText';
@@ -14,8 +13,6 @@ export interface DisclosureToggleProps {
   onToggle: () => void;
   onLongPress?: () => void;
   delayLongPress?: number;
-  /** Replaces the default chevron (e.g. a selection checkbox). */
-  trailing?: ReactNode;
   accessibilityLabel?: string;
   accessibilityHint?: string;
   testID?: string;
@@ -30,7 +27,6 @@ export function DisclosureToggle({
   onToggle,
   onLongPress,
   delayLongPress,
-  trailing,
   accessibilityLabel,
   accessibilityHint,
   testID,
@@ -57,15 +53,11 @@ export function DisclosureToggle({
           {meta}
         </AppText>
       ) : null}
-      {trailing !== undefined ? (
-        trailing
-      ) : (
-        <AppIcon
-          name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={Size.iconXs}
-          color="textSecondary"
-        />
-      )}
+      <AppIcon
+        name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
+        size={Size.iconXs}
+        color="textSecondary"
+      />
     </PressScaleTouchable>
   );
 }

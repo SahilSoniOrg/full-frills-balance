@@ -59,10 +59,11 @@ export function PrimaryTabBar({
     const targetRouteName = primaryRouteForGroup(copy.tab);
     const targetRoute = routes.find(route => route.name === targetRouteName);
     const selected = activeTab === copy.tab;
+    const disabled = covered || isSwitching || !targetRoute;
     return (
       <PressScaleTouchable
         key={copy.tab}
-        disabled={isSwitching || !targetRoute}
+        disabled={disabled}
         onPress={() => {
           if (!targetRoute) return;
           const prevented = emitTabPress(targetRoute.key);
@@ -77,7 +78,7 @@ export function PrimaryTabBar({
         accessibilityRole="tab"
         accessibilityState={{
           selected,
-          disabled: isSwitching || !targetRoute,
+          disabled,
         }}
         accessibilityLabel={copy.label}
         accessibilityHint={AppConfig.strings.navigation.tabDescriptions[copy.tab]}
@@ -117,7 +118,7 @@ export function PrimaryTabBar({
           <View style={[styles.addHalo, { backgroundColor: barColor }]} />
           <ContextualAddMenu
             primaryTab={activeTab}
-            disabled={isSwitching || isTransitioning}
+            disabled={covered || isSwitching || isTransitioning}
             bottomOffset={(TAB_BAR_ROW_HEIGHT - ADD_SLOT_SIZE) / 2 + ADD_RAISE}
             onAction={onAddAction}
           />

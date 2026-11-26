@@ -1,9 +1,8 @@
 import { DisclosureToggle } from '@/src/components/core/DisclosureToggle';
 import { fireEvent, render, screen } from '@/src/testing/render';
-import { Text } from 'react-native';
 
 describe('DisclosureToggle', () => {
-  it('toggles on press and supports long-press plus custom trailing', () => {
+  it('toggles on press and supports long-press', () => {
     const onToggle = jest.fn();
     const onLongPress = jest.fn();
     render(
@@ -13,14 +12,12 @@ describe('DisclosureToggle', () => {
         expanded={false}
         onToggle={onToggle}
         onLongPress={onLongPress}
-        trailing={<Text>Select</Text>}
         testID="disclosure"
       />,
     );
 
     expect(screen.getByText('Assets')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
-    expect(screen.getByText('Select')).toBeTruthy();
     fireEvent.press(screen.getByTestId('disclosure'));
     expect(onToggle).toHaveBeenCalled();
     fireEvent(screen.getByTestId('disclosure'), 'longPress');

@@ -198,8 +198,15 @@ describe('AccountsListView', () => {
     expect(queryByTestId('section-select-asset')).toBeNull();
 
     rerender(view(true));
+    const sectionControl = getByTestId('section-control-asset');
     const sectionSelectButton = getByTestId('section-select-asset');
     expect(sectionSelectButton).toBeTruthy();
+    // Checkbox must be a sibling of DisclosureToggle, not nested inside it.
+    let ancestor = sectionSelectButton.parent;
+    while (ancestor) {
+      expect(ancestor).not.toBe(sectionControl);
+      ancestor = ancestor.parent;
+    }
     fireEvent.press(sectionSelectButton);
     expect(onToggleSectionSelect).toHaveBeenCalledWith(['acc-1']);
     rerender(view(false));

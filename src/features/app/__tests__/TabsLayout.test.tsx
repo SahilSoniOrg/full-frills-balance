@@ -210,11 +210,21 @@ describe('primary navigation', () => {
     expect(coveredBar.props.importantForAccessibility).toBe('no-hide-descendants');
     expect(StyleSheet.flatten(coveredBar.props.style as ViewProps['style'])?.opacity).toBe(0);
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    const coveredTab = screen.getByTestId('tab-accounts', { includeHiddenElements: true });
+    expect(coveredTab.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(coveredTab);
+    expect(mockEmit).not.toHaveBeenCalled();
+    expect(mockNavigateToTab).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId('contextual-add', { includeHiddenElements: true }).props.accessibilityState
+        .disabled,
+    ).toBe(true);
 
     act(() => mockNavigation.current?.reportSelectionMode(false));
     expect(mockNavigation.current?.selectionModeActive).toBe(false);
     expect(screen.getByTestId('primary-tab-bar').props.pointerEvents).toBe('auto');
     expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.getByTestId('tab-accounts').props.accessibilityState.disabled).toBe(false);
     expect(screen.getByTestId('contextual-add').props.accessibilityState.disabled).toBe(false);
   });
 });

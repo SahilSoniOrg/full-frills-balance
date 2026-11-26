@@ -68,6 +68,7 @@ export function Screen({
           left={left}
           rightActions={headerActions}
           isSearchActive={isSearchActive}
+          covered={headerCovered}
         />
       </View>
     ) : undefined;

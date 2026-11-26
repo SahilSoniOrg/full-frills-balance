@@ -338,3 +338,44 @@ it('closes the overflow action sheet when selectedCount drops to zero and shows 
   view.rerender(<SelectionActionBar selectedCount={1} actions={actions} />);
   expect(view.queryByText('Actions (1 selected)')).toBeNull();
 });
+
+it('rounds signed averages to currency precision before deriving sign so tiny totals do not render minus-zero', () => {
+  const view = render(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['1', '2', '3']), ['1', '2', '3'])}
+      amountSummary={{
+        label: 'Signed total',
+        signed: true,
+        amounts: [{ amount: -0.01, currencyCode: 'USD' }],
+      }}
+      itemTypeLabel="transaction"
+      onClear={jest.fn()}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+
+  expect(
+    view.getByText('3 of 3 transactions · Signed total · Avg $0.00 · All selected'),
+  ).toBeTruthy();
+  expect(view.queryByText(/Avg −/)).toBeNull();
+
+  view.rerender(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['1', '2', '3']), ['1', '2', '3'])}
+      amountSummary={{
+        label: 'Signed total',
+        signed: true,
+        amounts: [{ amount: -0.02, currencyCode: 'USD' }],
+      }}
+      itemTypeLabel="transaction"
+      onClear={jest.fn()}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+
+  expect(
+    view.getByText('3 of 3 transactions · Signed total · Avg − $0.01 · All selected'),
+  ).toBeTruthy();
+});

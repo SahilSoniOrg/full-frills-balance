@@ -28,6 +28,8 @@ export type NavigationBarProps = {
   left?: NavigationBarLeft;
   rightActions?: React.ReactNode;
   isSearchActive?: boolean;
+  /** True while covered by an overlay such as selection chrome. */
+  covered?: boolean;
   style?: ViewStyle;
 };
 
@@ -37,6 +39,7 @@ export function NavigationBar({
   left,
   rightActions,
   isSearchActive = false,
+  covered = false,
   style,
 }: NavigationBarProps) {
   if (left?.kind === 'leading') {
@@ -73,6 +76,7 @@ export function NavigationBar({
             <IconButton
               name={left.icon ?? Icon.Back}
               onPress={left.onPress}
+              disabled={covered}
               accessibilityLabel={
                 left.icon === Icon.Close
                   ? AppConfig.strings.common.close

@@ -10,6 +10,7 @@ import {
   signPrefix,
   type FlowSign,
 } from '@/src/domain/accounting/presentationPolicy';
+import { Money } from '@/src/domain/money/money';
 import type { getSelectionState } from '@/src/hooks/selectionState';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import type { MoneyAmount } from '@/src/types/domainReadModels';
@@ -125,13 +126,15 @@ export function SelectionSummary({
         ? copy.totalUnavailable
         : undefined;
 
-  const formatSummaryMoney = (amount: number) => {
+  const formatSummaryMoney = (amount: number, currencyCode: string) => {
+    // Round to currency precision before deriving sign so tiny averages (e.g. -0.01 / 3) don't render "− $0.00".
+    const rounded = Money.from(amount, currencyCode).round().amount || 0;
     if (!signed) {
-      return { displayAmount: amount, prefix: undefined, color: theme.text };
+      return { displayAmount: rounded, prefix: undefined, color: theme.text };
     }
-    const sign = flowSignFor(amount);
+    const sign = flowSignFor(rounded);
     return {
-      displayAmount: Math.abs(amount),
+      displayAmount: Math.abs(rounded),
       prefix: signPrefix(sign),
       color: theme[signColorKey(sign)],
     };
@@ -139,14 +142,19 @@ export function SelectionSummary({
 
   const singleAmount =
     hasAmounts && !multipleCurrencies && !showSections ? displayAmounts[0] : null;
-  const singleMoney = singleAmount ? formatSummaryMoney(singleAmount.amount) : null;
+  const singleMoney = singleAmount
+    ? formatSummaryMoney(singleAmount.amount, singleAmount.currencyCode)
+    : null;
   const contributingCount = includedCount ?? selectedCount;
   // Skip "N currencies" — stacked amounts already show that. Only average when every
   // selected item contributed to the single-currency total.
   const averageMeta =
     singleAmount && !incomplete && selectedCount > 1 && contributingCount === selectedCount
       ? (() => {
-          const avg = formatSummaryMoney(singleAmount.amount / selectedCount);
+          const avg = formatSummaryMoney(
+            singleAmount.amount / selectedCount,
+            singleAmount.currencyCode,
+          );
           return copy.average(
             formatMoney(avg.displayAmount, singleAmount.currencyCode, { prefix: avg.prefix }),
           );
@@ -241,7 +249,7 @@ export function SelectionSummary({
                       </AppText>
                       <View style={styles.amountStack}>
                         {section.amounts.map(({ amount, currencyCode }) => {
-                          const formatted = formatSummaryMoney(amount);
+                          const formatted = formatSummaryMoney(amount, currencyCode);
                           return (
                             <MoneyText
                               key={`${section.label}-${currencyCode}`}
@@ -265,7 +273,7 @@ export function SelectionSummary({
               <Inline align="center" gap="xs">
                 <View style={styles.amountStack}>
                   {displayAmounts.map(({ amount, currencyCode }) => {
-                    const formatted = formatSummaryMoney(amount);
+                    const formatted = formatSummaryMoney(amount, currencyCode);
                     return (
                       <MoneyText
                         key={currencyCode}

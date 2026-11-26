@@ -106,7 +106,7 @@ export function AccountsListView({
         sectionAccountIds.length > 0 && sectionAccountIds.every(id => selectedAccountIds.has(id));
       const isSomeSectionSelected =
         !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
-      const selectionTrailing =
+      const selectionCheckbox =
         isSelectionModeActive && sectionAccountIds.length > 0 ? (
           <PressScaleTouchable
             onPress={() => onToggleSectionSelect(sectionAccountIds)}
@@ -128,7 +128,7 @@ export function AccountsListView({
               selected={isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false}
             />
           </PressScaleTouchable>
-        ) : undefined;
+        ) : null;
 
       return (
         <Inline
@@ -147,8 +147,8 @@ export function AccountsListView({
             accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
             style={styles.sectionHeaderPressable}
             testID={`section-control-${section.title.toLowerCase()}`}
-            trailing={selectionTrailing}
           />
+          {selectionCheckbox}
           <MoneyText
             amount={section.total}
             currencyCode={currencyCode}

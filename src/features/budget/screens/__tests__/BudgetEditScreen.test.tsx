@@ -26,7 +26,9 @@ jest.mock('@/src/features/budget/hooks/useBudgetEditViewModel', () => ({
   useBudgetEditViewModel: jest.fn(),
 }));
 jest.mock('@/src/components/account-selection', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createElement } = require('react') as typeof import('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Pressable } = require('react-native') as typeof import('react-native');
   return {
     MultiAccountPickerModal: ({

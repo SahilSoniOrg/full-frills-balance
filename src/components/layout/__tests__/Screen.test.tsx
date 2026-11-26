@@ -6,12 +6,13 @@ import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
-  NavigationBar: ({ title, subtitle, left, rightActions }: any) => (
+  NavigationBar: ({ title, subtitle, left, rightActions, covered }: any) => (
     <MockView testID="navigation-bar">
       <MockView testID="nav-title">{title}</MockView>
       <MockView testID="nav-subtitle">{subtitle}</MockView>
       <MockView testID="nav-back">{left?.kind === 'back' ? 'back' : 'no-back'}</MockView>
       <MockView testID="nav-actions">{rightActions ? 'actions' : 'no-actions'}</MockView>
+      <MockView testID="nav-covered">{String(Boolean(covered))}</MockView>
     </MockView>
   ),
 }));
@@ -175,5 +176,27 @@ describe('Screen', () => {
     );
 
     expect(() => screen.getByTestId('navigation-bar')).toThrow();
+  });
+
+  it('marks the navigation bar covered while an overlay is mounted', () => {
+    const { rerender } = render(
+      <Screen title="Test Screen" left={{ kind: 'back', onPress: () => {} }}>
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+    expect(screen.getByTestId('nav-covered')).toHaveTextContent('false');
+
+    rerender(
+      <Screen
+        title="Test Screen"
+        left={{ kind: 'back', onPress: () => {} }}
+        overlay={<MockView testID="test-overlay" />}
+      >
+        <MockView testID="test-child" />
+      </Screen>,
+    );
+    expect(screen.getByTestId('nav-covered', { includeHiddenElements: true })).toHaveTextContent(
+      'true',
+    );
   });
 });
