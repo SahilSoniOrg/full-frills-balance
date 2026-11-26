@@ -11,6 +11,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { FocusTarget } from '@/src/components/shared/FocusTarget';
+import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import {
@@ -284,14 +285,10 @@ function ConnectedSourcesSection({
   const showShortcutSms = shortcutSmsIntakeService.canSetUp;
   if (!showSms && !showGmail && !showShortcutSms) return null;
 
-  const sourcesHeader = strings.sourcesHeader;
-
   return (
     <Stack gap="sm">
       <Box paddingHorizontal="md">
-        <AppText variant="overline" color="secondary" accessibilityRole="header">
-          {sourcesHeader}
-        </AppText>
+        <SectionLabel label={strings.sourcesHeader} marginTop="none" />
       </Box>
       {showSms ? (
         <ListGroup variant="plain">
