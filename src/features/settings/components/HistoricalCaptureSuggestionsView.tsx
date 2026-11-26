@@ -17,19 +17,17 @@ import type { HistoricalCategoryPattern } from '@/src/services/transaction-intel
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { useTransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
+import {
+  CAPTURE_SUGGESTION_SORT_OPTIONS,
+  filterAndSortHistoricalPatterns,
+  type CaptureSuggestionSort,
+} from '@/src/features/settings/utils/captureSuggestionSort';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { Fragment, useMemo, useState } from 'react';
 
 const PAGE_SIZE = 20;
-type HistoricalSuggestionSort = 'latest' | 'alphabetical' | 'repeats';
 type HistoricalSuggestionsKind = 'categories' | 'mixed';
-
-const SORT_OPTIONS = [
-  { id: 'latest', label: strings.historicalSortLatest },
-  { id: 'alphabetical', label: strings.historicalSortAlphabetical },
-  { id: 'repeats', label: strings.historicalSortRepeats },
-] as const;
 
 function openMatchingJournalEntries(journalIds: string[]) {
   if (journalIds.length === 0) return;
@@ -51,47 +49,13 @@ export function HistoricalCaptureSuggestionsView({
       ? capture.historicalCategorySuggestions
       : capture.mixedHistoricalCategoryPatterns;
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<HistoricalSuggestionSort>('latest');
+  const [sort, setSort] = useState<CaptureSuggestionSort>('latest');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const patterns = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const filtered = sourcePatterns.filter(pattern => {
-      if (!query) return true;
-      return [
-        pattern.merchant,
-        pattern.financialAccountName,
-        pattern.currencyCode,
-        pattern.kind,
-        ...pattern.categories.map(category => category.name),
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
-    });
-
-    return filtered.sort((left, right) => {
-      if (sort === 'alphabetical') {
-        return (
-          left.merchant.localeCompare(right.merchant) ||
-          right.latestJournalDate - left.latestJournalDate ||
-          right.journalCount - left.journalCount
-        );
-      }
-      if (sort === 'repeats') {
-        return (
-          right.journalCount - left.journalCount ||
-          right.latestJournalDate - left.latestJournalDate ||
-          left.merchant.localeCompare(right.merchant)
-        );
-      }
-      return (
-        right.latestJournalDate - left.latestJournalDate ||
-        right.journalCount - left.journalCount ||
-        left.merchant.localeCompare(right.merchant)
-      );
-    });
-  }, [search, sort, sourcePatterns]);
+  const patterns = useMemo(
+    () => filterAndSortHistoricalPatterns(sourcePatterns, search, sort),
+    [search, sort, sourcePatterns],
+  );
 
   return (
     <SettingsLayout title={title}>
@@ -134,7 +98,7 @@ export function HistoricalCaptureSuggestionsView({
                   {strings.historicalSortBy}
                 </AppText>
                 <AppSegmentedControl
-                  options={SORT_OPTIONS}
+                  options={CAPTURE_SUGGESTION_SORT_OPTIONS}
                   value={sort}
                   onChange={value => {
                     setSort(value);

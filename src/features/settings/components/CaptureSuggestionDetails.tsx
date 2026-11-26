@@ -1,4 +1,11 @@
-import { AppButton, AppIcon, AppText, Badge, PressScaleTouchable } from '@/src/components/core';
+import {
+  AppButton,
+  AppIcon,
+  AppText,
+  Badge,
+  ListRow,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import {
@@ -313,35 +320,11 @@ export function HistoricalPatternRow({
 
   return (
     <SuggestionItemSurface expanded={expanded}>
-      <View style={styles.historyTile}>
-        <PressScaleTouchable
-          onPress={onToggle}
-          accessibilityRole="button"
-          accessibilityLabel={`${pattern.merchant}. ${mixed ? 'No default. ' : 'Suggested category: '}${breakdown}. ${metaText}`}
-          accessibilityState={{ expanded }}
-          testID={`matching-row-history-${pattern.key}`}
-          style={styles.historyRow}
-          pressScale="subtle"
-        >
-          <View style={styles.historyHeading}>
-            <AppText variant="heading" weight="semibold" style={styles.historyTitle}>
-              {pattern.merchant}
-            </AppText>
-            {mixed ? (
-              <Badge variant="warning" size="sm">
-                {strings.historicalNoDefaultBadge}
-              </Badge>
-            ) : null}
-            <AppIcon
-              name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-              size={16}
-              color={theme.textSecondary}
-            />
-          </View>
-          {mixed ? (
-            <AppText variant="caption" color="secondary">
-              {metaText}
-            </AppText>
+      <ListRow
+        title={pattern.merchant}
+        subtitle={
+          mixed ? (
+            metaText
           ) : (
             <Inline wrap align="center">
               <AppText variant="caption" color="secondary">
@@ -356,9 +339,29 @@ export function HistoricalPatternRow({
                 {strings.historicalCollapsedMetaSuffix(pattern.currencyCode, pattern.kind)}
               </AppText>
             </Inline>
-          )}
-        </PressScaleTouchable>
-      </View>
+          )
+        }
+        trailing={
+          <Inline align="center" gap="xs">
+            {mixed ? (
+              <Badge variant="warning" size="sm">
+                {strings.historicalNoDefaultBadge}
+              </Badge>
+            ) : null}
+            <AppIcon
+              name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
+              size={16}
+              color={theme.textSecondary}
+            />
+          </Inline>
+        }
+        accessibilityLabel={`${pattern.merchant}. ${mixed ? 'No default. ' : 'Suggested category: '}${breakdown}. ${metaText}`}
+        accessibilityState={{ expanded }}
+        onPress={onToggle}
+        chevron={false}
+        wrap
+        testID={`matching-row-history-${pattern.key}`}
+      />
       {expanded ? (
         <HistoricalPatternDetail capture={capture} pattern={pattern} mixed={mixed} />
       ) : null}
@@ -1018,10 +1021,6 @@ function ScopePanel({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  historyTile: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
-  historyRow: { gap: 2 },
-  historyHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  historyTitle: { flex: 1, flexShrink: 1 },
   detailBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
   statusInset: {
     borderWidth: StyleSheet.hairlineWidth,

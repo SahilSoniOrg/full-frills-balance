@@ -29,22 +29,16 @@ import {
   countUnrepresentedPausedMerchants,
   SavedCaptureDefaults,
 } from '@/src/features/settings/components/SavedCaptureDefaults';
-import type {
-  CaptureReviewItem,
-  HistoricalCategoryPattern,
-} from '@/src/services/transaction-intelligence/captureReviewService';
+import {
+  CAPTURE_SUGGESTION_SORT_OPTIONS,
+  filterAndSortCaptureSuggestions,
+  type CaptureSuggestionSort,
+} from '@/src/features/settings/utils/captureSuggestionSort';
 import { formatDate } from '@/src/utils/dateFormatting';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 const PAGE_SIZE = 20;
 type SuggestionsTab = 'review' | 'saved';
-type SuggestionSort = 'latest' | 'alphabetical' | 'repeats';
-
-const SORT_OPTIONS = [
-  { id: 'latest', label: strings.historicalSortLatest },
-  { id: 'alphabetical', label: strings.historicalSortAlphabetical },
-  { id: 'repeats', label: strings.historicalSortRepeats },
-] as const;
 
 interface CaptureSuggestionsViewProps {
   capture: TransactionCaptureViewModel;
@@ -136,11 +130,14 @@ function ReviewSuggestions({
   reviewCount: number;
 }) {
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SuggestionSort>('latest');
+  const [sort, setSort] = useState<CaptureSuggestionSort>('latest');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set());
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
-  const filtered = useMemo(() => filterAndSort(capture, search, sort), [capture, search, sort]);
+  const filtered = useMemo(
+    () => filterAndSortCaptureSuggestions(capture, search, sort),
+    [capture, search, sort],
+  );
   const visibleTotal = Object.values(filtered).reduce((total, rows) => total + rows.length, 0);
 
   const toggleRow = (id: string) => {
@@ -188,7 +185,7 @@ function ReviewSuggestions({
                 {strings.historicalSortBy}
               </AppText>
               <AppSegmentedControl
-                options={SORT_OPTIONS}
+                options={CAPTURE_SUGGESTION_SORT_OPTIONS}
                 value={sort}
                 onChange={value => resetView(search, value)}
                 flex
@@ -232,42 +229,32 @@ function ReviewSuggestions({
                 const accountLabel = item.financialAccountName ?? strings.unavailableAccount;
                 const dateLabel = formatDate(item.journalDate);
                 return (
-                  <SuggestionItemSurface key={id} expanded={expandedRows.has(id)}>
-                    <ListRow
-                      title={title}
-                      subtitle={
-                        <Inline wrap align="center">
-                          <AppText variant="caption" color="secondary" weight="medium">
-                            {`${item.description || strings.privateDescription} · ${categoryLabel} · `}
-                          </AppText>
-                          <SuggestionAccountLabel
-                            account={item.financialAccount}
-                            name={item.financialAccountName}
-                            placeholder={strings.unavailableAccount}
-                          />
-                          <AppText variant="caption" color="secondary" weight="medium">
-                            {` · ${dateLabel}`}
-                          </AppText>
-                        </Inline>
-                      }
-                      accessibilityLabel={`${title}, ${item.description || strings.privateDescription} · ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
-                      trailing={
-                        <SuggestionAmount
-                          amount={item.totalAmount}
-                          currencyCode={item.currencyCode}
-                          expanded={expandedRows.has(id)}
+                  <ExpandableReviewRow
+                    key={id}
+                    id={id}
+                    title={title}
+                    subtitle={
+                      <Inline wrap align="center">
+                        <AppText variant="caption" color="secondary" weight="medium">
+                          {`${item.description || strings.privateDescription} · ${categoryLabel} · `}
+                        </AppText>
+                        <SuggestionAccountLabel
+                          account={item.financialAccount}
+                          name={item.financialAccountName}
+                          placeholder={strings.unavailableAccount}
                         />
-                      }
-                      onPress={() => toggleRow(id)}
-                      accessibilityState={{ expanded: expandedRows.has(id) }}
-                      chevron={false}
-                      wrap
-                      testID={`matching-row-${id}`}
-                    />
-                    {expandedRows.has(id) ? (
-                      <DefaultedDetail capture={capture} item={item} />
-                    ) : null}
-                  </SuggestionItemSurface>
+                        <AppText variant="caption" color="secondary" weight="medium">
+                          {` · ${dateLabel}`}
+                        </AppText>
+                      </Inline>
+                    }
+                    accessibilityLabel={`${title}, ${item.description || strings.privateDescription} · ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
+                    amount={item.totalAmount}
+                    currencyCode={item.currencyCode}
+                    expanded={expandedRows.has(id)}
+                    onToggle={() => toggleRow(id)}
+                    detail={<DefaultedDetail capture={capture} item={item} />}
+                  />
                 );
               })}
               <ShowMore
@@ -305,42 +292,32 @@ function ReviewSuggestions({
                 const accountLabel = item.suggestedDefaultAccountName ?? strings.unavailableAccount;
                 const dateLabel = formatDate(item.journalDate);
                 return (
-                  <SuggestionItemSurface key={id} expanded={expandedRows.has(id)}>
-                    <ListRow
-                      title={title}
-                      subtitle={
-                        <Inline wrap align="center">
-                          <AppText variant="caption" color="secondary" weight="medium">
-                            {`${categoryLabel} · `}
-                          </AppText>
-                          <SuggestionAccountLabel
-                            account={item.suggestedDefaultAccount}
-                            name={item.suggestedDefaultAccountName}
-                            placeholder={strings.unavailableAccount}
-                          />
-                          <AppText variant="caption" color="secondary" weight="medium">
-                            {` · ${dateLabel}`}
-                          </AppText>
-                        </Inline>
-                      }
-                      accessibilityLabel={`${title}, ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
-                      trailing={
-                        <SuggestionAmount
-                          amount={item.totalAmount}
-                          currencyCode={item.currencyCode}
-                          expanded={expandedRows.has(id)}
+                  <ExpandableReviewRow
+                    key={id}
+                    id={id}
+                    title={title}
+                    subtitle={
+                      <Inline wrap align="center">
+                        <AppText variant="caption" color="secondary" weight="medium">
+                          {`${categoryLabel} · `}
+                        </AppText>
+                        <SuggestionAccountLabel
+                          account={item.suggestedDefaultAccount}
+                          name={item.suggestedDefaultAccountName}
+                          placeholder={strings.unavailableAccount}
                         />
-                      }
-                      onPress={() => toggleRow(id)}
-                      accessibilityState={{ expanded: expandedRows.has(id) }}
-                      chevron={false}
-                      wrap
-                      testID={`matching-row-${id}`}
-                    />
-                    {expandedRows.has(id) ? (
-                      <CategoryCandidateDetail capture={capture} item={item} />
-                    ) : null}
-                  </SuggestionItemSurface>
+                        <AppText variant="caption" color="secondary" weight="medium">
+                          {` · ${dateLabel}`}
+                        </AppText>
+                      </Inline>
+                    }
+                    accessibilityLabel={`${title}, ${categoryLabel} · ${accountLabel} · ${dateLabel}`}
+                    amount={item.totalAmount}
+                    currencyCode={item.currencyCode}
+                    expanded={expandedRows.has(id)}
+                    onToggle={() => toggleRow(id)}
+                    detail={<CategoryCandidateDetail capture={capture} item={item} />}
+                  />
                 );
               })}
               <ShowMore
@@ -441,27 +418,17 @@ function ReviewSuggestions({
                 const id = `name:${item.journalId}`;
                 const scope = descriptionScope(item);
                 return (
-                  <SuggestionItemSurface key={id} expanded={expandedRows.has(id)}>
-                    <ListRow
-                      title={item.description || strings.privateDescription}
-                      subtitle={`${item.merchantName ?? item.merchantKey ?? strings.unknownMerchant} · ${[scope.currencyCode, scope.amount].filter(value => value != null).join(' ')} · ${scope.kind}`}
-                      trailing={
-                        <SuggestionAmount
-                          amount={item.totalAmount}
-                          currencyCode={item.currencyCode}
-                          expanded={expandedRows.has(id)}
-                        />
-                      }
-                      onPress={() => toggleRow(id)}
-                      accessibilityState={{ expanded: expandedRows.has(id) }}
-                      chevron={false}
-                      wrap
-                      testID={`matching-row-${id}`}
-                    />
-                    {expandedRows.has(id) ? (
-                      <NameCandidateDetail capture={capture} item={item} />
-                    ) : null}
-                  </SuggestionItemSurface>
+                  <ExpandableReviewRow
+                    key={id}
+                    id={id}
+                    title={item.description || strings.privateDescription}
+                    subtitle={`${item.merchantName ?? item.merchantKey ?? strings.unknownMerchant} · ${[scope.currencyCode, scope.amount].filter(value => value != null).join(' ')} · ${scope.kind}`}
+                    amount={item.totalAmount}
+                    currencyCode={item.currencyCode}
+                    expanded={expandedRows.has(id)}
+                    onToggle={() => toggleRow(id)}
+                    detail={<NameCandidateDetail capture={capture} item={item} />}
+                  />
                 );
               })}
               <ShowMore
@@ -482,6 +449,47 @@ function ReviewSuggestions({
   );
 }
 
+function ExpandableReviewRow({
+  id,
+  title,
+  subtitle,
+  accessibilityLabel,
+  amount,
+  currencyCode,
+  expanded,
+  onToggle,
+  detail,
+}: {
+  id: string;
+  title: string;
+  subtitle: ReactNode;
+  accessibilityLabel?: string;
+  amount: number;
+  currencyCode: string;
+  expanded: boolean;
+  onToggle: () => void;
+  detail: ReactNode;
+}) {
+  return (
+    <SuggestionItemSurface expanded={expanded}>
+      <ListRow
+        title={title}
+        subtitle={subtitle}
+        accessibilityLabel={accessibilityLabel}
+        trailing={
+          <SuggestionAmount amount={amount} currencyCode={currencyCode} expanded={expanded} />
+        }
+        onPress={onToggle}
+        accessibilityState={{ expanded }}
+        chevron={false}
+        wrap
+        testID={`matching-row-${id}`}
+      />
+      {expanded ? detail : null}
+    </SuggestionItemSurface>
+  );
+}
+
 function SuggestionGroup({
   id,
   title,
@@ -497,7 +505,7 @@ function SuggestionGroup({
   description: string;
   expanded: boolean;
   onToggle: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   if (count === 0) return null;
   return (
@@ -538,121 +546,6 @@ function ShowMore<T>({
       {strings.showMore}
     </AppButton>
   ) : null;
-}
-
-function filterAndSort(capture: TransactionCaptureViewModel, search: string, sort: SuggestionSort) {
-  const query = search.trim().toLocaleLowerCase();
-  const includes = (fields: (string | number | undefined)[]) =>
-    !query ||
-    fields
-      .filter(value => value != null)
-      .join(' ')
-      .toLocaleLowerCase()
-      .includes(query);
-  const reviewItems = (
-    values: CaptureReviewItem[],
-    fields: (item: CaptureReviewItem) => (string | number | undefined)[],
-    title: (item: CaptureReviewItem) => string = item => item.merchantKey || item.description || '',
-  ) =>
-    values
-      .filter(item => includes(fields(item)))
-      .sort((left, right) => sortReviewRows(left, right, sort, title));
-  const historical = (values: HistoricalCategoryPattern[]) =>
-    values
-      .filter(pattern =>
-        includes([
-          pattern.merchant,
-          pattern.financialAccountName,
-          pattern.currencyCode,
-          pattern.kind,
-          ...pattern.categories.map(category => category.name),
-        ]),
-      )
-      .sort((left, right) => sortHistoricalRows(left, right, sort));
-
-  return {
-    defaulted: reviewItems(
-      capture.defaulted,
-      item => [
-        item.merchantKey,
-        item.description,
-        item.currencyCode,
-        item.financialAccountName,
-        item.totalAmount,
-        ...(item.currentCategoryNames ?? []),
-      ],
-      item => item.merchantKey || item.description || '',
-    ),
-    category: reviewItems(
-      capture.categoryCandidates,
-      item => [
-        item.merchantKey,
-        item.description,
-        item.suggestedCategoryName,
-        item.suggestedDefaultAccountName,
-        item.currencyCode,
-        item.suggestedDefault?.kind,
-        item.totalAmount,
-      ],
-      item => item.merchantKey || item.description || '',
-    ),
-    historical: historical(capture.historicalCategorySuggestions),
-    mixed: historical(capture.mixedHistoricalCategoryPatterns),
-    names: reviewItems(
-      capture.descriptionCandidates,
-      item => {
-        const scope = descriptionScope(item);
-        return [item.description, item.merchantKey, scope.amount, scope.currencyCode, scope.kind];
-      },
-      item => item.description || item.merchantKey || '',
-    ),
-  };
-}
-
-function sortReviewRows(
-  left: CaptureReviewItem,
-  right: CaptureReviewItem,
-  sort: SuggestionSort,
-  title: (item: CaptureReviewItem) => string,
-) {
-  const nameOrder = title(left).localeCompare(title(right));
-  if (sort === 'alphabetical')
-    return (
-      nameOrder ||
-      right.journalDate - left.journalDate ||
-      left.journalId.localeCompare(right.journalId)
-    );
-  return (
-    right.journalDate - left.journalDate ||
-    nameOrder ||
-    left.journalId.localeCompare(right.journalId)
-  );
-}
-
-function sortHistoricalRows(
-  left: HistoricalCategoryPattern,
-  right: HistoricalCategoryPattern,
-  sort: SuggestionSort,
-) {
-  if (sort === 'alphabetical') {
-    return (
-      left.merchant.localeCompare(right.merchant) ||
-      right.latestJournalDate - left.latestJournalDate ||
-      right.journalCount - left.journalCount
-    );
-  }
-  if (sort === 'repeats') {
-    return (
-      right.journalCount - left.journalCount ||
-      right.latestJournalDate - left.latestJournalDate ||
-      left.merchant.localeCompare(right.merchant)
-    );
-  }
-  return (
-    right.latestJournalDate - left.latestJournalDate ||
-    right.journalCount - left.journalCount ||
-    left.merchant.localeCompare(right.merchant)
-  );
 }
 
 function CaptureSuggestionsScreen() {
