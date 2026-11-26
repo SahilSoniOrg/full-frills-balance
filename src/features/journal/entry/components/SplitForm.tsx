@@ -136,6 +136,7 @@ export function SplitForm({
   const [splitMode, setSplitMode] = useState<'equal' | 'custom'>('equal');
   const [isQuickAdding, setIsQuickAdding] = useState(false);
   const initialPersonSelected = useRef(false);
+  const pendingEqualizeRef = useRef(false);
   const currencySymbol = CURRENCY_SYMBOLS[currencyCode] || currencyCode;
   const hasTotal = totals.total > 0;
   // Split entries require at least one allocation. The controller also
@@ -173,6 +174,13 @@ export function SplitForm({
     () => new Set(peopleGroups.flatMap(group => group.accountIds)),
     [peopleGroups],
   );
+  const effectiveAllocationAccounts = useMemo(() => {
+    const existingIds = new Set(allocationAccounts.map(account => account.id));
+    const personExtras = allAccounts.filter(
+      account => personAccountIds.has(account.id) && !existingIds.has(account.id),
+    );
+    return personExtras.length > 0 ? [...allocationAccounts, ...personExtras] : allocationAccounts;
+  }, [allAccounts, allocationAccounts, personAccountIds]);
   const selectedPersonIds = peopleGroups
     .filter(group => group.accountIds.some(id => splits.some(row => row.accountId === id)))
     .map(group => group.personId as PersonId);
@@ -197,6 +205,7 @@ export function SplitForm({
         ) ?? allAccounts.find(account => group.accountIds.includes(account.id));
       const account =
         target ?? (await ensurePersonAccount(workplaceId, personId, 'receivable', currencyCode));
+      if (splitMode === 'equal') pendingEqualizeRef.current = true;
       addSplitRowWithAccount(account.id);
     },
     [
@@ -205,6 +214,7 @@ export function SplitForm({
       currencyCode,
       peopleGroups,
       removeSplitRow,
+      splitMode,
       splits,
       updateSplitRow,
       workplaceId,
@@ -221,6 +231,11 @@ export function SplitForm({
     initialPersonSelected.current = true;
     void onTogglePerson(initialPersonId);
   }, [initialPersonId, onTogglePerson, selectedPersonIds.length, workplaceId]);
+  useEffect(() => {
+    if (!pendingEqualizeRef.current || splitMode !== 'equal' || !canEqualize) return;
+    pendingEqualizeRef.current = false;
+    handleEqualSplit();
+  }, [canEqualize, handleEqualSplit, splitMode, splits.length]);
   const handleAmountChange = useCallback(
     (id: string, amount: string) => {
       updateAmount(id, amount);
@@ -404,7 +419,7 @@ export function SplitForm({
         <AllocationRows
           rows={splits.map(row => ({ ...row, fx: splitFx[row.id] }))}
           accounts={allAccounts}
-          rowAccounts={allocationAccounts}
+          rowAccounts={effectiveAllocationAccounts}
           canRemove={canRemove}
           emptyPrompt={typeCopy.allocationEmptyPrompt}
           label={typeCopy.allocationLabel}

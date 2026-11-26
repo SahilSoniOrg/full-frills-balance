@@ -9,9 +9,12 @@ import {
   PressScaleTouchable,
 } from '@/src/components/core';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
+import { Opacity, Shape, Spacing } from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
+import { withOpacity } from '@/src/design-system/colorMath';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import type { PersonId } from '@/src/types/ids';
 
 export type SplitParticipant = { id: PersonId; name: string; color?: string };
@@ -32,6 +35,7 @@ export type SplitPeopleParticipantsBarProps = {
 };
 
 export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProps) {
+  const { theme } = useTheme();
   const [quickAdd, setQuickAdd] = useState(false);
   const [name, setName] = useState('');
   const submit = async () => {
@@ -41,12 +45,12 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
     setQuickAdd(false);
   };
   return (
-    <Stack gap="sm">
-      <AppText variant="caption" weight="semibold">
+    <Stack gap="sm" style={styles.container}>
+      <AppText variant="body" weight="bold" color="primary">
         Participants
       </AppText>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Inline gap="sm">
+        <Inline gap="sm" align="center">
           {props.people.map(person => {
             const selected = props.selectedPersonIds.includes(person.id);
             return (
@@ -56,23 +60,55 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 testID={`split-participant-${person.id}`}
+                surfaceStyle={[
+                  styles.chip,
+                  {
+                    backgroundColor: selected
+                      ? withOpacity(theme.primary, Opacity.soft)
+                      : theme.surfaceSecondary,
+                    borderColor: selected
+                      ? theme.primary
+                      : withOpacity(theme.border, Opacity.active),
+                  },
+                ]}
               >
                 <Inline gap="xs" align="center">
                   <PersonAvatar name={person.name} size={24} maxChars={2} />
-                  <AppText variant="caption">{person.name}</AppText>
-                  {selected ? <AppIcon name={Icon.Check} size={14} /> : null}
+                  <AppText variant="caption" weight={selected ? 'semibold' : 'medium'}>
+                    {person.name}
+                  </AppText>
+                  {selected ? <AppIcon name={Icon.Check} size={14} color="primary" /> : null}
                 </Inline>
               </PressScaleTouchable>
             );
           })}
-          <PressScaleTouchable onPress={() => setQuickAdd(v => !v)} accessibilityRole="button">
-            <AppText variant="caption">+ Quick add</AppText>
+          <PressScaleTouchable
+            onPress={() => setQuickAdd(v => !v)}
+            accessibilityRole="button"
+            surfaceStyle={[
+              styles.chip,
+              {
+                backgroundColor: quickAdd
+                  ? withOpacity(theme.primary, Opacity.soft)
+                  : theme.surfaceSecondary,
+                borderColor: quickAdd ? theme.primary : withOpacity(theme.border, Opacity.active),
+              },
+            ]}
+          >
+            <AppText variant="caption" weight="semibold" color="primary">
+              + Quick add
+            </AppText>
           </PressScaleTouchable>
         </Inline>
       </ScrollView>
       {quickAdd ? (
         <Inline gap="sm" align="center">
-          <AppInputField value={name} onChangeText={setName} placeholder="Person name" />
+          <AppInputField
+            value={name}
+            onChangeText={setName}
+            placeholder="Person name"
+            style={styles.quickAddInput}
+          />
           <AppButton onPress={submit} loading={props.isQuickAdding} disabled={!name.trim()}>
             Add
           </AppButton>
@@ -107,3 +143,21 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+  },
+  chip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  quickAddInput: {
+    flex: 1,
+  },
+});

@@ -78,7 +78,9 @@ export function SplitAllocationRow({
   row,
 }: SplitAllocationRowProps) {
   const { theme, fonts } = useTheme();
-  const category = allocationAccounts.find(account => account.id === row.accountId);
+  const category =
+    allocationAccounts.find(account => account.id === row.accountId) ??
+    allAccounts.find(account => account.id === row.accountId);
   const { pair, inputAmount, inputCurrency, inputPrecision, rowPrecision } = fx;
 
   const handleAccessibilityAction = useCallback(
