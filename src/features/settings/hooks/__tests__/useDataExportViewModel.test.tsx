@@ -108,3 +108,20 @@ it.each(['saved', 'cancelled', 'failed'] as const)(
     expect(viewModel.result.current.isPreparingExport).toBe(false);
   },
 );
+
+it('disables confirmation when selected scope has no workplaces', () => {
+  const runtime = new SharingRuntime(new PlatformShareTransport());
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <SharingProvider runtime={runtime}>{children}</SharingProvider>
+  );
+  const viewModel = renderHook(() => useDataExportViewModel(), { wrapper });
+
+  expect(viewModel.result.current.canConfirmExport).toBe(true);
+
+  act(() => {
+    viewModel.result.current.setBackupScope('selected');
+    viewModel.result.current.setSelectedWorkplaceIds([]);
+  });
+
+  expect(viewModel.result.current.canConfirmExport).toBe(false);
+});

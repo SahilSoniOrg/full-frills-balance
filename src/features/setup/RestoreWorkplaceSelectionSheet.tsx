@@ -30,6 +30,7 @@ export function RestoreWorkplaceSelectionSheet({
   selectedIndexes,
   onChange,
   onClose,
+  onDismiss,
   onConfirm,
 }: {
   visible: boolean;
@@ -37,9 +38,10 @@ export function RestoreWorkplaceSelectionSheet({
   selectedIndexes: readonly number[];
   onChange: (indexes: readonly number[]) => void;
   onClose: () => void;
+  onDismiss?: () => void;
   onConfirm: () => void;
 }) {
-  const allSelected = selectedIndexes.length === workplaces.length;
+  const allSelected = workplaces.length > 0 && selectedIndexes.length === workplaces.length;
   const selectAllState = allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false;
 
   return (
@@ -47,6 +49,7 @@ export function RestoreWorkplaceSelectionSheet({
       visible={visible}
       title="Restore workplaces"
       onClose={onClose}
+      onDismiss={onDismiss}
       position="bottomSheet"
       fixedHeight={false}
       maxHeightPercent={82}

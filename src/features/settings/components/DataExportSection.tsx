@@ -1,6 +1,7 @@
 import { ListGroup, ListRow, Icon, AppInput } from '@/src/components/core';
 import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { AppConfig } from '@/src/constants';
 import { formPrimitivesStrings as formCopy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Stack } from '@/src/design-system';
@@ -14,6 +15,8 @@ type DataExportSectionProps = {
 
 export function DataExportSection({ onImport }: DataExportSectionProps) {
   const vm = useDataExportViewModel();
+  const afterNamingDismiss = useAfterDismiss();
+  const afterScopeDismiss = useAfterDismiss();
   const scopeLabel =
     vm.backupScope === 'active'
       ? AppConfig.strings.update.exportScopeActive
@@ -54,7 +57,11 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
       <ModalSurface
         visible={vm.isNamingExport && !vm.isScopePickerVisible && !vm.isExporting}
         title={AppConfig.strings.settings.data.exportFilenameLabel}
-        onClose={() => vm.setIsNamingExport(false)}
+        onClose={() => {
+          afterNamingDismiss.cancel();
+          vm.setIsNamingExport(false);
+        }}
+        onDismiss={afterNamingDismiss.onDismiss}
         position="center"
         fixedHeight={false}
         scrollable={false}
@@ -66,14 +73,22 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               {
                 label: AppConfig.strings.common.cancel,
                 role: 'secondary',
-                onPress: () => vm.setIsNamingExport(false),
+                onPress: () => {
+                  afterNamingDismiss.cancel();
+                  vm.setIsNamingExport(false);
+                },
                 disabled: vm.isExporting,
               },
               {
                 label: AppConfig.strings.settings.data.exportBtn,
-                onPress: vm.onConfirmExport,
+                onPress: () => {
+                  afterNamingDismiss.run(() => {
+                    void vm.onConfirmExport();
+                  });
+                  vm.setIsNamingExport(false);
+                },
                 loading: vm.isExporting,
-                disabled: vm.isExporting,
+                disabled: vm.isExporting || !vm.canConfirmExport,
               },
             ]}
           />
@@ -93,7 +108,10 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
           testID="data-export-scope"
           title={AppConfig.strings.update.exportScopeTitle}
           subtitle={scopeLabel}
-          onPress={() => vm.setIsScopePickerVisible(true)}
+          onPress={() => {
+            afterNamingDismiss.run(() => vm.setIsScopePickerVisible(true));
+            vm.setIsNamingExport(false);
+          }}
           chevron
         />
       </ModalSurface>
@@ -106,11 +124,21 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         selectedWorkplaceIds={vm.selectedWorkplaceIds}
         onScopeChange={scope => {
           vm.setBackupScope(scope);
-          if (scope !== 'selected') vm.setIsScopePickerVisible(false);
+          if (scope !== 'selected') {
+            afterScopeDismiss.run(() => vm.setIsNamingExport(true));
+            vm.setIsScopePickerVisible(false);
+          }
         }}
         onSelectedWorkplaceIdsChange={vm.setSelectedWorkplaceIds}
-        onClose={() => vm.setIsScopePickerVisible(false)}
-        onConfirm={() => vm.setIsScopePickerVisible(false)}
+        onClose={() => {
+          afterScopeDismiss.run(() => vm.setIsNamingExport(true));
+          vm.setIsScopePickerVisible(false);
+        }}
+        onDismiss={afterScopeDismiss.onDismiss}
+        onConfirm={() => {
+          afterScopeDismiss.run(() => vm.setIsNamingExport(true));
+          vm.setIsScopePickerVisible(false);
+        }}
         confirmLabel={formCopy.done}
       />
     </Stack>

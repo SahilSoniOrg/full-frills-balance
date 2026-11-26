@@ -55,4 +55,21 @@ describe('RestoreWorkplaceSelectionSheet', () => {
     fireEvent.press(screen.getByText('Discard all'));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps select-all unchecked when no workplaces are available', () => {
+    render(
+      <RestoreWorkplaceSelectionSheet
+        visible
+        workplaces={[]}
+        selectedIndexes={[]}
+        onChange={jest.fn()}
+        onClose={jest.fn()}
+        onConfirm={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('checkbox', { name: 'Select all workplaces' }).props.accessibilityState,
+    ).toMatchObject({ checked: false });
+  });
 });

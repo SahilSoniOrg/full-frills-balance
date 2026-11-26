@@ -8,6 +8,7 @@ import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoti
 interface PrivacyAcknowledgementSheetProps {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   onOpenFullPolicy: () => void;
   onAcknowledge: () => void;
 }
@@ -15,6 +16,7 @@ interface PrivacyAcknowledgementSheetProps {
 export function PrivacyAcknowledgementSheet({
   visible,
   onClose,
+  onDismiss,
   onOpenFullPolicy,
   onAcknowledge,
 }: PrivacyAcknowledgementSheetProps) {
@@ -25,6 +27,7 @@ export function PrivacyAcknowledgementSheet({
       visible={visible}
       title={copy.acknowledgementPromptTitle}
       onClose={onClose}
+      onDismiss={onDismiss}
       contentTestID="privacy-acknowledgement-scroll"
       maxHeightPercent={70}
       fixedHeight={false}

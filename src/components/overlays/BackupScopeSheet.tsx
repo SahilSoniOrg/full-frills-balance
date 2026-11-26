@@ -15,6 +15,7 @@ export function BackupScopeSheet({
   onScopeChange,
   onSelectedWorkplaceIdsChange,
   onClose,
+  onDismiss,
   onConfirm,
   confirmLabel = 'Export backup',
 }: {
@@ -26,6 +27,7 @@ export function BackupScopeSheet({
   onScopeChange: (scope: BackupScope) => void;
   onSelectedWorkplaceIdsChange: (ids: string[]) => void;
   onClose: () => void;
+  onDismiss?: () => void;
   onConfirm: () => void;
   confirmLabel?: string;
 }) {
@@ -54,6 +56,7 @@ export function BackupScopeSheet({
       visible={visible}
       title={copy.exportScopeTitle}
       onClose={onClose}
+      onDismiss={onDismiss}
       position="bottomSheet"
       fixedHeight={false}
       maxHeightPercent={82}

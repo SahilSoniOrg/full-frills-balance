@@ -28,22 +28,39 @@ jest.mock('@/src/design-system', () => {
 });
 
 jest.mock('@/src/components/legal/PrivacyAcknowledgementSheet', () => {
-  const { Text, TouchableOpacity } = jest.requireActual(
+  const React = jest.requireActual<typeof import('react')>('react');
+  const { Text, TouchableOpacity, View } = jest.requireActual(
     'react-native',
   ) as typeof import('react-native');
   return {
     PrivacyAcknowledgementSheet: ({
       visible,
+      onDismiss,
       onAcknowledge,
+      onOpenFullPolicy,
     }: {
       visible: boolean;
+      onDismiss?: () => void;
       onAcknowledge: () => void;
-    }) =>
-      visible ? (
-        <TouchableOpacity testID="privacy-acknowledgement-sheet" onPress={onAcknowledge}>
-          <Text>Acknowledge privacy</Text>
-        </TouchableOpacity>
-      ) : null,
+      onOpenFullPolicy: () => void;
+    }) => {
+      const wasVisible = React.useRef(false);
+      React.useEffect(() => {
+        const closed = wasVisible.current && !visible;
+        wasVisible.current = visible;
+        if (closed) onDismiss?.();
+      }, [visible, onDismiss]);
+      return visible ? (
+        <View>
+          <TouchableOpacity testID="privacy-acknowledgement-sheet" onPress={onAcknowledge}>
+            <Text>Acknowledge privacy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity testID="privacy-full-policy" onPress={onOpenFullPolicy}>
+            <Text>Full policy</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null;
+    },
   };
 });
 
@@ -73,6 +90,17 @@ describe('DeviceNameStep privacy acknowledgement', () => {
 
     fireEvent.press(screen.getByTestId('onboarding-privacy-notice-button'));
     expect(defaultProps.onPrivacyNotice).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the full privacy policy after the sheet dismisses', () => {
+    render(<DeviceNameStep {...defaultProps} isPrivacyPolicyAcknowledged={false} />);
+
+    fireEvent.press(screen.getByTestId('onboarding-restore-button'));
+    expect(screen.getByTestId('privacy-full-policy')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('privacy-full-policy'));
+    expect(defaultProps.onPrivacyNotice).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onRestore).not.toHaveBeenCalled();
   });
 
   it('allows onboarding after the current privacy policy is acknowledged', () => {

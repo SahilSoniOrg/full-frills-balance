@@ -6,6 +6,7 @@ import { Keyboard, StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { useState } from 'react';
 
 interface DeviceNameStepProps {
@@ -31,11 +32,13 @@ export function DeviceNameStep({
 }: DeviceNameStepProps) {
   const [isPrivacyPromptVisible, setPrivacyPromptVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<'continue' | 'restore' | null>(null);
+  const afterPrivacyDismiss = useAfterDismiss();
 
   const runAction = (action: 'continue' | 'restore') => {
     if (action === 'continue' && !name.trim()) return;
     Keyboard.dismiss();
     if (!isPrivacyPolicyAcknowledged) {
+      afterPrivacyDismiss.cancel();
       setPendingAction(action);
       setPrivacyPromptVisible(true);
       return;
@@ -46,17 +49,17 @@ export function DeviceNameStep({
 
   const acknowledgePrivacyPolicy = () => {
     onAcknowledgePrivacyPolicy();
-    setPrivacyPromptVisible(false);
     const action = pendingAction;
     setPendingAction(null);
-    if (action === 'restore') onRestore();
-    else if (action === 'continue') onContinue();
+    if (action === 'restore') afterPrivacyDismiss.run(onRestore);
+    else if (action === 'continue') afterPrivacyDismiss.run(onContinue);
+    setPrivacyPromptVisible(false);
   };
 
   const openFullPrivacyPolicy = () => {
-    setPrivacyPromptVisible(false);
     setPendingAction(null);
-    onPrivacyNotice();
+    afterPrivacyDismiss.run(onPrivacyNotice);
+    setPrivacyPromptVisible(false);
   };
 
   return (
@@ -143,9 +146,11 @@ export function DeviceNameStep({
       <PrivacyAcknowledgementSheet
         visible={isPrivacyPromptVisible}
         onClose={() => {
+          afterPrivacyDismiss.cancel();
           setPrivacyPromptVisible(false);
           setPendingAction(null);
         }}
+        onDismiss={afterPrivacyDismiss.onDismiss}
         onOpenFullPolicy={openFullPrivacyPolicy}
         onAcknowledge={acknowledgePrivacyPolicy}
       />

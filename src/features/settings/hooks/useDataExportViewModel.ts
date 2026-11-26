@@ -10,6 +10,10 @@ import type { ShareOutcome } from '@/src/types/sharing';
 import type { BackupScope } from '@/src/services/export';
 import { useCallback, useMemo, useState } from 'react';
 
+function formatBackupTimestamp(date = new Date()) {
+  return date.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+}
+
 export interface DataExportViewModel {
   workplaces: ReturnType<typeof useSortedWorkplaces>;
   activeWorkplaceId: WorkplaceId;
@@ -17,6 +21,7 @@ export interface DataExportViewModel {
   selectedWorkplaceIds: string[];
   setBackupScope: (scope: BackupScope) => void;
   setSelectedWorkplaceIds: (ids: string[]) => void;
+  canConfirmExport: boolean;
   isScopePickerVisible: boolean;
   setIsScopePickerVisible: (value: boolean) => void;
   isExporting: boolean;
@@ -45,6 +50,7 @@ export function useDataExportViewModel(): DataExportViewModel {
   const workplaces = useSortedWorkplaces();
   const [isNamingExport, setIsNamingExport] = useState(false);
   const [exportFilename, setExportFilename] = useState('');
+  const [defaultTimestamp, setDefaultTimestamp] = useState(() => formatBackupTimestamp());
   const [backupScope, setBackupScope] = useState<BackupScope>('active');
   const [selectedWorkplaceIds, setSelectedWorkplaceIds] = useState<string[]>([workplaceId]);
   const [isScopePickerVisible, setIsScopePickerVisible] = useState(false);
@@ -54,25 +60,29 @@ export function useDataExportViewModel(): DataExportViewModel {
     if (backupScope === 'active') return [workplaceId];
     return [...selectedWorkplaceIds] as WorkplaceId[];
   }, [backupScope, selectedWorkplaceIds, workplaceId, workplaces]);
+  const canConfirmExport = backupScope !== 'selected' || selectedWorkplaceIds.length > 0;
   const sanitizedName = exportFilename
     .trim()
     .replace(/[^a-z0-9-_]/gi, '-')
     .substring(0, 50);
   const source = useMemo(() => {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     return createBackupShareable({
       id: 'data-export',
       title: 'Data Backup',
-      filename: sanitizedName || `balance-export-${timestamp}`,
+      filename: sanitizedName || `balance-export-${defaultTimestamp}`,
       workplaceIds,
       exportScope: backupScope === 'all' ? 'all' : 'selected',
     });
-  }, [backupScope, sanitizedName, workplaceIds]);
+  }, [backupScope, defaultTimestamp, sanitizedName, workplaceIds]);
   const shareable = useShareable(source, { errorMessage: 'Could not export data' });
 
-  const onExport = useCallback(() => setIsNamingExport(true), []);
+  const onExport = useCallback(() => {
+    setDefaultTimestamp(formatBackupTimestamp());
+    setIsNamingExport(true);
+  }, []);
 
   const onConfirmExport = useCallback(async () => {
+    if (!canConfirmExport) return;
     analytics.trackFeatureUsage('data_management', 'export_initiated');
     // Dismiss before delivery. Android follow-ups (folder picker, Just Save /
     // Share) use system sheets or non-native ConfirmDialog overlays that cannot
@@ -86,7 +96,7 @@ export function useDataExportViewModel(): DataExportViewModel {
         filename_length: sanitizedName.length,
       });
     }
-  }, [sanitizedName, shareable]);
+  }, [canConfirmExport, sanitizedName, shareable]);
 
   const progress = shareable.progress;
   return {
@@ -96,6 +106,7 @@ export function useDataExportViewModel(): DataExportViewModel {
     selectedWorkplaceIds,
     setBackupScope,
     setSelectedWorkplaceIds,
+    canConfirmExport,
     isScopePickerVisible,
     setIsScopePickerVisible,
     isExporting: shareable.isPending,

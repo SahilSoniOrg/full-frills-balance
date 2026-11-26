@@ -1,4 +1,5 @@
 import { AppText } from '@/src/components/core';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
@@ -58,15 +59,27 @@ export function RestoreSourceSlice({
 }) {
   const plugins = useMemo(() => importRegistry.getAll(), []);
   const [progressMessage, setProgressMessage] = useState<string | undefined>();
-  const [selection, setSelection] = useState<PendingRestoreSelection | undefined>(() => {
+  const [sheetState, setSheetState] = useState<{
+    visible: boolean;
+    selection: PendingRestoreSelection | undefined;
+  }>(() => {
     const sources = e2eRestoreSelectionSources();
-    return sources ? pendingSelection(sources) : undefined;
+    return {
+      visible: Boolean(sources),
+      selection: sources ? pendingSelection(sources) : undefined,
+    };
   });
+  const afterSelectionDismiss = useAfterDismiss();
+  const selection = sheetState.selection;
   const preparing = progressMessage !== undefined || isCompleting;
 
-  const presentSelection = useCallback((sources: readonly RestoreSourceOutput[]) => {
-    setSelection(pendingSelection(sources));
-  }, []);
+  const presentSelection = useCallback(
+    (sources: readonly RestoreSourceOutput[]) => {
+      afterSelectionDismiss.cancel();
+      setSheetState({ visible: true, selection: pendingSelection(sources) });
+    },
+    [afterSelectionDismiss],
+  );
 
   const onSelect = useCallback(
     async (pluginId: string) => {
@@ -141,28 +154,39 @@ export function RestoreSourceSlice({
       </ScrollView>
       {selection && (
         <RestoreWorkplaceSelectionSheet
-          visible
+          visible={sheetState.visible}
           workplaces={selection.workplaces}
           selectedIndexes={selection.selectedIndexes}
           onChange={selectedIndexes =>
-            setSelection(current => current && { ...current, selectedIndexes })
+            setSheetState(current =>
+              current.selection
+                ? { ...current, selection: { ...current.selection, selectedIndexes } }
+                : current,
+            )
           }
           onClose={() => {
-            forgetAllPreparedRestores();
-            setSelection(undefined);
+            afterSelectionDismiss.run(() => forgetAllPreparedRestores());
+            setSheetState(current => ({ ...current, visible: false }));
+          }}
+          onDismiss={() => {
+            afterSelectionDismiss.onDismiss();
+            setSheetState(current =>
+              current.visible ? current : { visible: false, selection: undefined },
+            );
           }}
           onConfirm={() => {
             const sources = selectPreparedRestoreSources(
               selection.sources,
               selection.selectedIndexes,
             );
-            setSelection(undefined);
             if (!sources) {
-              forgetAllPreparedRestores();
+              afterSelectionDismiss.run(() => forgetAllPreparedRestores());
+              setSheetState(current => ({ ...current, visible: false }));
               return;
             }
             keepPreparedRestores(sources);
-            onContinue(sources);
+            afterSelectionDismiss.run(() => onContinue(sources));
+            setSheetState(current => ({ ...current, visible: false }));
           }}
         />
       )}
