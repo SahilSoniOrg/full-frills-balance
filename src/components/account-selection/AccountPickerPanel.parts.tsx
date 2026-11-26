@@ -141,6 +141,7 @@ export interface AccountPickerDropdownProps {
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   onCreatePersonAccountRequest?: (personId?: string) => void;
+  onCreatePersonRequest?: () => void;
   onSelect: (id: AccountId) => void;
   sections: AccountPickerSections;
   setShowArchived: (show: boolean) => void;
@@ -161,6 +162,7 @@ export function AccountPickerDropdown({
   onClear,
   onCreateAccountRequest,
   onCreatePersonAccountRequest,
+  onCreatePersonRequest,
   onSelect,
   sections,
   setShowArchived,
@@ -314,6 +316,7 @@ export function AccountPickerDropdown({
           selectedAccountId={selectedAccountId}
           onSelect={handleAccountPress}
           toggleSection={toggleSection}
+          onCreatePersonRequest={onCreatePersonRequest}
         />
       ) : (
         sections.map((section, index) => {
@@ -327,11 +330,27 @@ export function AccountPickerDropdown({
               toggleSection={toggleSection}
             >
               {!isSectionCollapsed && (
-                <AccountPickerPillGrid
-                  accounts={section.data}
-                  selectedAccountId={selectedAccountId}
-                  onSelect={handleAccountPress}
-                />
+                <>
+                  <AccountPickerPillGrid
+                    accounts={section.data}
+                    selectedAccountId={selectedAccountId}
+                    onSelect={handleAccountPress}
+                  />
+                  {section.key === 'people' && onCreatePersonRequest && (
+                    <PressScaleTouchable
+                      testID="account-picker-new-person-button"
+                      accessibilityRole="button"
+                      accessibilityLabel="New person"
+                      onPress={onCreatePersonRequest}
+                      style={styles.headerPlusButton}
+                    >
+                      <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
+                      <AppText variant="caption" weight="semibold" color="primary">
+                        New person
+                      </AppText>
+                    </PressScaleTouchable>
+                  )}
+                </>
               )}
             </AccountPickerSection>
           );

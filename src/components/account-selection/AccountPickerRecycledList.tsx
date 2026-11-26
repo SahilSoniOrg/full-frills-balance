@@ -116,12 +116,14 @@ export function AccountPickerRecycledList({
   selectedAccountId,
   onSelect,
   toggleSection,
+  onCreatePersonRequest,
 }: {
   sections: AccountPickerSections;
   collapsedSections: ReadonlySet<string>;
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
   toggleSection: (key: string) => void;
+  onCreatePersonRequest?: () => void;
 }) {
   const rows = useMemo(
     () => buildAccountPickerRows(sections, collapsedSections),
@@ -141,9 +143,23 @@ export function AccountPickerRecycledList({
           index={item.sectionIndex}
           collapsed={item.collapsed}
           toggleSection={toggleSection}
-        />
+        >
+          {item.section.key === 'people' && !item.collapsed && onCreatePersonRequest && (
+            <PressScaleTouchable
+              testID="account-picker-new-person-button"
+              accessibilityRole="button"
+              accessibilityLabel="New person"
+              onPress={onCreatePersonRequest}
+            >
+              <AppIcon name={Icon.Plus} size={Size.xs} />
+              <AppText variant="caption" weight="semibold">
+                New person
+              </AppText>
+            </PressScaleTouchable>
+          )}
+        </AccountPickerSection>
       ),
-    [onSelect, selectedAccountId, toggleSection],
+    [onSelect, selectedAccountId, toggleSection, onCreatePersonRequest],
   );
 
   return (

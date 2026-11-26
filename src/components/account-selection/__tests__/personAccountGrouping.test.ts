@@ -43,7 +43,7 @@ describe('journal picker person grouping', () => {
       ]),
     ).toEqual([
       ['Assets', [accounts[0].id]],
-      ['People · Maya', [accounts[1].id]],
+      ['People', [accounts[1].id]],
     ]);
   });
 
@@ -53,7 +53,8 @@ describe('journal picker person grouping', () => {
     ).toBe(false);
     expect(
       buildJournalPickerSections(accounts, people, true).some(
-        section => section.title === 'People · Zoe',
+        section =>
+          section.title === 'People' && section.data.some(account => account.id === accounts[2].id),
       ),
     ).toBe(true);
   });

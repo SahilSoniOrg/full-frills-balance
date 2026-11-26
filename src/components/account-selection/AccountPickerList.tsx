@@ -203,6 +203,7 @@ type AccountPickerListProps = {
   excludeParentAccounts?: boolean;
   peopleGroups?: readonly PersonPickerGroup[];
   onCreatePersonAccountRequest?: (personId?: string) => void;
+  onCreatePersonRequest?: () => void;
 } & (
   | {
       isMultiple: true;
@@ -234,6 +235,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     excludeParentAccounts = false,
     peopleGroups,
     onCreatePersonAccountRequest,
+    onCreatePersonRequest,
   } = props;
   const { theme } = useTheme();
   const { useCompactAccountPicker } = useAccountDisplayPrefs();
@@ -361,6 +363,20 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
                 </PressScaleTouchable>
               )}
+              {key === 'people' && onCreatePersonRequest && !isSearchMode && (
+                <PressScaleTouchable
+                  testID="account-picker-new-person-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="New person"
+                  onPress={() => onCreatePersonRequest()}
+                  style={styles.actionButton}
+                >
+                  <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
+                  <AppText variant="caption" weight="semibold" color="primary">
+                    New person
+                  </AppText>
+                </PressScaleTouchable>
+              )}
               {!isSearchMode && (
                 <AppIcon
                   name={isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
@@ -380,6 +396,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       toggleSection,
       onCreateRequest,
       onCreatePersonAccountRequest,
+      onCreatePersonRequest,
       onClose,
     ],
   );

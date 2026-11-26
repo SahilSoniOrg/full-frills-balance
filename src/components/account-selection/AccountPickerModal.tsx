@@ -21,6 +21,7 @@ type AccountPickerModalBaseProps = {
   onClose: () => void;
   onDismiss?: () => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
+  onCreatePersonRequest?: () => void;
   excludeParentAccounts?: boolean;
   allowNone?: boolean;
   noneLabel?: string;
@@ -48,6 +49,7 @@ export function AccountPickerModal({
   onDismiss,
   onSelect,
   onCreateRequest,
+  onCreatePersonRequest,
   excludeParentAccounts = false,
   allowNone = false,
   noneLabel = 'None',
@@ -87,6 +89,7 @@ export function AccountPickerModal({
         selectedIds={selectedIds}
         onSelect={onSelect}
         onCreateRequest={onCreateRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         onClose={onClose}
         isMultiple={false}
         excludeParentAccounts={excludeParentAccounts}
@@ -121,6 +124,7 @@ export function MultiAccountPickerModal({
   onDismiss,
   onSelect,
   onCreateRequest,
+  onCreatePersonRequest,
   excludeParentAccounts = false,
 }: MultiAccountPickerModalProps) {
   const [draftSelected, setDraftSelected] = useState<Set<AccountId>>(() => new Set(selectedIds));
@@ -159,6 +163,7 @@ export function MultiAccountPickerModal({
         onToggle={handleToggle}
         onApply={handleApply}
         onCreateRequest={onCreateRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         onClose={onClose}
         isMultiple
         excludeParentAccounts={excludeParentAccounts}

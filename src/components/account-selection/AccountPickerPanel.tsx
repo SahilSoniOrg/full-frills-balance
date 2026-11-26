@@ -62,6 +62,7 @@ export interface AccountPickerPanelProps {
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   peopleGroups?: readonly PersonPickerGroup[];
   onCreatePersonAccountRequest?: (personId?: string) => void;
+  onCreatePersonRequest?: () => void;
   renderNodes: (layout: AccountPickerPanelLayout) => ReactNode;
 }
 
@@ -80,6 +81,7 @@ export function AccountPickerPanel({
   onCreateAccountRequest,
   peopleGroups,
   onCreatePersonAccountRequest,
+  onCreatePersonRequest,
   renderNodes,
 }: AccountPickerPanelProps) {
   const { theme } = useTheme();
@@ -161,6 +163,7 @@ export function AccountPickerPanel({
         onClear={handleClear}
         onCreateAccountRequest={onCreateAccountRequest}
         onCreatePersonAccountRequest={onCreatePersonAccountRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         onSelect={handleSelect}
         sections={sections}
         setShowArchived={setShowArchived}
