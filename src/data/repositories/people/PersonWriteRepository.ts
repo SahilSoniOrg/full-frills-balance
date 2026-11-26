@@ -1,0 +1,259 @@
+import { database } from '@/src/data/database/Database';
+import Person from '@/src/data/models/Person';
+import PersonAccount from '@/src/data/models/PersonAccount';
+import OpenItem from '@/src/data/models/OpenItem';
+import SettlementAllocation from '@/src/data/models/SettlementAllocation';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import {
+  stageModelWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
+import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
+import { AuditAction } from '@/src/types/enums';
+import { Q } from '@nozbe/watermelondb';
+export class PersonWriteRepository {
+  private people() {
+    return database.collections.get<Person>('people');
+  }
+  private links() {
+    return database.collections.get<PersonAccount>('person_accounts');
+  }
+  private items() {
+    return database.collections.get<OpenItem>('open_items');
+  }
+  private allocations() {
+    return database.collections.get<SettlementAllocation>('settlement_allocations');
+  }
+  private async person(w: WorkplaceId, id: PersonId) {
+    const x = await this.people()
+      .query(Q.where('workplace_id', w), Q.where('id', id), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    if (!x[0]) throw new Error('Person not found in workplace');
+    return x[0];
+  }
+  async createPersonInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    input: { name: string; notes?: string; color?: string },
+  ) {
+    const x = this.people().prepareCreate(r => {
+      r.workplaceId = w;
+      r.name = input.name;
+      r.notes = input.notes;
+      r.color = input.color;
+      r.createdAt = new Date();
+      r.updatedAt = new Date();
+    });
+    stageModelWrite(s, () => [
+      x,
+      auditRepository.prepareLog(
+        {
+          entityType: 'person',
+          entityId: x.id,
+          action: AuditAction.CREATE,
+          changes: input,
+          displayName: input.name,
+        },
+        w,
+      ),
+    ]);
+    return x;
+  }
+  async updatePersonInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    id: PersonId,
+    patch: { name?: string; notes?: string; color?: string },
+  ) {
+    const x = await this.person(w, id);
+    stageModelWrite(s, () => [
+      x.prepareUpdate(r => {
+        Object.assign(r, patch);
+        r.updatedAt = new Date();
+      }),
+      auditRepository.prepareLog(
+        { entityType: 'person', entityId: id, action: AuditAction.UPDATE, changes: patch },
+        w,
+      ),
+    ]);
+    return x;
+  }
+  async setPersonArchivedInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    id: PersonId,
+    archived: boolean,
+  ) {
+    const x = await this.person(w, id);
+    stageModelWrite(s, () => [
+      x.prepareUpdate(r => {
+        r.archivedAt = archived ? new Date() : undefined;
+        r.updatedAt = new Date();
+      }),
+      auditRepository.prepareLog(
+        { entityType: 'person', entityId: id, action: AuditAction.UPDATE, changes: { archived } },
+        w,
+      ),
+    ]);
+    return x;
+  }
+  async softDeletePersonInSession(s: AccountingWriteSession, w: WorkplaceId, id: PersonId) {
+    const x = await this.person(w, id);
+    stageModelWrite(s, () => [
+      x.prepareUpdate(r => {
+        r.deletedAt = new Date();
+        r.updatedAt = new Date();
+      }),
+      auditRepository.prepareLog(
+        {
+          entityType: 'person',
+          entityId: id,
+          action: AuditAction.DELETE,
+          changes: { deletedAt: true },
+        },
+        w,
+      ),
+    ]);
+  }
+  async linkAccountInSession(s: AccountingWriteSession, w: WorkplaceId, p: PersonId, a: AccountId) {
+    await this.person(w, p);
+    const matches = await this.links()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('account_id', a),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    if (matches.length) throw new Error('Account already linked to a person');
+    const x = this.links().prepareCreate(r => {
+      r.workplaceId = w;
+      r.personId = p;
+      r.accountId = a;
+      r.createdAt = new Date();
+      r.updatedAt = new Date();
+    });
+    stageModelWrite(s, [x]);
+    return x;
+  }
+  async unlinkAccountInSession(s: AccountingWriteSession, w: WorkplaceId, a: AccountId) {
+    const xs = await this.links()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('account_id', a),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    stageModelWrite(
+      s,
+      xs.map(x =>
+        x.prepareUpdate(r => {
+          r.deletedAt = new Date();
+          r.updatedAt = new Date();
+        }),
+      ),
+    );
+  }
+  async upsertOpenItemInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    i: {
+      personId: PersonId;
+      originatingJournalId: JournalId;
+      accountId: AccountId;
+      direction: 'receivable' | 'payable';
+      originalAmount: number;
+      currencyCode: string;
+    },
+  ) {
+    const rows = await this.items()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('originating_journal_id', i.originatingJournalId),
+        Q.where('account_id', i.accountId),
+      )
+      .fetch();
+    let x = rows.find(r => !r.deletedAt);
+    if (x)
+      stageModelWrite(s, () => [
+        x!.prepareUpdate(r => {
+          Object.assign(r, i);
+          r.updatedAt = new Date();
+        }),
+      ]);
+    else {
+      x = this.items().prepareCreate(r => {
+        r.workplaceId = w;
+        Object.assign(r, i);
+        r.createdAt = new Date();
+        r.updatedAt = new Date();
+      });
+      stageModelWrite(s, [x]);
+    }
+    return x;
+  }
+  async softDeleteOpenItemsInSession(s: AccountingWriteSession, w: WorkplaceId, ids: OpenItemId[]) {
+    const xs = await this.items()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('id', Q.oneOf(ids)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    stageModelWrite(
+      s,
+      xs.map(x =>
+        x.prepareUpdate(r => {
+          r.deletedAt = new Date();
+          r.updatedAt = new Date();
+        }),
+      ),
+    );
+  }
+  async createSettlementAllocationsInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    items: readonly {
+      personId: PersonId;
+      openItemId: OpenItemId;
+      settlementJournalId: JournalId;
+      accountId: AccountId;
+      allocationKind: 'repayment' | 'write_off' | 'auto_settle';
+      amount: number;
+    }[],
+  ) {
+    const xs = items.map(i =>
+      this.allocations().prepareCreate(r => {
+        r.workplaceId = w;
+        Object.assign(r, i);
+        r.isActive = true;
+        r.createdAt = new Date();
+        r.updatedAt = new Date();
+      }),
+    );
+    stageModelWrite(s, xs);
+    return xs;
+  }
+  async deactivateSettlementAllocationsInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    ids: string[],
+  ) {
+    const xs = await this.allocations()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('id', Q.oneOf(ids)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    stageModelWrite(
+      s,
+      xs.map(x =>
+        x.prepareUpdate(r => {
+          r.isActive = false;
+          r.updatedAt = new Date();
+        }),
+      ),
+    );
+  }
+}
+export const personWriteRepository = new PersonWriteRepository();
