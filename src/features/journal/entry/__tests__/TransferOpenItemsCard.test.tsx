@@ -1,7 +1,13 @@
 import { fireEvent, render } from '@/src/testing/render';
-import { renderHook, act } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { peopleReadService } from '@/src/services/people';
+import type { PersonId, OpenItemId } from '@/src/types/ids';
 import { TransferOpenItemsCard } from '../components/TransferOpenItemsCard';
-import { useTransferOpenItems } from '../hooks/useTransferOpenItems';
+import {
+  buildTransferOpenItemAllocations,
+  buildTransferOpenItemQuickFillChips,
+  useTransferOpenItems,
+} from '../hooks/useTransferOpenItems';
 
 describe('TransferOpenItemsCard', () => {
   it('forwards quick fill and mode changes', () => {
@@ -30,7 +36,7 @@ describe('TransferOpenItemsCard', () => {
     const { getByText } = render(
       <TransferOpenItemsCard
         items={[
-          { item: { id: 'a' as never, originalAmount: 8, currencyCode: 'USD' }, remainder: 3 },
+          { item: { id: 'a' as OpenItemId, originalAmount: 8, currencyCode: 'USD' }, remainder: 3 },
         ]}
         totalOpenRemainder={3}
         currencyCode="USD"
@@ -45,21 +51,42 @@ describe('TransferOpenItemsCard', () => {
     fireEvent.press(getByText(/Original/));
     expect(toggle).toHaveBeenCalledWith('a');
   });
-  it('caps selected allocations at remainders and follows item order in pick mode', () => {
+  it('builds capped allocations in input order and generates full/half/item chips', () => {
     const items = [
-      { item: { id: 'a' as never, originalAmount: 5, currencyCode: 'USD' }, remainder: 2 },
-      { item: { id: 'b' as never, originalAmount: 6, currencyCode: 'USD' }, remainder: 4 },
+      { item: { id: 'a' as OpenItemId, originalAmount: 5, currencyCode: 'USD' }, remainder: 2 },
+      { item: { id: 'b' as OpenItemId, originalAmount: 6, currencyCode: 'USD' }, remainder: 4 },
     ];
-    const { result, rerender } = renderHook(
-      ({ mode }) =>
-        useTransferOpenItems({
-          workplaceId: 'w' as never,
-          workplaceCurrency: 'USD',
-          transferAmountText: '5',
-          currencyCode: 'USD',
-        }),
-      {},
+    expect(buildTransferOpenItemAllocations(items, { a: true, b: true }, 5, 'pick')).toEqual([
+      { openItemId: 'a', amount: 2 },
+      { openItemId: 'b', amount: 3 },
+    ]);
+    expect(buildTransferOpenItemAllocations(items, {}, 5, 'fifo')).toEqual([
+      { openItemId: 'a', amount: 2 },
+      { openItemId: 'b', amount: 3 },
+    ]);
+    expect(buildTransferOpenItemQuickFillChips(items, 2).map(chip => chip.amount)).toEqual([
+      6, 3, 2, 4,
+    ]);
+  });
+  it('loads open items through peopleReadService and computes pick allocations', async () => {
+    const detail = {
+      openItems: [
+        { item: { id: 'a' as OpenItemId, originalAmount: 5, currencyCode: 'USD' }, remainder: 2 },
+        { item: { id: 'b' as OpenItemId, originalAmount: 6, currencyCode: 'USD' }, remainder: 4 },
+      ],
+    };
+    const spy = jest
+      .spyOn(peopleReadService, 'getPersonDetail')
+      .mockResolvedValue(detail as Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>);
+    const { result } = renderHook(() =>
+      useTransferOpenItems({
+        workplaceId: 'w' as never,
+        workplaceCurrency: 'USD',
+        personId: 'p' as PersonId,
+        transferAmountText: '5',
+      }),
     );
+    await waitFor(() => expect(result.current.openItems).toHaveLength(2));
     act(() => {
       result.current.setSelectedItemIds({ a: true, b: true });
       result.current.setAllocationMode('pick');
@@ -68,7 +95,6 @@ describe('TransferOpenItemsCard', () => {
       { openItemId: 'a', amount: 2 },
       { openItemId: 'b', amount: 3 },
     ]);
-    void items;
-    void rerender;
+    spy.mockRestore();
   });
 });

@@ -1,7 +1,42 @@
 import { useEffect, useMemo, useState } from 'react';
 import { peopleReadService } from '@/src/services/people';
-import type { RepaymentAllocationInput } from '@/src/services/people';
 import type { OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
+
+export type TransferOpenItem = {
+  item: { id: OpenItemId; originalAmount: number; currencyCode: string };
+  remainder: number;
+};
+export function buildTransferOpenItemAllocations(
+  items: readonly TransferOpenItem[],
+  selectedItemIds: Record<string, boolean>,
+  amount: number,
+  allocationMode: 'fifo' | 'pick',
+) {
+  const active = items.filter(item => allocationMode === 'fifo' || selectedItemIds[item.item.id]);
+  let remaining = Number.isFinite(amount) ? Math.max(0, amount) : 0;
+  return active
+    .map(({ item, remainder }) => {
+      const allocation = Math.min(remainder, remaining);
+      remaining -= allocation;
+      return { openItemId: item.id, amount: allocation };
+    })
+    .filter(allocation => allocation.amount > 0);
+}
+export function buildTransferOpenItemQuickFillChips(
+  items: readonly TransferOpenItem[],
+  precision: number,
+) {
+  const total = items.reduce((sum, item) => sum + item.remainder, 0);
+  return [
+    { id: 'full', label: 'Full balance', amount: total },
+    { id: 'half', label: 'Half', amount: total / 2 },
+    ...items.slice(0, 2).map(x => ({
+      id: x.item.id,
+      label: x.item.currencyCode + ' ' + x.item.originalAmount.toFixed(precision),
+      amount: x.remainder,
+    })),
+  ];
+}
 
 type Props = {
   workplaceId: WorkplaceId;
@@ -22,10 +57,10 @@ export function useTransferOpenItems({
   currencyCode,
 }: Props) {
   const [openItems, setOpenItems] = useState<
-    Array<{
+    {
       item: { id: OpenItemId; originalAmount: number; currencyCode: string };
       remainder: number;
-    }>
+    }[]
   >([]);
   const [allocationMode, setAllocationMode] = useState<'fifo' | 'pick'>(
     initialOpenItemId ? 'pick' : 'fifo',
@@ -36,7 +71,6 @@ export function useTransferOpenItems({
   useEffect(() => {
     let live = true;
     if (!personId) {
-      setOpenItems([]);
       return () => {
         live = false;
       };
@@ -54,28 +88,14 @@ export function useTransferOpenItems({
     [openItems, activeCurrency],
   );
   const totalOpenRemainder = items.reduce((sum, x) => sum + x.remainder, 0);
-  const quickFillChips = [
-    { id: 'full', label: 'Full balance', amount: totalOpenRemainder },
-    { id: 'half', label: 'Half', amount: totalOpenRemainder / 2 },
-    ...items.slice(0, 2).map(x => ({
-      id: x.item.id,
-      label: x.item.currencyCode + ' ' + x.item.originalAmount.toFixed(precision),
-      amount: x.remainder,
-    })),
-  ];
+  const quickFillChips = buildTransferOpenItemQuickFillChips(items, precision);
   const requested = Number(transferAmountText.replace(/,/g, ''));
-  let remaining = Number.isFinite(requested) ? Math.max(0, requested) : 0;
-  const selectedAllocations: RepaymentAllocationInput[] =
-    allocationMode === 'pick'
-      ? items
-          .filter(x => selectedItemIds[x.item.id])
-          .map(x => {
-            const amount = Math.min(x.remainder, remaining);
-            remaining -= amount;
-            return { openItemId: x.item.id, amount };
-          })
-          .filter(x => x.amount > 0)
-      : [];
+  const selectedAllocations = buildTransferOpenItemAllocations(
+    items,
+    selectedItemIds,
+    requested,
+    allocationMode,
+  );
   return {
     openItems: items,
     allocationMode,
