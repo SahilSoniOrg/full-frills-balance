@@ -42,8 +42,10 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { logger } from '@/src/services/observability/logger';
 import { toast } from '@/src/services/feedback/alerts';
-import { formatDate, getNow } from '@/src/utils/dateFormatting';
+import { formatDate } from '@/src/utils/dateFormatting';
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import {
   getNextPlannedPaymentOccurrences,
   plannedPaymentDetailService,
@@ -79,6 +81,25 @@ const ACTION_ERRORS: Record<PendingAction, string> = {
   toggle: 'Could not update the schedule. Try again.',
   delete: 'Could not delete this schedule. Try again.',
 };
+
+function samePlanCandidate(
+  a: ProvisionalPlannedPaymentCandidate | undefined,
+  b: ProvisionalPlannedPaymentCandidate | undefined,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.id === b.id &&
+    a.plannedPaymentId === b.plannedPaymentId &&
+    a.journalId === b.journalId &&
+    a.plannedOccurrenceJournalId === b.plannedOccurrenceJournalId &&
+    a.occurrenceDate === b.occurrenceDate &&
+    a.amount === b.amount &&
+    a.currencyCode === b.currencyCode &&
+    a.softMatch === b.softMatch &&
+    a.softMatchReasons?.[0] === b.softMatchReasons?.[0]
+  );
+}
 
 export interface PlannedPaymentDetailsViewModel {
   csvExport?: ShareableCsvControl;
@@ -165,6 +186,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const { theme } = useTheme();
   const { workplaceId } = useWorkplace();
   const isPrivacyMode = useEffectivePrivacyMode();
+  const today = useCalendarDay();
   const params = useLocalSearchParams();
   const { data: statusAudit } = useObservable(
     () => (id ? observeAuditTrail('planned_payment', id, workplaceId, 500) : of([])),
@@ -196,18 +218,32 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const actionLock = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [planCandidate, setPlanCandidate] = useState<
-    ProvisionalPlannedPaymentCandidate | undefined
-  >();
+  const [planCandidateState, setPlanCandidateState] = useState<{
+    key: string;
+    candidate?: ProvisionalPlannedPaymentCandidate;
+  } | null>(null);
   const planAttachTarget = item ? resolvePlannedPaymentActionTarget(item) : null;
+  const planAttachOccurrenceDate = planAttachTarget?.occurrenceDate;
   const planAttachKey =
-    item && planAttachTarget ? `${item.id}:${planAttachTarget.occurrenceDate}` : null;
-  const [loadedPlanAttachKey, setLoadedPlanAttachKey] = useState<string | null>(null);
-  // Clear stale candidate during render when the occurrence target changes.
-  if (planAttachKey !== loadedPlanAttachKey) {
-    setLoadedPlanAttachKey(planAttachKey);
-    if (planCandidate !== undefined) setPlanCandidate(undefined);
-  }
+    item && planAttachOccurrenceDate !== undefined
+      ? `${workplaceId}:${item.id}:${planAttachOccurrenceDate}`
+      : null;
+  const planCandidate =
+    planAttachKey && planCandidateState?.key === planAttachKey
+      ? planCandidateState.candidate
+      : undefined;
+  const itemId = item?.id;
+  const updatePlanCandidate = useCallback(
+    (key: string, nextCandidate: ProvisionalPlannedPaymentCandidate | undefined) => {
+      setPlanCandidateState(prev => {
+        if (prev?.key === key && samePlanCandidate(prev.candidate, nextCandidate)) {
+          return prev;
+        }
+        return { key, candidate: nextCandidate };
+      });
+    },
+    [],
+  );
   const runAction = useCallback(
     async (
       action: PendingAction,
@@ -287,37 +323,50 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     });
   }, [item, workplaceId, runAction]);
   useEffect(() => {
-    if (!item || !planAttachTarget || !planAttachKey) return;
+    if (!itemId || planAttachOccurrenceDate === undefined || !planAttachKey || isLoadingActivity) {
+      return;
+    }
     let cancelled = false;
-    void findPlanAttachCandidateForOccurrence(
-      workplaceId,
-      item.id,
-      planAttachTarget.occurrenceDate,
-    ).then(candidate => {
-      if (cancelled) return;
-      if (!candidate) {
-        setPlanCandidate(undefined);
-        return;
-      }
-      setPlanCandidate({
-        id: candidate.captureJournalId,
-        plannedPaymentId: item.id,
-        journalId: candidate.captureJournalId,
-        plannedOccurrenceJournalId: candidate.plannedJournalId,
-        kind: 'posted',
-        isPlanLinked: false,
-        isPosted: true,
-        occurrenceDate: candidate.occurrenceDay,
-        amount: candidate.amount,
-        currencyCode: candidate.currencyCode,
-        softMatch: candidate.matchKind !== 'strict',
-        softMatchReasons: candidate.matchKind === 'strict' ? undefined : [candidate.matchKind],
+    void findPlanAttachCandidateForOccurrence(workplaceId, itemId, planAttachOccurrenceDate)
+      .then(candidate => {
+        if (cancelled) return;
+        if (!candidate) {
+          updatePlanCandidate(planAttachKey, undefined);
+          return;
+        }
+        updatePlanCandidate(planAttachKey, {
+          id: candidate.captureJournalId,
+          plannedPaymentId: itemId,
+          journalId: candidate.captureJournalId,
+          plannedOccurrenceJournalId: candidate.plannedJournalId,
+          kind: 'posted',
+          isPlanLinked: false,
+          isPosted: true,
+          occurrenceDate: candidate.occurrenceDay,
+          amount: candidate.amount,
+          currencyCode: candidate.currencyCode,
+          softMatch: candidate.matchKind !== 'strict',
+          softMatchReasons: candidate.matchKind === 'strict' ? undefined : [candidate.matchKind],
+        });
+      })
+      .catch(error => {
+        if (cancelled) return;
+        logger.warn('[usePlannedPaymentDetailsViewModel] Failed to find plan attach candidate', {
+          error,
+        });
       });
-    });
     return () => {
       cancelled = true;
     };
-  }, [item, workplaceId, activity, planAttachKey, planAttachTarget]);
+  }, [
+    activity,
+    isLoadingActivity,
+    itemId,
+    planAttachKey,
+    planAttachOccurrenceDate,
+    updatePlanCandidate,
+    workplaceId,
+  ]);
 
   const handlePostNow = useCallback(async () => {
     if (!item) return;
@@ -336,22 +385,24 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         );
         if (!completed) return false;
         if (completed.status === 'attach_candidate') {
-          setPlanCandidate({
-            id: completed.candidate.captureJournalId,
-            plannedPaymentId: item.id,
-            journalId: completed.candidate.captureJournalId,
-            plannedOccurrenceJournalId: completed.candidate.plannedJournalId,
-            kind: 'posted',
-            isPlanLinked: false,
-            isPosted: true,
-            occurrenceDate: completed.candidate.occurrenceDay,
-            amount: completed.candidate.amount,
-            currencyCode: completed.candidate.currencyCode,
-            softMatch: completed.candidate.matchKind !== 'strict',
-          });
+          if (planAttachKey) {
+            updatePlanCandidate(planAttachKey, {
+              id: completed.candidate.captureJournalId,
+              plannedPaymentId: item.id,
+              journalId: completed.candidate.captureJournalId,
+              plannedOccurrenceJournalId: completed.candidate.plannedJournalId,
+              kind: 'posted',
+              isPlanLinked: false,
+              isPosted: true,
+              occurrenceDate: completed.candidate.occurrenceDay,
+              amount: completed.candidate.amount,
+              currencyCode: completed.candidate.currencyCode,
+              softMatch: completed.candidate.matchKind !== 'strict',
+            });
+          }
           return false;
         }
-        setPlanCandidate(undefined);
+        if (planAttachKey) updatePlanCandidate(planAttachKey, undefined);
         analytics.trackFeatureUsage('planned_payment', 'post_now', {
           payment_id: item.id,
           amount: item.amount,
@@ -361,7 +412,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       },
       'Occurrence recorded',
     );
-  }, [item, workplaceId, runAction, planCandidate]);
+  }, [item, workplaceId, runAction, planCandidate, planAttachKey, updatePlanCandidate]);
 
   const handleLinkInstead = useCallback(async () => {
     if (!item || !planCandidate?.journalId) return;
@@ -377,7 +428,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
             (planCandidate.plannedOccurrenceJournalId as JournalId | undefined) ?? target.journalId,
           occurrenceDay: target.occurrenceDate,
         });
-        setPlanCandidate(undefined);
+        if (planAttachKey) updatePlanCandidate(planAttachKey, undefined);
         analytics.trackFeatureUsage('planned_payment', 'link_instead', {
           payment_id: item.id,
           capture_journal_id: planCandidate.journalId,
@@ -385,7 +436,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       },
       'Linked to existing transaction',
     );
-  }, [item, planCandidate, workplaceId, runAction]);
+  }, [item, planCandidate, planAttachKey, updatePlanCandidate, workplaceId, runAction]);
 
   const handleSkip = useCallback(async () => {
     if (!item) return;
@@ -427,14 +478,19 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   } = selectionControl;
 
   useEffect(() => {
+    if (isMissing && isSelectionModeActive) exitSelectionMode();
+  }, [exitSelectionMode, isMissing, isSelectionModeActive]);
+
+  useEffect(() => {
     if (selectedIds.size === 0 || isHistoryLoading) return;
-    setSelectedIds(prev =>
-      pruneSelectedIds(
-        prev,
-        history.map(journal => journal.id),
-      ),
+    const pruned = pruneSelectedIds(
+      selectedIds,
+      history.map(journal => journal.id),
     );
-  }, [history, selectedIds, setSelectedIds, isHistoryLoading]);
+    if (pruned === selectedIds) return;
+    if (pruned.size === 0) exitSelectionMode();
+    else setSelectedIds(pruned);
+  }, [history, selectedIds, setSelectedIds, exitSelectionMode, isHistoryLoading]);
 
   const selectAll = useCallback(() => {
     if (!history) return;
@@ -659,7 +715,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           : formatDate(item.endDate),
       occurrenceAmount,
       outstandingJournalId: outstanding?.id,
-      activitySummary: activity ? summarizePlannedPaymentActivity(activity, getNow()) : undefined,
+      activitySummary: activity ? summarizePlannedPaymentActivity(activity, today) : undefined,
       nextOccurrences: activity ? getNextPlannedPaymentOccurrences(item, activity, 5) : undefined,
       nextOccurrenceDate: item.nextDueOccurrence,
       showcasedOccurrenceDate: outstanding?.journalDate ?? item.nextDueOccurrence,
@@ -740,6 +796,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     pDate,
     isLoadingVisible,
     isPrivacyMode,
+    today,
     selectionProps,
   ]);
 }

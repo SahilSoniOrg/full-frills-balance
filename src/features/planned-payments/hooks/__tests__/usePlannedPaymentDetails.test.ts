@@ -7,6 +7,7 @@ import type { PlannedPaymentObligation } from '@/src/services/planned-payment/pl
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { findPlanAttachCandidateForOccurrence } from '@/src/services/planned-payment/plannedOccurrenceSettlement';
 import { confirm, toast } from '@/src/services/feedback/alerts';
 
 jest.mock('@/src/hooks/useShareable', () => ({
@@ -192,5 +193,20 @@ describe('planned payment detail actions', () => {
     await confirmLatestAction(result.current.onPost);
     expect(result.current.actionError).toBeNull();
     expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads a plan attach candidate once without re-querying in a render loop', async () => {
+    jest.mocked(findPlanAttachCandidateForOccurrence).mockResolvedValue({
+      captureJournalId: 'cap-1' as never,
+      plannedJournalId: 'unpaid' as never,
+      occurrenceDay: 100,
+      amount: 100,
+      currencyCode: 'USD',
+      matchKind: 'strict',
+    });
+    const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
+    await waitFor(() => expect(result.current.planCandidate?.journalId).toBe('cap-1'));
+    expect(findPlanAttachCandidateForOccurrence).toHaveBeenCalledTimes(1);
+    expect(result.current.onLinkInstead).toBeDefined();
   });
 });

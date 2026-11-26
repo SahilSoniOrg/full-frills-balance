@@ -25,7 +25,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { JournalListModals } from '@/src/features/journal';
 import { Stack, Inline, Separator } from '@/src/design-system';
 import { PlannedPaymentStatus } from '@/src/types/enums';
-import { getNow } from '@/src/utils/dateFormatting';
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
 import {
@@ -42,6 +42,7 @@ export function PlannedPaymentDetailsView({
 }: PlannedPaymentDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { history = [], selectedIds, isSelectionModeActive } = vm;
   const formatMoney = useMoneyFormat();
+  const today = useCalendarDay();
   const pending = !!vm.pendingAction;
   const hasOccurrence = !!vm.onPost;
   const isPaused = vm.status === PlannedPaymentStatus.PAUSED;
@@ -62,7 +63,7 @@ export function PlannedPaymentDetailsView({
     isPaused,
     isEndedWithoutOutstanding,
     lastRecordedJournalDate: vm.activitySummary?.lastRecorded?.journalDate,
-    now: getNow(),
+    now: today,
   });
   const dueDateText = showcasedDate;
   const formattedDueDate = dueDateText
