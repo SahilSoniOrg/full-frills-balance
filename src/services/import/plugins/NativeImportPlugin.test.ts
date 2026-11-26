@@ -259,6 +259,60 @@ describe('NativeImportPlugin', () => {
       expect(stats.accounts).toBe(1);
     });
 
+    it('remaps People and open-item relationships; accepts legacy backups without People keys', async () => {
+      await parseImport({
+        json: {
+          ...validNativeData,
+          people: [{ id: 'p1', name: 'Alex' }],
+          personAccounts: [{ id: 'pa1', personId: 'p1', accountId: 'a1' }],
+          openItems: [
+            {
+              id: 'oi1',
+              personId: 'p1',
+              originatingJournalId: 'j1',
+              accountId: 'a1',
+              direction: 'receivable',
+              originalAmount: 10,
+              currencyCode: 'USD',
+            },
+          ],
+          settlementAllocations: [
+            {
+              id: 'sa1',
+              personId: 'p1',
+              openItemId: 'oi1',
+              settlementJournalId: 'j1',
+              accountId: 'a1',
+              allocationKind: 'repayment',
+              amount: 2,
+              isActive: true,
+            },
+          ],
+        },
+      } as ImportFileContext);
+      expect(lastBatch.people[0].id).not.toBe('p1');
+      expect(lastBatch.personAccounts[0]).toMatchObject({
+        personId: lastBatch.people[0].id,
+        accountId: lastBatch.accounts[0].id,
+      });
+      expect(lastBatch.openItems[0]).toMatchObject({
+        personId: lastBatch.people[0].id,
+        originatingJournalId: lastBatch.journals[0].id,
+        accountId: lastBatch.accounts[0].id,
+      });
+      expect(lastBatch.settlementAllocations[0]).toMatchObject({
+        personId: lastBatch.people[0].id,
+        openItemId: lastBatch.openItems[0].id,
+        settlementJournalId: lastBatch.journals[0].id,
+        accountId: lastBatch.accounts[0].id,
+      });
+      await parseImport({ json: validNativeData } as ImportFileContext);
+      expect(lastBatch.people).toEqual([]);
+      expect(lastBatch.personAccounts).toEqual([]);
+      expect(lastBatch.openItems).toEqual([]);
+      expect(lastBatch.settlementAllocations).toEqual([]);
+    });
+
     it('throws error for missing parsed JSON', async () => {
       const context = { json: null } as unknown as ImportFileContext;
       await expect(parseImport(context)).rejects.toThrow(/Invalid JSON/);
