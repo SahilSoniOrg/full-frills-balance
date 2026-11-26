@@ -1,5 +1,11 @@
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { AppButton, AppCard, AppIcon, AppText, EmptyStateView, Icon } from '@/src/components/core';
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  EmptyStateView,
+  ListGroup,
+  ListRow,
+} from '@/src/components/core';
 import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -41,6 +47,7 @@ export function ReportsV2Breakdown({
       <EmptyStateView
         title="No activity in this period"
         subtitle="Try a wider range or include planned activity."
+        style={styles.empty}
       />
     );
   const maximum = Math.max(1, ...section.rows.map(item => Math.abs(measureNumber(item.value))));
@@ -76,60 +83,57 @@ export function ReportsV2Breakdown({
           {section.rows.length} items
         </AppText>
       </View>
-      {(expanded ? section.rows : section.rows.slice(0, 12)).map((item, index) => (
-        <PressScaleTouchable
-          pressScale="subtle"
-          key={item.id}
-          onPress={() => {
-            if (!interactive) return;
-            onDrilldown({
-              label: item.label,
-              accountIds: item.accountIds,
-              journalIds: item.journalIds,
-            });
-          }}
-          disabled={!interactive}
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${item.label} details`}
-          accessibilityState={{ disabled: !interactive }}
-          style={[
-            styles.breakdownRow,
-            !interactive && styles.breakdownRowDisabled,
-            index > 0 && styles.rowBorder,
-            index > 0 && { borderTopColor: theme.divider },
-          ]}
-        >
-          <View style={styles.rowCopy}>
-            <AppText variant="body" weight="medium">
-              {item.label}
-            </AppText>
-            <View style={[styles.rowTrack, { backgroundColor: theme.surfaceSecondary }]}>
-              <View
-                style={[
-                  styles.rowFill,
-                  {
-                    width: `${Math.min(100, (Math.abs(measureNumber(item.value)) / maximum) * 100)}%`,
-                    backgroundColor: measureNumber(item.value) < 0 ? theme.error : theme.primary,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-          <View style={styles.rowValue}>
-            <MeasureText measure={item.value} variant="body" weight="semibold" />
-            {item.percentage && item.percentage.value !== null ? (
-              <AppText variant="caption" color="secondary">
-                {item.percentage.value.toFixed(1)}%
-              </AppText>
-            ) : item.percentage ? (
-              <AppText variant="caption" color="secondary">
-                Unavailable
-              </AppText>
-            ) : null}
-          </View>
-          <AppIcon name={Icon.ChevronRight} size={17} color="textTertiary" />
-        </PressScaleTouchable>
-      ))}
+      <ListGroup variant="plain">
+        {(expanded ? section.rows : section.rows.slice(0, 12)).map(item => {
+          const value = measureNumber(item.value);
+          return (
+            <ListRow
+              key={item.id}
+              title={item.label}
+              wrap
+              disabled={!interactive}
+              onPress={() => {
+                if (!interactive) return;
+                onDrilldown({
+                  label: item.label,
+                  accountIds: item.accountIds,
+                  journalIds: item.journalIds,
+                });
+              }}
+              accessibilityLabel={`Open ${item.label} details`}
+              accessibilityState={{ disabled: !interactive }}
+              subtitle={
+                <View style={[styles.rowTrack, { backgroundColor: theme.surfaceSecondary }]}>
+                  <View
+                    style={[
+                      styles.rowFill,
+                      {
+                        width: `${Math.min(100, (Math.abs(value) / maximum) * 100)}%`,
+                        backgroundColor: value < 0 ? theme.error : theme.primary,
+                      },
+                    ]}
+                  />
+                </View>
+              }
+              trailing={
+                <View style={styles.rowValue}>
+                  <MeasureText measure={item.value} variant="body" weight="semibold" />
+                  {item.percentage && item.percentage.value !== null ? (
+                    <AppText variant="caption" color="secondary">
+                      {item.percentage.value.toFixed(1)}%
+                    </AppText>
+                  ) : item.percentage ? (
+                    <AppText variant="caption" color="secondary">
+                      Unavailable
+                    </AppText>
+                  ) : null}
+                </View>
+              }
+              chevron={interactive}
+            />
+          );
+        })}
+      </ListGroup>
       {section.rows.length > 12 ? (
         <AppButton
           variant="ghost"
@@ -148,6 +152,7 @@ export function ReportsV2Breakdown({
 }
 
 const styles = StyleSheet.create({
+  empty: { flex: 0 },
   breakdownHeader: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
@@ -158,18 +163,7 @@ const styles = StyleSheet.create({
   },
   headerCopy: { flex: 1, gap: Spacing.xs },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  breakdownRow: {
-    minHeight: 78,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  breakdownRowDisabled: { opacity: 0.6 },
-  rowBorder: { borderTopWidth: 1 },
-  rowCopy: { flex: 1, minWidth: 0, gap: Spacing.sm },
-  rowTrack: { height: 5, borderRadius: 5, overflow: 'hidden' },
+  rowTrack: { height: 5, borderRadius: 5, overflow: 'hidden', marginTop: Spacing.sm },
   rowFill: { height: 5, borderRadius: 5 },
   showMoreButton: { alignSelf: 'center', marginVertical: Spacing.sm },
   rowValue: { alignItems: 'flex-end', minWidth: 76, gap: Spacing.xs },

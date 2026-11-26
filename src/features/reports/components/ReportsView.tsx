@@ -15,6 +15,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useCallback, useState } from 'react';
+import { reportChartWidth } from '@/src/components/reports/reportChartWidth';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
@@ -45,7 +46,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
 
   const { width } = useWindowDimensions();
-  const CHART_WIDTH = Math.max(0, width - (Spacing.md * 2 + Spacing.lg * 2));
+  const CHART_WIDTH = reportChartWidth(width);
   const toggleFilters = useCallback(() => setAreFiltersExpanded(expanded => !expanded), []);
   const accountLabel =
     filters.accountIds.length === 0

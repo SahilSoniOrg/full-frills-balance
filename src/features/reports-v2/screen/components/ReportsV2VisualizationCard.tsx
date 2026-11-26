@@ -4,8 +4,8 @@ import { ReportChartCard } from '@/src/components/charts/ReportChartCard';
 import { AppText } from '@/src/components/core';
 import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
 import { MoneyFlowWidget } from '@/src/components/reports/MoneyFlowWidget';
+import { reportChartWidth } from '@/src/components/reports/reportChartWidth';
 import { AppConfig } from '@/src/constants';
-import { Spacing } from '@/src/constants/design-tokens';
 import type {
   ReportTrendVisualization,
   ReportVisualization,
@@ -48,7 +48,7 @@ export function ReportsV2VisualizationCard({
   interactive: boolean;
 }) {
   const { width } = useWindowDimensions();
-  const chartWidth = Math.max(0, width - (Spacing.md * 2 + Spacing.lg * 2));
+  const chartWidth = reportChartWidth(width);
 
   if (visualization.kind === 'SANKEY') {
     return (

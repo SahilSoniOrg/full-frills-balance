@@ -1,9 +1,7 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { AppIcon, AppText, Icon } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants/design-tokens';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppIcon, Icon } from '@/src/components/core';
+import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import type { ReportWarning } from '@/src/services/reports-v2/types/result';
-import { StyleSheet, View } from 'react-native';
 
 export function ReportsV2QualityBanner({
   warnings,
@@ -12,7 +10,6 @@ export function ReportsV2QualityBanner({
   warnings: readonly ReportWarning[];
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
   const errorCount = warnings.reduce(
     (total, warning) => total + (warning.severity === 'ERROR' ? (warning.count ?? 1) : 0),
     0,
@@ -25,14 +22,7 @@ export function ReportsV2QualityBanner({
     (total, warning) => total + (warning.severity === 'INFO' ? (warning.count ?? 1) : 0),
     0,
   );
-  const tone = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'asset';
-  const color = theme[tone];
-  const backgroundColor =
-    tone === 'error'
-      ? theme.errorLight
-      : tone === 'warning'
-        ? theme.warningLight
-        : theme.assetLight;
+  const tone = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'info';
   const headline =
     errorCount > 0
       ? 'Needs attention'
@@ -53,43 +43,14 @@ export function ReportsV2QualityBanner({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Open report health"
-      style={[styles.qualityBanner, { borderColor: color }]}
     >
-      <View style={[styles.qualityIcon, { backgroundColor }]}>
-        <AppIcon
-          name={errorCount > 0 ? Icon.Alert : warningCount > 0 ? Icon.Error : Icon.CheckCircle}
-          size={18}
-          color={color}
-        />
-      </View>
-      <View style={styles.qualityCopy}>
-        <AppText variant="body" weight="semibold">
-          {headline}
-        </AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={1}>
-          {detail}
-        </AppText>
-      </View>
-      <AppIcon name={Icon.ChevronRight} size={18} color="textSecondary" />
+      <NoticeBanner
+        tone={tone}
+        icon={errorCount > 0 ? Icon.Alert : warningCount > 0 ? Icon.Error : Icon.CheckCircle}
+        title={headline}
+        message={detail}
+        action={<AppIcon name={Icon.ChevronRight} size={18} color="textSecondary" />}
+      />
     </PressScaleTouchable>
   );
 }
-
-const styles = StyleSheet.create({
-  qualityBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderRadius: Shape.radius.xxl,
-    padding: Spacing.md,
-  },
-  qualityIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qualityCopy: { flex: 1, gap: Spacing.xs },
-});
