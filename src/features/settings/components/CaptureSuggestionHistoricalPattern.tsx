@@ -15,6 +15,14 @@ import {
 } from './HistoricalEvidenceChart';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { transactionCaptureStrings as strings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import {
+  BorderWidth,
+  Opacity,
+  Shape,
+  Size,
+  Spacing,
+  Typography,
+} from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
 import type { TransactionCaptureViewModel } from '@/src/features/settings/hooks/useTransactionCaptureViewModel';
 import {
@@ -33,6 +41,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
 
 const EVIDENCE_PAGE_SIZE = 8;
+const MARKER_DOT_SIZE = 9;
+const MARKER_DIAMOND_SIZE = 7;
+const LEGEND_UNDERLINE_OFFSET = 7;
+const LEGEND_DOT_RADIUS = 5;
+const LEGEND_SQUARE_RADIUS = 2;
+const DAY_BOX_ITEM_BASIS = 120;
 
 function smsCount(count: number) {
   return `${count} ${count === 1 ? strings.smsSingular : strings.smsPlural}`;
@@ -107,7 +121,7 @@ export function HistoricalPatternRow({
             ) : null}
             <AppIcon
               name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
-              size={16}
+              size={Size.iconXs}
               color={theme.textSecondary}
             />
           </Inline>
@@ -256,7 +270,7 @@ function CategoryShapeMark({
   color: string;
   dimmed: boolean;
 }) {
-  const opacity = dimmed ? 0.4 : 1;
+  const opacity = dimmed ? Opacity.muted : Opacity.solid;
   if (shape === 'square') {
     return <View style={[styles.markSquare, { backgroundColor: color, opacity }]} />;
   }
@@ -268,6 +282,199 @@ function CategoryShapeMark({
     );
   }
   return <View style={[styles.markCircle, { backgroundColor: color, opacity }]} />;
+}
+
+function HistoricalEvidenceList({
+  workplaceId,
+  pattern,
+  showEntryCategory,
+  selectedDayMs,
+  onRetryRequest,
+  onRefreshSuggestions,
+}: {
+  workplaceId: TransactionCaptureViewModel['workplaceId'];
+  pattern: HistoricalCategoryPattern;
+  showEntryCategory: boolean;
+  selectedDayMs: number | null;
+  onRetryRequest: () => void;
+  onRefreshSuggestions: () => Promise<void>;
+}) {
+  const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
+  const [entries, setEntries] = useState<HistoricalEvidenceEntry[]>([]);
+  const [pagesLoaded, setPagesLoaded] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(false);
+  const [stale, setStale] = useState(false);
+  const activeRef = useRef(true);
+  const loadingMoreRef = useRef(false);
+
+  useEffect(() => {
+    activeRef.current = true;
+    loadingMoreRef.current = false;
+    void listHistoricalPatternEvidenceEntries(workplaceId, pattern, 0, EVIDENCE_PAGE_SIZE)
+      .then(page => {
+        if (!activeRef.current) return;
+        setEntries(page);
+        setPagesLoaded(1);
+        setLoading(false);
+        setStale(page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length));
+      })
+      .catch(() => {
+        if (!activeRef.current) return;
+        setError(true);
+        setLoading(false);
+      });
+    return () => {
+      activeRef.current = false;
+    };
+  }, [workplaceId, pattern]);
+
+  const loadMore = async () => {
+    if (
+      loading ||
+      error ||
+      loadingMore ||
+      loadingMoreRef.current ||
+      pagesLoaded * EVIDENCE_PAGE_SIZE >= pattern.journalIds.length
+    ) {
+      return;
+    }
+    const pagesAtStart = pagesLoaded;
+    const offset = pagesAtStart * EVIDENCE_PAGE_SIZE;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await listHistoricalPatternEvidenceEntries(
+        workplaceId,
+        pattern,
+        offset,
+        EVIDENCE_PAGE_SIZE,
+      );
+      if (!activeRef.current) return;
+      setEntries(current => [...current, ...page]);
+      setPagesLoaded(pagesAtStart + 1);
+      setLoadingMore(false);
+      setStale(
+        current =>
+          current || page.length < Math.min(EVIDENCE_PAGE_SIZE, pattern.journalIds.length - offset),
+      );
+    } catch {
+      if (!activeRef.current) return;
+      setError(true);
+      setLoadingMore(false);
+    } finally {
+      loadingMoreRef.current = false;
+    }
+  };
+
+  const entryGroups = useMemo(() => {
+    const groups: { dayMs: number; label: string; entries: HistoricalEvidenceEntry[] }[] = [];
+    for (const entry of entries) {
+      const dayMs = dayjsStart(entry.journalDate);
+      const last = groups[groups.length - 1];
+      if (last && last.dayMs === dayMs) last.entries.push(entry);
+      else
+        groups.push({
+          dayMs,
+          label: formatDate(entry.journalDate),
+          entries: [entry],
+        });
+    }
+    return groups;
+  }, [entries]);
+
+  return (
+    <Stack gap="xs">
+      {loading ? (
+        <AppText variant="caption" color="secondary">
+          {strings.historicalEvidenceLoading}
+        </AppText>
+      ) : null}
+      {error ? (
+        <Stack gap="xs">
+          <AppText variant="caption" color="error">
+            {strings.historicalEvidenceError}
+          </AppText>
+          <Pressable onPress={onRetryRequest} accessibilityRole="button" style={styles.textAction}>
+            <AppText variant="bodySmall" color="primary">
+              {strings.retry}
+            </AppText>
+          </Pressable>
+        </Stack>
+      ) : null}
+      {!loading && !error && stale ? (
+        <Stack gap="xs">
+          <AppText variant="caption" color="secondary">
+            {strings.historicalEvidenceStale}
+          </AppText>
+          <Pressable
+            onPress={() => void onRefreshSuggestions()}
+            accessibilityRole="button"
+            style={styles.textAction}
+          >
+            <AppText variant="bodySmall" color="primary">
+              {strings.refreshSuggestions}
+            </AppText>
+          </Pressable>
+        </Stack>
+      ) : null}
+      <View style={styles.evidenceList}>
+        {entryGroups.map(group => (
+          <View key={group.dayMs} style={styles.dateGroup}>
+            <AppText
+              variant="caption"
+              color="secondary"
+              weight="semibold"
+              style={styles.dateGroupLabel}
+            >
+              {group.label}
+            </AppText>
+            <View
+              style={[
+                styles.dayBox,
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
+              {group.entries.map((entry, index) => (
+                <View
+                  key={entry.journalId}
+                  style={
+                    index < group.entries.length - 1
+                      ? [styles.dayBoxRow, { borderBottomColor: theme.border }]
+                      : null
+                  }
+                >
+                  <HistoricalEvidenceRow
+                    entry={entry}
+                    hourCycle={resolvedHourCycle}
+                    showCategory={showEntryCategory}
+                    highlight={
+                      selectedDayMs != null &&
+                      dayjsStart(entry.journalDate) === dayjsStart(selectedDayMs)
+                    }
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
+      {!loading && !error && pagesLoaded * EVIDENCE_PAGE_SIZE < pattern.journalIds.length ? (
+        <Pressable
+          disabled={loadingMore}
+          onPress={() => void loadMore()}
+          accessibilityRole="button"
+          style={styles.textAction}
+        >
+          <AppText variant="bodySmall" color="secondary" style={styles.linkText}>
+            {loadingMore ? strings.historicalEvidenceLoading : strings.showMore}
+          </AppText>
+        </Pressable>
+      ) : null}
+    </Stack>
+  );
 }
 
 function HistoricalPatternDetail({
@@ -310,151 +517,12 @@ function HistoricalPatternDetail({
   const hasDifferentDefault =
     !!existing &&
     (existing.conflicted || existing.categoryAccountId !== pattern.categories[0]?.accountId);
-  const loadingMoreRef = useRef(false);
   const currentEvidenceKey = `${capture.workplaceId}:${capture.changeRevision}:${pattern.key}:${activeCategoryId ?? 'all'}`;
-  const [trackedCategoryId, setTrackedCategoryId] = useState(activeCategoryId);
-  const [evidence, setEvidence] = useState({
-    entriesOpen,
-    evidenceKey: currentEvidenceKey,
-    requestKey,
-    pattern: filteredPattern,
-    entries: [] as HistoricalEvidenceEntry[],
-    pagesLoaded: 0,
-    loading: false,
-    loadingMore: false,
-    error: false,
-    stale: false,
-  });
-  if (trackedCategoryId !== activeCategoryId) {
-    setTrackedCategoryId(activeCategoryId);
+
+  const handleSelectCategory = (categoryId: AccountId | null) => {
+    setSelectedCategoryId(categoryId);
     setSelectedDayMs(null);
     setDayEntries([]);
-  }
-  if (
-    evidence.entriesOpen !== entriesOpen ||
-    evidence.evidenceKey !== currentEvidenceKey ||
-    evidence.requestKey !== requestKey ||
-    evidence.pattern !== filteredPattern
-  ) {
-    setEvidence({
-      entriesOpen,
-      evidenceKey: currentEvidenceKey,
-      requestKey,
-      pattern: filteredPattern,
-      entries: [],
-      pagesLoaded: 0,
-      loading: entriesOpen,
-      loadingMore: false,
-      error: false,
-      stale: false,
-    });
-  }
-  const { entries, pagesLoaded, loading, loadingMore, error, stale } = evidence;
-
-  useEffect(() => {
-    if (!entriesOpen) return;
-    let active = true;
-    loadingMoreRef.current = false;
-    const evidenceKey = currentEvidenceKey;
-    const requestedPattern = filteredPattern;
-    const requestedKey = requestKey;
-    void listHistoricalPatternEvidenceEntries(
-      capture.workplaceId,
-      requestedPattern,
-      0,
-      EVIDENCE_PAGE_SIZE,
-    )
-      .then(page => {
-        if (!active) return;
-        setEvidence(current =>
-          current.entriesOpen === entriesOpen &&
-          current.evidenceKey === evidenceKey &&
-          current.requestKey === requestedKey &&
-          current.pattern === requestedPattern
-            ? {
-                ...current,
-                entries: page,
-                pagesLoaded: 1,
-                loading: false,
-                stale:
-                  page.length < Math.min(EVIDENCE_PAGE_SIZE, requestedPattern.journalIds.length),
-              }
-            : current,
-        );
-      })
-      .catch(() => {
-        if (!active) return;
-        setEvidence(current =>
-          current.entriesOpen === entriesOpen &&
-          current.evidenceKey === evidenceKey &&
-          current.requestKey === requestedKey &&
-          current.pattern === requestedPattern
-            ? { ...current, error: true, loading: false }
-            : current,
-        );
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    entriesOpen,
-    capture.workplaceId,
-    capture.changeRevision,
-    currentEvidenceKey,
-    filteredPattern,
-    requestKey,
-  ]);
-
-  const loadMore = async () => {
-    if (
-      loading ||
-      error ||
-      loadingMore ||
-      loadingMoreRef.current ||
-      pagesLoaded * EVIDENCE_PAGE_SIZE >= filteredPattern.journalIds.length
-    )
-      return;
-    const evidenceKey = currentEvidenceKey;
-    const requestedPattern = filteredPattern;
-    const requestedKey = requestKey;
-    const pagesAtStart = pagesLoaded;
-    const offset = pagesAtStart * EVIDENCE_PAGE_SIZE;
-    const isCurrent = (current: typeof evidence) =>
-      current.entriesOpen &&
-      current.evidenceKey === evidenceKey &&
-      current.requestKey === requestedKey &&
-      current.pattern === requestedPattern &&
-      current.pagesLoaded === pagesAtStart;
-    loadingMoreRef.current = true;
-    setEvidence(current => (isCurrent(current) ? { ...current, loadingMore: true } : current));
-    try {
-      const page = await listHistoricalPatternEvidenceEntries(
-        capture.workplaceId,
-        requestedPattern,
-        offset,
-        EVIDENCE_PAGE_SIZE,
-      );
-      setEvidence(current =>
-        isCurrent(current)
-          ? {
-              ...current,
-              entries: [...current.entries, ...page],
-              pagesLoaded: pagesAtStart + 1,
-              loadingMore: false,
-              stale:
-                current.stale ||
-                page.length <
-                  Math.min(EVIDENCE_PAGE_SIZE, requestedPattern.journalIds.length - offset),
-            }
-          : current,
-      );
-    } catch {
-      setEvidence(current =>
-        isCurrent(current) ? { ...current, error: true, loadingMore: false } : current,
-      );
-    } finally {
-      loadingMoreRef.current = false;
-    }
   };
 
   const showEntryCategory = mixed && !activeCategoryId;
@@ -465,22 +533,6 @@ function HistoricalPatternDetail({
   const openLabel = categoryLabel
     ? strings.historicalOpenFilteredEntries(filteredPattern.journalIds.length, categoryLabel)
     : strings.historicalOpenNEntries(pattern.journalCount);
-
-  const entryGroups = useMemo(() => {
-    const groups: { dayMs: number; label: string; entries: HistoricalEvidenceEntry[] }[] = [];
-    for (const entry of entries) {
-      const dayMs = dayjsStart(entry.journalDate);
-      const last = groups[groups.length - 1];
-      if (last && last.dayMs === dayMs) last.entries.push(entry);
-      else
-        groups.push({
-          dayMs,
-          label: formatDate(entry.journalDate),
-          entries: [entry],
-        });
-    }
-    return groups;
-  }, [entries]);
 
   return (
     <View style={styles.detailBody}>
@@ -526,7 +578,7 @@ function HistoricalPatternDetail({
             <CategoryLegend
               pattern={pattern}
               selectedCategoryId={activeCategoryId}
-              onSelect={setSelectedCategoryId}
+              onSelect={handleSelectCategory}
             />
           ) : null}
         </View>
@@ -566,7 +618,7 @@ function HistoricalPatternDetail({
               </AppText>
               <AppIcon
                 name={entriesOpen ? Icon.ChevronUp : Icon.ChevronDown}
-                size={16}
+                size={Size.iconXs}
                 color={theme.textSecondary}
               />
             </PressScaleTouchable>
@@ -587,100 +639,15 @@ function HistoricalPatternDetail({
             </PressScaleTouchable>
           </View>
           {entriesOpen ? (
-            <Stack gap="xs">
-              {loading ? (
-                <AppText variant="caption" color="secondary">
-                  {strings.historicalEvidenceLoading}
-                </AppText>
-              ) : null}
-              {error ? (
-                <Stack gap="xs">
-                  <AppText variant="caption" color="error">
-                    {strings.historicalEvidenceError}
-                  </AppText>
-                  <Pressable
-                    onPress={() => setRequestKey(value => value + 1)}
-                    accessibilityRole="button"
-                    style={styles.textAction}
-                  >
-                    <AppText variant="bodySmall" color="primary">
-                      {strings.retry}
-                    </AppText>
-                  </Pressable>
-                </Stack>
-              ) : null}
-              {!loading && !error && stale ? (
-                <Stack gap="xs">
-                  <AppText variant="caption" color="secondary">
-                    {strings.historicalEvidenceStale}
-                  </AppText>
-                  <Pressable
-                    onPress={() => void capture.onRetry()}
-                    accessibilityRole="button"
-                    style={styles.textAction}
-                  >
-                    <AppText variant="bodySmall" color="primary">
-                      {strings.refreshSuggestions}
-                    </AppText>
-                  </Pressable>
-                </Stack>
-              ) : null}
-              <View style={styles.evidenceList}>
-                {entryGroups.map(group => (
-                  <View key={group.dayMs} style={styles.dateGroup}>
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      weight="semibold"
-                      style={styles.dateGroupLabel}
-                    >
-                      {group.label}
-                    </AppText>
-                    <View
-                      style={[
-                        styles.dayBox,
-                        { backgroundColor: theme.background, borderColor: theme.border },
-                      ]}
-                    >
-                      {group.entries.map((entry, index) => (
-                        <View
-                          key={entry.journalId}
-                          style={
-                            index < group.entries.length - 1
-                              ? [styles.dayBoxRow, { borderBottomColor: theme.border }]
-                              : null
-                          }
-                        >
-                          <HistoricalEvidenceRow
-                            entry={entry}
-                            hourCycle={resolvedHourCycle}
-                            showCategory={showEntryCategory}
-                            highlight={
-                              selectedDayMs != null &&
-                              dayjsStart(entry.journalDate) === dayjsStart(selectedDayMs)
-                            }
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ))}
-              </View>
-              {!loading &&
-              !error &&
-              pagesLoaded * EVIDENCE_PAGE_SIZE < filteredPattern.journalIds.length ? (
-                <Pressable
-                  disabled={loadingMore}
-                  onPress={() => void loadMore()}
-                  accessibilityRole="button"
-                  style={styles.textAction}
-                >
-                  <AppText variant="bodySmall" color="secondary" style={styles.linkText}>
-                    {loadingMore ? strings.historicalEvidenceLoading : strings.showMore}
-                  </AppText>
-                </Pressable>
-              ) : null}
-            </Stack>
+            <HistoricalEvidenceList
+              key={`${currentEvidenceKey}:${requestKey}`}
+              workplaceId={capture.workplaceId}
+              pattern={filteredPattern}
+              showEntryCategory={showEntryCategory}
+              selectedDayMs={selectedDayMs}
+              onRetryRequest={() => setRequestKey(value => value + 1)}
+              onRefreshSuggestions={capture.onRetry}
+            />
           ) : null}
         </View>
 
@@ -750,7 +717,7 @@ function HistoricalEvidenceRow({
       testID={`historical-evidence-${entry.journalId}`}
       style={[
         styles.timelineRow,
-        highlight ? { backgroundColor: theme.primaryLight, borderRadius: 8 } : null,
+        highlight ? [styles.timelineRowHighlighted, { backgroundColor: theme.primaryLight }] : null,
       ]}
       pressScale="subtle"
     >
@@ -766,106 +733,134 @@ function HistoricalEvidenceRow({
       </View>
       <View style={styles.entryAmount}>
         <MoneyText amount={entry.totalAmount} currencyCode={entry.currencyCode} variant="caption" />
-        <AppIcon name={Icon.ChevronRight} size={12} color={theme.textSecondary} />
+        <AppIcon name={Icon.ChevronRight} size={Size.xxs} color={theme.textSecondary} />
       </View>
     </PressScaleTouchable>
   );
 }
 
 const styles = StyleSheet.create({
-  detailBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
+  detailBody: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.lg },
   statusInset: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 8,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
-  statusInsetAction: { marginTop: 4 },
+  statusInsetAction: { marginTop: Spacing.xs },
   legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    minHeight: 44,
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    minHeight: Size.touchTarget,
     position: 'relative',
   },
   legendUnderline: {
     position: 'absolute',
-    left: 8,
-    right: 8,
-    bottom: 7,
-    height: 2,
-    borderRadius: 1,
+    left: Spacing.sm,
+    right: Spacing.sm,
+    bottom: LEGEND_UNDERLINE_OFFSET,
+    height: BorderWidth.medium,
+    borderRadius: BorderWidth.thin,
   },
-  legendSep: { width: StyleSheet.hairlineWidth, height: 16, marginHorizontal: 2 },
-  markCircle: { width: 9, height: 9, borderRadius: 5 },
-  markSquare: { width: 9, height: 9, borderRadius: 2 },
-  markDiamondWrap: { width: 9, height: 9, alignItems: 'center', justifyContent: 'center' },
-  markDiamond: { width: 7, height: 7, borderRadius: 1, transform: [{ rotate: '45deg' }] },
-  entriesSection: { gap: 6 },
+  legendSep: { width: StyleSheet.hairlineWidth, height: Size.xs, marginHorizontal: Spacing.xs },
+  markCircle: {
+    width: MARKER_DOT_SIZE,
+    height: MARKER_DOT_SIZE,
+    borderRadius: LEGEND_DOT_RADIUS,
+  },
+  markSquare: {
+    width: MARKER_DOT_SIZE,
+    height: MARKER_DOT_SIZE,
+    borderRadius: LEGEND_SQUARE_RADIUS,
+  },
+  markDiamondWrap: {
+    width: MARKER_DOT_SIZE,
+    height: MARKER_DOT_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markDiamond: {
+    width: MARKER_DIAMOND_SIZE,
+    height: MARKER_DIAMOND_SIZE,
+    borderRadius: BorderWidth.thin,
+    transform: [{ rotate: '45deg' }],
+  },
+  entriesSection: { gap: Spacing.xs },
   dayBox: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
+    borderRadius: Shape.radius.md,
     overflow: 'hidden',
-    paddingHorizontal: 10,
+    paddingHorizontal: Spacing.md,
   },
   dayBoxRow: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  readout: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 0 },
-  readoutDate: { letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 },
+  readout: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: Spacing.md, gap: Spacing.none },
+  readoutDate: {
+    letterSpacing: Typography.letterSpacing.wide,
+    textTransform: 'uppercase',
+    marginBottom: Spacing.xs,
+  },
   disclosure: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minHeight: 44,
+    gap: Spacing.sm,
+    minHeight: Size.touchTarget,
   },
   disclosureToggle: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    minHeight: 44,
+    gap: Spacing.sm,
+    minHeight: Size.touchTarget,
     minWidth: 0,
   },
   disclosureLabel: { flexShrink: 1 },
   disclosureOpen: {
     flexShrink: 0,
-    minHeight: 44,
-    paddingHorizontal: 8,
+    minHeight: Size.touchTarget,
+    paddingHorizontal: Spacing.sm,
     justifyContent: 'center',
   },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  action: { minHeight: 44, paddingHorizontal: 14 },
-  actionWide: { alignSelf: 'stretch', width: '100%', minHeight: 46 },
-  link: { minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' },
+  actionWide: { alignSelf: 'stretch', width: '100%', minHeight: Size.buttonMd },
+  link: { minHeight: Size.touchTarget, paddingHorizontal: Spacing.md, justifyContent: 'center' },
   linkCentered: { alignSelf: 'center' },
   linkText: { textDecorationLine: 'underline' },
-  textAction: { minHeight: 40, justifyContent: 'center', alignSelf: 'flex-start' },
-  scope: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 4 },
-  evidenceList: { gap: 14, paddingBottom: 2 },
-  dateGroup: { gap: 6 },
-  dateGroupLabel: { paddingHorizontal: 2 },
+  textAction: { minHeight: Size.rowMin, justifyContent: 'center', alignSelf: 'flex-start' },
+  evidenceList: { gap: Spacing.md, paddingBottom: Spacing.xs },
+  dateGroup: { gap: Spacing.xs },
+  dateGroupLabel: { paddingHorizontal: Spacing.xs },
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-    minHeight: 44,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    minHeight: Size.touchTarget,
   },
-  entryText: { flexGrow: 1, flexShrink: 1, flexBasis: 120, gap: 1, minWidth: 0 },
+  timelineRowHighlighted: {
+    borderRadius: Shape.radius.sm,
+  },
+  entryText: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: DAY_BOX_ITEM_BASIS,
+    gap: Spacing.none,
+    minWidth: 0,
+  },
   entryAmount: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
     flexShrink: 0,
   },
 });
