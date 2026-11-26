@@ -3,7 +3,7 @@ import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 import { CREATE_LEDGER_READ_INDEXES_SQL, DROP_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 
 export const schema = appSchema({
-  version: 39,
+  version: 40,
   unsafeSql: (sql, kind) =>
     `${sql}\n${kind === 'drop_indices' ? DROP_LEDGER_READ_INDEXES_SQL : CREATE_LEDGER_READ_INDEXES_SQL}`,
   tables: [
@@ -414,5 +414,19 @@ END;`,
         { name: 'default_currency_code', type: 'string', isOptional: false },
       ],
     }),
+    ...(['people', 'person_accounts', 'open_items', 'settlement_allocations'] as const).map(name => tableSchema({
+      name,
+      columns: name === 'people' ? [
+        { name: 'name', type: 'string', isIndexed: true }, { name: 'notes', type: 'string', isOptional: true }, { name: 'color', type: 'string', isOptional: true },
+        { name: 'archived_at', type: 'number', isOptional: true, isIndexed: true }, { name: 'created_at', type: 'number', isIndexed: true }, { name: 'updated_at', type: 'number' }, { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true }, { name: 'workplace_id', type: 'string', isIndexed: true },
+      ] : name === 'person_accounts' ? [
+        { name: 'person_id', type: 'string', isIndexed: true }, { name: 'account_id', type: 'string', isIndexed: true }, { name: 'created_at', type: 'number', isIndexed: true }, { name: 'updated_at', type: 'number' }, { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true }, { name: 'workplace_id', type: 'string', isIndexed: true },
+      ] : name === 'open_items' ? [
+        { name: 'person_id', type: 'string', isIndexed: true }, { name: 'originating_journal_id', type: 'string', isIndexed: true }, { name: 'account_id', type: 'string', isIndexed: true }, { name: 'direction', type: 'string' }, { name: 'original_amount', type: 'number' }, { name: 'currency_code', type: 'string', isIndexed: true }, { name: 'created_at', type: 'number', isIndexed: true }, { name: 'updated_at', type: 'number' }, { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true }, { name: 'workplace_id', type: 'string', isIndexed: true },
+      ] : [
+        { name: 'person_id', type: 'string', isIndexed: true }, { name: 'open_item_id', type: 'string', isIndexed: true }, { name: 'settlement_journal_id', type: 'string', isIndexed: true }, { name: 'account_id', type: 'string', isIndexed: true }, { name: 'allocation_kind', type: 'string' }, { name: 'amount', type: 'number' }, { name: 'is_active', type: 'boolean', isIndexed: true }, { name: 'created_at', type: 'number', isIndexed: true }, { name: 'updated_at', type: 'number' }, { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true }, { name: 'workplace_id', type: 'string', isIndexed: true },
+      ],
+      unsafeSql: sql => `${sql};\nCREATE TRIGGER IF NOT EXISTS trg_${name}_workplace_id_check BEFORE INSERT ON ${name} FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on ${name}'); END;${name === 'person_accounts' ? '\nCREATE UNIQUE INDEX IF NOT EXISTS person_accounts_active_wp_account ON person_accounts (workplace_id, account_id) WHERE deleted_at IS NULL;' : ''}${name === 'open_items' ? '\nCREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_items (workplace_id, originating_journal_id, account_id) WHERE deleted_at IS NULL;' : ''}`,
+    })),
   ],
 });

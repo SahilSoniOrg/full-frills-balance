@@ -23,6 +23,9 @@ export const AUDIT_ENTITY_CAPABILITIES = {
   account_matcher: { canView: false, revertHandler: 'none' },
   transaction_inbox_record: { canView: false, revertHandler: 'none' },
   workplace: { canView: false, revertHandler: 'workplace' },
+  person: { canView: false, revertHandler: 'none' },
+  open_item: { canView: false, revertHandler: 'none' },
+  settlement_allocation: { canView: false, revertHandler: 'none' },
 } satisfies Record<AuditEntityType, AuditEntityCapabilities>;
 
 const UNSUPPORTED_AUDIT_ENTITY: AuditEntityCapabilities = {

@@ -20,6 +20,10 @@ function fundingIdsForV2Export(raw: unknown): string {
 }
 
 const EXPORT_KEY_BY_TABLE: Record<string, string> = {
+  people: 'people',
+  person_accounts: 'personAccounts',
+  open_items: 'openItems',
+  settlement_allocations: 'settlementAllocations',
   accounts: 'accounts',
   journals: 'journals',
   transactions: 'transactions',

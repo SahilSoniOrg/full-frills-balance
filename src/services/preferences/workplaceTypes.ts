@@ -4,6 +4,7 @@ import type { CaptureCategoryDefault } from '@/src/domain/transaction-intelligen
 
 /** Settings that change what a workplace's books mean or write. */
 export interface WorkplacePreferences {
+  autoSettlePeopleBalances?: boolean;
   automaticTransactionCapture?: AutomaticTransactionCapturePreferences;
   /** Merchant identities for which suggestions and automatic defaults are disabled. */
   openCaptureMerchants?: string[];
@@ -57,6 +58,7 @@ export const DEFAULT_WORKPLACE_PREFERENCES: WorkplacePreferences = {
 };
 
 export const WORKPLACE_PREFERENCE_KEYS = [
+  'autoSettlePeopleBalances',
   'automaticTransactionCapture',
   'openCaptureMerchants',
   'captureDescriptionDefaults',

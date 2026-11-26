@@ -1175,5 +1175,21 @@ WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_rebuild_intents'); END;`),
       ],
     },
+    {
+      toVersion: 40,
+      steps: [unsafeExecuteSql(`
+CREATE TABLE people (id varchar primary key not null, name varchar not null, notes varchar, color varchar, archived_at float, created_at float not null, updated_at float not null, deleted_at float, workplace_id varchar not null);
+CREATE INDEX people_name ON people (name); CREATE INDEX people_archived_at ON people (archived_at); CREATE INDEX people_created_at ON people (created_at); CREATE INDEX people_deleted_at ON people (deleted_at); CREATE INDEX people_workplace_id ON people (workplace_id);
+CREATE TABLE person_accounts (id varchar primary key not null, person_id varchar not null, account_id varchar not null, created_at float not null, updated_at float not null, deleted_at float, workplace_id varchar not null);
+CREATE INDEX person_accounts_person_id ON person_accounts (person_id); CREATE INDEX person_accounts_account_id ON person_accounts (account_id); CREATE INDEX person_accounts_created_at ON person_accounts (created_at); CREATE INDEX person_accounts_deleted_at ON person_accounts (deleted_at); CREATE INDEX person_accounts_workplace_id ON person_accounts (workplace_id);
+CREATE UNIQUE INDEX IF NOT EXISTS person_accounts_active_wp_account ON person_accounts (workplace_id, account_id) WHERE deleted_at IS NULL;
+CREATE TABLE open_items (id varchar primary key not null, person_id varchar not null, originating_journal_id varchar not null, account_id varchar not null, direction varchar not null, original_amount float not null, currency_code varchar not null, created_at float not null, updated_at float not null, deleted_at float, workplace_id varchar not null);
+CREATE INDEX open_items_person_id ON open_items (person_id); CREATE INDEX open_items_originating_journal_id ON open_items (originating_journal_id); CREATE INDEX open_items_account_id ON open_items (account_id); CREATE INDEX open_items_currency_code ON open_items (currency_code); CREATE INDEX open_items_created_at ON open_items (created_at); CREATE INDEX open_items_deleted_at ON open_items (deleted_at); CREATE INDEX open_items_workplace_id ON open_items (workplace_id);
+CREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_items (workplace_id, originating_journal_id, account_id) WHERE deleted_at IS NULL;
+CREATE TABLE settlement_allocations (id varchar primary key not null, person_id varchar not null, open_item_id varchar not null, settlement_journal_id varchar not null, account_id varchar not null, allocation_kind varchar not null, amount float not null, is_active boolean not null, created_at float not null, updated_at float not null, deleted_at float, workplace_id varchar not null);
+CREATE INDEX settlement_allocations_person_id ON settlement_allocations (person_id); CREATE INDEX settlement_allocations_open_item_id ON settlement_allocations (open_item_id); CREATE INDEX settlement_allocations_settlement_journal_id ON settlement_allocations (settlement_journal_id); CREATE INDEX settlement_allocations_account_id ON settlement_allocations (account_id); CREATE INDEX settlement_allocations_is_active ON settlement_allocations (is_active); CREATE INDEX settlement_allocations_created_at ON settlement_allocations (created_at); CREATE INDEX settlement_allocations_deleted_at ON settlement_allocations (deleted_at); CREATE INDEX settlement_allocations_workplace_id ON settlement_allocations (workplace_id);
+${['people','person_accounts','open_items','settlement_allocations'].map(t => `CREATE TRIGGER trg_${t}_workplace_id_check BEFORE INSERT ON ${t} FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on ${t}'); END;`).join('\n')}
+`)],
+    },
   ],
 });
