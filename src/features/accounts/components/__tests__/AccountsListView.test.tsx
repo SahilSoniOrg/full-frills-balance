@@ -49,8 +49,6 @@ const requiredViewProps = {
   onAccountActionPress: jest.fn(),
   selectedAccountIds: new Set<AccountId>(),
   isSelectionModeActive: false,
-  selectionChrome: undefined,
-  selectableAccountIds: [],
   modals: {
     activeModal: null,
     onCloseModal: jest.fn(),
@@ -80,14 +78,10 @@ describe('AccountsListView', () => {
         onAccountLongPress={onAccountLongPress}
         onCollapseAccount={jest.fn()}
         onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
         isLoading={false}
-        version={1}
         netWorth={1500}
         totalAssets={1500}
         totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
         inflowPeriod="overall"
         setInflowPeriod={jest.fn()}
         inflowIncome={0}
@@ -95,11 +89,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
         {...requiredViewProps}
       />,
     );
@@ -119,14 +108,10 @@ describe('AccountsListView', () => {
         onAccountLongPress={jest.fn()}
         onCollapseAccount={jest.fn()}
         onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
         isLoading={false}
-        version={1}
         netWorth={1500}
         totalAssets={1500}
         totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
         inflowPeriod="overall"
         setInflowPeriod={jest.fn()}
         inflowIncome={0}
@@ -134,11 +119,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
         {...requiredViewProps}
         onToggleSectionSelect={onToggleSectionSelect}
       />,
@@ -160,14 +140,10 @@ describe('AccountsListView', () => {
         onAccountLongPress={jest.fn()}
         onCollapseAccount={jest.fn()}
         onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
         isLoading={false}
-        version={1}
         netWorth={1500}
         totalAssets={1500}
         totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
         inflowPeriod="overall"
         setInflowPeriod={jest.fn()}
         inflowIncome={0}
@@ -175,16 +151,10 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
         {...requiredViewProps}
         isSelectionModeActive={isSelectionModeActive}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
         onToggleSectionSelect={onToggleSectionSelect}
-        selectableAccountIds={['acc-1' as AccountId]}
       />
     );
     const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
@@ -218,14 +188,10 @@ describe('AccountsListView', () => {
         onAccountLongPress={jest.fn()}
         onCollapseAccount={jest.fn()}
         onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
         isLoading={false}
-        version={1}
         netWorth={1500}
         totalAssets={1500}
         totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
         inflowPeriod="overall"
         setInflowPeriod={jest.fn()}
         inflowIncome={0}
@@ -233,15 +199,9 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
         {...requiredViewProps}
         isSelectionModeActive={true}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
-        selectableAccountIds={['acc-1' as AccountId]}
       />,
     );
 
@@ -257,14 +217,10 @@ describe('AccountsListView', () => {
         onAccountLongPress={jest.fn()}
         onCollapseAccount={jest.fn()}
         onCreateAccount={jest.fn()}
-        onManageHierarchy={jest.fn()}
         isLoading={false}
-        version={1}
         netWorth={1500}
         totalAssets={1500}
         totalLiabilities={0}
-        totalIncome={0}
-        totalExpense={0}
         inflowPeriod="overall"
         setInflowPeriod={jest.fn()}
         inflowIncome={0}
@@ -272,11 +228,6 @@ describe('AccountsListView', () => {
         isPeriodLoading={false}
         currencyCode="USD"
         activeTab="accounts"
-        searchQuery=""
-        isSearching={false}
-        onSearchChange={jest.fn()}
-        setIsSearching={jest.fn()}
-        accountsForArchiveToggle={[]}
         {...requiredViewProps}
         modals={{
           ...requiredViewProps.modals,

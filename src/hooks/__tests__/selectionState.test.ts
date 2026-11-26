@@ -1,4 +1,4 @@
-import { getSelectionState } from '../selectionState';
+import { getSelectionState, pruneSelectedIds } from '../selectionState';
 
 describe('getSelectionState', () => {
   it.each([
@@ -20,4 +20,16 @@ describe('getSelectionState', () => {
       });
     },
   );
+});
+
+describe('pruneSelectedIds', () => {
+  it('returns the same set reference when every id is still valid', () => {
+    const selected = new Set(['a', 'b']);
+    expect(pruneSelectedIds(selected, ['a', 'b', 'c'])).toBe(selected);
+  });
+
+  it('drops ids that are no longer valid', () => {
+    const selected = new Set(['a', 'gone']);
+    expect([...pruneSelectedIds(selected, ['a', 'b'])]).toEqual(['a']);
+  });
 });

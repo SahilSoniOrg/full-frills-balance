@@ -34,14 +34,31 @@ describe('buildSelectionChrome', () => {
     expect(chrome.exitSelectionMode).toBe(exitSelectionMode);
     expect(chrome.selectAll).toBe(selectAll);
     expect(chrome.clearItems).toBe(clearItems);
-    expect(chrome.onShareSelected).toBe(onShareSelected);
+    // Actions own Share — legacy onShareSelected is omitted when actions are present.
+    expect(chrome.onShareSelected).toBeUndefined();
     expect(chrome.actions).toBe(actions);
+  });
+
+  it('keeps onShareSelected when building chrome without actions', () => {
+    const onShareSelected = jest.fn();
+    const chrome = buildListSelectionChrome({
+      selectedIds: new Set(['a']),
+      selectableIds: ['a'],
+      itemTypeLabel: 'transaction',
+      exitSelectionMode: jest.fn(),
+      selectAll: jest.fn(),
+      clearItems: jest.fn(),
+      onShareSelected,
+    });
+    expect(chrome.onShareSelected).toBe(onShareSelected);
+    expect(chrome.actions).toBeUndefined();
   });
 
   it('attaches actions only when base selection chrome is defined', () => {
     const actions = [{ name: Icon.Edit, label: 'Rename', onPress: jest.fn() }];
     expect(attachSelectionActions(undefined, actions)).toBeUndefined();
 
+    const onShareSelected = jest.fn();
     const base = buildListSelectionChrome({
       selectedIds: new Set(['1']),
       selectableIds: ['1'],
@@ -49,10 +66,13 @@ describe('buildSelectionChrome', () => {
       exitSelectionMode: jest.fn(),
       selectAll: jest.fn(),
       clearItems: jest.fn(),
+      onShareSelected,
     });
     expect('actions' in base).toBe(false);
+    expect(base.onShareSelected).toBe(onShareSelected);
 
     const attached = attachSelectionActions(base, actions);
-    expect(attached).toEqual({ ...base, actions });
+    expect(attached?.actions).toBe(actions);
+    expect(attached?.onShareSelected).toBeUndefined();
   });
 });

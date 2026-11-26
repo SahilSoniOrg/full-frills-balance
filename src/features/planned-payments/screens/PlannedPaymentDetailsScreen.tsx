@@ -77,7 +77,6 @@ function PlannedPaymentDetailsScreen() {
         clearItems: vm.clearItems,
         exitSelectionMode: vm.exitSelectionMode,
         actions: vm.actions,
-        onShareSelected: vm.onShareSelected,
       }),
     };
   }, [
@@ -86,7 +85,6 @@ function PlannedPaymentDetailsScreen() {
     vm.selectAll,
     vm.clearItems,
     vm.actions,
-    vm.onShareSelected,
     vm.history,
     vm.reversalJournalIds,
     vm.selectedIds,

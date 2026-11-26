@@ -68,6 +68,10 @@ export function useInsightDetailsViewModel(
   });
 
   const header = useMemo(() => buildInsightDetailsHeader(params, theme), [params, theme]);
+  const selectionChrome = useMemo(
+    () => attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    [journalList.selectionChrome, bulkOperations.actions],
+  );
 
   return {
     csvExport: journalList.csvExport,
@@ -81,7 +85,7 @@ export function useInsightDetailsViewModel(
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    selectionChrome,
     modals: bulkOperations.modals,
   };
 }

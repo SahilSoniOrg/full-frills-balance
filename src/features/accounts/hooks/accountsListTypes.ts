@@ -66,3 +66,33 @@ export interface AccountsListViewModel {
   setIsSearching: (isSearching: boolean) => void;
   accountsForArchiveToggle: { archivedAt?: Date | number | null }[];
 }
+
+/** Props the list view actually reads — chrome/search live on the screen shell. */
+export type AccountsListViewProps = Pick<
+  AccountsListViewModel,
+  | 'sections'
+  | 'onToggleSection'
+  | 'onToggleSectionSelect'
+  | 'onAccountPress'
+  | 'onAccountLongPress'
+  | 'onAccountActionPress'
+  | 'selectedAccountIds'
+  | 'isSelectionModeActive'
+  | 'modals'
+  | 'onCollapseAccount'
+  | 'onCreateAccount'
+  | 'isLoading'
+  | 'error'
+  | 'retry'
+  | 'netWorth'
+  | 'totalAssets'
+  | 'totalLiabilities'
+  | 'inflowPeriod'
+  | 'setInflowPeriod'
+  | 'inflowIncome'
+  | 'inflowExpense'
+  | 'isPeriodLoading'
+  | 'hasUnvaluedEntries'
+  | 'currencyCode'
+  | 'activeTab'
+>;

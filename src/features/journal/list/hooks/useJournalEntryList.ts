@@ -11,6 +11,7 @@ import { selectableJournalIds } from '@/src/components/journal/selectableJournal
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
+import { pruneSelectedIds } from '@/src/hooks/selectionState';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useShareable } from '@/src/hooks/useShareable';
 import { useJournalCsvExport, type ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
@@ -297,11 +298,13 @@ export function useJournalEntryList({
   useEffect(() => {
     if (selectedIds.size === 0 || isLoading) return;
 
-    setSelectedIds(prev => {
-      const validIds = new Set(journals.map(j => j.id));
-      const filtered = new Set([...prev].filter(id => validIds.has(id)));
-      return filtered.size === prev.size ? prev : filtered;
-    });
+    setSelectedIds(
+      prev =>
+        pruneSelectedIds(
+          prev,
+          journals.map(j => j.id),
+        ) as typeof prev,
+    );
   }, [journals, selectedIds, setSelectedIds, isLoading]);
 
   useEffect(() => {

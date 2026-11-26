@@ -26,7 +26,9 @@ export function attachSelectionActions(
   actions: SelectionAction[] | undefined,
 ): SelectionOverlayProps | undefined {
   if (!chrome) return undefined;
-  return { ...chrome, actions };
+  // Actions already own Share (and the rest); drop the legacy onShareSelected channel.
+  const { onShareSelected: _unused, ...rest } = chrome;
+  return { ...rest, actions };
 }
 
 /** Assemble SelectionOverlayProps consistently from selection state and handlers. */
@@ -47,8 +49,7 @@ export function buildListSelectionChrome<TId extends string = string>({
     exitSelectionMode,
     selectAll,
     clearItems,
-    onShareSelected,
     amountSummary,
-    ...(actions !== undefined ? { actions } : {}),
+    ...(actions !== undefined ? { actions } : onShareSelected ? { onShareSelected } : {}),
   };
 }

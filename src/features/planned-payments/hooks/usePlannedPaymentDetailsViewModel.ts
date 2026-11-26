@@ -18,6 +18,7 @@ import {
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
+import { pruneSelectedIds } from '@/src/hooks/selectionState';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useShareable } from '@/src/hooks/useShareable';
 import { useJournalCsvExport, type ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
@@ -421,11 +422,13 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
   useEffect(() => {
     if (selectedIds.size === 0 || isHistoryLoading) return;
-    setSelectedIds(prev => {
-      const validIds = new Set(history.map(journal => journal.id));
-      const filtered = new Set([...prev].filter(journalId => validIds.has(journalId)));
-      return filtered.size === prev.size ? prev : filtered;
-    });
+    setSelectedIds(
+      prev =>
+        pruneSelectedIds(
+          prev,
+          history.map(journal => journal.id),
+        ) as typeof prev,
+    );
   }, [history, selectedIds, setSelectedIds, isHistoryLoading]);
 
   const selectAll = useCallback(() => {

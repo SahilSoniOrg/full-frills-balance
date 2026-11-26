@@ -18,7 +18,7 @@ import { DateRange, PeriodFilter } from '@/src/domain/calendar/dateRanges';
 import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
 import { useJournalEntryList } from './useJournalEntryList';
 import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
@@ -259,6 +259,22 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     [filters],
   );
 
+  const selection = useMemo(
+    (): JournalSelectionBundle => ({
+      selectedIds: core.selectedIds,
+      isSelectionModeActive: core.isSelectionModeActive,
+      onLongPressItem: core.onLongPressItem,
+      chrome: attachSelectionActions(core.selectionChrome, bulkOperations.actions),
+    }),
+    [
+      core.selectedIds,
+      core.isSelectionModeActive,
+      core.onLongPressItem,
+      core.selectionChrome,
+      bulkOperations.actions,
+    ],
+  );
+
   return {
     csvExport: attachMode ? undefined : core.csvExport,
     items: core.items,
@@ -278,12 +294,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     isDatePickerVisible,
     openDatePicker,
     closeDatePicker,
-    selection: {
-      selectedIds: core.selectedIds,
-      isSelectionModeActive: core.isSelectionModeActive,
-      onLongPressItem: core.onLongPressItem,
-      chrome: attachSelectionActions(core.selectionChrome, bulkOperations.actions),
-    },
+    selection,
     modals: attachMode ? undefined : bulkOperations.modals,
   };
 }

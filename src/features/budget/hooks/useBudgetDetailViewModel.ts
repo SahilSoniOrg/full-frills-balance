@@ -335,6 +335,11 @@ export function useBudgetDetailViewModel() {
     });
   }, [activityCategory?.id, chartAccountIds]);
 
+  const selectionChrome = useMemo(
+    () => attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    [journalList.selectionChrome, bulkOperations.actions],
+  );
+
   return {
     budget,
     csvExport: journalList.csvExport,
@@ -373,7 +378,7 @@ export function useBudgetDetailViewModel() {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    selectionChrome,
     modals: bulkOperations.modals,
   };
 }

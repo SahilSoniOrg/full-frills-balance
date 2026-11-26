@@ -249,6 +249,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     ],
   );
 
+  const selectionChrome = useMemo(
+    () => attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    [journalList.selectionChrome, bulkOperations.actions],
+  );
+
   return {
     accountName,
     accountLoading: data.accountLoading,
@@ -287,7 +292,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     selectedIds: journalList.selectedIds,
     isSelectionModeActive: journalList.isSelectionModeActive,
     onLongPressItem: journalList.onLongPressItem,
-    selectionChrome: attachSelectionActions(journalList.selectionChrome, bulkOperations.actions),
+    selectionChrome,
     modals: bulkOperations.modals,
   };
 }

@@ -104,6 +104,14 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
   );
   const selectedEventLabel =
     eventFilterOptions.find(option => option.id === eventFilter)?.label ?? eventFilter;
+  const exportLabel = isExportingHistory
+    ? archiveExportProgress
+      ? AppConfig.strings.audit.exportingHistoryProgress(
+          archiveExportProgress.exportedCount,
+          archiveExportProgress.totalAtStart,
+        )
+      : AppConfig.strings.audit.exportingHistory
+    : AppConfig.strings.audit.exportHistory;
 
   const loadOlderControl = (
     <View>
@@ -141,25 +149,9 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
               size="sm"
               loading={isExportingHistory}
               onPress={onExportHistory}
-              accessibilityLabel={
-                isExportingHistory
-                  ? archiveExportProgress
-                    ? AppConfig.strings.audit.exportingHistoryProgress(
-                        archiveExportProgress.exportedCount,
-                        archiveExportProgress.totalAtStart,
-                      )
-                    : AppConfig.strings.audit.exportingHistory
-                  : AppConfig.strings.audit.exportHistory
-              }
+              accessibilityLabel={exportLabel}
             >
-              {isExportingHistory
-                ? archiveExportProgress
-                  ? AppConfig.strings.audit.exportingHistoryProgress(
-                      archiveExportProgress.exportedCount,
-                      archiveExportProgress.totalAtStart,
-                    )
-                  : AppConfig.strings.audit.exportingHistory
-                : AppConfig.strings.audit.exportHistory}
+              {exportLabel}
             </AppButton>
           </View>
         )}

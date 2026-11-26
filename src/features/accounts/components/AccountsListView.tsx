@@ -12,7 +12,7 @@ import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
+import type { AccountsListViewProps } from '@/src/features/accounts/hooks/accountsListTypes';
 import {
   AccountCardViewModel,
   AccountSectionViewModel,
@@ -54,7 +54,7 @@ export function AccountsListView({
   hasUnvaluedEntries,
   currencyCode,
   activeTab,
-}: AccountsListViewModel) {
+}: AccountsListViewProps) {
   const { theme } = useTheme();
   const rows = useMemo(() => buildAccountListRows(sections), [sections]);
   const keyExtractor = useCallback((item: AccountListRow) => item.key, []);
