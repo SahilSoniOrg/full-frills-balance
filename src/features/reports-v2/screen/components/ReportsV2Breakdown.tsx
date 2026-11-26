@@ -7,7 +7,7 @@ import {
   ListRow,
 } from '@/src/components/core';
 import { ContextualExplanation } from '@/src/components/shared/ContextualExplanation';
-import { Spacing } from '@/src/constants/design-tokens';
+import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportSection } from '@/src/services/reports-v2/types/result';
 import { useState } from 'react';
@@ -18,6 +18,8 @@ import {
   explanationForBudgetUtilization,
   type ReportsV2ExplanationContext,
 } from './reportExplanations';
+
+const COLLAPSED_ROW_LIMIT = 12;
 
 function measureNumber(measure: NonNullable<ReportSection['rows']>[number]['value']): number {
   return measure.kind === 'MONEY' ? measure.amount : (measure.value ?? 0);
@@ -84,7 +86,7 @@ export function ReportsV2Breakdown({
         </AppText>
       </View>
       <ListGroup variant="plain">
-        {(expanded ? section.rows : section.rows.slice(0, 12)).map(item => {
+        {(expanded ? section.rows : section.rows.slice(0, COLLAPSED_ROW_LIMIT)).map(item => {
           const value = measureNumber(item.value);
           return (
             <ListRow
@@ -134,7 +136,7 @@ export function ReportsV2Breakdown({
           );
         })}
       </ListGroup>
-      {section.rows.length > 12 ? (
+      {section.rows.length > COLLAPSED_ROW_LIMIT ? (
         <AppButton
           variant="ghost"
           size="sm"
@@ -163,8 +165,13 @@ const styles = StyleSheet.create({
   },
   headerCopy: { flex: 1, gap: Spacing.xs },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  rowTrack: { height: 5, borderRadius: 5, overflow: 'hidden', marginTop: Spacing.sm },
-  rowFill: { height: 5, borderRadius: 5 },
+  rowTrack: {
+    height: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    overflow: 'hidden',
+    marginTop: Spacing.sm,
+  },
+  rowFill: { height: Spacing.xs, borderRadius: Shape.radius.full },
   showMoreButton: { alignSelf: 'center', marginVertical: Spacing.sm },
-  rowValue: { alignItems: 'flex-end', minWidth: 76, gap: Spacing.xs },
+  rowValue: { alignItems: 'flex-end', minWidth: Size.fieldNarrow, gap: Spacing.xs },
 });

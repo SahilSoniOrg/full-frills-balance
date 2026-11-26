@@ -10,13 +10,103 @@ import {
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { Insight } from '@/src/services/insight/insightTypes';
+import { StyleSheet } from 'react-native';
+
+function HubActiveContent({
+  activeInsights,
+  isInsightsLoading,
+  unreadSmsCount,
+  currencyCode,
+  emptyStateTitle,
+  dismissInsight,
+  onOpenInsight,
+  onCreateEmergencyAccount,
+}: {
+  activeInsights: Insight[];
+  isInsightsLoading: boolean;
+  unreadSmsCount: number;
+  currencyCode: string;
+  emptyStateTitle: string;
+  dismissInsight: (id: string) => void;
+  onOpenInsight: (insight: Insight) => void;
+  onCreateEmergencyAccount: () => void;
+}) {
+  if (activeInsights.length > 0) {
+    return (
+      <HubWidget
+        insights={activeInsights}
+        currencyCode={currencyCode}
+        onDismiss={dismissInsight}
+        onOpenInsight={onOpenInsight}
+        onCreateEmergencyAccount={onCreateEmergencyAccount}
+        hideManageDismissed
+      />
+    );
+  }
+  if (isInsightsLoading) {
+    return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
+  }
+  if (unreadSmsCount === 0) {
+    return <EmptyStateView icon={Icon.Info} title={emptyStateTitle} style={styles.emptyState} />;
+  }
+  return null;
+}
+
+function HubDismissedContent({
+  dismissedInsights,
+  isInsightsLoading,
+  noDismissedTitle,
+  restoreLabel,
+  restoreInsight,
+}: {
+  dismissedInsights: Insight[];
+  isInsightsLoading: boolean;
+  noDismissedTitle: string;
+  restoreLabel: string;
+  restoreInsight: (id: string) => void;
+}) {
+  const { theme } = useTheme();
+
+  if (dismissedInsights.length > 0) {
+    return (
+      <ListGroup
+        items={dismissedInsights}
+        toRow={(item: Insight) => ({
+          id: item.id,
+          leading: (
+            <AppIcon
+              name={insightTypePresentation(item.type).icon}
+              size={Size.xs}
+              color={theme.text}
+            />
+          ),
+          title: item.message,
+          subtitle: item.description,
+          trailing: (
+            <AppButton
+              size="sm"
+              onPress={() => restoreInsight(item.id)}
+              style={styles.restoreButton}
+            >
+              {restoreLabel}
+            </AppButton>
+          ),
+        })}
+      />
+    );
+  }
+  if (isInsightsLoading) {
+    return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
+  }
+  return <EmptyStateView icon={Icon.Info} title={noDismissedTitle} style={styles.emptyState} />;
+}
 
 export function HubView({
   activeTab,
@@ -35,77 +125,6 @@ export function HubView({
   onCreateEmergencyAccount,
   chrome,
 }: HubViewModel & { chrome: ScreenNavChrome }) {
-  const { theme } = useTheme();
-
-  const renderActiveContent = () => {
-    if (activeInsights.length > 0) {
-      return (
-        <HubWidget
-          insights={activeInsights}
-          currencyCode={currencyCode}
-          onDismiss={dismissInsight}
-          onOpenInsight={onOpenInsight}
-          onCreateEmergencyAccount={onCreateEmergencyAccount}
-          hideManageDismissed
-        />
-      );
-    }
-    if (isInsightsLoading) {
-      return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
-    }
-    if (unreadSmsCount === 0) {
-      return (
-        <EmptyStateView
-          icon={Icon.Info}
-          title={strings.emptyState}
-          style={{ marginTop: Spacing.xxxl }}
-        />
-      );
-    }
-    return null;
-  };
-
-  const renderDismissedContent = () => {
-    if (dismissedInsights.length > 0) {
-      return (
-        <ListGroup
-          items={dismissedInsights}
-          toRow={(item: Insight) => ({
-            id: item.id,
-            leading: (
-              <AppIcon
-                name={insightTypePresentation(item.type).icon}
-                size={Size.xs}
-                color={theme.text}
-              />
-            ),
-            title: item.message,
-            subtitle: item.description,
-            trailing: (
-              <AppButton
-                size="sm"
-                onPress={() => restoreInsight(item.id)}
-                style={{ borderRadius: 20 }}
-              >
-                {strings.restore}
-              </AppButton>
-            ),
-          })}
-        />
-      );
-    }
-    if (isInsightsLoading) {
-      return <LoadingView loading variant="inline" text={AppConfig.strings.common.loading} />;
-    }
-    return (
-      <EmptyStateView
-        icon={Icon.Info}
-        title={strings.noDismissed}
-        style={{ marginTop: Spacing.xxxl }}
-      />
-    );
-  };
-
   return (
     <ScreenWithChrome chrome={chrome} withPadding={false} scrollable>
       <Box marginTop="md">
@@ -126,8 +145,36 @@ export function HubView({
           </Box>
         ) : null}
 
-        {activeTab === 'active' ? renderActiveContent() : renderDismissedContent()}
+        {activeTab === 'active' ? (
+          <HubActiveContent
+            activeInsights={activeInsights}
+            isInsightsLoading={isInsightsLoading}
+            unreadSmsCount={unreadSmsCount}
+            currencyCode={currencyCode}
+            emptyStateTitle={strings.emptyState}
+            dismissInsight={dismissInsight}
+            onOpenInsight={onOpenInsight}
+            onCreateEmergencyAccount={onCreateEmergencyAccount}
+          />
+        ) : (
+          <HubDismissedContent
+            dismissedInsights={dismissedInsights}
+            isInsightsLoading={isInsightsLoading}
+            noDismissedTitle={strings.noDismissed}
+            restoreLabel={strings.restore}
+            restoreInsight={restoreInsight}
+          />
+        )}
       </Box>
     </ScreenWithChrome>
   );
 }
+
+const styles = StyleSheet.create({
+  emptyState: {
+    marginTop: Spacing.xxxl,
+  },
+  restoreButton: {
+    borderRadius: Shape.radius.xl,
+  },
+});

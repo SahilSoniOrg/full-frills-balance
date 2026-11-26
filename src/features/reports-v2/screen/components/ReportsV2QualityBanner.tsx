@@ -1,6 +1,7 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, Icon } from '@/src/components/core';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
+import { Size } from '@/src/constants/design-tokens';
 import type { ReportWarning } from '@/src/services/reports-v2/types/result';
 
 export function ReportsV2QualityBanner({
@@ -49,7 +50,7 @@ export function ReportsV2QualityBanner({
         icon={errorCount > 0 ? Icon.Alert : warningCount > 0 ? Icon.Error : Icon.CheckCircle}
         title={headline}
         message={detail}
-        action={<AppIcon name={Icon.ChevronRight} size={18} color="textSecondary" />}
+        action={<AppIcon name={Icon.ChevronRight} size={Size.iconSm} color="textSecondary" />}
       />
     </PressScaleTouchable>
   );
