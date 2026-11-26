@@ -153,11 +153,13 @@ exports[`settings screens keep their e2e testIDs and search focus targets workpl
 {
   "focusIds": [
     "active-workplace",
+    "auto-settle-people",
     "currency",
     "delete-workplace",
     "safe-to-spend-forecast",
   ],
   "testIDs": [
+    "auto-settle-people-toggle",
     "nav-back-button",
     "safe-to-spend-horizon",
     "workplace-delete-home",
