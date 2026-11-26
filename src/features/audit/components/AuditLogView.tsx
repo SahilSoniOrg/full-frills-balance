@@ -1,4 +1,5 @@
 import {
+  AppButton,
   AppText,
   EmptyStateView,
   ErrorStateView,
@@ -14,7 +15,7 @@ import {
   SelectionPickerSheet,
   type SelectionOption,
 } from '@/src/components/filters/SelectionPickerSheet';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
 import type {
@@ -26,7 +27,7 @@ import { AUDIT_EVENT_TYPES } from '@/src/types/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 const ENTITY_FILTERS: AuditEntityFilter[] = [
   'all',
@@ -135,36 +136,31 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
             <AppText variant="caption" color="secondary" style={styles.archiveHelp}>
               {AppConfig.strings.audit.exportHistoryHelp}
             </AppText>
-            <PressScaleTouchable
+            <AppButton
+              variant="secondary"
+              size="sm"
+              loading={isExportingHistory}
               onPress={onExportHistory}
-              disabled={isExportingHistory}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isExportingHistory }}
-              style={[
-                styles.archiveAction,
-                {
-                  backgroundColor: theme.surfaceSecondary,
-                  borderColor: theme.divider,
-                  opacity: isExportingHistory ? 0.75 : 1,
-                },
-              ]}
-            >
-              {isExportingHistory ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <AppIcon name={Icon.Save} size={Size.xs} color={theme.textSecondary} />
-              )}
-              <AppText variant="caption" weight="semibold">
-                {isExportingHistory
+              accessibilityLabel={
+                isExportingHistory
                   ? archiveExportProgress
                     ? AppConfig.strings.audit.exportingHistoryProgress(
                         archiveExportProgress.exportedCount,
                         archiveExportProgress.totalAtStart,
                       )
                     : AppConfig.strings.audit.exportingHistory
-                  : AppConfig.strings.audit.exportHistory}
-              </AppText>
-            </PressScaleTouchable>
+                  : AppConfig.strings.audit.exportHistory
+              }
+            >
+              {isExportingHistory
+                ? archiveExportProgress
+                  ? AppConfig.strings.audit.exportingHistoryProgress(
+                      archiveExportProgress.exportedCount,
+                      archiveExportProgress.totalAtStart,
+                    )
+                  : AppConfig.strings.audit.exportingHistory
+                : AppConfig.strings.audit.exportHistory}
+            </AppButton>
           </View>
         )}
         {error && logs.length === 0 ? (
@@ -177,13 +173,11 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
               sourceFilter === null &&
               eventFilter === 'all' &&
               correlationFilter === null)) ? (
-          <View style={styles.emptyContainer}>
-            <AppIcon name={Icon.Document} size={Size.fab} color={theme.textSecondary} />
-            <EmptyStateView
-              title={AppConfig.strings.audit.emptyLogs}
-              style={styles.emptyStateText}
-            />
-          </View>
+          <EmptyStateView
+            icon={Icon.Document}
+            title={AppConfig.strings.audit.emptyLogs}
+            style={styles.emptyState}
+          />
         ) : (
           <>
             {!isFiltered &&
@@ -269,11 +263,11 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
               onSelect={onEventFilterChange}
             />
             {logs.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <AppIcon name={Icon.Document} size={Size.fab} color={theme.textSecondary} />
+              <View style={styles.emptyFiltered}>
                 <EmptyStateView
+                  icon={Icon.Document}
                   title={AppConfig.strings.audit.emptyFilteredLogs}
-                  style={styles.emptyStateText}
+                  style={styles.emptyState}
                 />
                 {hasMore && loadOlderControl}
               </View>
@@ -316,15 +310,11 @@ const styles = StyleSheet.create({
   viewContent: {
     flex: 1,
   },
-  emptyContainer: {
+  emptyFiltered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.md,
   },
-  emptyStateText: {
-    flex: 0,
-    paddingTop: 0,
+  emptyState: {
+    flex: 1,
   },
   list: {
     padding: Spacing.lg,
@@ -339,15 +329,6 @@ const styles = StyleSheet.create({
   },
   archiveHelp: {
     flex: 1,
-  },
-  archiveAction: {
-    minHeight: Size.touchTarget,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Shape.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   loadMore: {
     alignItems: 'center',

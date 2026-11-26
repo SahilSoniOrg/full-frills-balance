@@ -1,6 +1,5 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
-import { Theme } from '@/src/constants/design-tokens';
 import {
   AuditAccountMap,
   asTransactionSnapshots,
@@ -11,6 +10,7 @@ import {
 } from '@/src/services/audit/auditLogDiffDisplay';
 import { AuditChangeValue, AuditTransactionSnapshot } from '@/src/services/audit/auditLogTypes';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { useTheme } from '@/src/hooks/use-theme';
 import { View } from 'react-native';
 
 interface AuditTransactionSnapshotStackProps {
@@ -76,7 +76,6 @@ interface AuditTransactionsFieldDiffProps {
   afterVal: AuditChangeValue | undefined;
   accountMap: AuditAccountMap;
   workplaceCurrency: string;
-  theme: Theme;
 }
 
 /** Before/after diff for the journal `transactions` audit field. */
@@ -85,8 +84,8 @@ export function AuditTransactionsFieldDiff({
   afterVal,
   accountMap,
   workplaceCurrency,
-  theme,
 }: AuditTransactionsFieldDiffProps) {
+  const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
   const beforeTxs = asTransactionSnapshots(beforeVal);
   const afterTxs = asTransactionSnapshots(afterVal);

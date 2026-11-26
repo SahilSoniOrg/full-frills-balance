@@ -1,6 +1,5 @@
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { Theme } from '@/src/constants/design-tokens';
 import { AuditAccountMap, asTransactionSnapshots } from '@/src/services/audit/auditLogDiffDisplay';
 import {
   AuditTransactionsFieldDiff,
@@ -111,7 +110,6 @@ function parseStructuredJsonField(
 }
 
 interface ChangeValueRendererProps {
-  theme: Theme;
   accountMap: AuditAccountMap;
   workplaceCurrency: string;
   changeKey: string;
@@ -123,7 +121,6 @@ interface ChangeValueRendererProps {
 }
 
 function ChangeValueRenderer({
-  theme,
   accountMap,
   workplaceCurrency,
   changeKey,
@@ -133,6 +130,7 @@ function ChangeValueRenderer({
   isAfter = false,
   oppositeValue,
 }: ChangeValueRendererProps): React.ReactNode {
+  const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
   if (value === null || value === undefined) {
     return <AppText variant="caption">{AppConfig.strings.audit.notSet}</AppText>;
@@ -142,7 +140,6 @@ function ChangeValueRenderer({
   if (structuredValue !== undefined) {
     return (
       <ChangeValueRenderer
-        theme={theme}
         accountMap={accountMap}
         workplaceCurrency={workplaceCurrency}
         changeKey={changeKey}
@@ -226,7 +223,6 @@ function ChangeValueRenderer({
           isAuditChangeRecord(val) || Array.isArray(val) ? (
             <ChangeValueRenderer
               key={index}
-              theme={theme}
               accountMap={accountMap}
               workplaceCurrency={workplaceCurrency}
               changeKey={changeKey}
@@ -267,7 +263,6 @@ function ChangeValueRenderer({
                 {formatAuditFieldLabel(key)}
               </AppText>
               <ChangeValueRenderer
-                theme={theme}
                 accountMap={accountMap}
                 workplaceCurrency={workplaceCurrency}
                 changeKey={key}
@@ -295,8 +290,8 @@ function BeforeAfterChangesView({
   accountMap,
   workplaceCurrency,
   hourCycle,
-  theme,
-}: AuditLogChangesRenderProps & { theme: Theme }) {
+}: AuditLogChangesRenderProps) {
+  const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
   if (!hasBeforeAfterChanges(changes)) return null;
 
@@ -401,7 +396,6 @@ function BeforeAfterChangesView({
                 afterVal={afterVal}
                 accountMap={accountMap}
                 workplaceCurrency={workplaceCurrency}
-                theme={theme}
               />
             </View>
           );
@@ -429,7 +423,6 @@ function BeforeAfterChangesView({
             >
               <View style={{ flex: 1, opacity: Opacity.medium }}>
                 <ChangeValueRenderer
-                  theme={theme}
                   accountMap={accountMap}
                   workplaceCurrency={workplaceCurrency}
                   changeKey={key}
@@ -445,7 +438,6 @@ function BeforeAfterChangesView({
               </View>
               <View style={{ flex: 1 }}>
                 <ChangeValueRenderer
-                  theme={theme}
                   accountMap={accountMap}
                   workplaceCurrency={workplaceCurrency}
                   changeKey={key}
@@ -469,8 +461,8 @@ function FlatChangesView({
   accountMap,
   workplaceCurrency,
   hourCycle,
-  theme,
-}: AuditLogChangesRenderProps & { theme: Theme }) {
+}: AuditLogChangesRenderProps) {
+  const { theme } = useTheme();
   const record = changes as AuditChangeRecord;
   return (
     <View
@@ -490,7 +482,6 @@ function FlatChangesView({
             {formatAuditFieldLabel(key)}:{' '}
           </AppText>
           <ChangeValueRenderer
-            theme={theme}
             accountMap={accountMap}
             workplaceCurrency={workplaceCurrency}
             changeKey={key}
@@ -509,7 +500,6 @@ export function AuditLogChangesView({
   accountMap,
   workplaceCurrency,
 }: AuditLogChangesViewProps) {
-  const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const fieldDiff = getAuditFieldDiff(changes);
   const details = isAuditEventPayload(changes) ? getAuditDetails(changes) : undefined;
@@ -523,7 +513,6 @@ export function AuditLogChangesView({
           accountMap={accountMap}
           workplaceCurrency={workplaceCurrency}
           hourCycle={resolvedHourCycle}
-          theme={theme}
         />
         {hasDetails && (
           <FlatChangesView
@@ -531,7 +520,6 @@ export function AuditLogChangesView({
             accountMap={accountMap}
             workplaceCurrency={workplaceCurrency}
             hourCycle={resolvedHourCycle}
-            theme={theme}
           />
         )}
       </View>
@@ -546,7 +534,6 @@ export function AuditLogChangesView({
       accountMap={accountMap}
       workplaceCurrency={workplaceCurrency}
       hourCycle={resolvedHourCycle}
-      theme={theme}
     />
   );
 }
