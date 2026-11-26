@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { JournalStatus } from '@/src/types/enums';
 import { AppConfig } from '@/src/constants';
-import { AccountId, JournalId } from '@/src/types/ids';
+import { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 import type {
   PostingPlanValidationIssue,
@@ -31,6 +31,8 @@ export type JournalEntryRouteParams = {
   copyFromJournalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
+  personId?: PersonId;
+  openItemId?: OpenItemId;
   amount?: string;
   currencyCode?: string;
   description?: string;
@@ -83,6 +85,8 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
       : {}),
     sourceAccountId,
     destinationAccountId,
+    personId: firstString(params.personId) as PersonId | undefined,
+    openItemId: firstString(params.openItemId) as OpenItemId | undefined,
     amount: firstString(params.amount),
     ...(currencyCode && /^[A-Z]{3}$/.test(currencyCode) ? { currencyCode } : {}),
     description: firstString(params.description),
@@ -306,6 +310,8 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
     copyFromJournalId: route.copyFromJournalId,
     sourceAccountId: route.sourceAccountId,
     destinationAccountId: route.destinationAccountId,
+    personId: route.personId,
+    openItemId: route.openItemId,
     amount: route.amount,
     currencyCode: route.currencyCode,
     description: route.description,
