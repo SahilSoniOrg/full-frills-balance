@@ -206,25 +206,45 @@ function SplitExpenseScreenContent() {
                   />
                   {vm.splitMethod === 'custom' ? (
                     <Stack gap="sm">
-                      <AppInputField
-                        keyboardType="decimal-pad"
-                        placeholder="Your share"
-                        value={vm.userShareText}
-                        onChangeText={vm.setUserShareText}
-                      />
-                      {vm.people
-                        .filter(entry => vm.selectedPersonIds.includes(entry.person.id))
-                        .map(entry => (
-                          <AppInputField
-                            key={entry.person.id}
-                            keyboardType="decimal-pad"
-                            placeholder={`${entry.person.name} share`}
-                            value={vm.customShares[entry.person.id] ?? ''}
-                            onChangeText={text =>
-                              vm.setCustomShares(prev => ({ ...prev, [entry.person.id]: text }))
-                            }
-                          />
-                        ))}
+                      {[
+                        {
+                          key: 'your-share',
+                          leading: <IconTile icon={Icon.Wallet} tint="primary" size="sm" />,
+                          label: 'Your share',
+                          placeholder: 'Your share',
+                          value: vm.userShareText,
+                          onChangeText: vm.setUserShareText,
+                        },
+                        ...vm.people
+                          .filter(entry => vm.selectedPersonIds.includes(entry.person.id))
+                          .map(entry => ({
+                            key: entry.person.id,
+                            leading: <PersonAvatar name={entry.person.name} size={32} />,
+                            label: entry.person.name,
+                            placeholder: `${entry.person.name} share`,
+                            value: vm.customShares[entry.person.id] ?? '',
+                            onChangeText: (text: string) =>
+                              vm.setCustomShares(prev => ({ ...prev, [entry.person.id]: text })),
+                          })),
+                      ].map(row => (
+                        <Inline key={row.key} gap="sm" alignItems="center">
+                          <Inline gap="sm" alignItems="center" style={styles.customShareLabel}>
+                            {row.leading}
+                            <AppText variant="body" weight="medium" numberOfLines={1}>
+                              {row.label}
+                            </AppText>
+                          </Inline>
+                          <View style={styles.flexOne}>
+                            <AppInputField
+                              keyboardType="decimal-pad"
+                              placeholder={row.placeholder}
+                              value={row.value}
+                              onChangeText={row.onChangeText}
+                              inputStyle={styles.customShareInput}
+                            />
+                          </View>
+                        </Inline>
+                      ))}
                     </Stack>
                   ) : null}
                 </Stack>
@@ -301,6 +321,9 @@ export const SplitExpenseScreen = withPrivacyScope(SplitExpenseScreenContent);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flexOne: { flex: 1 },
+  customShareLabel: { minWidth: 148, maxWidth: '50%' },
+  customShareInput: { textAlign: 'right' },
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxl,

@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Person from '@/src/data/models/Person';
 import PersonAccount from '@/src/data/models/PersonAccount';
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import OpenItem from '@/src/data/models/OpenItem';
 import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import type { PersonId, WorkplaceId } from '@/src/types/ids';
@@ -66,8 +67,8 @@ export class PersonObserveQueries {
   }
   observeBalanceSnapshots(workplaceId: WorkplaceId) {
     return database.collections
-      .get('balance_snapshots')
-      .query(Q.where('workplace_id', workplaceId), Q.where('deleted_at', Q.eq(null)))
+      .get<BalanceSnapshot>('balance_snapshots')
+      .query(Q.where('workplace_id', workplaceId))
       .observe();
   }
 }
