@@ -2,10 +2,10 @@ import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppText } from '@/src/components/core';
 import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Size } from '@/src/constants/design-tokens';
+import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface DayOfMonthSheetProps {
   visible: boolean;
@@ -47,9 +47,9 @@ export function DayOfMonthSheet({
         />
       }
     >
-      <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View testID={testID} style={styles.grid}>
         {Array.from({ length: 31 }, (_, index) => index + 1).map(day => (
-          <View key={day} style={{ width: '14.285%' }}>
+          <View key={day} style={styles.cell}>
             <PressScaleTouchable
               haptic="selection"
               testID={testID ? `${testID}-${day}` : undefined}
@@ -60,14 +60,10 @@ export function DayOfMonthSheet({
                 onSelect(day);
                 onClose();
               }}
-              style={{
-                height: Size.touchTarget,
-                margin: 2,
-                borderRadius: Size.touchTarget,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: value === day ? theme.primary : 'transparent',
-              }}
+              style={[
+                styles.dayButton,
+                { backgroundColor: value === day ? theme.primary : 'transparent' },
+              ]}
             >
               <AppText
                 variant="bodySmall"
@@ -82,3 +78,20 @@ export function DayOfMonthSheet({
     </ModalSurface>
   );
 }
+
+const styles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  cell: {
+    width: '14.285%',
+  },
+  dayButton: {
+    height: Size.touchTarget,
+    margin: Spacing.xs / 2,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

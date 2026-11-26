@@ -7,7 +7,7 @@ import {
   type IconName,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { BorderWidth, Layout, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/domain/calendar/dateRanges';
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.md,
     padding: Spacing.md,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     borderColor: 'transparent',
     borderRadius: Shape.radius.lg,
     marginHorizontal: -Spacing.xs,
@@ -433,24 +433,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.sm,
-    marginBottom: 2,
+    marginBottom: Spacing.xs / 2,
   },
   panelIcon: {
-    width: 32,
-    height: 32,
+    width: Size.lg,
+    height: Size.lg,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: Spacing.xs / 2,
   },
   activeBadge: {
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     borderRadius: Shape.radius.full,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
   },
   divider: {
-    height: 1,
+    height: BorderWidth.thin,
     marginVertical: Spacing.xs,
   },
   customRangeRow: {
@@ -459,11 +459,11 @@ const styles = StyleSheet.create({
   },
   inputButton: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     borderRadius: Shape.radius.lg,
     padding: Spacing.md,
     gap: Spacing.xs,
-    minHeight: 76,
+    minHeight: Size.textareaHeight,
     justifyContent: 'center',
   },
   lastNRow: {
@@ -472,12 +472,12 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   numberInputContainer: {
-    width: 68,
-    height: 50,
+    width: Size.fieldNarrow,
+    height: Size.inputMd,
     borderRadius: Shape.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
   },
   numberInput: {
     fontSize: Typography.sizes.xl,
@@ -495,12 +495,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     padding: Spacing.md,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     borderColor: 'transparent',
     borderRadius: Shape.radius.lg,
     marginHorizontal: -Spacing.xs,
   },
   allTimeBtn: {
-    minWidth: 84,
+    minWidth: Size.fieldNarrow + Spacing.md,
   },
 });

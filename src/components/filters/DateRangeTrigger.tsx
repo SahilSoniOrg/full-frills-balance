@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   navButton: {
-    width: Size.xl,
-    height: Size.xl,
+    width: Size.touchTarget,
+    height: Size.touchTarget,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: Size.xl,
+    minHeight: Size.touchTarget,
     paddingHorizontal: Spacing.md,
     borderRadius: Shape.radius.full,
     gap: Spacing.sm,

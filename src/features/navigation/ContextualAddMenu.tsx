@@ -11,15 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { PRIMARY_TABS, type PrimaryTab } from '@/src/navigation/primaryNavigation';
 import { usePrimaryPageNavigation } from '@/src/navigation/primaryPageNavigation';
+import { ModalHost } from '@/src/components/overlays/ModalHost';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { useEffect, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View, type ViewStyle } from 'react-native';
 
 export type ContextualAddAction =
   'expense' | 'income' | 'transfer' | 'account' | 'category' | 'budget' | 'planned-payment';
@@ -110,6 +105,7 @@ export function ContextualAddMenu({
   const { width, height, fontScale } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const afterDismiss = useAfterDismiss();
   const setPageSwipeLock = usePrimaryPageNavigation()?.setPageSwipeLock;
   useEffect(() => {
     const lockId = 'contextual-add-menu';
@@ -122,7 +118,7 @@ export function ContextualAddMenu({
   const addHeading = isJournalTab ? nav.addTransactionHeading : nav.addToTab(tabLabel);
   const openAccessibilityLabel = isJournalTab ? journal.newEntryFab.openOptions : addHeading;
   const menuWidth = Math.min(width - Spacing.lg * 2, AppConfig.layout.popupModalMaxWidth);
-  const minimumActionWidth = actions.length * 96 + (actions.length - 1) * Spacing.sm;
+  const minimumActionWidth = actions.length * Size.fieldAmount + (actions.length - 1) * Spacing.sm;
   const vertical = menuWidth - Spacing.lg * 2 < minimumActionWidth || fontScale >= 1.2;
 
   return (
@@ -130,6 +126,7 @@ export function ContextualAddMenu({
       <PressScaleTouchable
         testID="contextual-add-trigger"
         onPress={() => {
+          afterDismiss.cancel();
           if (isJournalTab) {
             analytics.track('entrypoint_opened', {
               screen: primaryTab,
@@ -142,7 +139,7 @@ export function ContextualAddMenu({
         accessibilityRole="button"
         accessibilityLabel={openAccessibilityLabel}
         accessibilityState={{ expanded: open, disabled }}
-        hitSlop={{ top: 10 }}
+        hitSlop={{ top: Spacing.md }}
         style={[styles.triggerHitbox, disabled && styles.triggerDisabled]}
         surfaceStyle={[
           styles.trigger,
@@ -152,18 +149,25 @@ export function ContextualAddMenu({
       >
         <AppIcon name={Icon.Add} size={Size.iconMd} color={theme.onPrimary} />
       </PressScaleTouchable>
-      <Modal
+      <ModalHost
         visible={open}
         transparent
         animationType={reduceMotion ? 'none' : 'fade'}
-        onRequestClose={() => setOpen(false)}
+        onRequestClose={() => {
+          afterDismiss.cancel();
+          setOpen(false);
+        }}
+        onDismiss={afterDismiss.onDismiss}
         statusBarTranslucent
         navigationBarTranslucent
       >
         <View style={styles.modalRoot} accessibilityViewIsModal>
           <Pressable
             style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]}
-            onPress={() => setOpen(false)}
+            onPress={() => {
+              afterDismiss.cancel();
+              setOpen(false);
+            }}
             accessible={false}
             accessibilityLabel={nav.dismissAddMenu}
           />
@@ -175,7 +179,7 @@ export function ContextualAddMenu({
                 width: menuWidth,
                 bottom: insets.bottom + Size.fab + Spacing.md + bottomOffset,
                 maxHeight: Math.max(
-                  96,
+                  Size.fieldAmount,
                   height - insets.top - insets.bottom - (Size.fab + Spacing.xxxl * 2),
                 ),
                 backgroundColor: theme.surface,
@@ -209,7 +213,6 @@ export function ContextualAddMenu({
                 <PressScaleTouchable
                   key={action}
                   onPress={() => {
-                    setOpen(false);
                     if (isJournalTab) {
                       analytics.track('entrypoint_selected', {
                         screen: primaryTab,
@@ -217,7 +220,8 @@ export function ContextualAddMenu({
                         target: 'journal_entry',
                       });
                     }
-                    onAction(action);
+                    afterDismiss.run(() => onAction(action));
+                    setOpen(false);
                   }}
                   accessibilityRole="menuitem"
                   accessibilityLabel={label}
@@ -243,7 +247,7 @@ export function ContextualAddMenu({
             </View>
           </View>
         </View>
-      </Modal>
+      </ModalHost>
     </>
   );
 }
@@ -285,7 +289,7 @@ const styles = StyleSheet.create({
   verticalActions: { flexDirection: 'column' },
   actionHitbox: {
     flex: 1,
-    minWidth: 96,
+    minWidth: Size.fieldAmount,
   },
   verticalActionHitbox: {
     width: '100%',

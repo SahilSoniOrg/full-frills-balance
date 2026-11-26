@@ -2,7 +2,7 @@ import { FitText } from '@/src/components/shared/FitText';
 import { AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
+import { BorderWidth, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   evaluateCalculatorExpression,
@@ -407,7 +407,7 @@ export function AmountCalculatorSheet({
                   surfaceStyle={[
                     styles.key,
                     { backgroundColor },
-                    isDisabled && { borderColor: theme.border, borderWidth: 1 },
+                    isDisabled && { borderColor: theme.border, borderWidth: BorderWidth.thin },
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={key.label}
