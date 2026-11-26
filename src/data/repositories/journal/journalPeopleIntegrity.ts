@@ -1,5 +1,8 @@
 import { personQueryRepository, personWriteRepository } from '@/src/data/repositories/people';
-import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import {
+  getStagedPersonAccounts,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import type Account from '@/src/data/models/Account';
 import type Transaction from '@/src/data/models/Transaction';
 import {
@@ -25,7 +28,7 @@ export async function syncPutJournalPeopleInSession(input: {
 }): Promise<void> {
   const { session, workplaceId, journalId, status, accountsById, beforeTransactions, newLines } =
     input;
-  const [links, existingItems, settlementAllocations] = await Promise.all([
+  const [persistedLinks, existingItems, settlementAllocations] = await Promise.all([
     personQueryRepository.listPersonAccounts(workplaceId),
     personQueryRepository.listOpenItems(workplaceId, { originatingJournalId: journalId }),
     personQueryRepository.listSettlementAllocations(workplaceId, {
@@ -33,6 +36,7 @@ export async function syncPutJournalPeopleInSession(input: {
       activeOnly: true,
     }),
   ]);
+  const links = [...persistedLinks, ...getStagedPersonAccounts(session, workplaceId)];
   const linksByAccount = new Map(links.map(link => [link.accountId, link]));
   const touched = [
     ...beforeTransactions.map(line => line.accountId),

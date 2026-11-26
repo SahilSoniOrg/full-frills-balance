@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
+import type PersonAccount from '@/src/data/models/PersonAccount';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 import {
@@ -23,6 +24,7 @@ export interface AccountingWriteSession {
 interface SessionState {
   operations: (Model | (() => readonly Model[]))[];
   createdAccounts: Account[];
+  createdPersonAccounts: PersonAccount[];
   captureMetadata: Map<JournalId, CaptureMetadataMutation>;
   rebuildIntents: Map<string, BalanceRebuildRequest>;
   closed: boolean;
@@ -63,6 +65,7 @@ export async function runAccountingWriteSession<T>(
     const state: SessionState = {
       operations: [],
       createdAccounts: [],
+      createdPersonAccounts: [],
       captureMetadata: new Map(),
       rebuildIntents: new Map(),
       closed: false,
@@ -194,5 +197,29 @@ export function getStagedAccounts(
 ): readonly Account[] {
   return getOpenState(session).createdAccounts.filter(
     account => account.workplaceId === workplaceId && (!accountIds || accountIds.has(account.id)),
+  );
+}
+
+/** @internal Tracks not-yet-committed PersonAccount links staged in this session. */
+export function stagePersonAccountCreation(
+  session: AccountingWriteSession,
+  link: PersonAccount,
+  operations: readonly Model[],
+): void {
+  const state = getOpenState(session);
+  if (state.createdPersonAccounts.some(created => created.accountId === link.accountId)) {
+    throw new Error(`Account ${link.accountId} was already staged for a person in this session`);
+  }
+  state.createdPersonAccounts.push(link);
+  state.operations.push(...operations);
+}
+
+/** @internal Includes not-yet-committed PersonAccount links during journal integrity sync. */
+export function getStagedPersonAccounts(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+): readonly PersonAccount[] {
+  return getOpenState(session).createdPersonAccounts.filter(
+    link => link.workplaceId === workplaceId,
   );
 }

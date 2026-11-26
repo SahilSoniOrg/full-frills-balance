@@ -1,4 +1,6 @@
 import {
+  getStagedAccounts,
+  getStagedPersonAccounts,
   runAccountingWriteSession,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
@@ -85,10 +87,15 @@ export async function ensurePersonAccountInSession(
   role: PersonAccountRole,
   currencyCode: string,
 ): Promise<Account> {
-  const [links, accounts] = await Promise.all([
+  const [persistedLinks, persistedAccounts] = await Promise.all([
     personQueryRepository.listPersonAccounts(workplaceId, personId),
     accountQueryRepository.findAll(workplaceId),
   ]);
+  const stagedLinks = getStagedPersonAccounts(session, workplaceId).filter(
+    link => link.personId === personId,
+  );
+  const links = [...persistedLinks, ...stagedLinks];
+  const accounts = [...persistedAccounts, ...getStagedAccounts(session, workplaceId)];
   const linked = links.find(link => {
     const account = accounts.find(a => a.id === link.accountId);
     return (
@@ -101,7 +108,15 @@ export async function ensurePersonAccountInSession(
   if (linked) return accounts.find(a => a.id === linked.accountId)!;
   const person = await personQueryRepository.findPerson(workplaceId, personId);
   if (!person) throw new Error('Person not found');
-  const base = `${person.name} (${currencyCode})`;
+  const roleLabel =
+    role === 'receivable'
+      ? 'Receivable'
+      : role === 'payable'
+        ? 'Payable'
+        : role === 'expense'
+          ? 'Expense'
+          : 'Income';
+  const base = `${person.name} (${roleLabel} · ${currencyCode})`;
   let name = base;
   let suffix = 2;
   while (accounts.some(a => a.name === name)) name = `${base} ${suffix++}`;

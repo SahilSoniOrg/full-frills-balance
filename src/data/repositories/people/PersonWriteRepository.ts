@@ -5,7 +5,9 @@ import OpenItem from '@/src/data/models/OpenItem';
 import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
+  getStagedPersonAccounts,
   stageModelWrite,
+  stagePersonAccountCreation,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
@@ -124,7 +126,9 @@ export class PersonWriteRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-    if (matches.length) throw new Error('Account already linked to a person');
+    if (matches.length || getStagedPersonAccounts(s, w).some(link => link.accountId === a)) {
+      throw new Error('Account already linked to a person');
+    }
     const x = this.links().prepareCreate(r => {
       r.workplaceId = w;
       r.personId = p;
@@ -132,7 +136,7 @@ export class PersonWriteRepository {
       r.createdAt = new Date();
       r.updatedAt = new Date();
     });
-    stageModelWrite(s, [x]);
+    stagePersonAccountCreation(s, x, [x]);
     return x;
   }
   async unlinkAccountInSession(s: AccountingWriteSession, w: WorkplaceId, a: AccountId) {
