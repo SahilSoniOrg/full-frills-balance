@@ -73,6 +73,7 @@ artifacts/
 /Pixel_*.log
 
 # Local agent artifacts (not product source)
+.agent-device/
 .gstack/
 .scratch/
 .claude/worktrees/
