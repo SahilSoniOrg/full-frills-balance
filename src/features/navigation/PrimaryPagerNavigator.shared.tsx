@@ -191,16 +191,9 @@ export function createPrimaryPagerContent(
       return () => subscription.remove();
     }, []);
 
-    useEffect(() => {
-      if (Platform.OS === 'web' || !isFocused) return;
-      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (primaryNavigation?.drawerVisible) return false;
-        if (swipeIndex === 0) return false;
-        actions.navigate('index');
-        return true;
-      });
-      return () => subscription.remove();
-    }, [actions, isFocused, primaryNavigation?.drawerVisible, swipeIndex]);
+    const navigateHome = useCallback(() => {
+      actions.navigate('index');
+    }, [actions]);
 
     const setPageSwipeLock = useCallback((lockId: string, locked: boolean) => {
       setPageSwipeLocks(previous => {
@@ -289,7 +282,11 @@ export function createPrimaryPagerContent(
           >
             <PrimaryPrivacyScopeStoreProvider>
               <PersistentTabChromeProvider>
-                <PrimaryPagerFrame tabBarProps={tabBarProps} isFocused={isFocused}>
+                <PrimaryPagerFrame
+                  tabBarProps={tabBarProps}
+                  isFocused={isFocused}
+                  onNavigateHome={navigateHome}
+                >
                   <Viewport {...viewportProps} />
                 </PrimaryPagerFrame>
               </PersistentTabChromeProvider>
@@ -305,14 +302,18 @@ function PrimaryPagerFrame({
   children,
   tabBarProps,
   isFocused,
+  onNavigateHome,
 }: {
   children: ReactNode;
   tabBarProps: PrimaryTabBarProps;
   isFocused: boolean;
+  onNavigateHome: () => void;
 }) {
   const { activeRouteName, pageProgress, onNavigateToPage, isTransitioning } = tabBarProps;
   const selection = usePersistentTabChrome(activeRouteName)?.selection;
-  const reportSelectionMode = usePrimaryNavigation()?.reportSelectionMode;
+  const primaryNavigation = usePrimaryNavigation();
+  const reportSelectionMode = primaryNavigation?.reportSelectionMode;
+  const drawerVisible = primaryNavigation?.drawerVisible ?? false;
   const selectionModeActive = isFocused && Boolean(selection);
   const { insets } = useWindowSafeAreaLayout();
   const { theme } = useTheme();
@@ -321,6 +322,21 @@ function PrimaryPagerFrame({
   useLayoutEffect(() => {
     reportSelectionMode?.(selectionModeActive);
   }, [reportSelectionMode, selectionModeActive]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !isFocused) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (drawerVisible) return false;
+      if (selection) {
+        selection.exitSelectionMode();
+        return true;
+      }
+      if (primaryPageIndex(activeRouteName) <= 0) return false;
+      onNavigateHome();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [activeRouteName, drawerVisible, isFocused, onNavigateHome, selection]);
 
   return (
     <View style={styles.container}>

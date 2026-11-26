@@ -10,7 +10,7 @@ import { getSelectionState } from '@/src/hooks/selectionState';
 import { PRIMARY_PAGES } from '@/src/navigation/primaryPages';
 import { Icon } from '@/src/types/domainIcons';
 import { render, screen } from '@/src/testing/render';
-import { StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 
 const mockReportSelectionMode = jest.fn();
 
@@ -68,7 +68,14 @@ function MockViewport({ pages, committedIndex }: PrimaryPagerViewportProps) {
 
 const PagerContent = createPrimaryPagerContent(MockViewport);
 
-function renderPager(selecting: boolean) {
+function renderPager(
+  selecting: boolean,
+  options?: {
+    index?: number;
+    navigate?: jest.Mock;
+    exitSelectionMode?: jest.Mock;
+  },
+) {
   const routes = PRIMARY_PAGES.map(page => ({ key: page.routeName, name: page.routeName }));
   const descriptors = Object.fromEntries(
     routes.map(route => [
@@ -98,7 +105,7 @@ function renderPager(selecting: boolean) {
                         },
                       ],
                     },
-                    exitSelectionMode: jest.fn(),
+                    exitSelectionMode: options?.exitSelectionMode ?? jest.fn(),
                     selectAll: jest.fn(),
                     clearItems: jest.fn(),
                     actions: [
@@ -122,9 +129,9 @@ function renderPager(selecting: boolean) {
 
   return (
     <PagerContent
-      state={{ index: 1, routes } as never}
+      state={{ index: options?.index ?? 1, routes } as never}
       descriptors={descriptors as never}
-      actions={{ navigate: jest.fn() } as never}
+      actions={{ navigate: options?.navigate ?? jest.fn() } as never}
       emitter={{ emit: jest.fn(() => ({ defaultPrevented: false })) } as never}
       onAddAction={jest.fn()}
       preloadPage={jest.fn()}
@@ -169,5 +176,43 @@ describe('PrimaryPagerNavigator selection layout slots', () => {
       bottom: 0,
     });
     expect(screen.getByText('Accounts body')).toBeTruthy();
+  });
+
+  it('exits selection mode on hardware Back before returning to Dashboard', () => {
+    let listeners: (() => boolean)[] = [];
+    const spy = jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockImplementation((event, callback) => {
+        if (event === 'hardwareBackPress') {
+          listeners.push(callback as () => boolean);
+        }
+        return {
+          remove: () => {
+            listeners = listeners.filter(item => item !== callback);
+          },
+        };
+      });
+
+    try {
+      const navigate = jest.fn();
+      const exitSelectionMode = jest.fn();
+      const { rerender } = render(renderPager(true, { index: 1, navigate, exitSelectionMode }));
+
+      expect(listeners[listeners.length - 1]?.()).toBe(true);
+      expect(exitSelectionMode).toHaveBeenCalledTimes(1);
+      expect(navigate).not.toHaveBeenCalled();
+
+      rerender(renderPager(false, { index: 1, navigate, exitSelectionMode }));
+      expect(listeners[listeners.length - 1]?.()).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('index');
+
+      navigate.mockClear();
+      rerender(renderPager(true, { index: 0, navigate, exitSelectionMode }));
+      expect(listeners[listeners.length - 1]?.()).toBe(true);
+      expect(exitSelectionMode).toHaveBeenCalledTimes(2);
+      expect(navigate).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
