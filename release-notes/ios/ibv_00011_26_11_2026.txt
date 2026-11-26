@@ -1,0 +1,19 @@
+New release 🚀
+
+First App Store release of Full Frills Balance for iPhone and iPad.
+
+Download: https://apps.apple.com/us/app/full-frills-balance/id6833898432
+
+---
+
+Also in this update
+
+* Double-entry journals that stay balanced, with accounts, budgets, and planned payments.
+* Safe to Spend estimates how much you can use before payday from the entries and plans you provide.
+* Books stay on your device. Optional bank-text capture via Apple Shortcuts, voice drafts, widgets, and JSON backup.
+
+---
+
+Big difference you'll notice
+
+* No bank login or app account is required for ordinary bookkeeping.

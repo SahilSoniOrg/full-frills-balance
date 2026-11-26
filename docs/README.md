@@ -3,7 +3,7 @@
 - **Accounting** — [repository ownership](architecture/REPOSITORY_MAP.md), [Account Tree](architecture/ACCOUNT_TREE_OWNERSHIP.md), and [journal currency and balancing](adr/0007-journal-currency-and-balancing-decision-layer.md).
 - **App behavior** — [User, Device, Workplace, and Setup](specs/user-device-workplace/spec.md), [gestures and navigation](architecture/GESTURE_INTERACTIONS.md), [typography](design/typography.md), and [system hour cycle](adr/0001-system-hour-cycle-is-os-clock.md).
 - **Transaction capture** — [capture and review](specs/automatic-transaction-capture/spec.md), [Account matcher discovery](specs/account-matcher-discovery/spec.md), and [Planned Payment settlement](specs/evidence-driven-planned-payment-settlement/spec.md).
-- **Shipping** — [mobile release](operations/mobile-release.md), [web deployment](operations/vercel-web-deployment.md), [mobile E2E](architecture/MOBILE_E2E.md), and the [App Store listing draft](release/app-store-listing.md).
+- **Shipping** — [mobile release](operations/mobile-release.md), [web deployment](operations/vercel-web-deployment.md), [mobile E2E](architecture/MOBILE_E2E.md), and the [App Store listing](release/app-store-listing.md) (live: [apps.apple.com](https://apps.apple.com/us/app/full-frills-balance/id6833898432)).
 - **Terms** — [domain glossary](../CONTEXT.md).
 
 ## Feature ideas

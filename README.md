@@ -20,8 +20,10 @@ A personal finance app for people who want to **know what they can spend**, keep
 
 | | |
 |---|---|
-| **Landing & get the app** | [fullfrills.sahilsoni.in](https://fullfrills.sahilsoni.in) |
-| **Web app (ready to use)** | [fullfrillsapp.sahilsoni.in](https://fullfrillsapp.sahilsoni.in) |
+| **App Store (iOS)** | [Full Frills Balance](https://apps.apple.com/us/app/full-frills-balance/id6833898432) |
+| **Google Play (Android)** | [Full Frills Balance](https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance) |
+| **Landing** | [fullfrills.sahilsoni.in](https://fullfrills.sahilsoni.in) |
+| **Web app** | [fullfrillsapp.sahilsoni.in](https://fullfrillsapp.sahilsoni.in) |
 
 ---
 

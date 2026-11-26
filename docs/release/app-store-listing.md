@@ -1,16 +1,26 @@
-# App Store listing draft
+# App Store listing
 
 For **Full Frills Balance**, bundle ID `in.sahilsoni.fullfrillsbalance`, version `1.0.0`.
 
+## Status
+
+**Live on the App Store** (approved November 26, 2026).
+
+- Public URL: https://apps.apple.com/us/app/full-frills-balance/id6833898432
+- App Store Connect record: **6833898432**
+- Live build number: **11** (`ibv_00011`); marketing version `1.0.0`
+- Shipped binary path: EAS build 6 (`f0c29540-d4df-4115-813f-53393d7da8e3`), App Store Connect submission `26556e4a-d0e3-4733-a425-12b01e51ff30`
+- Next binary: build **12** (`ibv_00012`) is in App Store Connect but not submitted for App Review yet
+
 ## App Store Connect progress
 
-Apple's App Store Connect Terms of Service were accepted after explicit approval. The app record is **6833898432**.
+Apple's App Store Connect Terms of Service were accepted after explicit approval.
 
 Saved in App Store Connect:
 
 - Promotional text, description, keywords, support URL, and marketing URL.
 - Subtitle and Finance primary category.
-- Privacy policy URL, now live at `https://fullfrills.sahilsoni.in/privacy.html`.
+- Privacy policy URL, live at `https://fullfrills.sahilsoni.in/privacy.html`.
 - Copyright: `© 2026 Sahil Soni`.
 - Price: Free in all 175 available territories.
 
@@ -20,7 +30,13 @@ Seven iPhone screenshots are uploaded to App Store Connect for the medium Dynami
 
 The App Privacy questionnaire is published with six data types: Device ID, Product Interaction, Coarse Location, Crash Data, Performance Data, and Other Diagnostic Data. PostHog receives IP addresses and adds approximate GeoIP fields; IP anonymization is off. These analytics and diagnostic types are linked to the app installation's pseudonymous analytics ID, are not used for tracking, and are used for analytics or app functionality as applicable. Apple Speech Recognition may send voice audio to Apple for real-time transcription; the policy discloses this, but the app does not retain audio recordings. The landing-page policy was published to production on November 13, 2026.
 
-The App Store version is set to `1.0.0`, matching the binary. The 4+ age rating and App Review contact are saved. Content Rights is now saved as “Yes, this app has the necessary rights to its third-party content,” after the user confirmed the permissions/rights basis. EAS build 3 (`fd25920e-17bd-4b1a-8216-3f3b6f256d95`) predates the updated in-app voice disclosure; its upload succeeded, but TestFlight still showed no builds about 30 minutes later. Corrected build 4 (`925db3a8-fa64-4fdc-9f8c-55fdf06044ff`) included the updated disclosure. Apple then emailed ITMS-90683 for build 4: missing `NSPhotoLibraryUsageDescription`, because bundled SDKs referenced photo-library APIs despite the app having no photo feature. Build 5, which added a purpose string, was canceled. The intended policy is to request no photo-library access: the unused `expo-image` dependency and plugin are removed, and a persistent Bun patch removes `expo-file-system`'s iOS PhotoKit asset handlers while retaining regular file operations. CocoaPods was reinstalled from the patched package; `expo-image` and its image-codec pods are no longer linked. EAS build 6 (`f0c29540-d4df-4115-813f-53393d7da8e3`) finished successfully and was submitted to App Store Connect as `26556e4a-d0e3-4733-a425-12b01e51ff30`. Do not submit the version for App Review until the remaining declarations are resolved.
+The App Store marketing version is `1.0.0`; the live build number is `11`. The 4+ age rating and App Review contact are saved. Content Rights is saved as “Yes, this app has the necessary rights to its third-party content.”
+
+### Submission path (historical)
+
+EAS build 3 (`fd25920e-17bd-4b1a-8216-3f3b6f256d95`) predates the updated in-app voice disclosure. Corrected build 4 (`925db3a8-fa64-4fdc-9f8c-55fdf06044ff`) included the updated disclosure. Apple emailed ITMS-90683 for build 4: missing `NSPhotoLibraryUsageDescription`, because bundled SDKs referenced photo-library APIs despite the app having no photo feature. Build 5, which added a purpose string, was canceled. The intended policy is to request no photo-library access: the unused `expo-image` dependency and plugin are removed, and a persistent Bun patch removes `expo-file-system`'s iOS PhotoKit asset handlers while retaining regular file operations. EAS build 6 finished successfully and was the binary that went through App Review.
+
+App Review contact details and the note explaining that sign-in is not required are saved. Reviewer credentials are not needed. Direct Gmail OAuth capture is parked and not offered in production (`gmail-capture-settings` PostHog flag off); iOS bank-text capture uses Shortcuts.
 
 ## App information
 
@@ -30,7 +46,7 @@ The App Store version is set to `1.0.0`, matching the binary. The 4+ age rating 
 - **Primary category:** Finance
 - **Privacy policy URL:** https://fullfrills.sahilsoni.in/privacy.html
 - **Support URL:** https://t.me/FullFrills
-- **Marketing URL:** https://fullfrills.sahilsoni.in/ (public homepage; currently says iOS is coming soon)
+- **Marketing URL:** https://fullfrills.sahilsoni.in/
 - **Keywords:** budget,ledger,accounting,bookkeeping,cash flow,net worth,expenses,transactions,spending
 
 ## Description
@@ -62,9 +78,3 @@ KEEP CONTROL OF YOUR DATA
 • Optional bank-text capture on iOS uses Apple Shortcuts to pass matching alerts into the Transaction inbox for review. Android can use SMS import. See the Privacy Policy for details.
 
 Full Frills Balance is a record-keeping tool. Safe to Spend is an estimate based on information you provide, not financial, tax, or investment advice.
-
-## Still needed before App Review
-
-- Export compliance was open for Build 6 in the last recorded App Store Connect review. Recheck the exact submission build and its compliance status before submitting.
-
-App Review contact details and the note explaining that sign-in is not required are saved. Reviewer credentials are not needed. Direct Gmail OAuth capture is parked and not offered in production.
