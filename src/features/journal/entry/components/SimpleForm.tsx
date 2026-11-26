@@ -1,5 +1,8 @@
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { type CreateAccountIntent } from '@/src/components/account-selection';
+import { TransferOpenItemsCard } from '@/src/features/journal/entry/components/TransferOpenItemsCard';
+import { useTransferOpenItems } from '@/src/features/journal/entry/hooks/useTransferOpenItems';
+import type { AccountId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { expectedPersonAccount } from '@/src/domain/people';
@@ -25,6 +28,18 @@ export interface SimpleFormProps {
   autopilotFirstRole?: AccountRole;
   onCalculatorDone?: () => void;
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
+  workplaceId?: WorkplaceId;
+  workplaceCurrency?: string;
+  initialOpenItemId?: OpenItemId;
+  onCreatePersonRequest?: () => void;
+  onTransferOpenItemPlanChange?: (
+    plan: {
+      personId: PersonId;
+      targetAccountId: AccountId;
+      allocationMode: 'fifo' | 'pick';
+      allocations: readonly { openItemId: OpenItemId; amount: number }[];
+    } | null,
+  ) => void;
 }
 
 export const SimpleForm = React.memo(function SimpleForm({
@@ -39,6 +54,11 @@ export const SimpleForm = React.memo(function SimpleForm({
   autopilotFirstRole,
   onCalculatorDone,
   accountFlowRef,
+  workplaceId,
+  workplaceCurrency,
+  initialOpenItemId,
+  onCreatePersonRequest,
+  onTransferOpenItemPlanChange,
 }: SimpleFormProps) {
   const amountInputRef = useRef<TextInput>(null);
   const sourceSection = editor.accountSections.find(section => section.role === 'source');
@@ -100,6 +120,53 @@ export const SimpleForm = React.memo(function SimpleForm({
       ? activePersonAccount.accountType === AccountType.ASSET
       : activePersonAccount.accountType === AccountType.LIABILITY),
   );
+  const transferPersonAccountId =
+    editor.type === 'transfer'
+      ? peopleGroups?.find(group => group.accountIds.includes(editor.destinationId))
+        ? editor.destinationId
+        : peopleGroups?.find(group => group.accountIds.includes(editor.sourceId))
+          ? editor.sourceId
+          : undefined
+      : undefined;
+  const transferPersonGroup = transferPersonAccountId
+    ? peopleGroups?.find(group => group.accountIds.includes(transferPersonAccountId))
+    : undefined;
+  const transferTargetAccountId =
+    transferPersonAccountId === editor.destinationId ? editor.sourceId : editor.destinationId;
+  const transferOpenItems = useTransferOpenItems({
+    workplaceId: workplaceId!,
+    workplaceCurrency: workplaceCurrency ?? editor.displayCurrency,
+    personId: workplaceId ? (transferPersonGroup?.personId as PersonId | undefined) : undefined,
+    initialOpenItemId,
+    transferAmountText: editor.amount,
+    precision,
+    currencyCode: editor.displayCurrency,
+  });
+  useEffect(() => {
+    if (
+      editor.type !== 'transfer' ||
+      !transferPersonGroup ||
+      !transferTargetAccountId ||
+      !workplaceId
+    ) {
+      onTransferOpenItemPlanChange?.(null);
+      return;
+    }
+    onTransferOpenItemPlanChange?.({
+      personId: transferPersonGroup.personId as PersonId,
+      targetAccountId: transferTargetAccountId,
+      allocationMode: transferOpenItems.allocationMode,
+      allocations: transferOpenItems.selectedAllocations,
+    });
+  }, [
+    editor.type,
+    onTransferOpenItemPlanChange,
+    transferOpenItems.allocationMode,
+    transferOpenItems.selectedAllocations,
+    transferPersonGroup,
+    transferTargetAccountId,
+    workplaceId,
+  ]);
 
   const handleTogglePersonRepayable = useCallback(
     (nextRepayable: boolean) => {
@@ -168,8 +235,26 @@ export const SimpleForm = React.memo(function SimpleForm({
         onSelectDestination={handleSelectDestination}
         onSwapAccounts={editor.swapAccounts}
         onCreateAccountRequest={onCreateAccountRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
+      {editor.type === 'transfer' &&
+        transferPersonGroup &&
+        transferOpenItems.openItems.length > 0 && (
+          <TransferOpenItemsCard
+            items={transferOpenItems.openItems}
+            totalOpenRemainder={transferOpenItems.totalOpenRemainder}
+            currencyCode={editor.displayCurrency}
+            quickFillChips={transferOpenItems.quickFillChips}
+            allocationMode={transferOpenItems.allocationMode}
+            onAllocationModeChange={transferOpenItems.setAllocationMode}
+            selectedItemIds={transferOpenItems.selectedItemIds}
+            onToggleItem={id =>
+              transferOpenItems.setSelectedItemIds(current => ({ ...current, [id]: !current[id] }))
+            }
+            onQuickFillAmount={val => editor.setAmount(Number(val).toFixed(precision))}
+          />
+        )}
       {activePersonGroup && activePersonAccount && (
         <PersonRepayableChoice
           flow={personFlow}

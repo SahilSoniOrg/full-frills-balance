@@ -57,6 +57,7 @@ export interface EntryTransactionCardProps {
   onSelectDestination: (id: AccountId) => void;
   onSwapAccounts?: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  onCreatePersonRequest?: () => void;
   accountTestIDPrefix?: string;
   metaContainerStyle?: StyleProp<ViewStyle>;
   exchangeRateContainerStyle?: StyleProp<ViewStyle>;
@@ -93,6 +94,7 @@ export function EntryTransactionCard({
   onSelectDestination,
   onSwapAccounts,
   onCreateAccountRequest,
+  onCreatePersonRequest,
   accountTestIDPrefix,
   metaContainerStyle,
   exchangeRateContainerStyle,
@@ -190,6 +192,7 @@ export function EntryTransactionCard({
         allAccounts={accounts}
         peopleGroups={peopleGroups}
         onCreateAccountRequest={onCreateAccountRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         displayMode={density === 'compact' ? 'compact' : 'standard'}
         containerStyle={accountSectionsContainerStyle}
         lazyDropdown
