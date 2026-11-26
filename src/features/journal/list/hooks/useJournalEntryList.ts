@@ -280,7 +280,6 @@ export function useJournalEntryList({
             selectAll: () => selectItems(selectableIds),
             clearItems,
             exitSelectionMode,
-            onShareSelected,
           })
         : undefined,
     [
@@ -291,19 +290,17 @@ export function useJournalEntryList({
       selectItems,
       clearItems,
       exitSelectionMode,
-      onShareSelected,
     ],
   );
 
   useEffect(() => {
     if (selectedIds.size === 0 || isLoading) return;
 
-    setSelectedIds(
-      prev =>
-        pruneSelectedIds(
-          prev,
-          journals.map(j => j.id),
-        ) as typeof prev,
+    setSelectedIds(prev =>
+      pruneSelectedIds(
+        prev,
+        journals.map(j => j.id),
+      ),
     );
   }, [journals, selectedIds, setSelectedIds, isLoading]);
 

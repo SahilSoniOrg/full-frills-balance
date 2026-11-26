@@ -401,7 +401,22 @@ export const Shape = {
       elevation: 6,
       boxShadow: `0px 4px 8px ${withOpacity('#000000', Opacity.hover)}`,
     } as ElevationStyle,
+    /** Floating selection summary / action bars (top or bottom edge). */
+    selection: {
+      elevation: 14,
+      boxShadow: `0px 10px 24px 2px ${withOpacity('#000000', Opacity.active)}, 0px 3px 8px 0px ${withOpacity('#000000', Opacity.hover)}`,
+    } as ElevationStyle,
+    selectionDark: {
+      elevation: 14,
+      boxShadow: `0px 10px 28px 2px ${withOpacity('#000000', Opacity.heavy)}, 0px 3px 10px 0px ${withOpacity('#000000', Opacity.medium)}`,
+    } as ElevationStyle,
   },
+} as const;
+
+/** Soft feathered lift behind floating selection bars. */
+export const SelectionEdgeScrim = {
+  light: { peak: Opacity.active, mid: Opacity.selection },
+  dark: { peak: Opacity.medium, mid: Opacity.active },
 } as const;
 
 // === LANDING PAGE PALETTE (Deep Space) ===

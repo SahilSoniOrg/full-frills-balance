@@ -1,5 +1,5 @@
 import { SelectionActionBar } from '../SelectionActionBar';
-import { SelectionOverlay } from '../SelectionOverlay';
+import { SelectionDock, SelectionHeader } from '../SelectionOverlay';
 import { SelectionSummary } from '../SelectionSummary';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 import { Icon } from '@/src/types/domainIcons';
@@ -85,23 +85,34 @@ it('shows the total selected count when a selection includes hidden items', () =
 
 it('renders the selection summary and its actions together', () => {
   const onShare = jest.fn();
+  const chrome = {
+    state: getSelectionState(new Set(['1', '2']), ['1', '2', '3']),
+    exitSelectionMode: jest.fn(),
+    selectAll: jest.fn(),
+    clearItems: jest.fn(),
+    amountSummary: {
+      label: 'Signed total',
+      signed: true as const,
+      amounts: [
+        { amount: -120.5, currencyCode: 'USD' },
+        { amount: 45, currencyCode: 'EUR' },
+      ],
+    },
+    itemTypeLabel: 'transaction',
+    actions: [
+      {
+        name: Icon.Share,
+        label: 'Share',
+        onPress: onShare,
+        accessibilityLabel: 'Share selected items',
+      },
+    ],
+  };
   const view = render(
-    <SelectionOverlay
-      state={getSelectionState(new Set(['1', '2']), ['1', '2', '3'])}
-      exitSelectionMode={jest.fn()}
-      selectAll={jest.fn()}
-      clearItems={jest.fn()}
-      amountSummary={{
-        label: 'Signed total',
-        signed: true,
-        amounts: [
-          { amount: -120.5, currencyCode: 'USD' },
-          { amount: 45, currencyCode: 'EUR' },
-        ],
-      }}
-      itemTypeLabel="transaction"
-      onShareSelected={onShare}
-    />,
+    <>
+      <SelectionHeader {...chrome} />
+      <SelectionDock {...chrome} />
+    </>,
   );
 
   expect(view.getByText(/− .*120\.50/)).toBeTruthy();
@@ -111,6 +122,26 @@ it('renders the selection summary and its actions together', () => {
   expect(view.getByText('Share')).toBeTruthy();
   fireEvent.press(view.getByLabelText('Share selected items'));
   expect(onShare).toHaveBeenCalledTimes(1);
+});
+
+it('formats non-ratio meta as count + item label without double selected', () => {
+  const view = render(
+    <SelectionSummary
+      selection={getSelectionState(new Set(['hidden']), ['visible'])}
+      amountSummary={{
+        label: 'Signed total',
+        signed: true,
+        amounts: [{ amount: -50, currencyCode: 'USD' }],
+      }}
+      itemTypeLabel="transaction"
+      onClear={jest.fn()}
+      onSelectAll={jest.fn()}
+      onDeselectAll={jest.fn()}
+    />,
+  );
+
+  expect(view.getByText('1 transaction · Signed total · 1 left')).toBeTruthy();
+  expect(view.queryByText(/selected transaction/)).toBeNull();
 });
 
 it('renders mixed account-type totals as labeled sections', () => {

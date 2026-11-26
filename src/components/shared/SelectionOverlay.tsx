@@ -8,13 +8,11 @@ import {
   type SelectionItemLabel,
 } from '@/src/components/shared/SelectionSummary';
 import type { getSelectionState } from '@/src/hooks/selectionState';
-import { StyleSheet, View } from 'react-native';
 
 export interface ListSelectionChrome {
   exitSelectionMode: () => void;
   selectAll: () => void;
   clearItems: () => void;
-  onShareSelected?: () => void;
   amountSummary?: SelectionAmountSummary;
   actions?: SelectionAction[];
 }
@@ -44,28 +42,6 @@ export function SelectionHeader({
   );
 }
 
-export function SelectionDock({ state, actions, onShareSelected }: SelectionOverlayProps) {
-  return (
-    <SelectionActionBar
-      selectedCount={state.selectedCount}
-      actions={actions}
-      onShare={onShareSelected}
-    />
-  );
+export function SelectionDock({ state, actions }: SelectionOverlayProps) {
+  return <SelectionActionBar selectedCount={state.selectedCount} actions={actions} />;
 }
-
-export function SelectionOverlay(props: SelectionOverlayProps) {
-  return (
-    <View pointerEvents="box-none" style={styles.container}>
-      <SelectionHeader {...props} />
-      <SelectionDock {...props} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-});

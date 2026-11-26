@@ -61,7 +61,6 @@ export function partitionSelectionActions(actions: SelectionAction[]): Selection
 
 export interface SelectionActionBarProps {
   selectedCount: number;
-  onShare?: () => void;
   actions?: SelectionAction[];
 }
 
@@ -69,11 +68,7 @@ export interface SelectionActionBarProps {
  * SelectionActionBar — labeled bulk-action dock while Selection mode is active.
  * Shows primary actions directly, with an overflow bottom sheet for secondary actions.
  */
-export const SelectionActionBar = ({
-  selectedCount,
-  onShare,
-  actions,
-}: SelectionActionBarProps) => {
+export const SelectionActionBar = ({ selectedCount, actions = [] }: SelectionActionBarProps) => {
   const { cardStyle, theme } = useSelectionBarSurface('bottom');
   const reduceMotion = useReducedMotion();
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
@@ -82,38 +77,20 @@ export const SelectionActionBar = ({
   const isModalVisible = isOverflowOpen && isBarActive;
   const copy = AppConfig.strings.selection;
 
-  const finalActions: SelectionAction[] = useMemo(() => {
-    if (actions) return actions;
-    if (onShare) {
-      return [
-        {
-          name: Icon.Share,
-          label: 'Share',
-          onPress: onShare,
-          variant: 'primary',
-          isPrimary: true,
-          disabled: selectedCount === 0,
-          accessibilityLabel: copy.shareSelected,
-        },
-      ];
-    }
-    return [];
-  }, [actions, onShare, selectedCount, copy.shareSelected]);
+  // Adjust overflow state during render when selection clears (React-recommended pattern).
+  if (!isBarActive && isOverflowOpen) {
+    setIsOverflowOpen(false);
+  }
+
+  useEffect(() => {
+    if (!isBarActive) afterDismiss.cancel();
+  }, [afterDismiss, isBarActive]);
 
   // Split actions between direct bar buttons and overflow bottom sheet
   const { barActions, overflowActions } = useMemo(
-    () => partitionSelectionActions(finalActions),
-    [finalActions],
+    () => partitionSelectionActions(actions),
+    [actions],
   );
-
-  useEffect(() => {
-    if (!isBarActive) {
-      afterDismiss.cancel();
-      // Reset overflow state when selection clears so re-selecting starts closed.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsOverflowOpen(false);
-    }
-  }, [afterDismiss, isBarActive]);
 
   const resolveDockTone = (action: SelectionAction, disabled: boolean) => {
     if (disabled) return theme.textTertiary;
@@ -125,7 +102,7 @@ export const SelectionActionBar = ({
 
   return (
     <>
-      {finalActions.length > 0 && (
+      {actions.length > 0 && (
         <MotiView
           pointerEvents="box-none"
           from={{

@@ -15,20 +15,8 @@ export interface BuildListSelectionChromeParams<TId extends string = string> {
   exitSelectionMode: () => void;
   selectAll: () => void;
   clearItems: () => void;
-  onShareSelected?: () => void;
   amountSummary?: SelectionAmountSummary;
   actions?: SelectionAction[];
-}
-
-/** Merge bulk actions onto a base selection chrome object when selection is active. */
-export function attachSelectionActions(
-  chrome: SelectionChromeBase | undefined,
-  actions: SelectionAction[] | undefined,
-): SelectionOverlayProps | undefined {
-  if (!chrome) return undefined;
-  // Actions already own Share (and the rest); drop the legacy onShareSelected channel.
-  const { onShareSelected: _unused, ...rest } = chrome;
-  return { ...rest, actions };
 }
 
 /** Assemble SelectionOverlayProps consistently from selection state and handlers. */
@@ -39,7 +27,6 @@ export function buildListSelectionChrome<TId extends string = string>({
   exitSelectionMode,
   selectAll,
   clearItems,
-  onShareSelected,
   amountSummary,
   actions,
 }: BuildListSelectionChromeParams<TId>): SelectionOverlayProps {
@@ -50,6 +37,15 @@ export function buildListSelectionChrome<TId extends string = string>({
     selectAll,
     clearItems,
     amountSummary,
-    ...(actions !== undefined ? { actions } : onShareSelected ? { onShareSelected } : {}),
+    ...(actions !== undefined ? { actions } : {}),
   };
+}
+
+/** Attach bulk actions onto an active selection chrome base. */
+export function attachSelectionActions(
+  chrome: SelectionChromeBase | undefined,
+  actions: SelectionAction[] | undefined,
+): SelectionOverlayProps | undefined {
+  if (!chrome) return undefined;
+  return { ...chrome, actions };
 }

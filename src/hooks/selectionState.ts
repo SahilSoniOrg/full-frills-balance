@@ -14,6 +14,11 @@ export function getSelectionState<T>(selectedIds: ReadonlySet<T>, selectableIds:
 }
 
 /** Drop selected ids that are no longer present. Returns `selectedIds` when nothing changed. */
+export function pruneSelectedIds<T>(selectedIds: Set<T>, validIds: Iterable<T>): Set<T>;
+export function pruneSelectedIds<T>(
+  selectedIds: ReadonlySet<T>,
+  validIds: Iterable<T>,
+): ReadonlySet<T>;
 export function pruneSelectedIds<T>(
   selectedIds: ReadonlySet<T>,
   validIds: Iterable<T>,

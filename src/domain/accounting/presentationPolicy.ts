@@ -203,6 +203,13 @@ export function bankEntrySign(direction: string | null | undefined): FlowSign {
   return 0;
 }
 
+/** Sign of a numeric amount for FLOW presentation (zero stays neutral). */
+export function flowSignForAmount(amount: number): FlowSign {
+  if (amount > 0) return 1;
+  if (amount < 0) return -1;
+  return 0;
+}
+
 /** Prefix for a signed amount. Every surface uses this, so there is one minus character. */
 export function signPrefix(sign: FlowSign): '+ ' | '− ' | '' {
   if (sign > 0) return '+ ';

@@ -6,9 +6,9 @@ import { Inline } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import type { AccountTypeColorKey } from '@/src/design-system/accountPresentation';
 import {
+  flowSignForAmount,
   signColorKey,
   signPrefix,
-  type FlowSign,
 } from '@/src/domain/accounting/presentationPolicy';
 import { Money } from '@/src/domain/money/money';
 import type { getSelectionState } from '@/src/hooks/selectionState';
@@ -76,16 +76,12 @@ function resolveItemTypeLabel(itemTypeLabel: SelectionItemLabel, count: number):
   return count === 1 ? itemTypeLabel.singular : itemTypeLabel.plural;
 }
 
-function flowSignFor(amount: number): FlowSign {
-  if (amount > 0) return 1;
-  if (amount < 0) return -1;
-  return 0;
-}
-
 function joinMeta(parts: readonly (string | undefined)[]): string | undefined {
   const filtered = parts.filter((part): part is string => Boolean(part));
   return filtered.length > 0 ? filtered.join(' · ') : undefined;
 }
+
+type ThemeColors = ReturnType<typeof useSelectionBarSurface>['theme'];
 
 type FormattedSummaryMoney = {
   displayAmount: number;
@@ -97,14 +93,14 @@ function formatSummaryMoney(
   amount: number,
   currencyCode: string,
   signed: boolean,
-  theme: ReturnType<typeof useSelectionBarSurface>['theme'],
+  theme: ThemeColors,
 ): FormattedSummaryMoney {
   // Round to currency precision before deriving sign so tiny averages (e.g. -0.01 / 3) don't render "− $0.00".
   const rounded = Money.from(amount, currencyCode).round().amount || 0;
   if (!signed) {
     return { displayAmount: rounded, prefix: undefined, color: theme.text };
   }
-  const sign = flowSignFor(rounded);
+  const sign = flowSignForAmount(rounded);
   return {
     displayAmount: Math.abs(rounded),
     prefix: signPrefix(sign),
@@ -120,7 +116,7 @@ function SummaryMoneyList({
 }: {
   amounts: readonly MoneyAmount[];
   signed: boolean;
-  theme: ReturnType<typeof useSelectionBarSurface>['theme'];
+  theme: ThemeColors;
   keyPrefix?: string;
 }) {
   return (
@@ -144,34 +140,15 @@ function SummaryMoneyList({
   );
 }
 
-export function SelectionSummary({
-  selection,
-  amountSummary,
-  itemTypeLabel,
-  onClear,
-  onSelectAll,
-  onDeselectAll,
-}: SelectionSummaryProps) {
-  const { selectedCount, selectedSelectableCount, selectableCount, checked } = selection;
-  const { cardStyle, isDark, theme } = useSelectionBarSurface('top');
-  const { height: windowHeight } = useWindowDimensions();
-  const maxBreakdownHeight = Math.min(144, Math.max(84, Math.round(windowHeight * 0.2)));
-  const reduceMotion = useReducedMotion();
-  const formatMoney = useMoneyFormat();
-  const copy = AppConfig.strings.selection;
-  const innerChipSurface = isDark ? theme.surface : theme.surfaceSecondary;
-  const showRatio = selectableCount > 0 && selectedSelectableCount === selectedCount;
-  const count = showRatio ? copy.countOfTotal(selectedCount, selectableCount) : selectedCount;
-  const compactCount = showRatio
-    ? copy.countOfTotal(selectedCount, selectableCount)
-    : copy.countSelected(selectedCount);
-  const itemLabel = resolveItemTypeLabel(
-    itemTypeLabel,
-    showRatio ? selectableCount : selectedCount,
-  );
-  const countLabel = copy.selectedCount(count, itemLabel);
-  const countWithType = `${compactCount} ${itemLabel}`;
-  const remaining = Math.max(0, selectableCount - selectedSelectableCount);
+function resolveDisplayAmounts(amountSummary: SelectionAmountSummary | undefined): {
+  displayAmounts: readonly MoneyAmount[];
+  showSections: boolean;
+  sections: readonly SelectionAmountSection[] | undefined;
+  label: string | undefined;
+  incomplete: boolean | undefined;
+  includedCount: number | undefined;
+  signed: boolean;
+} {
   const {
     amounts,
     sections,
@@ -184,7 +161,62 @@ export function SelectionSummary({
   const displayAmounts = showSections
     ? []
     : (amounts ?? (sections?.length === 1 ? sections[0].amounts : []));
-  const multipleCurrencies = displayAmounts.length > 1;
+  return {
+    displayAmounts,
+    showSections,
+    sections,
+    label,
+    incomplete,
+    includedCount,
+    signed,
+  };
+}
+
+function buildSelectionMeta({
+  selectedCount,
+  selectableCount,
+  selectedSelectableCount,
+  itemTypeLabel,
+  amountSummary,
+  formatMoney,
+  theme,
+}: {
+  selectedCount: number;
+  selectableCount: number;
+  selectedSelectableCount: number;
+  itemTypeLabel: SelectionItemLabel;
+  amountSummary: SelectionAmountSummary | undefined;
+  formatMoney: ReturnType<typeof useMoneyFormat>;
+  theme: ThemeColors;
+}): {
+  countLabel: string;
+  metaLine: string | undefined;
+  displayAmounts: readonly MoneyAmount[];
+  showSections: boolean;
+  sections: readonly SelectionAmountSection[] | undefined;
+  signed: boolean;
+  incomplete: boolean | undefined;
+  singleAmount: MoneyAmount | null;
+  singleMoney: FormattedSummaryMoney | null;
+} {
+  const copy = AppConfig.strings.selection;
+  const showRatio = selectableCount > 0 && selectedSelectableCount === selectedCount;
+  const itemLabel = resolveItemTypeLabel(
+    itemTypeLabel,
+    showRatio ? selectableCount : selectedCount,
+  );
+  // Ratio: "2 of 10"; otherwise just the count — never "2 selected transactions".
+  const compactCount = showRatio
+    ? copy.countOfTotal(selectedCount, selectableCount)
+    : String(selectedCount);
+  const countWithType = `${compactCount} ${itemLabel}`;
+  const countLabel = copy.selectedCount(
+    showRatio ? copy.countOfTotal(selectedCount, selectableCount) : selectedCount,
+    itemLabel,
+  );
+  const remaining = Math.max(0, selectableCount - selectedSelectableCount);
+  const { displayAmounts, showSections, sections, label, incomplete, includedCount, signed } =
+    resolveDisplayAmounts(amountSummary);
   const hasAmounts = displayAmounts.length > 0 || showSections;
   const amountLabel =
     hasAmounts && label
@@ -194,15 +226,13 @@ export function SelectionSummary({
       : incomplete
         ? copy.totalUnavailable
         : undefined;
-
+  const multipleCurrencies = displayAmounts.length > 1;
   const singleAmount =
-    hasAmounts && !multipleCurrencies && !showSections ? displayAmounts[0] : null;
+    hasAmounts && !multipleCurrencies && !showSections ? (displayAmounts[0] ?? null) : null;
   const singleMoney = singleAmount
     ? formatSummaryMoney(singleAmount.amount, singleAmount.currencyCode, signed, theme)
     : null;
   const contributingCount = includedCount ?? selectedCount;
-  // Skip "N currencies" — stacked amounts already show that. Only average when every
-  // selected item contributed to the single-currency total.
   const averageMeta =
     singleAmount && !incomplete && selectedCount > 1 && contributingCount === selectedCount
       ? (() => {
@@ -237,13 +267,31 @@ export function SelectionSummary({
         ? copy.tapToSelect
         : selectionStatus;
 
-  const toggleDisabled = selectableCount === 0;
-  const allSelected = checked === true;
-  // Square / CheckSquare only — MinusSquare beside "All" reads as a broken control.
-  const toggleIcon = allSelected ? Icon.CheckSquare : Icon.Square;
-  const toggleTint = toggleDisabled ? theme.textTertiary : allSelected ? theme.primary : theme.text;
+  return {
+    countLabel,
+    metaLine,
+    displayAmounts,
+    showSections,
+    sections,
+    signed,
+    incomplete,
+    singleAmount,
+    singleMoney,
+  };
+}
 
-  const partialBadge = incomplete ? (
+function PartialAmountBadge({
+  incomplete,
+  label,
+  theme,
+}: {
+  incomplete: boolean | undefined;
+  label: string | undefined;
+  theme: ThemeColors;
+}) {
+  const copy = AppConfig.strings.selection;
+  if (!incomplete) return null;
+  return (
     <View
       accessible
       accessibilityRole="image"
@@ -251,7 +299,113 @@ export function SelectionSummary({
     >
       <AppIcon name={Icon.Alert} size={Size.iconXs} color={theme.warning} />
     </View>
-  ) : null;
+  );
+}
+
+function AmountBreakdown({
+  showSections,
+  sections,
+  displayAmounts,
+  signed,
+  theme,
+  maxBreakdownHeight,
+  incomplete,
+  label,
+}: {
+  showSections: boolean;
+  sections: readonly SelectionAmountSection[] | undefined;
+  displayAmounts: readonly MoneyAmount[];
+  signed: boolean;
+  theme: ThemeColors;
+  maxBreakdownHeight: number;
+  incomplete: boolean | undefined;
+  label: string | undefined;
+}) {
+  const multipleCurrencies = displayAmounts.length > 1;
+  if (!(showSections || multipleCurrencies)) return null;
+
+  return (
+    <Inline align={showSections ? 'flex-start' : 'center'} gap="xs">
+      <ScrollView
+        style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
+        contentContainerStyle={showSections ? styles.sectionStack : styles.amountStack}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        testID="selection-summary-breakdown"
+      >
+        {showSections && sections ? (
+          sections.map(section => (
+            <View key={section.label} style={styles.sectionBlock}>
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{
+                  color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
+                }}
+              >
+                {section.label}
+              </AppText>
+              <View style={styles.amountStack}>
+                <SummaryMoneyList
+                  amounts={section.amounts}
+                  signed={signed}
+                  theme={theme}
+                  keyPrefix={section.label}
+                />
+              </View>
+            </View>
+          ))
+        ) : (
+          <SummaryMoneyList amounts={displayAmounts} signed={signed} theme={theme} />
+        )}
+      </ScrollView>
+      <PartialAmountBadge incomplete={incomplete} label={label} theme={theme} />
+    </Inline>
+  );
+}
+
+export function SelectionSummary({
+  selection,
+  amountSummary,
+  itemTypeLabel,
+  onClear,
+  onSelectAll,
+  onDeselectAll,
+}: SelectionSummaryProps) {
+  const { selectedCount, selectedSelectableCount, selectableCount, checked } = selection;
+  const { cardStyle, isDark, theme } = useSelectionBarSurface('top');
+  const { height: windowHeight } = useWindowDimensions();
+  const maxBreakdownHeight = Math.min(144, Math.max(84, Math.round(windowHeight * 0.2)));
+  const reduceMotion = useReducedMotion();
+  const formatMoney = useMoneyFormat();
+  const copy = AppConfig.strings.selection;
+  const innerChipSurface = isDark ? theme.surface : theme.surfaceSecondary;
+
+  const {
+    countLabel,
+    metaLine,
+    displayAmounts,
+    showSections,
+    sections,
+    signed,
+    incomplete,
+    singleAmount,
+    singleMoney,
+  } = buildSelectionMeta({
+    selectedCount,
+    selectableCount,
+    selectedSelectableCount,
+    itemTypeLabel,
+    amountSummary,
+    formatMoney,
+    theme,
+  });
+
+  const multipleCurrencies = displayAmounts.length > 1;
+  const toggleDisabled = selectableCount === 0;
+  const allSelected = checked === true;
+  const toggleIcon = allSelected ? Icon.CheckSquare : Icon.Square;
+  const toggleTint = toggleDisabled ? theme.textTertiary : allSelected ? theme.primary : theme.text;
 
   return (
     <MotiView
@@ -291,42 +445,16 @@ export function SelectionSummary({
 
           <View style={styles.summaryContent} accessibilityLiveRegion="polite">
             {showSections || multipleCurrencies ? (
-              <Inline align={showSections ? 'flex-start' : 'center'} gap="xs">
-                <ScrollView
-                  style={[styles.breakdownScroll, { maxHeight: maxBreakdownHeight }]}
-                  contentContainerStyle={showSections ? styles.sectionStack : styles.amountStack}
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator
-                  testID="selection-summary-breakdown"
-                >
-                  {showSections && sections ? (
-                    sections.map(section => (
-                      <View key={section.label} style={styles.sectionBlock}>
-                        <AppText
-                          variant="caption"
-                          weight="bold"
-                          style={{
-                            color: section.colorKey ? theme[section.colorKey] : theme.textSecondary,
-                          }}
-                        >
-                          {section.label}
-                        </AppText>
-                        <View style={styles.amountStack}>
-                          <SummaryMoneyList
-                            amounts={section.amounts}
-                            signed={signed}
-                            theme={theme}
-                            keyPrefix={section.label}
-                          />
-                        </View>
-                      </View>
-                    ))
-                  ) : (
-                    <SummaryMoneyList amounts={displayAmounts} signed={signed} theme={theme} />
-                  )}
-                </ScrollView>
-                {partialBadge}
-              </Inline>
+              <AmountBreakdown
+                showSections={showSections}
+                sections={sections}
+                displayAmounts={displayAmounts}
+                signed={signed}
+                theme={theme}
+                maxBreakdownHeight={maxBreakdownHeight}
+                incomplete={incomplete}
+                label={amountSummary?.label}
+              />
             ) : singleMoney && singleAmount ? (
               <Inline align="center" gap="xs">
                 <MoneyText
@@ -338,7 +466,11 @@ export function SelectionSummary({
                   fit={SUMMARY_AMOUNT_FIT}
                   style={[styles.amountText, { color: singleMoney.color }]}
                 />
-                {partialBadge}
+                <PartialAmountBadge
+                  incomplete={incomplete}
+                  label={amountSummary?.label}
+                  theme={theme}
+                />
               </Inline>
             ) : (
               <AppText
