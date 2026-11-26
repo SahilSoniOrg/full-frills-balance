@@ -25,6 +25,7 @@ interface SubmitFooterProps {
   /** Brief scale pulse after a successful save. */
   pulse?: boolean;
   bottomInset?: 'form' | 'journal';
+  testID?: string;
 }
 
 export const SubmitFooter = ({
@@ -39,6 +40,7 @@ export const SubmitFooter = ({
   trailing,
   pulse = false,
   bottomInset = 'form',
+  testID = 'submit-footer-button',
 }: SubmitFooterProps) => {
   const { theme } = useTheme();
   // Hint only after a tap on the disabled button, not on open.
@@ -68,7 +70,7 @@ export const SubmitFooter = ({
         buttonSize,
         disabled && !compact ? { backgroundColor: theme.surfaceSecondary } : undefined,
       ]}
-      testID="submit-footer-button"
+      testID={testID}
       accessibilityLabel={label}
     >
       {disabled && !compact ? (

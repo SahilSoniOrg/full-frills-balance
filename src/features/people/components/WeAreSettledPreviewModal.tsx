@@ -1,6 +1,14 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core';
-import { ModalHost } from '@/src/components/overlays/ModalHost';
-import { Spacing } from '@/src/constants/design-tokens';
+import {
+  AppButton,
+  AppText,
+  Badge,
+  Icon,
+  IconTile,
+  ListGroup,
+  ListRow,
+} from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { Box, Inline, Stack } from '@/src/design-system';
 import type { PersonBalanceSummary } from '@/src/domain/people/personTypes';
 import { View } from 'react-native';
 
@@ -17,6 +25,7 @@ type Props = {
   onCancel: () => void;
   onConfirm: () => void;
 };
+
 export function WeAreSettledPreviewModal({
   visible,
   personName,
@@ -31,48 +40,79 @@ export function WeAreSettledPreviewModal({
   onConfirm,
 }: Props) {
   return (
-    <ModalHost visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={{ flex: 1, justifyContent: 'center', padding: Spacing.lg }}>
-        <AppCard>
-          <View style={{ gap: Spacing.sm }}>
-            <AppText variant="title">Settle with {personName}</AppText>
+    <ModalSurface
+      visible={visible}
+      title={`Settle with ${personName}`}
+      onClose={onCancel}
+      position="bottomSheet"
+      fixedHeight={false}
+      footer={
+        <Inline gap="sm" alignItems="center">
+          <Box flex={1}>
+            <AppButton variant="outline" onPress={onCancel}>
+              Cancel
+            </AppButton>
+          </Box>
+          <Box flex={1}>
+            <AppButton variant="primary" onPress={onConfirm} disabled={Boolean(blockedReason)}>
+              Confirm
+            </AppButton>
+          </Box>
+        </Inline>
+      }
+    >
+      <Stack gap="lg">
+        {summary.currencies.length > 0 ? (
+          <ListGroup header="OPEN BALANCES BY CURRENCY">
             {summary.currencies.map(b => (
-              <View key={b.currencyCode}>
-                <AppText>
-                  {personName} owes you: {formatAmount(b.owedToYou, b.currencyCode)}
-                </AppText>
-                <AppText>
-                  You owe {personName}: {formatAmount(b.youOwe, b.currencyCode)}
-                </AppText>
-                <AppText>Net: {formatAmount(b.net, b.currencyCode)}</AppText>
-              </View>
+              <ListRow
+                key={b.currencyCode}
+                leading={<IconTile icon={Icon.Bank} tint="primary" />}
+                title={`${b.currencyCode} Net: ${formatAmount(b.net, b.currencyCode)}`}
+                subtitle={`${personName} owes you: ${formatAmount(b.owedToYou, b.currencyCode)} · You owe ${personName}: ${formatAmount(b.youOwe, b.currencyCode)}`}
+                wrap
+              />
             ))}
-            {summary.convertedNet?.isInformational && (
-              <AppText color="secondary">
-                Est. net ~
-                {formatAmount(summary.convertedNet.amount, summary.convertedNet.currencyCode)}{' '}
-                (informational)
-              </AppText>
-            )}
-            <AppText>
-              Closing residual ({workplaceCurrency}):{' '}
-              {formatAmount(closingResidual, workplaceCurrency)} forgiven to {forgivenAccountName} (
-              {forgivenAccountType})
-            </AppText>
-            {blockedReason && (
-              <AppText accessibilityRole="alert">
-                Negative unassigned remainder: {blockedReason}
-              </AppText>
-            )}
-            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-              <AppButton onPress={onCancel}>Cancel</AppButton>
-              <AppButton onPress={onConfirm} disabled={Boolean(blockedReason)}>
-                Confirm
-              </AppButton>
-            </View>
+          </ListGroup>
+        ) : null}
+
+        {summary.convertedNet?.isInformational ? (
+          <Inline gap="xs" alignItems="center">
+            <Badge size="sm">
+              Est. net ~
+              {formatAmount(summary.convertedNet.amount, summary.convertedNet.currencyCode)}{' '}
+              (informational)
+            </Badge>
+          </Inline>
+        ) : null}
+
+        <ListGroup header="CLOSING ADJUSTMENT">
+          <ListRow
+            leading={
+              <IconTile
+                icon={forgivenAccountType === 'Income' ? Icon.ArrowUp : Icon.ArrowDown}
+                tint={forgivenAccountType === 'Income' ? 'income' : 'expense'}
+              />
+            }
+            title={`Closing residual (${workplaceCurrency})`}
+            subtitle={`${formatAmount(closingResidual, workplaceCurrency)} forgiven to ${forgivenAccountName} (${forgivenAccountType})`}
+            wrap
+          />
+        </ListGroup>
+
+        {blockedReason ? (
+          <View accessibilityRole="alert">
+            <Badge variant="warning" size="md">
+              Negative unassigned remainder: {blockedReason}
+            </Badge>
           </View>
-        </AppCard>
-      </View>
-    </ModalHost>
+        ) : (
+          <AppText variant="caption" color="secondary">
+            Zeroes open receivable/payable items in your ledger and writes off any rounding or
+            forgiven balance to {forgivenAccountName}.
+          </AppText>
+        )}
+      </Stack>
+    </ModalSurface>
   );
 }

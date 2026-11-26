@@ -1,6 +1,6 @@
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { LoadingView } from '@/src/components/shared/LoadingView';
-import { AppButton, Icon } from '@/src/components/core';
+import { Icon, IconTile, ListGroup, ListRow } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Box, Stack } from '@/src/design-system';
@@ -63,27 +63,29 @@ export function JournalDetailsView({
           {details.planned && <JournalPlannedActions planned={details.planned} />}
           <JournalEntries entries={details.entries} />
           {(details.peopleActions?.splitLabel || details.peopleActions?.settlePersonName) && (
-            <Stack gap="sm">
-              {details.peopleActions?.splitLabel && details.peopleActions.onSplitWithPeople && (
-                <AppButton
-                  variant="outline"
+            <ListGroup header="PEOPLE">
+              {details.peopleActions?.splitLabel && details.peopleActions.onSplitWithPeople ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.Handshake} tint="primary" />}
+                  title={details.peopleActions.splitLabel}
+                  subtitle="Divide shares or track who owes what"
+                  chevron
                   onPress={details.peopleActions.onSplitWithPeople}
                   testID="journal-split-people-button"
-                >
-                  {details.peopleActions.splitLabel}
-                </AppButton>
-              )}
+                />
+              ) : null}
               {details.peopleActions?.settlePersonName &&
-                details.peopleActions.onSettleWithPerson && (
-                  <AppButton
-                    variant="secondary"
-                    onPress={details.peopleActions.onSettleWithPerson}
-                    testID="journal-settle-person-button"
-                  >
-                    Settle up with {details.peopleActions.settlePersonName}
-                  </AppButton>
-                )}
-            </Stack>
+              details.peopleActions.onSettleWithPerson ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.CheckCircle} tint="income" />}
+                  title={`Settle up with ${details.peopleActions.settlePersonName}`}
+                  subtitle="Record repayment or close open items"
+                  chevron
+                  onPress={details.peopleActions.onSettleWithPerson}
+                  testID="journal-settle-person-button"
+                />
+              ) : null}
+            </ListGroup>
           )}
           <JournalAccountingIssues evaluation={details.balanceEvaluation} />
           <JournalBudgetImpact budget={details.budget} />

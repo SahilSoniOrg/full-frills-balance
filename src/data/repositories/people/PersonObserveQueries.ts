@@ -64,5 +64,11 @@ export class PersonObserveQueries {
         'updated_at',
       ]);
   }
+  observeBalanceSnapshots(workplaceId: WorkplaceId) {
+    return database.collections
+      .get('balance_snapshots')
+      .query(Q.where('workplace_id', workplaceId), Q.where('deleted_at', Q.eq(null)))
+      .observe();
+  }
 }
 export const personObserveQueries = new PersonObserveQueries();

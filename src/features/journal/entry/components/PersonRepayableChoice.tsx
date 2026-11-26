@@ -1,7 +1,6 @@
-import { AppCard, AppSegmentedControl, AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants/design-tokens';
+import { AppCard, AppSegmentedControl, AppText, Icon, IconTile } from '@/src/components/core';
+import { Inline, Stack } from '@/src/design-system';
 import { getPersonRepayablePrompt } from '../personRepayablePolicy';
-import { View } from 'react-native';
 
 type Props = {
   flow: 'outflow' | 'inflow';
@@ -9,14 +8,28 @@ type Props = {
   repayable: boolean;
   onChange: (repayable: boolean) => void;
 };
+
 export function PersonRepayableChoice({ flow, personName, repayable, onChange }: Props) {
   const prompt = getPersonRepayablePrompt({ flow, personName, repayable });
   return (
-    <AppCard accessibilityLabel="Repayment choice" testID="person-repayable-choice">
-      <View style={{ gap: Spacing.sm }}>
-        <AppText variant="body" weight="semibold">
-          {prompt.question}
-        </AppText>
+    <AppCard
+      variant="outline"
+      padding="md"
+      radius="xl"
+      accessibilityLabel="Repayment choice"
+      testID="person-repayable-choice"
+    >
+      <Stack gap="sm">
+        <Inline gap="sm" alignItems="center">
+          <IconTile
+            icon={repayable ? Icon.SwapHorizontal : Icon.Heart}
+            tint={repayable ? 'primary' : 'income'}
+            size="sm"
+          />
+          <AppText variant="body" weight="semibold" style={{ flex: 1 }}>
+            {prompt.question}
+          </AppText>
+        </Inline>
         <AppSegmentedControl
           options={[
             { id: 'yes', label: 'Yes' },
@@ -28,7 +41,7 @@ export function PersonRepayableChoice({ flow, personName, repayable, onChange }:
         <AppText color="secondary" variant="caption">
           {prompt.hint}
         </AppText>
-      </View>
+      </Stack>
     </AppCard>
   );
 }

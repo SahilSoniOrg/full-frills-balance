@@ -254,6 +254,7 @@ export class PeopleReadService {
       personObserveQueries.observePersonAccounts(workplaceId),
       personObserveQueries.observeOpenItems(workplaceId),
       personObserveQueries.observeSettlementAllocations(workplaceId),
+      personObserveQueries.observeBalanceSnapshots(workplaceId),
     ).pipe(startWith(null));
   }
 
