@@ -9,6 +9,9 @@ import type { MoneyAmount } from '@/src/types/domainReadModels';
 import type { JournalId } from '@/src/types/ids';
 import type { JournalListRowId } from '@/src/types/ui';
 
+type ResolvedRowAmount =
+  { status: 'amount'; value: MoneyAmount } | { status: 'zero' } | { status: 'unavailable' };
+
 export function computeSelectedJournalsTotal(
   rows: readonly JournalTimelineRow[],
   selectedIds: ReadonlySet<JournalId>,
@@ -17,40 +20,42 @@ export function computeSelectedJournalsTotal(
 
   const missingIds = new Set(selectedIds);
   const includedIds = new Set<JournalId>();
-  // undefined = unavailable (marks total incomplete); null = zero-flow entry (excluded cleanly).
-  const amountByRow = new Map<JournalListRowId, MoneyAmount | null | undefined>();
+  const amountByRow = new Map<JournalListRowId, ResolvedRowAmount>();
 
   for (const { journal, viewer, selectionId, listId } of rows) {
     if (!selectedIds.has(selectionId)) continue;
     missingIds.delete(selectionId);
 
     const amountId = viewer ? listId : selectionId;
-    if (amountByRow.get(amountId) !== undefined) continue;
+    if (amountByRow.has(amountId)) continue;
 
     const leg = viewerLegOf(journal, viewer);
     const amount = viewer ? leg?.amount : journal.totalAmount;
     const currencyCode = leg?.currencyCode || journal.currencyCode;
     if (amount == null || !Number.isFinite(amount) || !currencyCode?.trim()) {
-      amountByRow.set(amountId, undefined);
+      amountByRow.set(amountId, { status: 'unavailable' });
       continue;
     }
     const sign = leg ? postingFlowSignOf(leg) : journalFlowSignOf(journal);
     if (sign === 0) {
-      amountByRow.set(amountId, null);
+      amountByRow.set(amountId, { status: 'zero' });
       continue;
     }
     includedIds.add(selectionId);
     amountByRow.set(amountId, {
-      amount: sign * amount,
-      currencyCode,
+      status: 'amount',
+      value: {
+        amount: sign * amount,
+        currencyCode,
+      },
     });
   }
 
   let hasUnavailable = false;
   const available: MoneyAmount[] = [];
   for (const entry of amountByRow.values()) {
-    if (entry === undefined) hasUnavailable = true;
-    else if (entry !== null) available.push(entry);
+    if (entry.status === 'unavailable') hasUnavailable = true;
+    else if (entry.status === 'amount') available.push(entry.value);
   }
   return {
     amounts: sumByCurrency(available),

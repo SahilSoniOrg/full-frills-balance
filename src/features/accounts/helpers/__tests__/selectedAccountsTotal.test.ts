@@ -97,6 +97,22 @@ describe('computeSelectedAccountsTotal', () => {
     ]);
   });
 
+  it('marks incomplete and skips amounts when an account type is unknown', () => {
+    const item = balance('mystery', 50, 'USD', AccountType.ASSET);
+
+    expect(
+      computeSelectedAccountsTotal(
+        [{ id: item.accountId, currencyCode: 'USD', accountType: '' }],
+        new Map([[item.accountId, { directBalance: item.directBalance, accountType: '' }]]),
+        new Set([item.accountId]),
+      ),
+    ).toEqual({
+      amounts: [],
+      sections: [],
+      incomplete: true,
+    });
+  });
+
   it('splits selected balances into account-type sections', () => {
     const balances = [
       balance('cash', 200, 'USD', AccountType.ASSET),

@@ -11,8 +11,15 @@ export type SelectedAccountsSection = {
 };
 
 export function computeSelectedAccountsTotal(
-  accounts: readonly Pick<AccountFields, 'id' | 'currencyCode' | 'accountType'>[],
-  balancesByAccountId: ReadonlyMap<AccountId, AccountBalance>,
+  accounts: readonly {
+    id: AccountFields['id'];
+    currencyCode: AccountFields['currencyCode'];
+    accountType?: string | null;
+  }[],
+  balancesByAccountId: ReadonlyMap<
+    AccountId,
+    Pick<AccountBalance, 'directBalance'> & { accountType?: string | null }
+  >,
   selectedAccountIds: ReadonlySet<AccountId>,
 ): { amounts: MoneyAmount[]; sections: SelectedAccountsSection[]; incomplete: boolean } {
   if (selectedAccountIds.size === 0) {
@@ -27,9 +34,11 @@ export function computeSelectedAccountsTotal(
     const balance = balancesByAccountId.get(id);
     if (!balance || !Number.isFinite(balance.directBalance) || !currencyCode?.trim()) continue;
 
+    const type = knownAccountType(accountType) ?? knownAccountType(balance.accountType);
+    // Unknown types must not silently land in ASSET — leave the total incomplete instead.
+    if (!type) continue;
+
     matched += 1;
-    const type =
-      knownAccountType(accountType) ?? knownAccountType(balance.accountType) ?? AccountType.ASSET;
     const bucket = amountsByType.get(type) ?? [];
     bucket.push({ amount: balance.directBalance, currencyCode });
     amountsByType.set(type, bucket);
