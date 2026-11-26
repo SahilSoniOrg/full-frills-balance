@@ -1,7 +1,7 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { Icon, AppIcon, AppText, LoadingView, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
+import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
@@ -111,7 +111,7 @@ function BulkChangeJournalAccountModalContent({
               <View style={styles.optionHeader}>
                 <AppIcon
                   name={Icon.ArrowRight}
-                  size={20}
+                  size={Size.iconSm}
                   color={eligibility.canEditDebit ? theme.primary : theme.textTertiary}
                 />
                 <View style={styles.optionTextContainer}>
@@ -151,7 +151,7 @@ function BulkChangeJournalAccountModalContent({
               <View style={styles.optionHeader}>
                 <AppIcon
                   name={Icon.Back}
-                  size={20}
+                  size={Size.iconSm}
                   color={eligibility.canEditCredit ? theme.primary : theme.textTertiary}
                 />
                 <View style={styles.optionTextContainer}>
@@ -182,6 +182,7 @@ function BulkChangeJournalAccountModalContent({
         <AccountPickerModal
           visible
           accounts={accounts}
+          excludeParentAccounts
           onClose={() => setActiveLegForPicker(null)}
           onSelect={handleAccountChosen}
           title={`Select New ${activeLegForPicker === 'debit' ? 'Destination' : 'Source'} Account`}

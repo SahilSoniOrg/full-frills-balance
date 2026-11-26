@@ -18,8 +18,21 @@ import {
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/src/types/domainIcons';
+
+function useSingleFlightCallback(fn: () => Promise<void>): () => Promise<void> {
+  const inFlightRef = useRef(false);
+  return useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
+      await fn();
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, [fn]);
+}
 
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
@@ -81,26 +94,35 @@ export function useJournalsBulkOperations({
     [workplaceId, runUndoableAction],
   );
 
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
   // 2. Bulk Duplicate
-  const handleBulkDuplicate = useCallback(async () => {
+  const runBulkDuplicate = useCallback(async () => {
     if (!workplaceId || selection.selectedIds.size === 0) return;
     const ids = Array.from(selection.selectedIds);
+    setIsDuplicating(true);
 
-    await runUndoableAction(
-      () => bulkDuplicateJournalsCommand(workplaceId, ids),
-      duplicated =>
-        bulkDeleteJournalsCommand(
-          workplaceId,
-          duplicated.map(journal => journal.id),
-        ),
-      duplicated => `Duplicated ${duplicated.length} entr${duplicated.length === 1 ? 'y' : 'ies'}`,
-      {
-        errorMessage: 'Failed to duplicate entries',
-        undoSuccessMessage: 'Duplicated entries removed',
-        onUndoError: error => showErrorAlert(error, 'Failed to undo duplication'),
-      },
-    );
+    try {
+      await runUndoableAction(
+        () => bulkDuplicateJournalsCommand(workplaceId, ids),
+        duplicated =>
+          bulkDeleteJournalsCommand(
+            workplaceId,
+            duplicated.map(journal => journal.id),
+          ),
+        duplicated =>
+          `Duplicated ${duplicated.length} entr${duplicated.length === 1 ? 'y' : 'ies'}`,
+        {
+          errorMessage: 'Failed to duplicate entries',
+          undoSuccessMessage: 'Duplicated entries removed',
+          onUndoError: error => showErrorAlert(error, 'Failed to undo duplication'),
+        },
+      );
+    } finally {
+      setIsDuplicating(false);
+    }
   }, [workplaceId, selection.selectedIds, runUndoableAction]);
+  const handleBulkDuplicate = useSingleFlightCallback(runBulkDuplicate);
 
   // 3. Merge
   const handleOpenMerge = useCallback(() => {
@@ -113,8 +135,9 @@ export function useJournalsBulkOperations({
 
   const handleMergeConfirm = useCallback(
     async (params: { description: string; journalDate: number }) => {
-      if (!workplaceId || selection.selectedIds.size < 2) return;
-      const ids = Array.from(selection.selectedIds);
+      const ids =
+        activeModal?.type === 'merge' ? activeModal.journalIds : Array.from(selection.selectedIds);
+      if (!workplaceId || ids.length < 2) return;
       try {
         await mergeJournalsCommand(workplaceId, ids, params);
         selection.exitSelectionMode();
@@ -124,7 +147,7 @@ export function useJournalsBulkOperations({
         showErrorAlert(error, 'Failed to merge entries');
       }
     },
-    [workplaceId, selection, closeModal],
+    [workplaceId, activeModal, selection, closeModal],
   );
 
   // 4. Change Account (Destination / Source)
@@ -135,8 +158,11 @@ export function useJournalsBulkOperations({
 
   const handleBulkChangeAccountSelect = useCallback(
     async (targetLeg: 'debit' | 'credit', newAccountId: AccountId) => {
-      if (!workplaceId || selection.selectedIds.size === 0) return;
-      const ids = Array.from(selection.selectedIds);
+      const ids =
+        activeModal?.type === 'bulkChangeAccount'
+          ? activeModal.journalIds
+          : Array.from(selection.selectedIds);
+      if (!workplaceId || ids.length === 0) return;
       const legName = targetLeg === 'debit' ? 'Destination' : 'Source';
 
       await runUndoableAction(
@@ -152,7 +178,7 @@ export function useJournalsBulkOperations({
         },
       );
     },
-    [workplaceId, selection.selectedIds, runUndoableAction],
+    [workplaceId, activeModal, selection.selectedIds, runUndoableAction],
   );
 
   // 5. Bulk Delete
@@ -206,7 +232,7 @@ export function useJournalsBulkOperations({
             variant: 'surface',
             accessibilityLabel: 'Duplicate selected transactions',
           },
-          isEnabled: count => count > 0,
+          isEnabled: count => count > 0 && !isDuplicating,
         },
         {
           action: {
@@ -256,6 +282,7 @@ export function useJournalsBulkOperations({
       buildActions,
       handleOpenBulkRename,
       handleBulkDuplicate,
+      isDuplicating,
       handleOpenMerge,
       handleOpenChangeAccount,
       onShareSelected,

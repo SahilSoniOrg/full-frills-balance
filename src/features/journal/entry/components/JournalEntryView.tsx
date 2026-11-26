@@ -28,7 +28,7 @@ import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/Simpl
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/design-system/colorMath';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
@@ -42,13 +42,23 @@ export function JournalEntryView(props: JournalEntryShell) {
   const [helpMode, setHelpMode] = useState<JournalEntryScreenMode | null>(null);
   const notesAdded =
     props.editor.notes.trim() !== '' || props.editor.lines.some(line => line.notes.trim() !== '');
-  const [showEntryNotes, setShowEntryNotes] = useState(notesAdded);
-  const [notesWereAdded, setNotesWereAdded] = useState(notesAdded);
-  if (notesAdded !== notesWereAdded) {
-    setNotesWereAdded(notesAdded);
-    if (notesAdded) setShowEntryNotes(true);
-  }
+  const [notesVisibility, setNotesVisibility] = useState<{
+    open: boolean;
+    whenNotesAdded: boolean;
+  } | null>(null);
+  const showEntryNotes = notesVisibility
+    ? notesAdded && !notesVisibility.whenNotesAdded
+      ? true
+      : notesVisibility.open
+    : notesAdded;
+  const setShowEntryNotes = useCallback(
+    (visible: boolean) => {
+      setNotesVisibility({ open: visible, whenNotesAdded: notesAdded });
+    },
+    [notesAdded],
+  );
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+  const openVoiceModal = useCallback(() => setIsVoiceModalVisible(true), []);
   const [isModePickerVisible, setIsModePickerVisible] = useState(false);
   const descriptionInputRef = useRef<TextInput>(null);
   const isInteractingWithSuggestionsRef = useRef(false);
@@ -180,6 +190,60 @@ export function JournalEntryView(props: JournalEntryShell) {
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
   const valuationCurrency = editor.valuationCurrency;
+  const journalMetaProps = useMemo<JournalMetaCardProps>(
+    () => ({
+      description: editor.description,
+      setDescription,
+      date: editor.journalDate,
+      setDate: editor.setJournalDate,
+      time: editor.journalTime,
+      setTime: editor.setJournalTime,
+      notes: editor.notes,
+      setNotes: editor.setNotes,
+      notesAdded,
+      showNotes: showEntryNotes,
+      onNotesVisibilityChange: setShowEntryNotes,
+      suggestions,
+      suggestionState,
+      onSelectSuggestion: handleSelectSuggestion,
+      activeTabType: activeMode === 'basic' ? editor.transactionType : undefined,
+      accounts,
+      onDescriptionFocus,
+      hideSuggestions,
+      onSuggestionInteractionChange,
+      onVoiceInputPress: activeMode === 'basic' ? openVoiceModal : undefined,
+      showBanner: showEditBanner,
+      bannerText: editBannerText,
+      onDescriptionSubmitEditing: activeMode === 'basic' ? startGuidedAccountFlow : undefined,
+      descriptionInputRef,
+    }),
+    [
+      accounts,
+      activeMode,
+      editBannerText,
+      editor.description,
+      editor.journalDate,
+      editor.journalTime,
+      editor.notes,
+      editor.setJournalDate,
+      editor.setJournalTime,
+      editor.setNotes,
+      editor.transactionType,
+      handleSelectSuggestion,
+      hideSuggestions,
+      notesAdded,
+      onDescriptionFocus,
+      onSuggestionInteractionChange,
+      openVoiceModal,
+      setDescription,
+      setShowEntryNotes,
+      showEditBanner,
+      showEntryNotes,
+      startGuidedAccountFlow,
+      suggestionState,
+      suggestions,
+    ],
+  );
 
   if (isLoading || loadState === 'not_found' || loadState === 'error') {
     const statusChrome: ScreenNavChrome = {
@@ -206,32 +270,6 @@ export function JournalEntryView(props: JournalEntryShell) {
     );
   }
 
-  const journalMetaProps: JournalMetaCardProps = {
-    description: editor.description,
-    setDescription,
-    date: editor.journalDate,
-    setDate: editor.setJournalDate,
-    time: editor.journalTime,
-    setTime: editor.setJournalTime,
-    notes: editor.notes,
-    setNotes: editor.setNotes,
-    notesAdded,
-    showNotes: showEntryNotes,
-    onNotesVisibilityChange: setShowEntryNotes,
-    suggestions,
-    suggestionState,
-    onSelectSuggestion: handleSelectSuggestion,
-    activeTabType: activeMode === 'basic' ? editor.transactionType : undefined,
-    accounts,
-    onDescriptionFocus,
-    hideSuggestions,
-    onSuggestionInteractionChange,
-    onVoiceInputPress: activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined,
-    showBanner: showEditBanner,
-    bannerText: editBannerText,
-    onDescriptionSubmitEditing: activeMode === 'basic' ? startGuidedAccountFlow : undefined,
-    descriptionInputRef,
-  };
   const journalMetaCard = !isBatchMode ? <JournalMetaCard {...journalMetaProps} /> : null;
 
   return (

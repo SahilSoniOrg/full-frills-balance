@@ -46,4 +46,23 @@ describe('useJournalSearchFilters report drill-down scope', () => {
     expect(result.current.accountIds).toEqual([]);
     expect(result.current.queryOptions.journalIds).toBeUndefined();
   });
+
+  it('initializes CUSTOM period dates from params and ignores non-numeric amount filters', () => {
+    const { result } = renderHook(() =>
+      useJournalSearchFilters({
+        startDate: '100',
+        endDate: '200',
+        minAmount: 'abc',
+        maxAmount: '42.5',
+      }),
+    );
+
+    expect(result.current.periodFilter).toEqual({
+      type: 'CUSTOM',
+      startDate: 100,
+      endDate: 200,
+    });
+    expect(result.current.queryOptions.minAmount).toBeUndefined();
+    expect(result.current.queryOptions.maxAmount).toBe(42.5);
+  });
 });

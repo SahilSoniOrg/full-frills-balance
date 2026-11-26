@@ -28,15 +28,34 @@ type JournalSearchViewProps = JournalSearchViewModel & {
 const searchCopy = AppConfig.strings.journal.search;
 
 export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
+  const {
+    attachMode,
+    reportScopeLabel,
+    clearReportScope,
+    searchQuery,
+    setSearchQuery,
+    dateRange,
+    openDatePicker,
+    accountIds,
+    openAccountPicker,
+    displayType,
+    setDisplayType,
+    minAmount,
+    setMinAmount,
+    maxAmount,
+    setMaxAmount,
+    clearFilters,
+  } = vm;
+  const accountCount = accountIds.length;
   const filterHeader = useMemo(
     () => (
       <View style={styles.filterContainer} testID="journal-search-screen">
-        {vm.attachMode ? (
+        {attachMode ? (
           <AppText variant="caption" color="secondary" testID="journal-search-attach-hint">
             {captureCopy.attachToJournalHint}
           </AppText>
         ) : null}
-        {vm.reportScopeLabel ? (
+        {reportScopeLabel ? (
           <Inline
             align="center"
             justify="space-between"
@@ -45,14 +64,14 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             paddingVertical="xs"
           >
             <AppText variant="caption" weight="semibold" style={styles.reportScopeLabel}>
-              {searchCopy.reportScopeLabel(vm.reportScopeLabel)}
+              {searchCopy.reportScopeLabel(reportScopeLabel)}
             </AppText>
             <PressScaleTouchable
               accessibilityRole="button"
               accessibilityLabel={searchCopy.clearReportScopeA11y}
               testID="journal-search-clear-report-scope"
-              onPress={vm.clearReportScope}
-              hitSlop={8}
+              onPress={clearReportScope}
+              hitSlop={Spacing.sm}
             >
               <AppText variant="caption" color="primary" weight="semibold">
                 {searchCopy.clearReportScope}
@@ -62,8 +81,8 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
         ) : null}
         <SearchField
           placeholder={searchCopy.placeholder}
-          value={vm.searchQuery}
-          onChangeText={vm.setSearchQuery}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
           autoFocus
           testID="journal-search-input"
         />
@@ -75,25 +94,23 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           keyboardShouldPersistTaps="always"
         >
           <DateRangeTrigger
-            range={vm.dateRange}
+            range={dateRange}
             onPress={() => {
               Keyboard.dismiss();
-              vm.openDatePicker();
+              openDatePicker();
             }}
             showNavigationArrows={false}
           />
 
           <FilterChipButton
             label={
-              vm.accountIds.length > 0
-                ? searchCopy.accountsCount(vm.accountIds.length)
-                : searchCopy.allAccounts
+              accountCount > 0 ? searchCopy.accountsCount(accountCount) : searchCopy.allAccounts
             }
             icon={Icon.Wallet}
-            isActive={vm.accountIds.length > 0}
+            isActive={accountCount > 0}
             onPress={() => {
               Keyboard.dismiss();
-              vm.openAccountPicker();
+              openAccountPicker();
             }}
           />
 
@@ -104,10 +121,10 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
               { label: 'Expense', id: 'EXPENSE' },
               { label: 'Transfer', id: 'TRANSFER' },
             ]}
-            value={vm.displayType}
+            value={displayType}
             onChange={val => {
               Keyboard.dismiss();
-              vm.setDisplayType(val);
+              setDisplayType(val);
             }}
           />
         </ScrollView>
@@ -115,8 +132,8 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
         <Inline align="center" gap="sm">
           <CalculatorAmountInput
             placeholder={searchCopy.minAmount}
-            value={vm.minAmount}
-            onChangeText={vm.setMinAmount}
+            value={minAmount}
+            onChangeText={setMinAmount}
             containerStyle={{ flex: 1 }}
             testID="journal-search-min-amount"
           />
@@ -125,22 +142,22 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           </AppText>
           <CalculatorAmountInput
             placeholder={searchCopy.maxAmount}
-            value={vm.maxAmount}
-            onChangeText={vm.setMaxAmount}
+            value={maxAmount}
+            onChangeText={setMaxAmount}
             containerStyle={{ flex: 1 }}
             testID="journal-search-max-amount"
           />
-          {(vm.searchQuery ||
-            vm.accountIds.length > 0 ||
-            vm.dateRange ||
-            vm.minAmount ||
-            vm.maxAmount ||
-            vm.displayType ||
-            vm.reportScopeLabel) && (
+          {(searchQuery ||
+            accountCount > 0 ||
+            dateRange ||
+            minAmount ||
+            maxAmount ||
+            displayType ||
+            reportScopeLabel) && (
             <IconButton
               name={Icon.Close}
               size={Size.iconXs}
-              onPress={vm.clearFilters}
+              onPress={clearFilters}
               accessibilityLabel={AppConfig.strings.common.clearFilters}
               style={styles.clearButton}
             />
@@ -148,7 +165,24 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
         </Inline>
       </View>
     ),
-    [vm],
+    [
+      accountCount,
+      attachMode,
+      clearFilters,
+      clearReportScope,
+      dateRange,
+      displayType,
+      maxAmount,
+      minAmount,
+      openAccountPicker,
+      openDatePicker,
+      reportScopeLabel,
+      searchQuery,
+      setDisplayType,
+      setMaxAmount,
+      setMinAmount,
+      setSearchQuery,
+    ],
   );
 
   return (

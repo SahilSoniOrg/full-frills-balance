@@ -45,7 +45,9 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
       : null;
   });
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(() =>
-    dateRange && endDate ? { type: 'CUSTOM' } : { type: 'ALL_TIME' },
+    dateRange
+      ? { type: 'CUSTOM', startDate: dateRange.startDate, endDate: dateRange.endDate }
+      : { type: 'ALL_TIME' },
   );
   const [accountIds, setAccountIds] = useState<AccountId[]>(() =>
     accountIdsParam ? (accountIdsParam.split(',') as AccountId[]) : [],
@@ -149,16 +151,17 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     () => (dateRange ? { startDate: dateRange.startDate, endDate: dateRange.endDate } : undefined),
     [dateRange],
   );
-  const queryOptions = useMemo(
-    () => ({
-      minAmount: minAmount ? parseFloat(minAmount) : undefined,
-      maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
+  const queryOptions = useMemo(() => {
+    const parsedMin = minAmount.trim() ? Number.parseFloat(minAmount) : Number.NaN;
+    const parsedMax = maxAmount.trim() ? Number.parseFloat(maxAmount) : Number.NaN;
+    return {
+      minAmount: Number.isFinite(parsedMin) ? parsedMin : undefined,
+      maxAmount: Number.isFinite(parsedMax) ? parsedMax : undefined,
       displayType: displayType || undefined,
       accountIds: accountIds.length > 0 ? accountIds : undefined,
       journalIds: journalIds.length > 0 ? journalIds : undefined,
-    }),
-    [minAmount, maxAmount, displayType, accountIds, journalIds],
-  );
+    };
+  }, [minAmount, maxAmount, displayType, accountIds, journalIds]);
 
   return {
     searchQuery,

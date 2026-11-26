@@ -6,7 +6,7 @@ import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
 import type { AccountRole } from '@/src/types/domainJournal';
-import React, { type RefObject, useEffect, useRef } from 'react';
+import React, { type RefObject, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, type TextInput } from 'react-native';
 
 export interface SimpleFormProps {
@@ -37,6 +37,16 @@ export const SimpleForm = React.memo(function SimpleForm({
   const amountInputRef = useRef<TextInput>(null);
   const sourceSection = editor.accountSections.find(section => section.role === 'source');
   const destinationSection = editor.accountSections.find(section => section.role === 'destination');
+  const handleSelectSourceAccount = useCallback(
+    (id: Parameters<NonNullable<typeof sourceSection>['onSelect']>[0]) =>
+      sourceSection?.onSelect(id),
+    [sourceSection],
+  );
+  const handleSelectDestinationAccount = useCallback(
+    (id: Parameters<NonNullable<typeof destinationSection>['onSelect']>[0]) =>
+      destinationSection?.onSelect(id),
+    [destinationSection],
+  );
   const {
     expansionPosition,
     handleSelectDestination,
@@ -48,8 +58,8 @@ export const SimpleForm = React.memo(function SimpleForm({
     sourceId: editor.sourceId,
     destinationId: editor.destinationId,
     autopilotFirstRole,
-    onSelectSource: id => sourceSection?.onSelect(id),
-    onSelectDestination: id => destinationSection?.onSelect(id),
+    onSelectSource: handleSelectSourceAccount,
+    onSelectDestination: handleSelectDestinationAccount,
   });
 
   useEffect(() => {
