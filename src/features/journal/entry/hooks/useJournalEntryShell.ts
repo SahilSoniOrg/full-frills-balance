@@ -47,6 +47,7 @@ import {
 } from '@/src/services/people';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import type { JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useLocalSearchParams } from 'expo-router';
@@ -103,7 +104,7 @@ export interface JournalEntryShell {
   peopleGroups: PersonPickerGroup[];
   initialPersonId?: PersonId;
   initialOpenItemId?: OpenItemId;
-  onQuickAddPerson: (name: string) => Promise<void>;
+  onQuickAddPerson: (name: string, currencyCode?: string) => Promise<AccountId>;
   onTransferOpenItemPlanChange: (
     plan: {
       personId: PersonId;
@@ -164,9 +165,15 @@ export function useJournalEntryShell(): JournalEntryShell {
     [],
   );
   const onQuickAddPerson = useCallback(
-    async (name: string) => {
+    async (name: string, currencyCode?: string) => {
       const person = await createPerson(workplaceId, { name });
-      await ensurePersonAccount(workplaceId, person.id, 'receivable', workplaceCurrency);
+      const account = await ensurePersonAccount(
+        workplaceId,
+        person.id,
+        'receivable',
+        currencyCode ?? workplaceCurrency,
+      );
+      return account.id;
     },
     [workplaceId, workplaceCurrency],
   );
@@ -310,9 +317,9 @@ export function useJournalEntryShell(): JournalEntryShell {
             lines.map(line => [
               line.id,
               line.transactionType === TransactionType.CREDIT
-                ? { accountId: source.id }
+                ? lineAccountPatch(source.id, source, source.accountType)
                 : {
-                    accountId: destination.id,
+                    ...lineAccountPatch(destination.id, destination, destination.accountType),
                     ...(item && !seed.amount && item.remainder > 0
                       ? { amount: String(item.remainder) }
                       : {}),

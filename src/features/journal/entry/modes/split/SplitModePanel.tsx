@@ -8,7 +8,7 @@ import type { CreateAccountIntent } from '@/src/components/account-selection';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
-import type { PersonId, WorkplaceId } from '@/src/types/ids';
+import type { AccountId, PersonId, WorkplaceId } from '@/src/types/ids';
 import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
 
 export type SplitModePanelProps = {
@@ -23,7 +23,7 @@ export type SplitModePanelProps = {
   peopleGroups?: readonly PersonPickerGroup[];
   initialPersonId?: PersonId;
   workplaceId?: WorkplaceId;
-  onQuickAddPerson?: (name: string) => Promise<void>;
+  onQuickAddPerson?: (name: string, currencyCode?: string) => Promise<AccountId | void>;
   onCreatePersonRequest?: () => void;
 };
 

@@ -46,7 +46,7 @@ type SplitFormProps = SplitJournalController & {
   peopleGroups?: readonly PersonPickerGroup[];
   initialPersonId?: PersonId;
   workplaceId?: WorkplaceId;
-  onQuickAddPerson?: (name: string) => Promise<void>;
+  onQuickAddPerson?: (name: string, currencyCode?: string) => Promise<AccountId | void>;
   onCreatePersonRequest?: () => void;
   onCreateAccountRequestForRow: (
     rowId: string,
@@ -250,7 +250,13 @@ export function SplitForm({
   const handleQuickAddPerson = useCallback(
     async (name: string) => {
       if (onQuickAddPerson) {
-        await onQuickAddPerson(name);
+        setIsQuickAdding(true);
+        try {
+          const accountId = await onQuickAddPerson(name, currencyCode);
+          if (accountId) addSplitRowWithAccount(accountId);
+        } finally {
+          setIsQuickAdding(false);
+        }
         return;
       }
       if (!workplaceId) return;

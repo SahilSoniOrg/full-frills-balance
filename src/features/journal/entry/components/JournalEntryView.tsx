@@ -1,19 +1,20 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import {
+  AppButton,
   AppIcon,
+  AppInputField,
   AppText,
   EmptyStateView,
   Icon,
   LoadingView,
   PressScaleTouchable,
 } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
-import { Page } from '@/src/design-system';
-import { peopleReadService } from '@/src/services/people';
-import { useObservable } from '@/src/hooks/useObservable';
+import { Inline, Page, Stack } from '@/src/design-system';
+import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import {
@@ -31,7 +32,7 @@ import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/Simpl
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/design-system/colorMath';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
@@ -193,25 +194,36 @@ export function JournalEntryView(props: JournalEntryShell) {
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
   const valuationCurrency = editor.valuationCurrency;
-  const { data: peopleTick } = useObservable(
-    () => peopleReadService.observePeopleTick(props.workplaceId),
-    [props.workplaceId],
-    null,
-  );
-  const [peopleGroups, setPeopleGroups] = useState<PersonPickerGroup[]>([]);
-  useEffect(() => {
-    let active = true;
-    if (typeof peopleReadService?.listPersonPickerGroups !== 'function') return undefined;
-    void peopleReadService
-      .listPersonPickerGroups(props.workplaceId)
-      .then(groups => {
-        if (active) setPeopleGroups(groups);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [peopleTick, props.workplaceId]);
+  const {
+    people,
+    peopleGroups,
+    initialPersonId,
+    initialOpenItemId,
+    onQuickAddPerson,
+    onTransferOpenItemPlanChange,
+  } = props;
+  const [addPersonOpen, setAddPersonOpen] = useState(false);
+  const [addPersonName, setAddPersonName] = useState('');
+  const [addingPerson, setAddingPerson] = useState(false);
+  const openAddPersonModal = useCallback(() => {
+    setAddPersonName('');
+    setAddPersonOpen(true);
+  }, []);
+  const handleSaveNewPerson = useCallback(async () => {
+    const trimmed = addPersonName.trim();
+    if (!trimmed || addingPerson) return;
+    setAddingPerson(true);
+    try {
+      await onQuickAddPerson(trimmed);
+      setAddPersonOpen(false);
+      setAddPersonName('');
+      toast.success('Person added');
+    } catch (error) {
+      showErrorAlert(error instanceof Error ? error.message : 'Could not add person');
+    } finally {
+      setAddingPerson(false);
+    }
+  }, [addPersonName, addingPerson, onQuickAddPerson]);
   const journalMetaProps = useMemo<JournalMetaCardProps>(
     () => ({
       description: editor.description,
@@ -393,6 +405,9 @@ export function JournalEntryView(props: JournalEntryShell) {
             workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
             peopleGroups={peopleGroups}
+            initialOpenItemId={initialOpenItemId}
+            onCreatePersonRequest={openAddPersonModal}
+            onTransferOpenItemPlanChange={onTransferOpenItemPlanChange}
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
@@ -408,6 +423,12 @@ export function JournalEntryView(props: JournalEntryShell) {
               workplaceCurrency={valuationCurrency}
               editor={editor}
               onCreateAccountForTarget={onCreateAccountForTarget}
+              people={people}
+              peopleGroups={peopleGroups}
+              initialPersonId={initialPersonId}
+              workplaceId={workplaceId}
+              onQuickAddPerson={onQuickAddPerson}
+              onCreatePersonRequest={openAddPersonModal}
             />
           </>
         ) : activeMode === 'expert' ? (
@@ -449,8 +470,42 @@ export function JournalEntryView(props: JournalEntryShell) {
         onClose={onCloseAccountPicker}
         onDismiss={onAccountPickerDismiss}
         onCreateRequest={onCreateAccountRequest}
+        onCreatePersonRequest={openAddPersonModal}
         excludeParentAccounts={true}
       />
+
+      {/* Quick Add Person */}
+      <ModalSurface
+        visible={addPersonOpen}
+        title="Add person"
+        onClose={() => setAddPersonOpen(false)}
+        position="center"
+        footer={
+          <Inline gap="sm" justifyContent="flex-end">
+            <AppButton variant="outline" onPress={() => setAddPersonOpen(false)}>
+              Cancel
+            </AppButton>
+            <AppButton
+              loading={addingPerson}
+              disabled={!addPersonName.trim() || addingPerson}
+              onPress={() => void handleSaveNewPerson()}
+            >
+              Save
+            </AppButton>
+          </Inline>
+        }
+      >
+        <Stack gap="sm">
+          <AppText color="secondary" variant="caption">
+            Create an offline ledger profile to split bills or record repayments.
+          </AppText>
+          <AppInputField
+            placeholder="Person name"
+            value={addPersonName}
+            onChangeText={setAddPersonName}
+          />
+        </Stack>
+      </ModalSurface>
 
       {/* Mode Picker Bottom Sheet */}
       <JournalEntryModePickerModal
