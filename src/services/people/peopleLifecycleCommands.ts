@@ -136,6 +136,17 @@ export async function ensurePersonAccountInSession(
   await personWriteRepository.linkAccountInSession(session, workplaceId, personId, account.id);
   return account;
 }
+
+export function ensurePersonAccount(
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  kind: PersonAccountRole,
+  currencyCode: string,
+): Promise<Account> {
+  return runAccountingWriteSession(session =>
+    ensurePersonAccountInSession(session, workplaceId, personId, kind, currencyCode),
+  );
+}
 function typeForRole(role: PersonAccountRole): AccountType {
   return role === 'receivable'
     ? AccountType.ASSET

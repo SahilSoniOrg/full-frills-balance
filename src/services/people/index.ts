@@ -6,6 +6,7 @@ export {
   softDeletePerson,
   linkExistingAccount,
   ensurePersonAccountInSession,
+  ensurePersonAccount,
 } from './peopleLifecycleCommands';
 export { saveSplitExpense, saveFriendPaidBill, recordPersonMovement } from './peopleSplitCommands';
 export {
