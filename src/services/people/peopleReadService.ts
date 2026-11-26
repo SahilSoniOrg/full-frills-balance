@@ -1,4 +1,9 @@
-import { projectLinkedAccount, summarizePerson, openItemRemainder } from '@/src/domain/people';
+import {
+  classifyPersonDebtPosting,
+  openItemRemainder,
+  projectLinkedAccount,
+  summarizePerson,
+} from '@/src/domain/people';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { personQueryRepository } from '@/src/data/repositories/people';
@@ -213,9 +218,18 @@ export class PeopleReadService {
           .map(x => transactionQueryRepository.findByAccount(workplaceId, x.account.id)),
       )
     ).flat();
-    const unallocatedRepayments = repaymentTransactions.filter(
-      tx => !domainAllocations.some(a => a.journalId === tx.journalId),
-    );
+    const accountTypeById = new Map(validLinks.map(x => [x.account.id, x.account.accountType]));
+    const unallocatedRepayments = repaymentTransactions.filter(tx => {
+      const accountType = accountTypeById.get(tx.accountId);
+      if (!accountType) return false;
+      if (
+        classifyPersonDebtPosting({ accountType, transactionType: tx.transactionType }) !==
+        'reducing'
+      ) {
+        return false;
+      }
+      return !domainAllocations.some(a => a.journalId === tx.journalId);
+    });
     return {
       person,
       linkedAccounts: validLinks,

@@ -12,6 +12,7 @@ import {
   buildUserPaidSplit,
 } from '@/src/domain/people/personSplitPlanner';
 import { ensurePersonAccountInSession } from './peopleLifecycleCommands';
+import { autoSettlePersonInSession } from './peopleSettlementCommands';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
 
@@ -23,7 +24,7 @@ export async function saveSplitExpense(
     description?: string;
     notes?: string;
     currencyCode: string;
-    fundingAccountId: AccountId;
+    fundingAccountId?: AccountId;
     expenseAccountId: AccountId;
     userShare: number;
     participants: readonly {
@@ -93,6 +94,9 @@ export async function saveSplitExpense(
           currencyCode,
         });
     }
+    for (const personId of new Set(input.participants.map(p => p.personId))) {
+      await autoSettlePersonInSession(session, workplaceId, personId, result.journal.journalDate);
+    }
     return result.journal;
   });
 }
@@ -143,7 +147,7 @@ export function saveFriendPaidBill(
       },
       workplaceId,
     );
-    if (input.repayable && input.userShare > 0)
+    if (input.repayable && input.userShare > 0) {
       await personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
         personId: input.payerPersonId,
         originatingJournalId: result.journal.id,
@@ -152,6 +156,13 @@ export function saveFriendPaidBill(
         originalAmount: input.userShare,
         currencyCode: input.currencyCode,
       });
+      await autoSettlePersonInSession(
+        session,
+        workplaceId,
+        input.payerPersonId,
+        result.journal.journalDate,
+      );
+    }
     return result.journal;
   });
 }
@@ -207,7 +218,7 @@ export function recordPersonMovement(
       },
       workplaceId,
     );
-    if ((input.flow === 'lend' || input.flow === 'borrow') && input.amount > 0)
+    if ((input.flow === 'lend' || input.flow === 'borrow') && input.amount > 0) {
       await personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
         personId: input.personId,
         originatingJournalId: result.journal.id,
@@ -216,6 +227,13 @@ export function recordPersonMovement(
         originalAmount: input.amount,
         currencyCode: input.currencyCode,
       });
+      await autoSettlePersonInSession(
+        session,
+        workplaceId,
+        input.personId,
+        result.journal.journalDate,
+      );
+    }
     return result.journal;
   });
 }
