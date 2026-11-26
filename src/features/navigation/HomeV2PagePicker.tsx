@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const pageDetails: Partial<Record<string, { icon: IconName; description: string }>> = {
   accounts: { icon: Icon.Wallet, description: 'Balances and account structure' },
   categories: { icon: Icon.Tag, description: 'Income and expense categories' },
+  people: { icon: Icon.User, description: 'Balances, splits, and settlements' },
   commitments: { icon: Icon.Calendar, description: 'Spending limits and progress' },
   'planned-payments': { icon: Icon.Calendar, description: 'Upcoming payments and income' },
 };
@@ -128,7 +129,7 @@ export function HomeV2PagePicker({
           accessibilityRole={paired ? 'button' : 'header'}
           accessibilityLabel={
             paired
-              ? `${page?.title}.${hasMultipleWorkplaces ? ` Workplace: ${workplace.activeWorkplace.name}.` : ''} Choose ${siblings.map(item => item.title).join(' or ')}`
+              ? `${page?.title}.${hasMultipleWorkplaces ? ` Workplace: ${workplace.activeWorkplace.name}.` : ''} Choose ${siblings.map(item => item.title).join(', ')}`
               : `${page?.title}${hasMultipleWorkplaces ? `. Workplace: ${workplace.activeWorkplace.name}` : ''}`
           }
           accessibilityHint={paired ? 'Opens the page selector' : undefined}

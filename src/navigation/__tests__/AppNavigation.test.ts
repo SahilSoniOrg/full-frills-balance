@@ -30,6 +30,21 @@ const { router } = jest.requireMock('expo-router') as {
   };
 };
 
+describe('People navigation', () => {
+  it('navigates to People, person details, split expense, and settle up', () => {
+    AppNavigation.toPeople({ create: '1' });
+    AppNavigation.toPersonDetails('person-1');
+    AppNavigation.toSplitExpense({ journalId: 'entry-1' });
+    AppNavigation.toSettleUp({ personId: 'person-1' });
+    expect(router.push.mock.calls.slice(-4)).toEqual([
+      ['/(tabs)/people?create=1'],
+      ['/person-details?personId=person-1'],
+      ['/split-expense?journalId=entry-1'],
+      ['/settle-up?personId=person-1'],
+    ]);
+  });
+});
+
 describe('buildRoute', () => {
   it('returns pathname as Href when no params are provided', () => {
     expect(buildRoute('/account-details')).toBe('/account-details');

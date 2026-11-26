@@ -173,6 +173,22 @@ export const AppNavigation = {
     AppNavigation.toPrimaryPage('accounts');
   },
 
+  toPeople: (params?: Record<string, string | number | boolean | undefined>) => {
+    router.push(buildRoute('/(tabs)/people', params));
+  },
+
+  toPersonDetails: (personId: string) => {
+    router.push(buildRoute('/person-details', { personId }));
+  },
+
+  toSplitExpense: (params?: Record<string, string | number | boolean | undefined>) => {
+    router.push(buildRoute('/split-expense', params));
+  },
+
+  toSettleUp: (params?: Record<string, string | number | boolean | undefined>) => {
+    router.push(buildRoute('/settle-up', params));
+  },
+
   /** Return after removal, preserving valid history and discarding pages for the removed account. */
   afterAccountRemoval: (accountId: AccountId, navigation: AccountRemovalNavigation): void => {
     lastJournalEntryNavigation = null;
