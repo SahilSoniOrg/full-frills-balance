@@ -355,6 +355,24 @@ _Avoid_: global position; category position
 A tree operation that changes an account’s parent while preserving that account’s descendants, their parent links, and their relative sibling order.
 _Avoid_: move-and-flatten; reattach children
 
+### People and person-linked accounts
+
+**Person**:
+A Workplace-scoped record for someone whose money-related activity the User tracks. It groups linked ledger Accounts and their journals; it is not itself an Account.
+_Avoid_: People account; cross-type parent account; shared contact
+
+**Person-linked Account**:
+An ordinary ledger Account associated with a Person for transaction entry and person-level history. It retains its normal account type, currency, journal postings, and account-tree rules.
+_Avoid_: Person account (as a distinct account type); gift account; people parent
+
+**Person balance**:
+The amount the Person owes the User or the User owes the Person, derived from the Person's linked receivable Asset and payable Liability accounts. Native balances remain visible by currency; any converted net estimate is informational and never settles the ledger.
+_Avoid_: Automatically settled balance; cross-currency ledger balance
+
+**Repayment link**:
+An explicit relationship between a repayment journal and one or more earlier repayable items. It changes which items appear open or settled on the Person page, not the posted journal amounts.
+_Avoid_: Repayment journal as a separate journal type; automatic match
+
 ### Time display
 
 **Hour cycle**:
