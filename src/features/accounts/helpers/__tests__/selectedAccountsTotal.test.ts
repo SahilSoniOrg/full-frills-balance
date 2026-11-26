@@ -143,4 +143,24 @@ describe('computeSelectedAccountsTotal', () => {
       incomplete: false,
     });
   });
+
+  it('deduplicates repeated account rows before summing', () => {
+    const cash = balance('cash', 200, 'USD', AccountType.ASSET);
+    expect(
+      computeSelectedAccountsTotal(
+        [
+          { id: cash.accountId, currencyCode: 'USD', accountType: AccountType.ASSET },
+          { id: cash.accountId, currencyCode: 'USD', accountType: AccountType.ASSET },
+        ],
+        new Map([[cash.accountId, cash]]),
+        new Set([cash.accountId]),
+      ),
+    ).toEqual({
+      amounts: [{ amount: 200, currencyCode: 'USD' }],
+      sections: [
+        { accountType: AccountType.ASSET, amounts: [{ amount: 200, currencyCode: 'USD' }] },
+      ],
+      incomplete: false,
+    });
+  });
 });

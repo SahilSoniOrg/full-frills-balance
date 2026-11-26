@@ -155,7 +155,7 @@ export function accountEntryLeg(
 }
 
 /** A leg's amount in the journal currency, when its rate is known. */
-function legJournalAmount(
+export function legJournalAmount(
   journal: EnrichedJournal,
   account: EnrichedJournal['accounts'][number],
 ): number | undefined {

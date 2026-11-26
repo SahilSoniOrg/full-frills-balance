@@ -192,4 +192,38 @@ describe('computeSelectedJournalsTotal', () => {
       includedCount: 1,
     });
   });
+
+  it('nets income and expense legs for whole-journal MIXED entries', () => {
+    const mixed = journal('mixed', JournalDisplayType.MIXED, 1000, 'USD', [
+      {
+        id: asAccountId('salary'),
+        name: 'Salary',
+        accountType: AccountType.INCOME,
+        role: 'SOURCE',
+        amount: 1000,
+      },
+      {
+        id: asAccountId('shopping'),
+        name: 'Shopping',
+        accountType: AccountType.EXPENSE,
+        role: 'DESTINATION',
+        amount: 100,
+      },
+      {
+        id: asAccountId('checking'),
+        name: 'Checking',
+        accountType: AccountType.ASSET,
+        role: 'DESTINATION',
+        amount: 900,
+      },
+    ]);
+
+    expect(
+      computeSelectedJournalsTotal(journalsToTimelineRows([mixed]), new Set([mixed.id])),
+    ).toEqual({
+      amounts: [{ amount: 900, currencyCode: 'USD' }],
+      incomplete: false,
+      includedCount: 1,
+    });
+  });
 });

@@ -140,7 +140,7 @@ export const SEMANTIC_MATRIX: Matrix5<SemanticType> = {
     [LIABILITY]: SemanticType.LIABILITY_TRANSFER,
     [EQUITY]: SemanticType.DEBT_CONVERSION,
     [INCOME]: SemanticType.LIABILITY_ADJUSTMENT,
-    [EXPENSE]: SemanticType.PURCHASE,
+    [EXPENSE]: SemanticType.EXPENSE_ON_CREDIT,
   },
   [EQUITY]: {
     [ASSET]: SemanticType.BALANCE_ADJUSTMENT,

@@ -5,6 +5,7 @@ import type { MoneyAmount } from '@/src/types/domainReadModels';
 export function sumByCurrency(amounts: Iterable<MoneyAmount>): MoneyAmount[] {
   const totals = new Map<string, Money>();
   for (const { amount, currencyCode } of amounts) {
+    if (!Number.isFinite(amount)) continue;
     const code = normalizeCurrencyCode(currencyCode);
     if (!code) continue;
 

@@ -13,6 +13,7 @@ import {
   safeMultiply,
   safeSubtract,
 } from '@/src/domain/money/money';
+import { sumByCurrency } from '@/src/domain/money/sumByCurrency';
 
 describe('money utilities', () => {
   describe('roundToPrecision', () => {
@@ -174,5 +175,19 @@ describe('sanitizeDecimalInput', () => {
   it('still rejects too many decimal places and stray separators', () => {
     expect(sanitizeDecimalInput('-1.234', 2, { allowNegative: true })).toBeNull();
     expect(sanitizeDecimalInput('-1.2.3', 2, { allowNegative: true })).toBeNull();
+  });
+});
+
+describe('sumByCurrency', () => {
+  it('skips non-finite amounts and blank currency codes safely', () => {
+    expect(
+      sumByCurrency([
+        { amount: Number.NaN, currencyCode: 'USD' },
+        { amount: Number.POSITIVE_INFINITY, currencyCode: 'USD' },
+        { amount: 25, currencyCode: '' },
+        { amount: 12.34, currencyCode: 'usd' },
+        { amount: 7.66, currencyCode: 'USD' },
+      ]),
+    ).toEqual([{ amount: 20, currencyCode: 'USD' }]);
   });
 });

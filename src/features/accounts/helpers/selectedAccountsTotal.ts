@@ -27,10 +27,12 @@ export function computeSelectedAccountsTotal(
   }
 
   const amountsByType = new Map<AccountType, MoneyAmount[]>();
+  const seenIds = new Set<AccountId>();
   let matched = 0;
 
   for (const { id, currencyCode, accountType } of accounts) {
-    if (!selectedAccountIds.has(id)) continue;
+    if (!selectedAccountIds.has(id) || seenIds.has(id)) continue;
+    seenIds.add(id);
     const balance = balancesByAccountId.get(id);
     if (!balance || !Number.isFinite(balance.directBalance) || !currencyCode?.trim()) continue;
 
