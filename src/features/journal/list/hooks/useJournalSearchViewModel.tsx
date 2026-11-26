@@ -264,9 +264,12 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       selectedIds: core.selectedIds,
       isSelectionModeActive: core.isSelectionModeActive,
       onLongPressItem: core.onLongPressItem,
-      chrome: attachSelectionActions(core.selectionChrome, bulkOperations.actions),
+      chrome: attachMode
+        ? undefined
+        : attachSelectionActions(core.selectionChrome, bulkOperations.actions),
     }),
     [
+      attachMode,
       core.selectedIds,
       core.isSelectionModeActive,
       core.onLongPressItem,

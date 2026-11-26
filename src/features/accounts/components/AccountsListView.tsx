@@ -28,6 +28,13 @@ import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
+const SECTION_SELECT_HIT_SLOP = {
+  top: Spacing.sm,
+  bottom: Spacing.sm,
+  left: Spacing.sm,
+  right: Spacing.sm,
+} as const;
+
 export function AccountsListView({
   sections,
   onToggleSection,
@@ -110,12 +117,7 @@ export function AccountsListView({
         isSelectionModeActive && sectionAccountIds.length > 0 ? (
           <PressScaleTouchable
             onPress={() => onToggleSectionSelect(sectionAccountIds)}
-            hitSlop={{
-              top: Spacing.sm,
-              bottom: Spacing.sm,
-              left: Spacing.sm,
-              right: Spacing.sm,
-            }}
+            hitSlop={SECTION_SELECT_HIT_SLOP}
             style={styles.sectionSelectButton}
             accessibilityRole="checkbox"
             accessibilityState={{

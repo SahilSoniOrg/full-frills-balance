@@ -119,6 +119,8 @@ export function toShareableJournalEntry(
   };
 }
 
+const noopLongPress = () => {};
+
 /**
  * Shared journal list/search pipeline: fetch, day grouping, selection, share, pagination.
  */
@@ -353,7 +355,7 @@ export function useJournalEntryList({
     selectedIds,
     selectionChrome,
     isSelectionModeActive: selectionActive,
-    onLongPressItem: disableSelection ? () => undefined : onLongPressItem,
+    onLongPressItem: disableSelection ? noopLongPress : onLongPressItem,
     toggleSelection,
     exitSelectionMode,
     onShareSelected,
