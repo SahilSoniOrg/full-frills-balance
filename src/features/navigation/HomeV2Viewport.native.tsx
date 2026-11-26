@@ -62,11 +62,11 @@ export function HomeV2Viewport({
         currentPager.setPageWithoutAnimation(target);
         nativeIndex.current = target;
         setInteractivePageIndex(target);
+        commandTarget.current = target;
       } else {
         deferredTarget.current = target;
         commandTarget.current = null;
       }
-      commandTarget.current = currentPager ? target : null;
       phase.current = 'idle';
       pageProgress.set(target);
       callbacks.current.onTransitioningChange(false);
@@ -148,11 +148,16 @@ export function HomeV2Viewport({
     finishFrame.current = null;
     clearTransitionWatchdog();
     phase.current = 'idle';
-    commandTarget.current = routeIndex.current;
-    pager.current?.setPageWithoutAnimation(routeIndex.current);
-    pageProgress.set(routeIndex.current);
+    const target = routeIndex.current;
+    pageProgress.set(target);
     callbacks.current.onTransitioningChange(false);
-    armTransitionWatchdog();
+    if (pager.current && nativeIndex.current !== target) {
+      commandTarget.current = target;
+      pager.current.setPageWithoutAnimation(target);
+      armTransitionWatchdog();
+    } else {
+      commandTarget.current = null;
+    }
   }, [armTransitionWatchdog, clearTransitionWatchdog, scrollEnabled, pageProgress]);
 
   useLayoutEffect(

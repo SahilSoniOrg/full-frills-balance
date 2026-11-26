@@ -13,6 +13,8 @@ export type AccountsListHeaderActionsProps = {
   setIsSearching: (searching: boolean) => void;
   onManageHierarchy: () => void;
   accountsForArchiveToggle: readonly ArchiveAccountRef[];
+  isActive?: boolean;
+  covered?: boolean;
 };
 
 export function AccountsListHeaderActions({
@@ -22,6 +24,8 @@ export function AccountsListHeaderActions({
   setIsSearching,
   onManageHierarchy,
   accountsForArchiveToggle,
+  isActive = true,
+  covered = false,
 }: AccountsListHeaderActionsProps) {
   return (
     <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
@@ -42,6 +46,8 @@ export function AccountsListHeaderActions({
         onChangeText={onSearchChange}
         onExpandChange={setIsSearching}
         placeholder="Search accounts..."
+        autoFocus={isActive && !covered}
+        editable={!covered}
       />
       {!isSearching ? <PrivacyToggleButton /> : null}
     </View>

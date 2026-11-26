@@ -25,7 +25,7 @@ import {
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/services/currency/incompleteFxDetails';
 
 const SECTION_SELECT_HIT_SLOP = {
@@ -143,7 +143,10 @@ export function AccountsListView({
             meta={section.count}
             expanded={!section.isCollapsed}
             onToggle={() => handleToggleSection(section.title)}
-            onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
+            onLongPress={() => {
+              Keyboard.dismiss();
+              onToggleSectionSelect(sectionAccountIds);
+            }}
             delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
             accessibilityLabel={`${section.title} section, ${section.count} accounts`}
             accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}

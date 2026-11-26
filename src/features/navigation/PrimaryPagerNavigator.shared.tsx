@@ -26,8 +26,16 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { NavigatorContentProps } from 'expo-router';
 import { unstable_useReconcileTabHistory, useIsFocused } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, AppState, BackHandler, Platform, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  AppState,
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import type { ComponentType, ReactNode } from 'react';
 import {
@@ -191,10 +199,6 @@ export function createPrimaryPagerContent(
       return () => subscription.remove();
     }, []);
 
-    const navigateHome = useCallback(() => {
-      actions.navigate('index');
-    }, [actions]);
-
     const setPageSwipeLock = useCallback((lockId: string, locked: boolean) => {
       setPageSwipeLocks(previous => {
         if (previous.has(lockId) === locked) return previous;
@@ -282,11 +286,7 @@ export function createPrimaryPagerContent(
           >
             <PrimaryPrivacyScopeStoreProvider>
               <PersistentTabChromeProvider>
-                <PrimaryPagerFrame
-                  tabBarProps={tabBarProps}
-                  isFocused={isFocused}
-                  onNavigateHome={navigateHome}
-                >
+                <PrimaryPagerFrame tabBarProps={tabBarProps} isFocused={isFocused}>
                   <Viewport {...viewportProps} />
                 </PrimaryPagerFrame>
               </PersistentTabChromeProvider>
@@ -302,12 +302,10 @@ function PrimaryPagerFrame({
   children,
   tabBarProps,
   isFocused,
-  onNavigateHome,
 }: {
   children: ReactNode;
   tabBarProps: PrimaryTabBarProps;
   isFocused: boolean;
-  onNavigateHome: () => void;
 }) {
   const { activeRouteName, pageProgress, onNavigateToPage, isTransitioning } = tabBarProps;
   const selection = usePersistentTabChrome(activeRouteName)?.selection;
@@ -315,28 +313,32 @@ function PrimaryPagerFrame({
   const reportSelectionMode = primaryNavigation?.reportSelectionMode;
   const drawerVisible = primaryNavigation?.drawerVisible ?? false;
   const selectionModeActive = isFocused && Boolean(selection);
-  const { insets } = useWindowSafeAreaLayout();
+  const { isKeyboardVisible } = useKeyboard();
+  const { insets, bottomSpacing } = useWindowSafeAreaLayout();
   const { theme } = useTheme();
   const page = primaryPageFromRouteName(activeRouteName);
+  const selectionRef = useRef(selection);
 
   useLayoutEffect(() => {
+    selectionRef.current = selection;
     reportSelectionMode?.(selectionModeActive);
-  }, [reportSelectionMode, selectionModeActive]);
+  }, [reportSelectionMode, selection, selectionModeActive]);
 
   useEffect(() => {
     if (Platform.OS === 'web' || !isFocused) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (drawerVisible) return false;
-      if (selection) {
-        selection.exitSelectionMode();
+      const currentSelection = selectionRef.current;
+      if (currentSelection) {
+        currentSelection.exitSelectionMode();
         return true;
       }
       if (primaryPageIndex(activeRouteName) <= 0) return false;
-      onNavigateHome();
+      onNavigateToPage('index');
       return true;
     });
     return () => subscription.remove();
-  }, [activeRouteName, drawerVisible, isFocused, onNavigateHome, selection]);
+  }, [activeRouteName, drawerVisible, isFocused, onNavigateToPage]);
 
   return (
     <View style={styles.container}>
@@ -357,17 +359,22 @@ function PrimaryPagerFrame({
         </SafeAreaScope>
       </SafeAreaFrame>
       <PrivacyScopeProvider key={`footer-${activeRouteName}`} scopeKey={page?.group}>
-        <SelectionFooterHost
-          selection={selection}
-          backgroundColor={theme.background}
-          edgePadding={{
-            bottom: insets.bottom,
-            left: insets.left,
-            right: insets.right,
-          }}
+        <KeyboardAvoidingView
+          enabled={Platform.OS !== 'web'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
-        </SelectionFooterHost>
+          <SelectionFooterHost
+            selection={selection}
+            backgroundColor={theme.background}
+            edgePadding={{
+              bottom: isKeyboardVisible ? 0 : bottomSpacing.selectionActions,
+              left: insets.left,
+              right: insets.right,
+            }}
+          >
+            <PrimaryTabBar {...tabBarProps} covered={Boolean(selection)} />
+          </SelectionFooterHost>
+        </KeyboardAvoidingView>
       </PrivacyScopeProvider>
     </View>
   );

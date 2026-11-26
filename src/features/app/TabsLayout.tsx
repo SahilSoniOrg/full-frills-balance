@@ -8,7 +8,7 @@ import {
 } from '@/src/features/navigation';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { PRIMARY_PAGES } from '@/src/navigation/primaryPages';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function TabsLayout() {
@@ -32,44 +32,60 @@ export function TabsLayout() {
   const reportActiveRoute = useCallback((routeName: string) => {
     setActiveRouteName(routeName);
   }, []);
-  const onAddAction = (action: ContextualAddAction) => {
-    const workplaceId = workplace.workplaceId;
-    switch (action) {
-      case 'expense':
-      case 'income':
-      case 'transfer':
-        AppNavigation.toSimpleJournalEntry(action, { workplaceId, guidedAutopilot: true });
-        break;
-      case 'account':
-        AppNavigation.toAccountCreation(undefined, workplaceId);
-        break;
-      case 'category':
-        AppNavigation.toCategoryCreation(undefined, workplaceId);
-        break;
-      case 'budget':
-        AppNavigation.toBudgetForm(undefined, undefined, workplaceId);
-        break;
-      case 'planned-payment':
-        AppNavigation.toPlannedPaymentForm(undefined, undefined, workplaceId);
-        break;
-    }
-  };
+  const onAddAction = useCallback(
+    (action: ContextualAddAction) => {
+      const workplaceId = workplace.workplaceId;
+      switch (action) {
+        case 'expense':
+        case 'income':
+        case 'transfer':
+          AppNavigation.toSimpleJournalEntry(action, { workplaceId, guidedAutopilot: true });
+          break;
+        case 'account':
+          AppNavigation.toAccountCreation(undefined, workplaceId);
+          break;
+        case 'category':
+          AppNavigation.toCategoryCreation(undefined, workplaceId);
+          break;
+        case 'budget':
+          AppNavigation.toBudgetForm(undefined, undefined, workplaceId);
+          break;
+        case 'planned-payment':
+          AppNavigation.toPlannedPaymentForm(undefined, undefined, workplaceId);
+          break;
+      }
+    },
+    [workplace.workplaceId],
+  );
+
+  const navigationContextValue = useMemo(
+    () => ({
+      reportSelectionMode,
+      selectionModeActive,
+      drawerVisible,
+      openDrawer,
+      closeDrawer,
+      userName: displayName,
+      activeRouteName,
+      reportActiveRoute,
+      drawerSwipePermission,
+      reportDrawerSwipePermission: setDrawerSwipePermission,
+    }),
+    [
+      reportSelectionMode,
+      selectionModeActive,
+      drawerVisible,
+      openDrawer,
+      closeDrawer,
+      displayName,
+      activeRouteName,
+      reportActiveRoute,
+      drawerSwipePermission,
+    ],
+  );
 
   return (
-    <PrimaryNavigationProvider
-      value={{
-        reportSelectionMode,
-        selectionModeActive,
-        drawerVisible,
-        openDrawer,
-        closeDrawer,
-        userName: displayName,
-        activeRouteName,
-        reportActiveRoute,
-        drawerSwipePermission,
-        reportDrawerSwipePermission: setDrawerSwipePermission,
-      }}
-    >
+    <PrimaryNavigationProvider value={navigationContextValue}>
       <NavigationDrawer>
         <View style={styles.shell}>
           <PrimaryPager onAddAction={onAddAction} backBehavior="none">

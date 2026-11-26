@@ -114,6 +114,21 @@ export function PressScaleTouchable({
     opacity.set(withTiming(baseOpacity, { duration: PRESS_OUT_DURATION_MS }));
   }, [animateOpacity, baseOpacity, opacity]);
 
+  useEffect(() => {
+    if (!props.disabled) return;
+    if (wrapped && pressed) handlePressOut();
+    if (!wrapped) {
+      scale.set(Scale.identity);
+      opacity.set(baseOpacityRef.current);
+    }
+  }, [props.disabled, wrapped, pressed, handlePressOut, scale, opacity]);
+
+  useEffect(() => {
+    if (!wrapped && !animateScale) {
+      scale.set(Scale.identity);
+    }
+  }, [wrapped, animateScale, scale]);
+
   const pressStyle = useAnimatedStyle(() => {
     const animatedStyle: ViewStyle = {};
     if (animateScale) animatedStyle.transform = [{ scale: scale.get() }];
@@ -139,7 +154,11 @@ export function PressScaleTouchable({
         scale.set(withTiming(SCALE_BY_AMOUNT[pressScale], { duration: PRESS_IN_DURATION_MS }));
       }
       if (animateOpacity) {
-        opacity.set(withTiming(activeOpacity, { duration: PRESS_IN_DURATION_MS }));
+        opacity.set(
+          withTiming(Math.min(baseOpacityRef.current, activeOpacity), {
+            duration: PRESS_IN_DURATION_MS,
+          }),
+        );
       }
     },
     onPressOut: (event: GestureResponderEvent) => {
@@ -169,7 +188,10 @@ export function PressScaleTouchable({
                   opacity: pressed ? Math.min(baseOpacity, activeOpacity) : baseOpacity,
                 }
           }
-          transition={transition}
+          transition={{
+            ...transition,
+            duration: reduceMotion ? 0 : transition.duration,
+          }}
           style={surfaceStyle}
         >
           {children}

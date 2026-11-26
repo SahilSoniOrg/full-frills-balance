@@ -188,12 +188,19 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
   } | null>(null);
   const surfaceRef = useRef<View>(null);
   const selectorAnchorRef = useRef<View>(null);
+  const selectorRequestRef = useRef(0);
+  const drawerVisibleRef = useRef(drawerVisible);
   const activeIdRef = useRef(activeWorkplace.id);
   const drawerWidth = Math.min(width * 0.88, AppConfig.layout.popupModalMaxWidth);
   const selectorMaxHeight = Math.max(
     Size.touchTargetLg * 3,
     Math.min(Size.touchTargetLg * 7.5, height * 0.45 - insets.bottom),
   );
+
+  useEffect(() => {
+    drawerVisibleRef.current = drawerVisible;
+    if (!drawerVisible) selectorRequestRef.current += 1;
+  }, [drawerVisible]);
 
   const closeDrawer = useCallback(() => {
     setSelectorOpen(false);
@@ -240,12 +247,16 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
 
   const toggleSelector = () => {
     if (selectorOpen) {
+      selectorRequestRef.current += 1;
       setSelectorOpen(false);
       return;
     }
 
+    const requestId = ++selectorRequestRef.current;
     selectorAnchorRef.current?.measureInWindow((x, y, anchorWidth, anchorHeight) => {
+      if (selectorRequestRef.current !== requestId || !drawerVisibleRef.current) return;
       surfaceRef.current?.measureInWindow((surfaceX, surfaceY) => {
+        if (selectorRequestRef.current !== requestId || !drawerVisibleRef.current) return;
         setSelectorPosition({
           top: y - surfaceY + anchorHeight + Spacing.sm,
           left: x - surfaceX,
@@ -299,6 +310,7 @@ export function NavigationDrawer({ children }: NavigationDrawerProps) {
       >
         <View
           style={styles.profileHeader}
+          accessible
           accessibilityRole="text"
           accessibilityLabel={`User: ${userName}`}
         >
@@ -615,12 +627,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Shape.radius.xxl,
     borderBottomRightRadius: Shape.radius.xxl,
     overflow: 'hidden',
-    elevation: 20,
+    elevation: Shape.elevation.selection.elevation,
   },
   selectorBackdrop: {
     ...StyleSheet.absoluteFill,
     zIndex: 10,
-    elevation: 10,
+    elevation: Shape.elevation.lg.elevation,
   },
   header: {
     minHeight: Size.touchTarget,
@@ -644,7 +656,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  workplaceSection: { position: 'relative', zIndex: 20, elevation: 20 },
+  workplaceSection: {
+    position: 'relative',
+    zIndex: 20,
+    elevation: Shape.elevation.selection.elevation,
+  },
   workplaceSectionTitle: {
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,

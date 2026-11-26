@@ -94,7 +94,7 @@ describe('PressScaleTouchable', () => {
     expect(screen.getByTestId('dimmed')).toHaveStyle({ opacity: 0.5 });
   });
 
-  it('dims to activeOpacity and restores the static style opacity', () => {
+  it('caps press opacity for already dimmed controls without brightening on press', () => {
     render(
       <PressScaleTouchable testID="dimmed" style={{ opacity: 0.4 }} onPress={() => {}}>
         <Text>Disabled</Text>
@@ -102,7 +102,7 @@ describe('PressScaleTouchable', () => {
     );
     const row = screen.getByTestId('dimmed');
     fireEvent(row, 'pressIn');
-    expect(withTiming).toHaveBeenLastCalledWith(0.7, expect.any(Object));
+    expect(withTiming).toHaveBeenLastCalledWith(0.4, expect.any(Object));
     fireEvent(row, 'pressOut');
     expect(withTiming).toHaveBeenLastCalledWith(0.4, expect.any(Object));
   });

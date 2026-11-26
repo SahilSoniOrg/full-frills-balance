@@ -23,7 +23,7 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateFormatting';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { MotiView } from 'moti';
 import { usePressScale } from '@/src/components/core/PressScaleTouchable';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -81,8 +81,16 @@ function AccountCardBase({
 
   // Card body press vs IconButton must stay siblings: RN-web maps
   // accessibilityRole="button" to a real <button>, and nested buttons hydrate badly.
-  const openAccount = () => onPress(account.id);
-  const selectAccount = onLongPress ? () => onLongPress(account) : undefined;
+  const openAccount = () => {
+    Keyboard.dismiss();
+    onPress(account.id);
+  };
+  const selectAccount = onLongPress
+    ? () => {
+        Keyboard.dismiss();
+        onLongPress(account);
+      }
+    : undefined;
   const cardAccessibilityLabel = [
     account.name,
     `level ${Math.max(account.depth, 0) + 1}`,

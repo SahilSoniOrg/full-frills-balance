@@ -5,7 +5,7 @@ import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/cons
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseExpandableSearchProps {
   value: string;
@@ -54,6 +54,8 @@ export interface InlineSearchFieldProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   onExpandChange?: (isExpanded: boolean) => void;
+  autoFocus?: boolean;
+  editable?: boolean;
 }
 
 /**
@@ -65,6 +67,8 @@ export const InlineSearchField = ({
   onChangeText,
   placeholder = AppConfig.strings.common.searchPlaceholder,
   onExpandChange,
+  autoFocus = true,
+  editable = true,
 }: InlineSearchFieldProps) => {
   const { theme, fonts } = useTheme();
   const { isExpanded, handleExpand, handleCollapse, handleClear, inputRef } = useExpandableSearch({
@@ -72,6 +76,10 @@ export const InlineSearchField = ({
     onChangeText,
     onExpandChange,
   });
+
+  useEffect(() => {
+    if (!editable || !autoFocus) inputRef.current?.blur();
+  }, [editable, autoFocus, inputRef]);
 
   if (!isExpanded) {
     return (
@@ -108,7 +116,8 @@ export const InlineSearchField = ({
         placeholder={placeholder}
         placeholderTextColor={theme.textTertiary}
         selectionColor={theme.primary}
-        autoFocus
+        autoFocus={autoFocus}
+        editable={editable}
       />
       <PressScaleTouchable
         onPress={value.length > 0 ? handleClear : handleCollapse}

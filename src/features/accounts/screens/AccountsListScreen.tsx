@@ -24,10 +24,13 @@ export function AccountsListScreen({ tab = 'accounts' }: { tab?: 'accounts' | 'c
           setIsSearching={vm.setIsSearching}
           onManageHierarchy={vm.onManageHierarchy}
           accountsForArchiveToggle={vm.accountsForArchiveToggle}
+          isActive={active}
+          covered={Boolean(vm.selectionChrome)}
         />
       ),
     }),
     [
+      active,
       vm.isSearching,
       vm.searchQuery,
       vm.onSearchChange,
