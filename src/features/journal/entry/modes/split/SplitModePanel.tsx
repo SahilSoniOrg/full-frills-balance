@@ -7,6 +7,9 @@ import {
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
+import type { PersonId, WorkplaceId } from '@/src/types/ids';
+import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
 
 export type SplitModePanelProps = {
   accounts: AccountFields[];
@@ -16,6 +19,12 @@ export type SplitModePanelProps = {
     target: JournalAccountCreateTarget,
     intent: CreateAccountIntent,
   ) => void;
+  people?: SplitParticipant[];
+  peopleGroups?: readonly PersonPickerGroup[];
+  initialPersonId?: PersonId;
+  workplaceId?: WorkplaceId;
+  onQuickAddPerson?: (name: string) => Promise<void>;
+  onCreatePersonRequest?: () => void;
 };
 
 export function SplitModePanel({
@@ -23,6 +32,7 @@ export function SplitModePanel({
   workplaceCurrency,
   editor,
   onCreateAccountForTarget,
+  ...peopleProps
 }: SplitModePanelProps) {
   const splitEditor = useSplitJournalEditor({
     accounts,
@@ -32,6 +42,7 @@ export function SplitModePanel({
   return (
     <SplitForm
       {...splitEditor}
+      {...peopleProps}
       onCreateAccountRequestForRow={bindRowAccountCreate('splitRow', onCreateAccountForTarget)}
     />
   );
