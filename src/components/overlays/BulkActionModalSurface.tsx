@@ -9,6 +9,7 @@ import { ModalActions } from './ModalActions';
 export interface BulkActionModalSurfaceProps {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   title: string;
   itemCount?: number;
   itemCountLabel?: string;
@@ -27,6 +28,7 @@ export interface BulkActionModalSurfaceProps {
 export function BulkActionModalSurface({
   visible,
   onClose,
+  onDismiss,
   title,
   itemCount,
   itemCountLabel,
@@ -55,6 +57,7 @@ export function BulkActionModalSurface({
       keyboardAvoiding
       visible={visible}
       onClose={onClose}
+      onDismiss={onDismiss}
       title={title}
       fixedHeight={false}
       scrollable={true}

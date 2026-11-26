@@ -25,25 +25,32 @@ type AlertState =
 export function AlertContainer() {
   const [activeAlert, setActiveAlert] = useState<AlertState>(null);
   const activeAlertIdRef = useRef<string | null>(null);
+  const pendingAlert = useRef<AlertPayload | null>(null);
   const pendingConfirm = useRef<ConfirmPayload | null>(null);
 
   useEffect(() => {
     setAlertListener(payload => {
+      pendingAlert.current?.onClose?.();
       pendingConfirm.current?.onClose();
+      pendingAlert.current = payload;
       pendingConfirm.current = null;
       activeAlertIdRef.current = payload.id;
       setActiveAlert({ type: 'alert', payload });
     });
 
     setConfirmListener(payload => {
+      pendingAlert.current?.onClose?.();
       pendingConfirm.current?.onClose();
+      pendingAlert.current = null;
       pendingConfirm.current = payload;
       activeAlertIdRef.current = payload.id;
       setActiveAlert({ type: 'confirm', payload });
     });
 
     return () => {
+      pendingAlert.current?.onClose?.();
       pendingConfirm.current?.onClose();
+      pendingAlert.current = null;
       pendingConfirm.current = null;
       clearAlertListener();
       clearConfirmListener();
@@ -55,9 +62,14 @@ export function AlertContainer() {
   if (activeAlert.type === 'alert') {
     const { payload } = activeAlert;
     const dismiss = (callback?: () => void) => {
-      callback?.();
-      if (activeAlertIdRef.current === payload.id) {
-        setActiveAlert(null);
+      pendingAlert.current = null;
+      const currentId = payload.id;
+      try {
+        callback?.();
+      } finally {
+        if (activeAlertIdRef.current === currentId) {
+          setActiveAlert(null);
+        }
       }
     };
     return (
@@ -78,37 +90,30 @@ export function AlertContainer() {
 
   if (activeAlert.type === 'confirm') {
     const { payload } = activeAlert;
+    const dismissConfirm = (callback: () => void) => {
+      pendingConfirm.current = null;
+      const currentId = payload.id;
+      try {
+        callback();
+      } finally {
+        if (activeAlertIdRef.current === currentId) {
+          setActiveAlert(null);
+        }
+      }
+    };
     return (
       <ConfirmDialog
         visible={true}
         title={payload.title}
-        onClose={() => {
-          pendingConfirm.current = null;
-          payload.onClose();
-          setActiveAlert(null);
-        }}
+        onClose={() => dismissConfirm(payload.onClose)}
         secondaryAction={{
           label: payload.cancelText || AppConfig.strings.common.cancel,
-          onPress: () => {
-            pendingConfirm.current = null;
-            const currentId = payload.id;
-            payload.onCancel();
-            if (activeAlertIdRef.current === currentId) {
-              setActiveAlert(null);
-            }
-          },
+          onPress: () => dismissConfirm(payload.onCancel),
           variant: payload.destructiveCancel ? 'destructive-outline' : 'ghost',
         }}
         primaryAction={{
           label: payload.confirmText || AppConfig.strings.common.confirm,
-          onPress: () => {
-            pendingConfirm.current = null;
-            const currentId = payload.id;
-            payload.onConfirm();
-            if (activeAlertIdRef.current === currentId) {
-              setActiveAlert(null);
-            }
-          },
+          onPress: () => dismissConfirm(payload.onConfirm),
           variant: payload.destructive ? 'destructive' : 'primary',
         }}
         message={payload.messageContent ?? <AppText>{payload.message}</AppText>}

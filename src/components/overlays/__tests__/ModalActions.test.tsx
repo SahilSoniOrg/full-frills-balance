@@ -37,4 +37,21 @@ describe('ModalActions', () => {
     expect(screen.getByTestId('save')).toBeTruthy();
     expect(screen.getByTestId('dismiss')).toBeTruthy();
   });
+
+  it('orders primary actions above secondary actions in stacked layout', () => {
+    render(
+      <ModalActionsSurfaceContext.Provider value="center">
+        <ModalActions
+          layout="stacked"
+          actions={[
+            { label: 'Cancel', role: 'secondary', onPress: jest.fn(), testID: 'cancel' },
+            { label: 'Confirm', role: 'primary', onPress: jest.fn(), testID: 'confirm' },
+          ]}
+        />
+      </ModalActionsSurfaceContext.Provider>,
+    );
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map(button => button.props.testID)).toEqual(['confirm', 'cancel']);
+  });
 });

@@ -214,12 +214,18 @@ function typeToTitle(type: ToastType): string {
 
 // === ALERT API ===
 
+let nextAlertId = 0;
+function createAlertId(): string {
+  nextAlertId += 1;
+  return `alert-${nextAlertId}`;
+}
+
 export const alert = {
   show: (options: AlertOptions) => {
     if (alertListener) {
       alertListener({
         ...options,
-        id: Date.now().toString(),
+        id: createAlertId(),
       });
       return;
     }
@@ -315,7 +321,7 @@ export const confirm = {
     if (confirmListener) {
       confirmListener({
         ...options,
-        id: Date.now().toString(),
+        id: createAlertId(),
         // Wrap callbacks to ensure listener can handle them
         onConfirm: options.onConfirm,
         onCancel: options.onCancel || (() => {}),

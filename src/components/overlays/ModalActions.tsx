@@ -65,13 +65,18 @@ export function ModalActions({
   // The visible surface fills the platform-sized target, including Android's 48pt minimum.
   const minimumHeight = Platform.OS === 'android' ? Size.touchTargetLg : Size.touchTarget;
 
-  const renderAction = (action: ModalAction, index: number, width: 'content' | 'full') => {
+  const renderAction = (
+    action: ModalAction,
+    keyPrefix: string,
+    index: number,
+    width: 'content' | 'full',
+  ) => {
     const secondary = action.role === 'secondary';
     const variant = action.variant ?? (secondary ? 'ghost' : 'primary');
 
     return (
       <AppButton
-        key={`${action.testID ?? action.label}-${index}`}
+        key={`${keyPrefix}-${action.testID ?? action.label}-${index}`}
         variant={variant}
         size={isBottomSheet ? 'md' : 'sm'}
         onPress={action.onPress}
@@ -98,15 +103,23 @@ export function ModalActions({
   if (resolvedLayout === 'primary') {
     return (
       <View style={styles.primaryGroup}>
-        {primaryActions.map((action, index) => renderAction(action, index, 'full'))}
+        {primaryActions.map((action, index) => renderAction(action, 'primary', index, 'full'))}
         {secondaryActions.map((action, index) => (
-          <View key={`${action.testID ?? action.label}-${index}`} style={styles.dismissRow}>
-            {renderAction(action, primaryActions.length + index, 'content')}
+          <View
+            key={`secondary-${action.testID ?? action.label}-${index}`}
+            style={styles.dismissRow}
+          >
+            {renderAction(action, 'secondary', index, 'content')}
           </View>
         ))}
       </View>
     );
   }
+
+  const orderedActions =
+    resolvedLayout === 'stacked' && secondaryActions.length > 0 && primaryActions.length > 0
+      ? [...primaryActions, ...secondaryActions]
+      : actions;
 
   return (
     <View
@@ -116,8 +129,13 @@ export function ModalActions({
         resolvedLayout === 'stacked' && styles.stacked,
       ]}
     >
-      {actions.map((action, index) =>
-        renderAction(action, index, resolvedLayout === 'inline' ? 'content' : 'full'),
+      {orderedActions.map((action, index) =>
+        renderAction(
+          action,
+          action.role === 'secondary' ? 'secondary' : 'primary',
+          index,
+          resolvedLayout === 'inline' ? 'content' : 'full',
+        ),
       )}
     </View>
   );

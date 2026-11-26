@@ -74,7 +74,7 @@ export function ModalSurface({
     ? { opacity: 0.92, translateY: ChromeMotion.sheetRisePx }
     : {
         opacity: 0,
-        translateY: 8,
+        translateY: Spacing.sm,
         scale: ChromeMotion.dialogFromScale,
       };
 
@@ -94,7 +94,12 @@ export function ModalSurface({
       ]}
     >
       <View style={styles.header}>
-        <AppText variant="heading" fontRole="display" style={styles.title}>
+        <AppText
+          variant="heading"
+          fontRole="display"
+          accessibilityRole="header"
+          style={styles.title}
+        >
           {title}
         </AppText>
         <IconButton
@@ -166,6 +171,7 @@ export function ModalSurface({
       {...(keyboardAvoiding
         ? { behavior: Platform.OS === 'ios' ? ('padding' as const) : undefined }
         : {})}
+      {...(!useNativeModal ? { accessibilityViewIsModal: visible, 'aria-modal': visible } : {})}
       style={[
         styles.overlay,
         isBottomSheet ? styles.overlayBottomSheet : styles.overlayCenter,
