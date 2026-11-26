@@ -41,6 +41,7 @@ export interface SplitJournalActions {
   setSourceAccountId: (id: AccountId) => void;
   setTotalAmount: (amount: string) => void;
   addSplitRow: () => void;
+  addSplitRowWithAccount: (accountId: AccountId) => void;
   removeSplitRow: (id: string) => void;
   updateSplitRow: (
     id: string,

@@ -332,6 +332,42 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
 }
 
 describe('useSplitJournalEditor FX rows', () => {
+  it('fills the unused blank allocation, then appends another selected account', () => {
+    const { result } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-usd', '10'),
+      {
+        id: asTransactionId('blank'),
+        accountId: asAccountId(''),
+        accountName: '',
+        accountType: AccountType.ASSET,
+        amount: '',
+        transactionType: TransactionType.DEBIT,
+        notes: '',
+        exchangeRate: '',
+      },
+    ]);
+
+    act(() => result.current.split.addSplitRowWithAccount(asAccountId('food-inr')));
+    expect(result.current.lines).toHaveLength(2);
+    expect(result.current.lines.find(line => line.id === 'blank')).toMatchObject({
+      accountId: 'food-inr',
+      accountName: 'Food',
+      accountType: AccountType.EXPENSE,
+      accountCurrency: 'INR',
+    });
+
+    act(() => result.current.split.addSplitRowWithAccount(asAccountId('rent-inr')));
+    expect(result.current.lines).toHaveLength(3);
+    expect(result.current.lines[2]).toMatchObject({
+      accountId: 'rent-inr',
+      accountName: 'Rent',
+      accountType: AccountType.EXPENSE,
+      accountCurrency: 'INR',
+      amount: '',
+      transactionType: TransactionType.DEBIT,
+    });
+  });
+
   it('shows the workplace rate on a foreign allocation and keeps that row in its own currency', () => {
     const { result } = renderStatefulSplit([
       fxLine('source', TransactionType.CREDIT, 'cash-usd', '8'),

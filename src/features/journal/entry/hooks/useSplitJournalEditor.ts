@@ -17,6 +17,7 @@ import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
+import type { JournalEntryLine } from '@/src/types/domainJournal';
 import { TransactionType } from '@/src/types/enums';
 import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import {
@@ -111,6 +112,42 @@ export function useSplitJournalEditor({
   const addSplitRow = useCallback(() => {
     editor.addLine();
   }, [editor]);
+  const addSplitRowWithAccount = useCallback(
+    (accountId: AccountId) => {
+      const account = accounts.find(candidate => candidate.id === accountId);
+      const patch = lineAccountPatch(
+        accountId,
+        account,
+        getInferredAccountType(transactionType, TransactionType.DEBIT),
+      );
+
+      if (
+        destinationLines.length === 1 &&
+        (!destinationLines[0].accountId || destinationLines[0].accountId === EMPTY_ACCOUNT_ID) &&
+        destinationLines[0].amount === ''
+      ) {
+        updateLine(destinationLines[0].id, patch);
+        return;
+      }
+
+      editor.setLines(previous => {
+        const numericIds = previous
+          .map(line => Number.parseInt(line.id, 10))
+          .filter(Number.isFinite);
+        const nextId = String((numericIds.length ? Math.max(...numericIds) : previous.length) + 1);
+        const line: JournalEntryLine = {
+          id: nextId as JournalEntryLine['id'],
+          ...patch,
+          amount: '',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '',
+        };
+        return [...previous, line];
+      });
+    },
+    [accounts, destinationLines, editor, transactionType, updateLine],
+  );
   const removeSplitRow = useCallback(
     (id: string) => {
       editor.setLines(previous => {
@@ -379,6 +416,7 @@ export function useSplitJournalEditor({
       sourceFx,
       canEqualize,
       addSplitRow,
+      addSplitRowWithAccount,
       removeSplitRow,
       updateSplitRow,
       updateSplitAmounts,
@@ -412,6 +450,7 @@ export function useSplitJournalEditor({
       sourceFx,
       canEqualize,
       addSplitRow,
+      addSplitRowWithAccount,
       removeSplitRow,
       updateSplitRow,
       updateSplitAmounts,
