@@ -1,15 +1,20 @@
 import {
   classifyPersonDebtPosting,
+  isCompatiblePersonAccount,
+  isEligiblePostedExpense,
   openItemRemainder,
   projectLinkedAccount,
   summarizePerson,
 } from '@/src/domain/people';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { personQueryRepository } from '@/src/data/repositories/people';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { personObserveQueries, personQueryRepository } from '@/src/data/repositories/people';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import type { AccountId, PersonId, WorkplaceId } from '@/src/types/ids';
+import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
+import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
+import { merge, startWith } from 'rxjs';
 
 const asDomainItems = (items: Awaited<ReturnType<typeof personQueryRepository.listOpenItems>>) =>
   items.map(item => ({
@@ -241,6 +246,227 @@ export class PeopleReadService {
       balanceSummary,
       unallocatedRepayments,
     };
+  }
+
+  observePeopleTick(workplaceId: WorkplaceId) {
+    return merge(
+      personObserveQueries.observePeople(workplaceId, { includeArchived: true }),
+      personObserveQueries.observePersonAccounts(workplaceId),
+      personObserveQueries.observeOpenItems(workplaceId),
+      personObserveQueries.observeSettlementAllocations(workplaceId),
+    ).pipe(startWith(null));
+  }
+
+  async listSelectableAccounts(workplaceId: WorkplaceId) {
+    const accounts = await accountQueryRepository.findAll(workplaceId);
+    const parentIds = new Set(
+      accounts.map(account => account.parentAccountId).filter((id): id is AccountId => Boolean(id)),
+    );
+    return accounts
+      .filter(account => !parentIds.has(account.id))
+      .map(account => ({
+        id: account.id,
+        name: account.name,
+        accountType: account.accountType,
+        accountSubtype: account.accountSubtype ?? AccountSubtype.OTHER,
+        currencyCode: account.currencyCode,
+        archivedAt: account.archivedAt?.getTime(),
+        icon: account.icon,
+      }));
+  }
+
+  async listLinkableAccountsForPeople(workplaceId: WorkplaceId) {
+    const [accounts, links] = await Promise.all([
+      this.listSelectableAccounts(workplaceId),
+      personQueryRepository.listPersonAccounts(workplaceId),
+    ]);
+    const linkedAccountIds = new Set(links.map(link => link.accountId));
+    return accounts.filter(
+      account =>
+        !linkedAccountIds.has(account.id) &&
+        isCompatiblePersonAccount({
+          id: account.id,
+          type: account.accountType,
+          subtype: account.accountSubtype,
+          currencyCode: account.currencyCode,
+        }),
+    );
+  }
+
+  async listPersonPickerGroups(workplaceId: WorkplaceId) {
+    const [people, links] = await Promise.all([
+      personQueryRepository.listPeople(workplaceId, { includeArchived: true }),
+      personQueryRepository.listPersonAccounts(workplaceId),
+    ]);
+    return people.map(person => ({
+      personId: person.id,
+      personName: person.name,
+      archived: Boolean(person.archivedAt),
+      accountIds: links.filter(link => link.personId === person.id).map(link => link.accountId),
+    }));
+  }
+
+  async getJournalForSplit(workplaceId: WorkplaceId, journalId: JournalId) {
+    const [journal, txs, accounts, links, openItems, people] = await Promise.all([
+      journalQueryRepository.find(workplaceId, journalId),
+      transactionQueryRepository.findByJournal(workplaceId, journalId),
+      accountQueryRepository.findAll(workplaceId),
+      personQueryRepository.listPersonAccounts(workplaceId),
+      personQueryRepository.listOpenItems(workplaceId, { originatingJournalId: journalId }),
+      personQueryRepository.listPeople(workplaceId, { includeArchived: true }),
+    ]);
+    if (!journal) return null;
+    const accountById = new Map(accounts.map(account => [account.id, account]));
+    const personById = new Map(people.map(person => [person.id, person]));
+    const linkByAccount = new Map(links.map(link => [link.accountId, link.personId]));
+    const lines = txs.map(tx => {
+      const account = accountById.get(tx.accountId);
+      return {
+        accountId: tx.accountId,
+        accountName: account?.name ?? 'Account',
+        accountType: account?.accountType ?? AccountType.EXPENSE,
+        amount: tx.amount,
+        transactionType: tx.transactionType,
+        currencyCode: tx.currencyCode,
+        personId: linkByAccount.get(tx.accountId),
+      };
+    });
+    const isAlreadyShared = openItems.length > 0;
+    const isEligible = isEligiblePostedExpense(lines, journal.currencyCode, isAlreadyShared);
+    const participants = openItems.map(item => ({
+      personId: item.personId,
+      personName: personById.get(item.personId)?.name ?? 'Person',
+      accountId: item.accountId,
+      amount: item.originalAmount,
+    }));
+    const userShare = lines
+      .filter(
+        line =>
+          line.accountType === AccountType.EXPENSE &&
+          line.transactionType === TransactionType.DEBIT,
+      )
+      .reduce((sum, line) => sum + line.amount, 0);
+    const totalAmount = lines
+      .filter(line => line.transactionType === TransactionType.CREDIT)
+      .reduce((sum, line) => sum + line.amount, 0);
+    return {
+      journal: {
+        id: journal.id,
+        journalDate: journal.journalDate,
+        description: journal.description,
+        notes: journal.notes,
+        currencyCode: journal.currencyCode,
+        status: journal.status,
+      },
+      lines,
+      totalAmount,
+      userShare,
+      isEligible,
+      isAlreadyShared,
+      participants,
+    };
+  }
+
+  async listCompatibleRepaymentJournals(workplaceId: WorkplaceId, personId: PersonId) {
+    const [journals, links, accounts, allocations] = await Promise.all([
+      journalQueryRepository.findRecentPosted(workplaceId, 100),
+      personQueryRepository.listPersonAccounts(workplaceId),
+      accountQueryRepository.findAll(workplaceId),
+      personQueryRepository.listSettlementAllocations(workplaceId, { activeOnly: true }),
+    ]);
+    if (journals.length === 0) return [];
+    const txs = await transactionQueryRepository.findByJournals(
+      workplaceId,
+      journals.map(journal => journal.id),
+    );
+    const txByJournal = new Map<JournalId, typeof txs>();
+    for (const tx of txs) {
+      const group = txByJournal.get(tx.journalId) ?? [];
+      group.push(tx);
+      txByJournal.set(tx.journalId, group);
+    }
+    const accountById = new Map(accounts.map(account => [account.id, account]));
+    const linkedPersonByAccount = new Map(links.map(link => [link.accountId, link.personId]));
+    const allocatedJournalIds = new Set(allocations.map(a => a.settlementJournalId));
+    return journals
+      .filter(journal => !allocatedJournalIds.has(journal.id))
+      .flatMap(journal => {
+        const journalTxs = txByJournal.get(journal.id) ?? [];
+        if (journalTxs.length !== 2) return [];
+        const cashLine = journalTxs.find(
+          tx =>
+            !linkedPersonByAccount.has(tx.accountId) &&
+            [AccountType.ASSET, AccountType.LIABILITY].includes(
+              accountById.get(tx.accountId)?.accountType ?? AccountType.EXPENSE,
+            ),
+        );
+        if (!cashLine) return [];
+        const touchesThisPerson = journalTxs.some(
+          tx => linkedPersonByAccount.get(tx.accountId) === personId,
+        );
+        const touchesOtherPerson = journalTxs.some(tx => {
+          const owner = linkedPersonByAccount.get(tx.accountId);
+          return owner && owner !== personId;
+        });
+        if (touchesOtherPerson) return [];
+        return [
+          {
+            journalId: journal.id,
+            journalDate: journal.journalDate,
+            description: journal.description,
+            currencyCode: journal.currencyCode,
+            cashAccountId: cashLine.accountId,
+            cashAccountName: accountById.get(cashLine.accountId)?.name ?? 'Account',
+            cashAmount: cashLine.amount,
+            cashTransactionType: cashLine.transactionType,
+            touchesPersonAccount: touchesThisPerson,
+          },
+        ];
+      });
+  }
+
+  async listPersonJournalHistory(workplaceId: WorkplaceId, personId: PersonId) {
+    const [links, accounts] = await Promise.all([
+      personQueryRepository.listPersonAccounts(workplaceId, personId),
+      accountQueryRepository.findAll(workplaceId),
+    ]);
+    if (links.length === 0) return [];
+    const txs = (
+      await Promise.all(
+        links.map(link => transactionQueryRepository.findByAccount(workplaceId, link.accountId)),
+      )
+    ).flat();
+    const journalIds = [...new Set(txs.map(tx => tx.journalId))];
+    if (journalIds.length === 0) return [];
+    const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
+    const accountById = new Map(accounts.map(account => [account.id, account]));
+    const journalMap = new Map(journals.map(journal => [journal.id, journal]));
+    const byJournal = new Map<
+      JournalId,
+      {
+        journalId: JournalId;
+        journalDate: number;
+        description?: string;
+        currencyCode: string;
+        amount: number;
+        accountName: string;
+        status: string;
+      }
+    >();
+    for (const tx of txs) {
+      const journal = journalMap.get(tx.journalId);
+      if (!journal || byJournal.has(journal.id)) continue;
+      byJournal.set(journal.id, {
+        journalId: journal.id,
+        journalDate: journal.journalDate,
+        description: journal.description,
+        currencyCode: journal.currencyCode,
+        amount: tx.amount,
+        accountName: accountById.get(tx.accountId)?.name ?? 'Account',
+        status: journal.status,
+      });
+    }
+    return [...byJournal.values()].sort((a, b) => b.journalDate - a.journalDate);
   }
 }
 

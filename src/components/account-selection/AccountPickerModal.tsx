@@ -4,6 +4,7 @@ import { PlainAccount } from '@/src/types/plainDtos';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
+import type { PersonPickerGroup } from './personAccountGrouping';
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -15,6 +16,7 @@ export type { CreateAccountIntent };
 type AccountPickerModalBaseProps = {
   visible: boolean;
   accounts: (AccountFields | PlainAccount)[];
+  peopleGroups?: readonly PersonPickerGroup[];
   title?: string;
   onClose: () => void;
   onDismiss?: () => void;
@@ -39,6 +41,7 @@ export type MultiAccountPickerModalProps = AccountPickerModalBaseProps & {
 export function AccountPickerModal({
   visible,
   accounts,
+  peopleGroups,
   selectedId,
   title = 'Select Account',
   onClose,
@@ -80,6 +83,7 @@ export function AccountPickerModal({
       ) : null}
       <AccountPickerList
         accounts={accounts}
+        peopleGroups={peopleGroups}
         selectedIds={selectedIds}
         onSelect={onSelect}
         onCreateRequest={onCreateRequest}
@@ -110,6 +114,7 @@ const styles = StyleSheet.create({
 export function MultiAccountPickerModal({
   visible,
   accounts,
+  peopleGroups,
   selectedIds,
   title = 'Select Accounts',
   onClose,
@@ -149,6 +154,7 @@ export function MultiAccountPickerModal({
     <BaseAccountPickerModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={title}>
       <AccountPickerList
         accounts={accounts}
+        peopleGroups={peopleGroups}
         selectedIds={draftSelected}
         onToggle={handleToggle}
         onApply={handleApply}
