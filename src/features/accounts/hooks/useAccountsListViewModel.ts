@@ -241,9 +241,6 @@ export function useAccountsListViewModel(
     expandedAccountIds,
     setExpandedAccountIds,
     activeTab,
-    activeModal,
-    openModal: setActiveModal,
-    closeModal: onCloseModal,
     applyArchiveChanges,
   });
 
@@ -261,8 +258,11 @@ export function useAccountsListViewModel(
   const { selectedIds, setSelectedIds } = selection;
   useEffect(() => {
     if (selectedIds.size === 0) return;
-    setSelectedIds(prev => pruneSelectedIds(prev, allSelectableAccountIds));
-  }, [allSelectableAccountIds, selectedIds, setSelectedIds]);
+    const pruned = pruneSelectedIds(selectedIds, allSelectableAccountIds);
+    if (pruned === selectedIds) return;
+    if (pruned.size === 0) exitSelectionMode();
+    else setSelectedIds(pruned);
+  }, [allSelectableAccountIds, exitSelectionMode, selectedIds, setSelectedIds]);
 
   const onAccountPress = useCallback(
     (accountId: AccountId) => {

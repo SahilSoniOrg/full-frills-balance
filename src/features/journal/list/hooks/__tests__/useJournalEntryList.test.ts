@@ -244,7 +244,7 @@ describe('useJournalEntryList', () => {
     expect(itemsAfter.find(i => i.id === 'j2')).toBeDefined();
     expect(itemsAfter.length).toBe(4);
 
-    act(() => result.current.onLongPressItem('j1' as JournalId));
+    act(() => result.current.onLongPressItem?.('j1' as JournalId));
     expect(result.current.selectionChrome?.state).toMatchObject({
       selectedCount: 1,
       selectableCount: 2,
@@ -262,7 +262,7 @@ describe('useJournalEntryList', () => {
     );
 
     act(() => {
-      result.current.onLongPressItem('j1' as JournalId);
+      result.current.onLongPressItem?.('j1' as JournalId);
       result.current.toggleSelection('j3' as JournalId);
     });
 

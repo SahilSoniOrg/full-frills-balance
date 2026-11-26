@@ -112,7 +112,7 @@ export interface AccountDetailsViewModel {
   unreconciledCount: number;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
+  onLongPressItem?: (id: JournalId) => void;
   selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }

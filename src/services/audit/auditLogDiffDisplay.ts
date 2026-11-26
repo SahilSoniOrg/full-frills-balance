@@ -53,6 +53,75 @@ export function collectTransactionAccountIds(
   return Array.from(new Set([...before.map(t => t.accountId), ...after.map(t => t.accountId)]));
 }
 
+export interface PairedTransactionLegDiff {
+  key: string;
+  accountId: string;
+  before?: AuditTransactionSnapshot;
+  after?: AuditTransactionSnapshot;
+}
+
+/** Pair transaction legs by account and type occurrence order without dropping split legs. */
+export function pairTransactionSnapshotLegs(
+  before: readonly AuditTransactionSnapshot[],
+  after: readonly AuditTransactionSnapshot[],
+): PairedTransactionLegDiff[] {
+  const afterByExact = new Map<string, number[]>();
+  after.forEach((leg, index) => {
+    const exactKey = `${leg.accountId}:${leg.type || ''}`;
+    const list = afterByExact.get(exactKey) ?? [];
+    list.push(index);
+    afterByExact.set(exactKey, list);
+  });
+
+  const usedAfter = new Set<number>();
+  const pairedBeforeToAfter = new Map<number, number>();
+
+  before.forEach((leg, beforeIdx) => {
+    const exactKey = `${leg.accountId}:${leg.type || ''}`;
+    const matchIndex = afterByExact.get(exactKey)?.shift();
+    if (matchIndex !== undefined) {
+      usedAfter.add(matchIndex);
+      pairedBeforeToAfter.set(beforeIdx, matchIndex);
+    }
+  });
+
+  const unmatchedAfterByAccount = new Map<string, number[]>();
+  after.forEach((leg, index) => {
+    if (usedAfter.has(index)) return;
+    const list = unmatchedAfterByAccount.get(leg.accountId) ?? [];
+    list.push(index);
+    unmatchedAfterByAccount.set(leg.accountId, list);
+  });
+
+  const rows: PairedTransactionLegDiff[] = [];
+  const emittedAfter = new Set<number>();
+  before.forEach((leg, beforeIdx) => {
+    let afterIdx = pairedBeforeToAfter.get(beforeIdx);
+    if (afterIdx === undefined) {
+      afterIdx = unmatchedAfterByAccount.get(leg.accountId)?.shift();
+    }
+    if (afterIdx !== undefined) emittedAfter.add(afterIdx);
+    rows.push({
+      key: `${leg.accountId}-b${beforeIdx}-a${afterIdx ?? 'none'}`,
+      accountId: leg.accountId,
+      before: leg,
+      after: afterIdx !== undefined ? after[afterIdx] : undefined,
+    });
+  });
+
+  after.forEach((leg, afterIdx) => {
+    if (emittedAfter.has(afterIdx)) return;
+    rows.push({
+      key: `${leg.accountId}-bnone-a${afterIdx}`,
+      accountId: leg.accountId,
+      before: undefined,
+      after: leg,
+    });
+  });
+
+  return rows;
+}
+
 export function shouldHideUnchangedTransactionLeg(
   tBefore: AuditTransactionSnapshot | undefined,
   tAfter: AuditTransactionSnapshot | undefined,

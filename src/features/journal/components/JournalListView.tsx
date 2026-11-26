@@ -49,7 +49,7 @@ export type JournalSelectionBundle = {
   chrome?: SelectionOverlayProps;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
+  onLongPressItem?: (id: JournalId) => void;
 };
 
 export interface JournalListViewProps {

@@ -40,7 +40,7 @@ export interface RecentJournalEntries {
   onEndReached?: () => void;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
+  onLongPressItem?: (id: JournalId) => void;
   selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }

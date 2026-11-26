@@ -82,7 +82,7 @@ export interface JournalEntryListCore {
   selectedIds: Set<JournalId>;
   selectionChrome?: SelectionChromeBase;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
+  onLongPressItem?: (id: JournalId) => void;
   toggleSelection: (id: JournalId) => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
@@ -118,8 +118,6 @@ export function toShareableJournalEntry(
     displayType: shareDisplayTypeFor(sign, journal.displayType),
   };
 }
-
-const noopLongPress = () => {};
 
 /**
  * Shared journal list/search pipeline: fetch, day grouping, selection, share, pagination.
@@ -199,6 +197,14 @@ export function useJournalEntryList({
   } = selectionControl;
 
   const selectionActive = !disableSelection && isSelectionModeActive;
+  const wasEnabledRef = useRef(enabled);
+
+  useEffect(() => {
+    if ((wasEnabledRef.current && !enabled) || disableSelection) {
+      if (isSelectionModeActive) exitSelectionMode();
+    }
+    wasEnabledRef.current = enabled;
+  }, [disableSelection, enabled, exitSelectionMode, isSelectionModeActive]);
 
   const handleRowPress = useCallback(
     (row: JournalTimelineRow) => {
@@ -297,14 +303,12 @@ export function useJournalEntryList({
 
   useEffect(() => {
     if (selectedIds.size === 0 || isLoading) return;
-
-    setSelectedIds(prev =>
-      pruneSelectedIds(
-        prev,
-        journals.map(j => j.id),
-      ),
-    );
-  }, [journals, selectedIds, setSelectedIds, isLoading]);
+    const validIds = journals.map(j => j.id);
+    const pruned = pruneSelectedIds(selectedIds, validIds);
+    if (pruned === selectedIds) return;
+    if (pruned.size === 0) exitSelectionMode();
+    else setSelectedIds(pruned);
+  }, [journals, selectedIds, setSelectedIds, exitSelectionMode, isLoading]);
 
   useEffect(() => {
     const toFetch = new Set<string>();
@@ -355,7 +359,7 @@ export function useJournalEntryList({
     selectedIds,
     selectionChrome,
     isSelectionModeActive: selectionActive,
-    onLongPressItem: disableSelection ? noopLongPress : onLongPressItem,
+    onLongPressItem: disableSelection ? undefined : onLongPressItem,
     toggleSelection,
     exitSelectionMode,
     onShareSelected,

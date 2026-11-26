@@ -2,6 +2,7 @@ import {
   asTransactionSnapshots,
   collectTransactionAccountIds,
   formatAuditAccountLabel,
+  pairTransactionSnapshotLegs,
   shouldHideUnchangedTransactionLeg,
 } from '@/src/services/audit/auditLogDiffDisplay';
 import { AccountId } from '@/src/types/ids';
@@ -62,6 +63,27 @@ describe('auditLogDiffDisplay', () => {
 
     it('shows when type changes', () => {
       expect(shouldHideUnchangedTransactionLeg(leg(10, 'DEBIT'), leg(10, 'CREDIT'))).toBe(false);
+    });
+  });
+
+  describe('pairTransactionSnapshotLegs', () => {
+    it('preserves multiple legs on the same account without dropping any', () => {
+      const paired = pairTransactionSnapshotLegs(
+        [
+          { accountId: 'acc-1' as AccountId, amount: 40, type: 'DEBIT' },
+          { accountId: 'acc-1' as AccountId, amount: 60, type: 'DEBIT' },
+        ],
+        [
+          { accountId: 'acc-1' as AccountId, amount: 40, type: 'DEBIT' },
+          { accountId: 'acc-1' as AccountId, amount: 80, type: 'DEBIT' },
+        ],
+      );
+
+      expect(paired).toHaveLength(2);
+      expect(paired[0].before?.amount).toBe(40);
+      expect(paired[0].after?.amount).toBe(40);
+      expect(paired[1].before?.amount).toBe(60);
+      expect(paired[1].after?.amount).toBe(80);
     });
   });
 });

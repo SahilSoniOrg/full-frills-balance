@@ -4,8 +4,9 @@ import { Spacing } from '@/src/constants';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
 import { JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
+import type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
@@ -35,6 +36,37 @@ interface JournalEntryListViewProps {
 
 export interface JournalEntryListRef {
   scrollToOffset: (options: { offset: number; animated?: boolean }) => void;
+}
+
+function SelectableJournalCard({
+  cardProps,
+  onPress,
+  selectionId,
+  onLongPressItem,
+  isSelected,
+  isSelectionModeActive,
+}: {
+  cardProps: Omit<JournalEntryCardProps, 'onPress'>;
+  onPress: () => void;
+  selectionId?: JournalId;
+  onLongPressItem?: (id: JournalId) => void;
+  isSelected?: boolean;
+  isSelectionModeActive?: boolean;
+}) {
+  const handleLongPress = useCallback(() => {
+    if (selectionId) onLongPressItem?.(selectionId);
+  }, [onLongPressItem, selectionId]);
+
+  return (
+    <JournalEntryCard
+      {...cardProps}
+      dateDisplay="time"
+      onPress={onPress}
+      onLongPress={onLongPressItem && selectionId ? handleLongPress : undefined}
+      isSelected={isSelected}
+      isSelectionModeActive={isSelectionModeActive}
+    />
+  );
 }
 
 function renderListItem({
@@ -67,18 +99,19 @@ function renderListItem({
   }
 
   return (
-    <JournalEntryCard
-      {...item.cardProps!}
-      dateDisplay="time"
+    <SelectableJournalCard
+      cardProps={item.cardProps!}
       onPress={item.onPress!}
-      onLongPress={
-        onLongPressItem && item.selectionId ? () => onLongPressItem(item.selectionId!) : undefined
-      }
+      selectionId={item.selectionId}
+      onLongPressItem={onLongPressItem}
       isSelected={item.selectionId ? selectedIds?.has(item.selectionId) : false}
       isSelectionModeActive={isSelectionModeActive}
     />
   );
 }
+
+const keyExtractor = (item: JournalListItem) => item.id;
+const getItemType = (item: JournalListItem) => item.type;
 
 export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProps) {
   const listRef = React.useRef<FlashListRef<JournalListItem>>(null);
@@ -165,22 +198,32 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     </Stack>
   );
 
+  const extraData = useMemo(
+    () => ({ selectedIds, isSelectionModeActive }),
+    [selectedIds, isSelectionModeActive],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: JournalListItem }) =>
+      renderListItem({
+        item,
+        selectedIds,
+        onLongPressItem,
+        isSelectionModeActive,
+      }),
+    [selectedIds, onLongPressItem, isSelectionModeActive],
+  );
+
   return (
     <View style={[styles.container, style]}>
       <FlashList
         ref={listRef}
         testID="journal-entry-list"
         data={items}
-        renderItem={({ item }: { item: JournalListItem }) =>
-          renderListItem({
-            item,
-            selectedIds,
-            onLongPressItem,
-            isSelectionModeActive,
-          })
-        }
-        keyExtractor={(item: JournalListItem) => item.id}
-        getItemType={(item: JournalListItem) => item.type}
+        extraData={extraData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        getItemType={getItemType}
         contentContainerStyle={contentContainerStyle}
         ListHeaderComponent={ListHeaderComponent}
         ListHeaderComponentStyle={styles.header}

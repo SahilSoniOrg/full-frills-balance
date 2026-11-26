@@ -3,7 +3,6 @@ import {
   resolveAccountListPressAction,
   type AccountsListTab,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
-import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { deleteAccount as deleteAccountCommand } from '@/src/services/accounts/accountDeleteCommands';
 import { updateAccounts as updateAccountsCommand } from '@/src/services/accounts/accountHierarchyCommands';
@@ -23,9 +22,6 @@ interface UseAccountsListActionsInput {
   expandedAccountIds: Set<AccountId>;
   setExpandedAccountIds: Dispatch<SetStateAction<Set<AccountId>>>;
   activeTab: AccountsListTab;
-  activeModal?: AccountsListActiveModal;
-  openModal?: (modal: AccountsListActiveModal) => void;
-  closeModal?: () => void;
   applyArchiveChanges?: (changes: {
     toArchive: AccountId[];
     toUnarchive: AccountId[];

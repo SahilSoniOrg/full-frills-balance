@@ -3,6 +3,7 @@ import { AppConfig } from '@/src/constants';
 import type { JournalSelectionBundle } from '../../components/JournalListView';
 import type { JournalListModalsProps } from '../../components/JournalListModals';
 import { useJournalsBulkOperations } from '../../hooks/useJournalsBulkOperations';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields, PlainInboxRecord } from '@/src/types/plainDtos';
 import { useAccounts } from '@/src/components/account-selection';
@@ -78,8 +79,17 @@ export interface JournalSearchViewModel {
 export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const privateMode = useEffectivePrivacyMode();
   const { accounts } = useAccounts(workplaceId);
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const isMountedRef = useRef(true);
+  const attachRequestLockRef = useRef(false);
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
   const attachInboxId =
     typeof params.attachInboxId === 'string' && params.attachInboxId.length > 0
       ? params.attachInboxId
@@ -101,9 +111,14 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   useEffect(() => {
     if (!attachInboxId) return;
     let cancelled = false;
-    void smsService.findInboxRecord(workplaceId, attachInboxId).then(record => {
-      if (!cancelled) setAttachInboxCache({ id: attachInboxId, record });
-    });
+    void smsService
+      .findInboxRecord(workplaceId, attachInboxId)
+      .then(record => {
+        if (!cancelled) setAttachInboxCache({ id: attachInboxId, record });
+      })
+      .catch(error => {
+        if (!cancelled) showErrorAlert(error, captureCopy.attachToJournalErrorTitle, true);
+      });
     return () => {
       cancelled = true;
     };
@@ -130,10 +145,14 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
 
   const handleAttachJournal = useCallback(
     (journalId: JournalId) => {
-      if (!attachInboxId) return;
+      if (!attachInboxId || attachRequestLockRef.current) return;
       const journal = journalsRef.current.find(entry => entry.id === journalId) ?? null;
       const journalLabel =
         journal?.description?.trim() || journal?.semanticLabel?.trim() || 'this journal';
+      let confirmSubmitted = false;
+      const requestWorkplaceId = workplaceId;
+      const requestInboxId = attachInboxId;
+      const requestChannel = attachInboxChannel;
       const showConfirm = (inbox: PlainInboxRecord | null) => {
         confirm.show({
           title: captureCopy.attachToJournalConfirmTitle,
@@ -142,6 +161,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
             journal,
             journalLabel,
             hourCycle: resolvedHourCycle,
+            privateMode,
           }),
           messageContent: (
             <AttachToJournalConfirmContent
@@ -150,25 +170,37 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
               journalLabel={journalLabel}
               hourCycle={resolvedHourCycle}
               defaultCurrencyCode={defaultCurrencyCode}
+              privateMode={privateMode}
             />
           ),
           confirmText: captureCopy.attachToJournalConfirmAction,
           onConfirm: () => {
+            if (confirmSubmitted || attachRequestLockRef.current) return;
+            confirmSubmitted = true;
+            attachRequestLockRef.current = true;
             analytics.trackFeatureUsage('sms', 'inbox_accept', {
+              channel: requestChannel,
               action: 'attach_to_journal',
             });
             void smsService
-              .finalizeManualImport(workplaceId, attachInboxId, journalId)
+              .finalizeManualImport(requestWorkplaceId, requestInboxId, journalId)
               .then(() => {
+                if (!isMountedRef.current) return;
                 toast.success(
-                  attachInboxChannel === 'email'
+                  requestChannel === 'email'
                     ? captureCopy.attachToJournalSuccessEmail
-                    : captureCopy.attachToJournalSuccessSms,
+                    : requestChannel === 'voice'
+                      ? captureCopy.attachToJournalSuccessVoice
+                      : captureCopy.attachToJournalSuccessSms,
                 );
                 AppNavigation.back();
               })
               .catch(error => {
+                confirmSubmitted = false;
                 showErrorAlert(error, captureCopy.attachToJournalErrorTitle, true);
+              })
+              .finally(() => {
+                attachRequestLockRef.current = false;
               });
           },
         });
@@ -179,16 +211,26 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
         return;
       }
 
-      void smsService.findInboxRecord(workplaceId, attachInboxId).then(record => {
-        setAttachInboxCache({ id: attachInboxId, record });
-        showConfirm(record);
-      });
+      attachRequestLockRef.current = true;
+      void smsService
+        .findInboxRecord(requestWorkplaceId, requestInboxId)
+        .then(record => {
+          attachRequestLockRef.current = false;
+          if (!isMountedRef.current) return;
+          setAttachInboxCache({ id: requestInboxId, record });
+          showConfirm(record);
+        })
+        .catch(error => {
+          attachRequestLockRef.current = false;
+          showErrorAlert(error, captureCopy.attachToJournalErrorTitle, true);
+        });
     },
     [
       attachInbox,
       attachInboxChannel,
       attachInboxId,
       defaultCurrencyCode,
+      privateMode,
       resolvedHourCycle,
       workplaceId,
     ],

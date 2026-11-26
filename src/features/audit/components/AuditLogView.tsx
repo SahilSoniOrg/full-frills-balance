@@ -136,6 +136,11 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
     </View>
   );
 
+  const flashListExtraData = useMemo(
+    () => ({ expandedIds, accountMap, entityStatusMap }),
+    [expandedIds, accountMap, entityStatusMap],
+  );
+
   return (
     <ScreenWithChrome chrome={chrome}>
       <View style={styles.viewContent}>
@@ -261,11 +266,11 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                   title={AppConfig.strings.audit.emptyFilteredLogs}
                   style={styles.emptyState}
                 />
-                {hasMore && loadOlderControl}
               </View>
             ) : (
               <FlashList
                 data={logs}
+                extraData={flashListExtraData}
                 renderItem={({ item }) => (
                   <AuditLogItem
                     item={item}

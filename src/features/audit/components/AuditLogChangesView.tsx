@@ -476,7 +476,12 @@ function FlatChangesView({
       {Object.entries(record).map(([key, value]) => (
         <View
           key={key}
-          style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: Spacing.xs }}
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'baseline',
+            marginBottom: Spacing.xs,
+          }}
         >
           <AppText variant="caption" weight="bold">
             {formatAuditFieldLabel(key)}:{' '}

@@ -3,8 +3,8 @@ import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import {
   AuditAccountMap,
   asTransactionSnapshots,
-  collectTransactionAccountIds,
   formatAuditAccountLabel,
+  pairTransactionSnapshotLegs,
   resolveSnapshotCurrency,
   shouldHideUnchangedTransactionLeg,
 } from '@/src/services/audit/auditLogDiffDisplay';
@@ -32,6 +32,7 @@ export function AuditTransactionSnapshotStack({
   isAfter = false,
 }: AuditTransactionSnapshotStackProps) {
   const formatMoney = useMoneyFormat();
+  const oppositeMatched = new Set<number>();
   return (
     <View style={{ marginTop: Spacing.xs }}>
       {snapshots.map((snapshot, index) => {
@@ -44,7 +45,19 @@ export function AuditTransactionSnapshotStack({
           workplaceCurrency,
         );
 
-        const oppositeItem = oppositeSnapshots.find(opp => opp.accountId === snapshot.accountId);
+        let oppIndex = oppositeSnapshots.findIndex(
+          (opp, idx) =>
+            !oppositeMatched.has(idx) &&
+            opp.accountId === snapshot.accountId &&
+            opp.type === snapshot.type,
+        );
+        if (oppIndex === -1) {
+          oppIndex = oppositeSnapshots.findIndex(
+            (opp, idx) => !oppositeMatched.has(idx) && opp.accountId === snapshot.accountId,
+          );
+        }
+        if (oppIndex !== -1) oppositeMatched.add(oppIndex);
+        const oppositeItem = oppIndex !== -1 ? oppositeSnapshots[oppIndex] : undefined;
         const oppositeName = oppositeItem
           ? formatAuditAccountLabel(oppositeItem.accountId, oppositeItem, accountMap)
           : null;
@@ -91,22 +104,26 @@ export function AuditTransactionsFieldDiff({
   const afterTxs = asTransactionSnapshots(afterVal);
   if (beforeTxs.length === 0 && afterTxs.length === 0) return null;
 
-  const accountIds = collectTransactionAccountIds(beforeTxs, afterTxs);
+  const pairedLegs = pairTransactionSnapshotLegs(beforeTxs, afterTxs);
 
   return (
     <View style={{ marginTop: Spacing.xs }}>
-      {accountIds.map(accountId => {
-        const tBefore = beforeTxs.find(t => t.accountId === accountId);
-        const tAfter = afterTxs.find(t => t.accountId === accountId);
-
+      {pairedLegs.map(({ key, accountId, before: tBefore, after: tAfter }) => {
         if (shouldHideUnchangedTransactionLeg(tBefore, tAfter)) return null;
 
         const name = formatAuditAccountLabel(accountId, tAfter ?? tBefore, accountMap);
-        const currency = resolveSnapshotCurrency(
-          tAfter ?? tBefore,
+        const beforeCurrency = resolveSnapshotCurrency(
+          tBefore,
           accountMap,
           accountId,
-          tAfter?.currencyCode || tBefore?.currencyCode,
+          tBefore?.currencyCode,
+          workplaceCurrency,
+        );
+        const afterCurrency = resolveSnapshotCurrency(
+          tAfter,
+          accountMap,
+          accountId,
+          tAfter?.currencyCode,
           workplaceCurrency,
         );
 
@@ -117,13 +134,14 @@ export function AuditTransactionsFieldDiff({
         const typeChanged = beforeType !== afterType;
 
         return (
-          <View key={accountId} style={{ marginBottom: Spacing.xs }}>
+          <View key={key} style={{ marginBottom: Spacing.xs }}>
             <AppText variant="caption" color="secondary" weight="semibold">
               • {name}
             </AppText>
             <View
               style={{
                 flexDirection: 'row',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 marginLeft: Spacing.md,
               }}
@@ -131,9 +149,9 @@ export function AuditTransactionsFieldDiff({
               <AppText
                 variant="caption"
                 color="secondary"
-                style={{ fontSize: Typography.sizes.xs, opacity: Opacity.medium }}
+                style={{ fontSize: Typography.sizes.xs, opacity: Opacity.medium, flexShrink: 1 }}
               >
-                {formatMoney(beforeAmt, currency)} ({beforeType})
+                {formatMoney(beforeAmt, beforeCurrency)} ({beforeType})
               </AppText>
               <AppText
                 variant="caption"
@@ -147,9 +165,9 @@ export function AuditTransactionsFieldDiff({
               <AppText
                 variant="caption"
                 color="secondary"
-                style={{ fontSize: Typography.sizes.xs, opacity: Opacity.heavy }}
+                style={{ fontSize: Typography.sizes.xs, opacity: Opacity.heavy, flexShrink: 1 }}
               >
-                {formatMoney(afterAmt, currency)} ({afterType})
+                {formatMoney(afterAmt, afterCurrency)} ({afterType})
               </AppText>
               {typeChanged && (
                 <AppText

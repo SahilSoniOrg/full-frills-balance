@@ -30,7 +30,7 @@ export interface InsightDetailsViewModel {
   emptySubtitle: string;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: JournalId) => void;
+  onLongPressItem?: (id: JournalId) => void;
   selectionChrome?: SelectionOverlayProps;
   modals?: JournalListModalsProps;
 }
