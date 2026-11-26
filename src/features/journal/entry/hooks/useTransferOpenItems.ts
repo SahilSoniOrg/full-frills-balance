@@ -57,13 +57,11 @@ export function useTransferOpenItems({
   const quickFillChips = [
     { id: 'full', label: 'Full balance', amount: totalOpenRemainder },
     { id: 'half', label: 'Half', amount: totalOpenRemainder / 2 },
-    ...items
-      .slice(0, 2)
-      .map(x => ({
-        id: x.item.id,
-        label: x.item.currencyCode + ' ' + x.item.originalAmount.toFixed(precision),
-        amount: x.remainder,
-      })),
+    ...items.slice(0, 2).map(x => ({
+      id: x.item.id,
+      label: x.item.currencyCode + ' ' + x.item.originalAmount.toFixed(precision),
+      amount: x.remainder,
+    })),
   ];
   const requested = Number(transferAmountText.replace(/,/g, ''));
   let remaining = Number.isFinite(requested) ? Math.max(0, requested) : 0;

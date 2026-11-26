@@ -3,10 +3,12 @@ import {
   AppSegmentedControl,
   AppText,
   AppIcon,
+  Icon,
   ListRow,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { Inline, Stack } from '@/src/design-system';
 import type { OpenItemId } from '@/src/types/ids';
 
@@ -26,6 +28,7 @@ type Props = {
   onQuickFillAmount: (amount: string) => void;
 };
 export function TransferOpenItemsCard(p: Props) {
+  const isPrivacyMode = useEffectivePrivacyMode();
   return (
     <AppCard variant="outline" padding="md" radius="xl">
       <Stack gap="sm">
@@ -33,12 +36,16 @@ export function TransferOpenItemsCard(p: Props) {
           <AppText variant="caption" weight="semibold" style={{ flex: 1 }}>
             OPEN ITEMS TO SETTLE
           </AppText>
-          <MoneyText amount={p.totalOpenRemainder} currencyCode={p.currencyCode} />
+          <AppText>
+            {formatMoneyAmount(p.totalOpenRemainder, p.currencyCode, isPrivacyMode)}
+          </AppText>
         </Inline>
         <Inline gap="xs">
           {p.quickFillChips.map(c => (
             <PressScaleTouchable key={c.id} onPress={() => p.onQuickFillAmount(String(c.amount))}>
-              <AppText variant="caption">{c.label}</AppText>
+              <AppText variant="caption">
+                {c.label}: {formatMoneyAmount(c.amount, p.currencyCode, isPrivacyMode)}
+              </AppText>
             </PressScaleTouchable>
           ))}
         </Inline>
@@ -53,8 +60,10 @@ export function TransferOpenItemsCard(p: Props) {
         {p.items.map(x => (
           <PressScaleTouchable key={x.item.id} onPress={() => p.onToggleItem(x.item.id)}>
             <ListRow
-              title={`${x.item.currencyCode} ${x.item.originalAmount.toFixed(2)} · ${x.remainder.toFixed(2)} left`}
-              trailing={p.selectedItemIds[x.item.id] ? <AppIcon name="checkCircle2" /> : undefined}
+              title={`Original ${formatMoneyAmount(x.item.originalAmount, x.item.currencyCode, isPrivacyMode)} · ${formatMoneyAmount(x.remainder, x.item.currencyCode, isPrivacyMode)} left`}
+              trailing={
+                p.selectedItemIds[x.item.id] ? <AppIcon name={Icon.CheckCircle} /> : undefined
+              }
             />
           </PressScaleTouchable>
         ))}
