@@ -4,6 +4,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { useLocalSearchParams } from 'expo-router';
 
 const mockArchivedAt$ = new BehaviorSubject<number | null>(null);
 
@@ -15,7 +16,7 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ accountId: 'account-1' as AccountId }),
+  useLocalSearchParams: jest.fn(() => ({ accountId: 'account-1' as AccountId })),
 }));
 
 jest.mock('@/src/services/ReactiveDataService', () => ({
@@ -87,5 +88,28 @@ describe('useAccountDetailsData archive state', () => {
 
     act(() => mockArchivedAt$.next(null));
     expect(result.current.isArchived).toBe(false);
+  });
+
+  it('drops preview fallback params and marks account missing after dashboard finishes loading null', () => {
+    jest.mocked(useLocalSearchParams).mockReturnValueOnce({
+      accountId: 'account-1' as AccountId,
+      pName: 'Stale Account',
+      pBalance: '250',
+    });
+    jest.mocked(reactiveDataService.observeAccountDashboard).mockReturnValueOnce(
+      mockOf({
+        account: null,
+        balance: null,
+        subAccounts: [],
+        allAccounts: [],
+      }),
+    );
+
+    const { result } = renderHook(() => useAccountDetailsData());
+
+    expect(result.current.dashboardLoading).toBe(false);
+    expect(result.current.accountMissing).toBe(true);
+    expect(result.current.account).toBeNull();
+    expect(result.current.balanceAmount).toBeNull();
   });
 });

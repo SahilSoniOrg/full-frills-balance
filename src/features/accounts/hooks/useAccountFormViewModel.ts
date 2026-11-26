@@ -204,13 +204,14 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     Keyboard.dismiss();
     updateActiveSheet(sheet);
   }, []);
+  const isFormHydrating = isAccountLoading || isBalanceLoading || isMetadataLoading;
   const core = useAccountFormCore(dispatch, draft.core, isEditMode);
   const kind = useAccountFormKind({
     core: draft.core,
     dispatch,
     isEditMode,
     hasSubtypeRouteParam: subtypeParam !== undefined,
-    canChangeKind: !isParent,
+    canChangeKind: !isParent && !isFormHydrating,
   });
   const pickers = useAccountFormPickers(dispatch, draft.pickers);
   const metadata = useAccountFormMetadata({
@@ -375,6 +376,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     isSaveDisabled:
       !core.accountName.trim() ||
       persistence.isCreating ||
+      isFormHydrating ||
       !!validation.formError ||
       !!draft.localFormError,
     requirementHint,

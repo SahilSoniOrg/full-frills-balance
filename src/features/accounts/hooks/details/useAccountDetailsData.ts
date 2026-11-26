@@ -132,7 +132,7 @@ export function useAccountDetailsData(): AccountDetailsData {
   const account = useMemo<PlainAccount | null>(
     () =>
       dbAccount ||
-      (pName
+      (dashboardLoading && pName
         ? {
             id: accountId,
             name: pName,
@@ -146,21 +146,40 @@ export function useAccountDetailsData(): AccountDetailsData {
             deletedAt: undefined,
           }
         : null),
-    [dbAccount, pName, accountId, pType, pCurrency, workplaceCurrency, pIcon, pColor],
+    [
+      dbAccount,
+      dashboardLoading,
+      pName,
+      accountId,
+      pType,
+      pCurrency,
+      workplaceCurrency,
+      pIcon,
+      pColor,
+    ],
   );
 
+  const parsedPreviewBalance = pBalance ? Number.parseFloat(pBalance) : Number.NaN;
   const balanceData = useMemo(
     () =>
       dbBalanceData ||
-      ((pBalance
+      ((dashboardLoading && Number.isFinite(parsedPreviewBalance)
         ? {
             accountId,
-            balance: parseFloat(pBalance),
+            balance: parsedPreviewBalance,
             currencyCode: pCurrency || account?.currencyCode || workplaceCurrency,
             transactionCount: 0,
           }
         : null) as AccountBalance | null),
-    [dbBalanceData, pBalance, accountId, pCurrency, account?.currencyCode, workplaceCurrency],
+    [
+      dbBalanceData,
+      dashboardLoading,
+      parsedPreviewBalance,
+      accountId,
+      pCurrency,
+      account?.currencyCode,
+      workplaceCurrency,
+    ],
   );
 
   const accountLoading = dashboardLoading && !pName;

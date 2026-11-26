@@ -173,4 +173,43 @@ describe('useAccountDetailsMetrics', () => {
       expect(result.current.chartData.at(-1)?.y).toBe(20);
     },
   );
+
+  it('combines opening balances and chronological curves across descendant accountIds', async () => {
+    const parentId = '00000000-0000-4000-8000-000000000010' as AccountId;
+    const childId = '00000000-0000-4000-8000-000000000011' as AccountId;
+    const start = dayjs('2024-09-01').valueOf();
+    const end = dayjs('2024-09-30').endOf('day').valueOf();
+
+    jest
+      .mocked(observeAccountOpeningBalance)
+      .mockImplementation((_wp, id) => mockOf(id === parentId ? 10 : 90));
+    jest.mocked(observeAccountChartTransactions).mockImplementation((_wp, id) =>
+      id === childId
+        ? mockOf([
+            {
+              id: 't-child',
+              accountId: childId,
+              transactionDate: dayjs('2024-09-05').valueOf(),
+              runningBalance: 130,
+            } as unknown as Transaction,
+          ])
+        : mockOf([]),
+    );
+
+    const { result } = renderHook(() =>
+      useAccountDetailsMetrics({
+        accountId: parentId,
+        workplaceId: '00000000-0000-4000-8000-000000000012' as WorkplaceId,
+        accountType: AccountType.EXPENSE,
+        balanceCurrency: 'USD',
+        balanceData: null,
+        accountIds: [parentId, childId],
+        dateRange: { startDate: start, endDate: end },
+      }),
+    );
+
+    await waitFor(() => expect(result.current.chartData.length).toBeGreaterThan(0));
+    expect(result.current.chartData[0]).toEqual({ x: start, y: 0 });
+    expect(result.current.chartData.at(-1)?.y).toBe(40);
+  });
 });

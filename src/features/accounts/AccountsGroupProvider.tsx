@@ -6,7 +6,7 @@ import {
 } from '@/src/services/ReactiveDataService';
 import { useObservable } from '@/src/hooks/useObservable';
 import type { AccountId } from '@/src/types/ids';
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY, of } from 'rxjs';
 
 type AccountsGroupDataValue = {
@@ -84,6 +84,7 @@ export function AccountsGroupProvider({
     [active, defaultCurrencyCode, workplaceId],
     () =>
       (workplaceId ? reactiveDataService.getAccountsListSnapshot(workplaceId) : null) ?? EMPTY_DATA,
+    { keepPreviousData: false, resetKey: workplaceId },
   );
 
   const [collapsedSections, setCollapsedSections] = useState(() => new Set(['Equity']));
@@ -97,6 +98,19 @@ export function AccountsGroupProvider({
     hasUnvaluedEntries?: boolean;
   } | null>(null);
   const [isPeriodLoading, setIsPeriodLoading] = useState(false);
+
+  const previousWorkplaceIdRef = useRef(workplaceId);
+  useEffect(() => {
+    if (previousWorkplaceIdRef.current === workplaceId) return;
+    previousWorkplaceIdRef.current = workplaceId;
+    setCollapsedSections(new Set(['Equity']));
+    setExpandedAccountIds(new Set());
+    setSearchQuery('');
+    setIsSearching(false);
+    setInflowPeriod('overall');
+    setRollingPeriodTotals(null);
+    setIsPeriodLoading(false);
+  }, [workplaceId]);
 
   const dataValue = useMemo(
     () => ({ data, isLoading, error, retry, version }),

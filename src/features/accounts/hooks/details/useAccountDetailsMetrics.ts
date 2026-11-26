@@ -18,6 +18,7 @@ import {
 } from '@/src/services/projections';
 import { isCategoryAccountType } from '@/src/domain/accounts/accountClassification';
 import { DateRange, describePeriodRange } from '@/src/domain/calendar/dateRanges';
+import { roundToPrecision } from '@/src/domain/money/money';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { combineLatest, map, of } from 'rxjs';
@@ -81,7 +82,10 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         accountIds,
       ).pipe(
         map(metrics => {
-          const netChange = metrics.totalIncrease - metrics.totalDecrease;
+          const netChange = roundToPrecision(
+            metrics.totalIncrease - metrics.totalDecrease,
+            precision,
+          );
           const period = dateRange ? describePeriodRange(dateRange, today) : null;
           // A running period averages over the days so far; others over their full length.
           const days = period && (period.isCurrent ? period.elapsedDays : period.periodDays);
@@ -128,7 +132,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
       ).pipe(
         map(metrics => ({
           label: previousRange.label,
-          netChange: metrics.totalIncrease - metrics.totalDecrease,
+          netChange: roundToPrecision(metrics.totalIncrease - metrics.totalDecrease, precision),
         })),
       );
     },
@@ -139,6 +143,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
       dateRange?.endDate,
       accountType,
       workplaceId,
+      precision,
       today,
     ],
     null,
@@ -147,33 +152,108 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
   const { data: chart } = useObservable<AccountRollingBalanceSeries>(
     () => {
       const MS_PER_DAY = AppConfig.time.msPerDay;
+      const targetIds = accountIds.length > 0 ? accountIds : accountId ? [accountId] : [];
       const rebaseChart = isCategoryAccountType(accountType) && !!dateRange;
       const queryPadding = rebaseChart ? 0 : 7 * MS_PER_DAY;
       const start =
         (dateRange ? dateRange.startDate : dayjs(today).startOf('month').valueOf()) - queryPadding;
       const end =
         (dateRange ? dateRange.endDate : dayjs(today).endOf('month').valueOf()) + queryPadding;
-      const transactions = observeAccountChartTransactions(workplaceId, accountId, start, end).pipe(
-        map(transactions =>
-          transactions.map(transaction => ({
-            transactionDate: transaction.transactionDate,
-            runningBalance: transaction.runningBalance,
-          })),
-        ),
+
+      if (targetIds.length <= 1) {
+        const targetId = targetIds[0] ?? null;
+        const transactions = observeAccountChartTransactions(
+          workplaceId,
+          targetId,
+          start,
+          end,
+        ).pipe(
+          map(transactions =>
+            transactions.map(transaction => ({
+              transactionDate: transaction.transactionDate,
+              runningBalance: transaction.runningBalance,
+            })),
+          ),
+        );
+        const opening =
+          rebaseChart && dateRange
+            ? observeAccountOpeningBalance(workplaceId, targetId, dateRange.startDate)
+            : of(undefined);
+        // Recreate both reads for each account/period; neither can reuse the other's previous value.
+        return combineLatest([transactions, opening]).pipe(
+          map(([transactions, openingBalance]) => {
+            const window =
+              dateRange && openingBalance !== undefined
+                ? {
+                    visibleStart: dateRange.startDate,
+                    visibleEnd: dateRange.endDate,
+                    openingBalance,
+                  }
+                : { visibleStart: dateRange?.startDate, visibleEnd: dateRange?.endDate };
+            return buildAccountRollingBalanceSeries({
+              transactions,
+              ...window,
+              paddingDays: dateRange ? 0 : undefined,
+              dataEnd: dayjs(today).endOf('day').valueOf(),
+              msPerDay: MS_PER_DAY,
+            });
+          }),
+        );
+      }
+
+      const perAccountTransactions = combineLatest(
+        targetIds.map(id => observeAccountChartTransactions(workplaceId, id, start, end)),
       );
-      const opening =
+      const perAccountOpening =
         rebaseChart && dateRange
-          ? observeAccountOpeningBalance(workplaceId, accountId, dateRange.startDate)
+          ? combineLatest(
+              targetIds.map(id =>
+                observeAccountOpeningBalance(workplaceId, id, dateRange.startDate),
+              ),
+            )
           : of(undefined);
-      // Recreate both reads for each account/period; neither can reuse the other's previous value.
-      return combineLatest([transactions, opening]).pipe(
-        map(([transactions, openingBalance]) => {
+
+      return combineLatest([perAccountTransactions, perAccountOpening]).pipe(
+        map(([groups, openingBalances]) => {
+          const runningByAccount = new Map<AccountId, number>();
+          targetIds.forEach((id, index) => {
+            runningByAccount.set(id, openingBalances?.[index] ?? 0);
+          });
+          const merged = groups
+            .flat()
+            .sort(
+              (a, b) =>
+                a.transactionDate - b.transactionDate ||
+                (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) ||
+                a.id.localeCompare(b.id),
+            )
+            .map(tx => {
+              if (tx.runningBalance != null) {
+                runningByAccount.set(tx.accountId, tx.runningBalance);
+              }
+              let combined = 0;
+              for (const val of runningByAccount.values()) combined += val;
+              return {
+                transactionDate: tx.transactionDate,
+                runningBalance: roundToPrecision(combined, precision),
+              };
+            });
+          const totalOpening = openingBalances
+            ? roundToPrecision(
+                openingBalances.reduce((sum, val) => sum + val, 0),
+                precision,
+              )
+            : undefined;
           const window =
-            dateRange && openingBalance !== undefined
-              ? { visibleStart: dateRange.startDate, visibleEnd: dateRange.endDate, openingBalance }
+            dateRange && totalOpening !== undefined
+              ? {
+                  visibleStart: dateRange.startDate,
+                  visibleEnd: dateRange.endDate,
+                  openingBalance: totalOpening,
+                }
               : { visibleStart: dateRange?.startDate, visibleEnd: dateRange?.endDate };
           return buildAccountRollingBalanceSeries({
-            transactions,
+            transactions: merged,
             ...window,
             paddingDays: dateRange ? 0 : undefined,
             dataEnd: dayjs(today).endOf('day').valueOf(),
@@ -182,7 +262,16 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         }),
       );
     },
-    [workplaceId, accountId, accountType, dateRange?.startDate, dateRange?.endDate, today],
+    [
+      workplaceId,
+      accountId,
+      accountIdsKey,
+      accountType,
+      dateRange?.startDate,
+      dateRange?.endDate,
+      precision,
+      today,
+    ],
     { chartData: [], rollingAverageData: [], xTicks: [] },
     { keepPreviousData: false },
   );

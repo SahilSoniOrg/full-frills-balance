@@ -150,15 +150,25 @@ export function useAccountsListViewModel(
     return aggregateLeafPeriodIncomeExpense(accounts, dashboardData.balances);
   }, [inflowPeriod, accounts, dashboardData.balances]);
 
+  const previousInflowPeriodRef = useRef(inflowPeriod);
+
   useEffect(() => {
+    const switchedTo30Days =
+      previousInflowPeriodRef.current !== '30days' && inflowPeriod === '30days';
+    previousInflowPeriodRef.current = inflowPeriod;
+
     if (!isFocused) {
       focusStartVersion.current = null;
+      return;
+    }
+    if (inflowPeriod !== '30days') {
+      setIsPeriodLoading(false);
       return;
     }
     // Refocus first replays the latest aggregate. Wait for that emission rather
     // than fetching once for the retained version and again for the fresh one.
     if (focusStartVersion.current === null) focusStartVersion.current = version;
-    if (version === focusStartVersion.current || !workplaceId || inflowPeriod !== '30days') {
+    if ((!switchedTo30Days && version === focusStartVersion.current) || !workplaceId) {
       return;
     }
 
@@ -368,13 +378,20 @@ export function useAccountsListViewModel(
 
   const selectionChrome = useMemo(() => {
     if (!selection.isSelectionModeActive) return undefined;
+    const hasSelectedParent = accounts.some(
+      account =>
+        account.parentAccountId != null && selection.selectedIds.has(account.parentAccountId),
+    );
     const sections = selectedTotal.sections.map(section => ({
       label: getAccountTypeSectionTitle(section.accountType),
       amounts: section.amounts,
       colorKey: getAccountTypeColorKey(section.accountType) as AccountTypeColorKey,
     }));
     const amountSummary = {
-      label: sections.length === 1 ? sections[0].label : AppConfig.strings.selection.directBalances,
+      label:
+        sections.length === 1 && !hasSelectedParent
+          ? sections[0].label
+          : AppConfig.strings.selection.directBalances,
       incomplete: selectedTotal.incomplete,
       sections,
     };
@@ -394,6 +411,7 @@ export function useAccountsListViewModel(
   }, [
     selection.isSelectionModeActive,
     selection.selectedIds,
+    accounts,
     allSelectableAccountIds,
     activeTab,
     selection.exitSelectionMode,
