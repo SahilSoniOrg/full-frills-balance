@@ -1,4 +1,5 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { AppIcon, AppInput, PressScaleTouchable, SwipeToRemove } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -31,6 +32,8 @@ export interface SplitAllocationRowProps {
   onChangeNotes?: (notes: string) => void;
   onConvertedAmountChange: (amount: string) => void;
   onCreateAccountRequest: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   onRemove: () => void;
   onMove?: () => void;
   moveLabel?: string;
@@ -62,6 +65,8 @@ export function SplitAllocationRow({
   onChangeNotes,
   onConvertedAmountChange,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonRequest,
   onRemove,
   onMove,
   moveLabel,
@@ -106,6 +111,8 @@ export function SplitAllocationRow({
         isExpanded={isExpanded}
         label={label}
         onCreateAccountRequest={onCreateAccountRequest}
+        peopleGroups={peopleGroups}
+        onCreatePersonRequest={onCreatePersonRequest}
         onSelect={onSelectAccount}
         onToggle={onToggle}
         role={role}
