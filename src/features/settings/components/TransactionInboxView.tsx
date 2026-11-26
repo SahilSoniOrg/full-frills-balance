@@ -48,10 +48,14 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     showOldUpiMerchantRepair,
     selectedDuplicateItem,
     selectedEditReparseItem,
+    isDuplicateModalVisible,
+    isEditReparseModalVisible,
     handleOpenDuplicateModal,
     handleCloseDuplicateModal,
+    handleDismissDuplicateModal,
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
+    handleDismissEditReparseModal,
     handleOpenAttachToJournal,
     handleDetachFromJournal,
     handleMergeDuplicate,
@@ -166,12 +170,14 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                 />
               ) : (
                 <EmptyStateView
-                  title="Inbox is clear"
+                  title={filter === 'pending' ? 'Inbox is clear' : 'No matching inbox items'}
                   icon={Icon.Check}
                   subtitle={
-                    isAndroid
-                      ? 'Try refreshing or loading older messages.'
-                      : 'No pending drafts to review.'
+                    filter === 'pending'
+                      ? isAndroid
+                        ? 'Try refreshing or loading older messages.'
+                        : 'No pending drafts to review.'
+                      : 'No inbox items match the selected filter.'
                   }
                 />
               )
@@ -218,10 +224,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
       </SettingsLayout>
 
       <DuplicateConflictResolutionModal
-        visible={Boolean(selectedDuplicateItem)}
+        visible={isDuplicateModalVisible}
         item={selectedDuplicateItem}
         defaultCurrencyCode={defaultCurrencyCode}
         onClose={handleCloseDuplicateModal}
+        onDismiss={handleDismissDuplicateModal}
         onMarkDuplicateAndDismiss={handleDismiss}
         onMerge={handleMergeDuplicate}
         onPostAnyway={handleImport}
@@ -229,10 +236,11 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
       />
 
       <EditReparseSmsModal
-        visible={Boolean(selectedEditReparseItem)}
+        visible={isEditReparseModalVisible}
         item={selectedEditReparseItem}
         defaultCurrencyCode={defaultCurrencyCode}
         onClose={handleCloseEditReparseModal}
+        onDismiss={handleDismissEditReparseModal}
         onImportParsed={handleImport}
       />
     </View>

@@ -22,10 +22,14 @@ interface UseTransactionInboxModalsProps {
 export interface TransactionInboxModals {
   selectedDuplicateItem: TransactionInboxItem | null;
   selectedEditReparseItem: TransactionInboxItem | null;
+  isDuplicateModalVisible: boolean;
+  isEditReparseModalVisible: boolean;
   handleOpenDuplicateModal: (item: TransactionInboxItem) => void;
   handleCloseDuplicateModal: () => void;
+  handleDismissDuplicateModal: () => void;
   handleOpenEditReparseModal: (item: TransactionInboxItem) => void;
   handleCloseEditReparseModal: () => void;
+  handleDismissEditReparseModal: () => void;
   handleOpenAttachToJournal: (item: TransactionInboxItem) => void;
   handleDetachFromJournal: (item: TransactionInboxItem) => void;
   handleMergeDuplicate: (item: TransactionInboxItem) => Promise<void>;
@@ -52,7 +56,7 @@ function linkedJournalAsEnriched(
 
 type InboxModal =
   | { kind: 'closed' }
-  | { kind: 'duplicate' | 'editReparse'; workplaceId: WorkplaceId; itemId: string };
+  | { kind: 'duplicate' | 'editReparse'; open: boolean; workplaceId: WorkplaceId; itemId: string };
 
 export function useTransactionInboxModals({
   workplaceId,
@@ -71,27 +75,43 @@ export function useTransactionInboxModals({
 
   const selectedDuplicateItem = resolveSelected('duplicate');
   const selectedEditReparseItem = resolveSelected('editReparse');
+  const isDuplicateModalVisible =
+    modal.kind === 'duplicate' && modal.workplaceId === workplaceId && modal.open;
+  const isEditReparseModalVisible =
+    modal.kind === 'editReparse' && modal.workplaceId === workplaceId && modal.open;
 
   const handleOpenDuplicateModal = useCallback(
     (item: TransactionInboxItem) => {
-      setModal({ kind: 'duplicate', workplaceId, itemId: item.id });
+      setModal({ kind: 'duplicate', open: true, workplaceId, itemId: item.id });
     },
     [workplaceId],
   );
 
   const handleCloseDuplicateModal = useCallback(() => {
-    setModal(current => (current.kind === 'duplicate' ? { kind: 'closed' } : current));
+    setModal(current => (current.kind === 'duplicate' ? { ...current, open: false } : current));
+  }, []);
+
+  const handleDismissDuplicateModal = useCallback(() => {
+    setModal(current =>
+      current.kind === 'duplicate' && !current.open ? { kind: 'closed' } : current,
+    );
   }, []);
 
   const handleOpenEditReparseModal = useCallback(
     (item: TransactionInboxItem) => {
-      setModal({ kind: 'editReparse', workplaceId, itemId: item.id });
+      setModal({ kind: 'editReparse', open: true, workplaceId, itemId: item.id });
     },
     [workplaceId],
   );
 
   const handleCloseEditReparseModal = useCallback(() => {
-    setModal(current => (current.kind === 'editReparse' ? { kind: 'closed' } : current));
+    setModal(current => (current.kind === 'editReparse' ? { ...current, open: false } : current));
+  }, []);
+
+  const handleDismissEditReparseModal = useCallback(() => {
+    setModal(current =>
+      current.kind === 'editReparse' && !current.open ? { kind: 'closed' } : current,
+    );
   }, []);
 
   const handleOpenAttachToJournal = useCallback((item: TransactionInboxItem) => {
@@ -165,10 +185,14 @@ export function useTransactionInboxModals({
   return {
     selectedDuplicateItem,
     selectedEditReparseItem,
+    isDuplicateModalVisible,
+    isEditReparseModalVisible,
     handleOpenDuplicateModal,
     handleCloseDuplicateModal,
+    handleDismissDuplicateModal,
     handleOpenEditReparseModal,
     handleCloseEditReparseModal,
+    handleDismissEditReparseModal,
     handleOpenAttachToJournal,
     handleDetachFromJournal,
     handleMergeDuplicate,

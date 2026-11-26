@@ -93,9 +93,16 @@ describe('useTransactionInboxModals', () => {
       result.current.handleOpenDuplicateModal(mockItem);
     });
     expect(result.current.selectedDuplicateItem).toEqual(mockItem);
+    expect(result.current.isDuplicateModalVisible).toBe(true);
 
     act(() => {
       result.current.handleCloseDuplicateModal();
+    });
+    expect(result.current.isDuplicateModalVisible).toBe(false);
+    expect(result.current.selectedDuplicateItem).toEqual(mockItem);
+
+    act(() => {
+      result.current.handleDismissDuplicateModal();
     });
     expect(result.current.selectedDuplicateItem).toBeNull();
   });
@@ -115,9 +122,16 @@ describe('useTransactionInboxModals', () => {
       result.current.handleOpenEditReparseModal(mockItem);
     });
     expect(result.current.selectedEditReparseItem).toEqual(mockItem);
+    expect(result.current.isEditReparseModalVisible).toBe(true);
 
     act(() => {
       result.current.handleCloseEditReparseModal();
+    });
+    expect(result.current.isEditReparseModalVisible).toBe(false);
+    expect(result.current.selectedEditReparseItem).toEqual(mockItem);
+
+    act(() => {
+      result.current.handleDismissEditReparseModal();
     });
     expect(result.current.selectedEditReparseItem).toBeNull();
   });

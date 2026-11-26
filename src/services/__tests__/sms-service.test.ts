@@ -87,16 +87,20 @@ describe('smsService workplace isolation', () => {
 
   it('limits record-id and linked-journal reads to the requested workplace', async () => {
     const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-    const createRecord = async (workplaceId: WorkplaceId, linkedJournalId: JournalId) =>
+    const createRecord = async (
+      workplaceId: WorkplaceId,
+      linkedJournalId: JournalId,
+      channel: 'sms' | 'email' | 'voice' = 'sms',
+    ) =>
       database.write(async () =>
         inbox.create(record => {
           record.workplaceId = workplaceId;
-          record.channel = 'sms';
-          record.deviceSourceId = `${workplaceId}-sms`;
+          record.channel = channel;
+          record.deviceSourceId = `${workplaceId}-${channel}`;
           record.senderAddress = 'BANK';
           record.rawBody = 'Coffee purchase';
           record.inputDate = Date.now();
-          record.inputFingerprint = `${workplaceId}-fingerprint`;
+          record.inputFingerprint = `${workplaceId}-${channel}-fingerprint`;
           record.parseStatus = InboxParseStatus.PARSED;
           record.direction = TransactionDirection.DEBIT;
           record.processingStatus = InboxProcessingStatus.IMPORTED;
@@ -109,17 +113,26 @@ describe('smsService workplace isolation', () => {
     const workplaceId = 'wp-1' as WorkplaceId;
     const otherWorkplaceId = 'wp-2' as WorkplaceId;
     const sharedJournalId = 'shared-journal' as JournalId;
-    const foreignRecord = await createRecord(otherWorkplaceId, sharedJournalId);
-    const currentRecord = await createRecord(workplaceId, sharedJournalId);
-    const secondCurrentRecord = await createRecord(workplaceId, sharedJournalId);
+    const foreignRecord = await createRecord(otherWorkplaceId, sharedJournalId, 'sms');
+    const currentRecord = await createRecord(workplaceId, sharedJournalId, 'sms');
+    const secondCurrentRecord = await createRecord(workplaceId, sharedJournalId, 'sms');
+    const emailRecord = await createRecord(workplaceId, sharedJournalId, 'email');
+    const voiceRecord = await createRecord(workplaceId, sharedJournalId, 'voice');
 
     expect(await transactionInboxRepository.find(workplaceId, foreignRecord.id)).toBeNull();
-    expect([currentRecord.id, secondCurrentRecord.id]).toContain(
+    expect([currentRecord.id, secondCurrentRecord.id, emailRecord.id, voiceRecord.id]).toContain(
       (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId))[0]?.id,
     );
     expect(
       (await smsService.findAllByLinkedJournalId(workplaceId, sharedJournalId)).map(r => r.id),
-    ).toEqual(expect.arrayContaining([currentRecord.id, secondCurrentRecord.id]));
+    ).toEqual(
+      expect.arrayContaining([
+        currentRecord.id,
+        secondCurrentRecord.id,
+        emailRecord.id,
+        voiceRecord.id,
+      ]),
+    );
 
     await smsService.markInboxRecordStatus(
       workplaceId,

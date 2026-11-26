@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, AppButton, AppCard, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Spacing } from '@/src/constants';
+import { BorderWidth, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { smsService } from '@/src/services/sms-service';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
@@ -21,6 +22,7 @@ interface EditReparseSmsModalProps {
   item: TransactionInboxItem | null;
   defaultCurrencyCode: string;
   onClose: () => void;
+  onDismiss?: () => void;
   onImportParsed: (item: TransactionInboxItem) => void;
 }
 
@@ -29,6 +31,7 @@ export function EditReparseSmsModal({
   item,
   defaultCurrencyCode,
   onClose,
+  onDismiss,
   onImportParsed,
 }: EditReparseSmsModalProps) {
   if (!item) return null;
@@ -40,6 +43,7 @@ export function EditReparseSmsModal({
       item={item}
       defaultCurrencyCode={defaultCurrencyCode}
       onClose={onClose}
+      onDismiss={onDismiss}
       onImportParsed={onImportParsed}
     />
   );
@@ -50,6 +54,7 @@ interface EditReparseModalContentProps {
   item: TransactionInboxItem;
   defaultCurrencyCode: string;
   onClose: () => void;
+  onDismiss?: () => void;
   onImportParsed: (item: TransactionInboxItem) => void;
 }
 
@@ -58,9 +63,19 @@ function EditReparseModalContent({
   item,
   defaultCurrencyCode,
   onClose,
+  onDismiss,
   onImportParsed,
 }: EditReparseModalContentProps) {
   const { theme } = useTheme();
+  const afterDismiss = useAfterDismiss();
+  const mountedRef = useRef(true);
+  const parseRequestRef = useRef(0);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const initialRaw = item.rawBody || '';
   const initialSender = item.senderAddress || '';
 
@@ -88,6 +103,7 @@ function EditReparseModalContent({
   });
 
   const parseCurrentInput = async (): Promise<ParsedTransaction | null> => {
+    const requestId = ++parseRequestRef.current;
     setIsParsing(true);
     try {
       const parsed = await smsService.parseTransactionMessageAsync({
@@ -96,14 +112,19 @@ function EditReparseModalContent({
         body: rawText,
         date: item.inputDate,
       });
+      if (!mountedRef.current || parseRequestRef.current !== requestId) return null;
       setParsedResult(parsed);
       setLastParsedSource({ rawText, senderAddress });
       return parsed;
     } catch (error) {
-      showErrorAlert(error, 'SMS Parsing', true);
+      if (mountedRef.current && parseRequestRef.current === requestId) {
+        showErrorAlert(error, 'SMS Parsing', true);
+      }
       return null;
     } finally {
-      setIsParsing(false);
+      if (mountedRef.current && parseRequestRef.current === requestId) {
+        setIsParsing(false);
+      }
     }
   };
 
@@ -120,38 +141,58 @@ function EditReparseModalContent({
 
     if (!finalParsed || isDirtyFromLastParse) {
       finalParsed = await parseCurrentInput();
-      if (!finalParsed) {
+      if (!finalParsed || !mountedRef.current) {
         return;
       }
     }
 
+    const sourceWasEdited = rawText !== initialRaw || senderAddress !== initialSender;
     const updatedItem: TransactionInboxItem = {
       ...item,
       rawBody: rawText,
       senderAddress,
-      parsedAmount: finalParsed?.amount ?? item.parsedAmount,
-      parsedCurrencyCode: finalParsed?.currencyCode ?? item.parsedCurrencyCode,
-      parsedMerchant: finalParsed?.merchant ?? item.parsedMerchant,
-      parsedAccountSource: finalParsed?.accountSource ?? item.parsedAccountSource,
-      referenceNumber: finalParsed?.referenceNumber ?? item.referenceNumber,
+      parsedAmount: sourceWasEdited
+        ? finalParsed.amount
+        : (finalParsed.amount ?? item.parsedAmount),
+      parsedCurrencyCode: sourceWasEdited
+        ? finalParsed.currencyCode
+        : (finalParsed.currencyCode ?? item.parsedCurrencyCode),
+      parsedMerchant: sourceWasEdited
+        ? finalParsed.merchant
+        : (finalParsed.merchant ?? item.parsedMerchant),
+      parsedAccountSource: sourceWasEdited
+        ? finalParsed.accountSource
+        : (finalParsed.accountSource ?? item.parsedAccountSource),
+      referenceNumber: sourceWasEdited
+        ? finalParsed.referenceNumber
+        : (finalParsed.referenceNumber ?? item.referenceNumber),
       direction:
-        finalParsed?.type === 'credit'
+        finalParsed.type === 'credit'
           ? 'credit'
-          : finalParsed?.type === 'debit'
+          : finalParsed.type === 'debit'
             ? 'debit'
-            : item.direction,
-      parseConfidence: finalParsed?.confidence ?? item.parseConfidence,
-      parseReason: finalParsed?.parseReason ?? item.parseReason,
+            : sourceWasEdited
+              ? 'unknown'
+              : item.direction,
+      parseConfidence: finalParsed.confidence,
+      parseReason: finalParsed.parseReason,
     };
+    afterDismiss.run(() => onImportParsed(updatedItem));
     onClose();
-    onImportParsed(updatedItem);
   };
 
   return (
     <BulkActionModalSurface
       visible={visible}
       title="Edit & Re-Parse Message"
-      onClose={onClose}
+      onClose={() => {
+        afterDismiss.cancel();
+        onClose();
+      }}
+      onDismiss={() => {
+        afterDismiss.onDismiss();
+        onDismiss?.();
+      }}
       confirmLabel="Import with Parsed Details"
       onConfirm={handleApplyAndImport}
       isSubmitting={isParsing}
@@ -188,11 +229,14 @@ function EditReparseModalContent({
 
         {parsedResult && (
           <AppCard
-            style={[styles.parsedCard, { borderColor: theme.border, borderWidth: 1 }]}
+            style={[
+              styles.parsedCard,
+              { borderColor: theme.border, borderWidth: BorderWidth.thin },
+            ]}
             padding="lg"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name={Icon.Zap} size={14} color={theme.primary} />
+              <AppIcon name={Icon.Zap} size={Size.iconXs} color={theme.primary} />
               <AppText variant="caption" weight="bold" color="primary">
                 PARSER OUTPUT
               </AppText>
@@ -202,7 +246,7 @@ function EditReparseModalContent({
             </View>
 
             <View style={styles.fieldRow}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.merchantColumn}>
                 <AppText variant="caption" color="secondary">
                   Merchant
                 </AppText>
@@ -210,7 +254,7 @@ function EditReparseModalContent({
                   {parsedResult.merchant || 'None detected'}
                 </AppText>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={styles.amountColumn}>
                 <AppText variant="caption" color="secondary">
                   Amount
                 </AppText>
@@ -276,5 +320,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  merchantColumn: {
+    flex: 1,
+  },
+  amountColumn: {
+    alignItems: 'flex-end',
   },
 });

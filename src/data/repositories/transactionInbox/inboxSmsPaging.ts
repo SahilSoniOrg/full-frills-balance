@@ -24,13 +24,12 @@ export async function findAllByLinkedJournalId(
     .query(
       Q.where('workplace_id', workplaceId),
       Q.where('linked_journal_id', journalId),
-      Q.where('channel', 'sms'),
       Q.sortBy('input_date', Q.asc),
     )
     .fetch();
-  const devices = await deviceSmsInboxRepository.findBySourceIds(
-    copies.map(copy => copy.deviceSourceId),
-  );
+  const deviceIds = copies.map(copy => copy.deviceSourceId).filter(Boolean);
+  const devices =
+    deviceIds.length > 0 ? await deviceSmsInboxRepository.findBySourceIds(deviceIds) : [];
   return projectInbox(workplaceId, devices, copies).sort((a, b) => a.inputDate - b.inputDate);
 }
 

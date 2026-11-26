@@ -3,7 +3,10 @@ import { Icon, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Opacity, Shape, Spacing } from '@/src/constants';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
+import { AppConfig, BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -20,6 +23,7 @@ interface DuplicateConflictResolutionModalProps {
   item: TransactionInboxItem | null;
   defaultCurrencyCode: string;
   onClose: () => void;
+  onDismiss?: () => void;
   onMarkDuplicateAndDismiss: (item: TransactionInboxItem) => Promise<void> | void;
   onMerge: (item: TransactionInboxItem) => Promise<void> | void;
   onPostAnyway: (item: TransactionInboxItem) => void;
@@ -31,6 +35,7 @@ export function DuplicateConflictResolutionModal({
   item,
   defaultCurrencyCode,
   onClose,
+  onDismiss,
   onMarkDuplicateAndDismiss,
   onMerge,
   onPostAnyway,
@@ -38,6 +43,8 @@ export function DuplicateConflictResolutionModal({
 }: DuplicateConflictResolutionModalProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const privateMode = useEffectivePrivacyMode();
+  const afterDismiss = useAfterDismiss();
 
   if (!item || !item.duplicateCandidate) {
     return null;
@@ -49,15 +56,24 @@ export function DuplicateConflictResolutionModal({
   const matchColor = isHighConfidence ? theme.warning : theme.primary;
 
   const executeAction = (action: (item: TransactionInboxItem) => void | Promise<void>) => {
+    afterDismiss.run(() => {
+      void action(item);
+    });
     onClose();
-    action(item);
   };
 
   return (
     <ModalSurface
       visible={visible}
       title="Duplicate Conflict Detected"
-      onClose={onClose}
+      onClose={() => {
+        afterDismiss.cancel();
+        onClose();
+      }}
+      onDismiss={() => {
+        afterDismiss.onDismiss();
+        onDismiss?.();
+      }}
       accessibilityCloseLabel="Close duplicate conflict dialog"
       contentTestID="duplicate-modal-body"
       maxHeightPercent={90}
@@ -116,11 +132,12 @@ export function DuplicateConflictResolutionModal({
             >
               {scorePercent > 0 ? `${scorePercent}% Match` : 'Likely Duplicate'}
             </Badge>
-            {candidate.reasons.map((reason, idx) => (
-              <Badge key={`${reason}-${idx}`} size="sm">
-                {reason}
-              </Badge>
-            ))}
+            {!privateMode &&
+              candidate.reasons.map((reason, idx) => (
+                <Badge key={`${reason}-${idx}`} size="sm">
+                  {reason}
+                </Badge>
+              ))}
           </View>
           <AppText variant="caption" color="secondary">
             This incoming message matches an existing entry already saved in your books. Review the
@@ -132,11 +149,14 @@ export function DuplicateConflictResolutionModal({
         <View style={styles.comparisonWrapper}>
           {/* Incoming SMS Card */}
           <AppCard
-            style={[styles.comparisonCard, { borderColor: theme.border, borderWidth: 1 }]}
+            style={[
+              styles.comparisonCard,
+              { borderColor: theme.border, borderWidth: BorderWidth.thin },
+            ]}
             padding="lg"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name={Icon.MessageSquare} size={14} color={theme.primary} />
+              <AppIcon name={Icon.MessageSquare} size={Size.iconXs} color={theme.primary} />
               <AppText variant="caption" weight="bold" color="primary">
                 INCOMING SMS / DRAFT
               </AppText>
@@ -147,7 +167,9 @@ export function DuplicateConflictResolutionModal({
                 Origin / Merchant
               </AppText>
               <AppText variant="body" weight="semibold">
-                {item.parsedMerchant || item.senderAddress || 'Unknown'}
+                {privateMode
+                  ? transactionCaptureStrings.privateDescription
+                  : item.parsedMerchant || item.senderAddress || 'Unknown'}
               </AppText>
             </View>
 
@@ -186,7 +208,7 @@ export function DuplicateConflictResolutionModal({
                   Reference #
                 </AppText>
                 <AppText variant="caption" weight="semibold">
-                  {item.referenceNumber}
+                  {privateMode ? AppConfig.privacyMask : item.referenceNumber}
                 </AppText>
               </View>
             ) : null}
@@ -197,7 +219,7 @@ export function DuplicateConflictResolutionModal({
                   Raw Text
                 </AppText>
                 <AppText variant="caption" color="secondary" numberOfLines={3}>
-                  {item.rawBody}
+                  {privateMode ? AppConfig.strings.journalDetails.hiddenSms : item.rawBody}
                 </AppText>
               </View>
             ) : null}
@@ -205,11 +227,14 @@ export function DuplicateConflictResolutionModal({
 
           {/* Matched Journal Card */}
           <AppCard
-            style={[styles.comparisonCard, { borderColor: theme.border, borderWidth: 1 }]}
+            style={[
+              styles.comparisonCard,
+              { borderColor: theme.border, borderWidth: BorderWidth.thin },
+            ]}
             padding="lg"
           >
             <View style={styles.cardHeader}>
-              <AppIcon name={Icon.Document} size={14} color={theme.textSecondary} />
+              <AppIcon name={Icon.Document} size={Size.iconXs} color={theme.textSecondary} />
               <AppText variant="caption" weight="bold" color="secondary">
                 EXISTING ENTRY
               </AppText>
@@ -220,7 +245,9 @@ export function DuplicateConflictResolutionModal({
                 Description / Title
               </AppText>
               <AppText variant="body" weight="semibold">
-                {candidate.description || 'Untitled Transaction'}
+                {privateMode
+                  ? AppConfig.privacyMask
+                  : candidate.description || 'Untitled Transaction'}
               </AppText>
             </View>
 
@@ -278,7 +305,7 @@ const styles = StyleSheet.create({
   matchBanner: {
     padding: Spacing.sm,
     borderRadius: Shape.radius.md,
-    borderWidth: 1,
+    borderWidth: BorderWidth.thin,
     gap: Spacing.xs,
   },
   matchBadgeRow: {

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@/src/testing/render';
 import { EditReparseSmsModal } from '../EditReparseSmsModal';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { smsService } from '@/src/services/sms-service';
 
@@ -80,14 +81,15 @@ describe('EditReparseSmsModal', () => {
     });
   });
 
-  it('applies updated values and calls onImportParsed', async () => {
-    const { getByTestId } = render(<EditReparseSmsModal {...defaultProps} />);
+  it('applies updated values and calls onImportParsed after dismiss', async () => {
+    const { getByTestId, UNSAFE_getByType } = render(<EditReparseSmsModal {...defaultProps} />);
 
     await act(async () => {
       fireEvent.press(getByTestId('edit-reparse-confirm'));
     });
 
     expect(defaultProps.onClose).toHaveBeenCalled();
+    act(() => UNSAFE_getByType(BulkActionModalSurface).props.onDismiss?.());
     expect(defaultProps.onImportParsed).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'rec-1',
@@ -97,7 +99,7 @@ describe('EditReparseSmsModal', () => {
     );
   });
 
-  it('automatically parses dirty text on import if Re-Parse was not tapped', async () => {
+  it('automatically parses dirty text on import without carrying over stale parsed fields', async () => {
     (smsService.parseTransactionMessageAsync as jest.Mock).mockResolvedValue({
       id: 'sms-1',
       amount: 1200,
@@ -109,7 +111,7 @@ describe('EditReparseSmsModal', () => {
       parseReason: 'Merchant detected',
     });
 
-    const { getByTestId } = render(<EditReparseSmsModal {...defaultProps} />);
+    const { getByTestId, UNSAFE_getByType } = render(<EditReparseSmsModal {...defaultProps} />);
 
     fireEvent.changeText(getByTestId('edit-reparse-body-input'), 'Paid Rs 1200 at Amazon.');
 
@@ -124,12 +126,43 @@ describe('EditReparseSmsModal', () => {
       date: 1786800000000,
     });
 
+    act(() => UNSAFE_getByType(BulkActionModalSurface).props.onDismiss?.());
     expect(defaultProps.onImportParsed).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'rec-1',
         parsedAmount: 1200,
         parsedMerchant: 'Amazon',
         rawBody: 'Paid Rs 1200 at Amazon.',
+      }),
+    );
+  });
+
+  it('clears stale parsed fields when edited text omits amount or merchant', async () => {
+    (smsService.parseTransactionMessageAsync as jest.Mock).mockResolvedValue({
+      id: 'sms-1',
+      amount: undefined,
+      currencyCode: undefined,
+      merchant: undefined,
+      type: 'unknown',
+      date: 1786800000000,
+      confidence: 0,
+      parseReason: 'No amount found',
+    });
+
+    const { getByTestId, UNSAFE_getByType } = render(<EditReparseSmsModal {...defaultProps} />);
+
+    fireEvent.changeText(getByTestId('edit-reparse-body-input'), 'Unparseable edited text');
+
+    await act(async () => {
+      fireEvent.press(getByTestId('edit-reparse-confirm'));
+    });
+
+    act(() => UNSAFE_getByType(BulkActionModalSurface).props.onDismiss?.());
+    expect(defaultProps.onImportParsed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parsedAmount: undefined,
+        parsedMerchant: undefined,
+        direction: 'unknown',
       }),
     );
   });

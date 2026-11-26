@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { AppText, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
 import { ErrorStateView } from '@/src/components/shared/ErrorStateView';
 import { AppConfig, Size, Spacing } from '@/src/constants';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { JournalSourceModel } from '../../journalDetailsPresentation';
 import { JournalSmsSheet } from './JournalSmsSheet';
 
 export function JournalSource({ source }: { source: JournalSourceModel }) {
   const [open, setOpen] = useState(false);
+  const privateMode = useEffectivePrivacyMode();
   const strings = AppConfig.strings.journalDetails;
   if (source.error)
     return (
@@ -30,9 +32,9 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
   const title = sms
     ? smsList.length > 1
       ? senders.length === 1
-        ? strings.smsFromMany(senders[0], smsList.length)
+        ? strings.smsFromMany(privateMode ? AppConfig.privacyMask : senders[0], smsList.length)
         : strings.linkedSmsCount(smsList.length)
-      : strings.smsFrom(sms.sender ?? strings.unknownSender)
+      : strings.smsFrom(privateMode ? AppConfig.privacyMask : (sms.sender ?? strings.unknownSender))
     : strings.importedFrom(imported!.name);
   const subtitle = sms
     ? [
@@ -41,7 +43,9 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
           : sms.autoPosted
             ? strings.autoPosted
             : strings.imported,
-        smsList.length === 1 && sms.referenceNumber ? strings.ref(sms.referenceNumber) : undefined,
+        smsList.length === 1 && sms.referenceNumber
+          ? strings.ref(privateMode ? AppConfig.privacyMask : sms.referenceNumber)
+          : undefined,
       ]
         .filter(Boolean)
         .join(' · ')

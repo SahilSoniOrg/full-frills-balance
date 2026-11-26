@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { transactionCaptureStrings as copy } from '@/src/constants/copy/domains/transactionCaptureStrings';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type {
   JournalLinkConfirmMode,
   JournalLinkConfirmTarget,
@@ -21,10 +22,14 @@ function truncateBody(body: string): string {
   return `${trimmed.slice(0, BODY_PREVIEW_LIMIT - 1)}…`;
 }
 
-function formatInboxAmount(inbox: PlainInboxRecord, defaultCurrencyCode: string): string {
+function formatInboxAmount(
+  inbox: PlainInboxRecord,
+  defaultCurrencyCode: string,
+  privateMode: boolean,
+): string {
   const currency = inbox.parsedCurrencyCode || defaultCurrencyCode;
   const prefix = signPrefix(bankEntrySign(inbox.direction));
-  return formatMoneyAmount(inbox.parsedAmount ?? 0, currency, false, { prefix });
+  return formatMoneyAmount(inbox.parsedAmount ?? 0, currency, privateMode, { prefix });
 }
 
 type AttachToJournalConfirmContentProps = {
@@ -34,6 +39,7 @@ type AttachToJournalConfirmContentProps = {
   hourCycle: ResolvedHourCycle;
   defaultCurrencyCode: string;
   mode?: JournalLinkConfirmMode;
+  privateMode?: boolean;
 };
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
@@ -55,7 +61,11 @@ export function AttachToJournalConfirmContent({
   hourCycle,
   defaultCurrencyCode,
   mode = 'attach',
+  privateMode: privateModeProp,
 }: AttachToJournalConfirmContentProps) {
+  const effectivePrivacyMode = useEffectivePrivacyMode();
+  const privateMode = privateModeProp ?? effectivePrivacyMode;
+
   return (
     <View style={styles.container} testID="attach-to-journal-confirm-content">
       <AppText variant="caption" weight="bold" color="secondary">
@@ -64,16 +74,18 @@ export function AttachToJournalConfirmContent({
       {inbox ? (
         <View style={styles.section}>
           <DetailRow label={copy.attachToJournalConfirmMerchantLabel}>
-            {inbox.parsedMerchant?.trim() || inbox.senderAddress?.trim() || 'Unknown'}
+            {privateMode
+              ? AppConfig.privacyMask
+              : inbox.parsedMerchant?.trim() || inbox.senderAddress?.trim() || 'Unknown'}
           </DetailRow>
           {inbox.parsedAmount != null ? (
             <DetailRow label={copy.attachToJournalConfirmAmountLabel}>
-              {formatInboxAmount(inbox, defaultCurrencyCode)}
+              {formatInboxAmount(inbox, defaultCurrencyCode, privateMode)}
             </DetailRow>
           ) : null}
           {inbox.senderAddress?.trim() && inbox.parsedMerchant?.trim() ? (
             <DetailRow label={copy.attachToJournalConfirmSenderLabel}>
-              {inbox.senderAddress.trim()}
+              {privateMode ? AppConfig.privacyMask : inbox.senderAddress.trim()}
             </DetailRow>
           ) : null}
           <DetailRow label={copy.attachToJournalConfirmDateLabel}>
@@ -81,7 +93,11 @@ export function AttachToJournalConfirmContent({
           </DetailRow>
           {inbox.rawBody?.trim() ? (
             <DetailRow label={copy.attachToJournalConfirmBodyLabel}>
-              <AppText variant="caption">{truncateBody(inbox.rawBody)}</AppText>
+              <AppText variant="caption">
+                {privateMode
+                  ? AppConfig.strings.journalDetails.hiddenSms
+                  : truncateBody(inbox.rawBody)}
+              </AppText>
             </DetailRow>
           ) : null}
         </View>
@@ -98,7 +114,7 @@ export function AttachToJournalConfirmContent({
       </AppText>
       <View style={styles.section}>
         <AppText variant="body" weight="semibold">
-          {journalLabel}
+          {privateMode ? AppConfig.privacyMask : journalLabel}
         </AppText>
         {journal ? (
           <View style={styles.journalMeta}>
@@ -106,7 +122,7 @@ export function AttachToJournalConfirmContent({
               {formatMoneyAmount(
                 journal.totalAmount,
                 journal.currencyCode || defaultCurrencyCode,
-                false,
+                privateMode,
               )}
             </AppText>
             <AppText variant="caption" color="secondary">
@@ -133,7 +149,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   row: {
-    gap: 2,
+    gap: Spacing.xs,
   },
   journalHeading: {
     marginTop: Spacing.xs,

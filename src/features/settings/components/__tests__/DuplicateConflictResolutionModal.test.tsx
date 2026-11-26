@@ -1,5 +1,7 @@
-import { fireEvent, render, within } from '@/src/testing/render';
+import { act, cleanup, fireEvent, render, within } from '@/src/testing/render';
 import { DuplicateConflictResolutionModal } from '../DuplicateConflictResolutionModal';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { preferences } from '@/src/services/preferences';
 import { JournalId } from '@/src/types/ids';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 
@@ -42,6 +44,12 @@ describe('DuplicateConflictResolutionModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    preferences.update({ isPrivacyMode: false });
+  });
+
+  afterEach(() => {
+    cleanup();
+    preferences.update({ isPrivacyMode: false });
   });
 
   it('renders side-by-side comparison details correctly', () => {
@@ -66,35 +74,56 @@ describe('DuplicateConflictResolutionModal', () => {
     expect(body.queryByTestId('duplicate-modal-view-journal-btn')).toBeNull();
   });
 
-  it('triggers onMerge and closes when Merge button is pressed', () => {
-    const { getByTestId } = render(<DuplicateConflictResolutionModal {...defaultProps} />);
+  it('masks sensitive merchant, reference, raw text, and description in privacy mode', () => {
+    preferences.update({ isPrivacyMode: true });
+    const view = render(<DuplicateConflictResolutionModal {...defaultProps} />);
+    const serialized = JSON.stringify(view.toJSON());
+
+    expect(serialized).not.toMatch(/STARBUCKS|Coffee at Starbucks|REF9988|HDFCBK|Card 1234/);
+  });
+
+  it('triggers onMerge after dismiss when Merge button is pressed', () => {
+    const { getByTestId, UNSAFE_getByType } = render(
+      <DuplicateConflictResolutionModal {...defaultProps} />,
+    );
 
     fireEvent.press(getByTestId('duplicate-modal-merge-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
+    expect(defaultProps.onMerge).not.toHaveBeenCalled();
+    act(() => UNSAFE_getByType(ModalSurface).props.onDismiss?.());
     expect(defaultProps.onMerge).toHaveBeenCalledWith(mockItem);
   });
 
-  it('triggers onMarkDuplicateAndDismiss when Dismiss button is pressed', () => {
-    const { getByTestId } = render(<DuplicateConflictResolutionModal {...defaultProps} />);
+  it('triggers onMarkDuplicateAndDismiss after dismiss when Dismiss button is pressed', () => {
+    const { getByTestId, UNSAFE_getByType } = render(
+      <DuplicateConflictResolutionModal {...defaultProps} />,
+    );
 
     fireEvent.press(getByTestId('duplicate-modal-dismiss-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
+    act(() => UNSAFE_getByType(ModalSurface).props.onDismiss?.());
     expect(defaultProps.onMarkDuplicateAndDismiss).toHaveBeenCalledWith(mockItem);
   });
 
-  it('triggers onPostAnyway when Post as Separate Entry button is pressed', () => {
-    const { getByTestId } = render(<DuplicateConflictResolutionModal {...defaultProps} />);
+  it('triggers onPostAnyway after dismiss when Post as Separate Entry button is pressed', () => {
+    const { getByTestId, UNSAFE_getByType } = render(
+      <DuplicateConflictResolutionModal {...defaultProps} />,
+    );
 
     fireEvent.press(getByTestId('duplicate-modal-post-anyway-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
+    act(() => UNSAFE_getByType(ModalSurface).props.onDismiss?.());
     expect(defaultProps.onPostAnyway).toHaveBeenCalledWith(mockItem);
   });
 
-  it('triggers onViewJournal when View Existing Journal button is pressed', () => {
-    const { getByTestId } = render(<DuplicateConflictResolutionModal {...defaultProps} />);
+  it('triggers onViewJournal after dismiss when View Existing Journal button is pressed', () => {
+    const { getByTestId, UNSAFE_getByType } = render(
+      <DuplicateConflictResolutionModal {...defaultProps} />,
+    );
 
     fireEvent.press(getByTestId('duplicate-modal-view-journal-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
+    act(() => UNSAFE_getByType(ModalSurface).props.onDismiss?.());
     expect(defaultProps.onViewJournal).toHaveBeenCalledWith(mockItem);
   });
 

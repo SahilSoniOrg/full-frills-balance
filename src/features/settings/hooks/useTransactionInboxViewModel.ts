@@ -13,6 +13,8 @@ import { InboxProcessingStatus } from '@/src/types/enums';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
+import { transactionCaptureStrings } from '@/src/constants/copy/domains/transactionCaptureStrings';
 import { useCallback } from 'react';
 
 export type { SmsInboxFilterStatus };
@@ -70,24 +72,32 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         channel: item.channel,
         direction: item.direction,
       });
-      await smsService.markInboxRecordStatus(
-        data.workplaceId,
-        item.id,
-        InboxProcessingStatus.DISMISSED,
-      );
+      try {
+        await smsService.markInboxRecordStatus(
+          data.workplaceId,
+          item.id,
+          InboxProcessingStatus.DISMISSED,
+        );
+      } catch (error) {
+        showErrorAlert(error, transactionCaptureStrings.inboxActionErrorTitle, true);
+      }
     },
     [data.workplaceId],
   );
 
   const handleUndismiss = useCallback(
     async (item: TransactionInboxItem) => {
-      await smsService.markInboxRecordStatus(
-        data.workplaceId,
-        item.id,
-        item.duplicateCandidate
-          ? InboxProcessingStatus.DUPLICATE_FLAGGED
-          : InboxProcessingStatus.PENDING,
-      );
+      try {
+        await smsService.markInboxRecordStatus(
+          data.workplaceId,
+          item.id,
+          item.duplicateCandidate
+            ? InboxProcessingStatus.DUPLICATE_FLAGGED
+            : InboxProcessingStatus.PENDING,
+        );
+      } catch (error) {
+        showErrorAlert(error, transactionCaptureStrings.inboxActionErrorTitle, true);
+      }
     },
     [data.workplaceId],
   );

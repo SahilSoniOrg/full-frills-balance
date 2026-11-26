@@ -290,6 +290,9 @@ it('masks amounts and rates in splits, history and SMS, and hides the original b
               rawBody: 'Rs.52 debited',
               amount: 52,
               currencyCode: 'INR',
+              merchant: 'MerchantName',
+              accountSource: 'XX1234',
+              referenceNumber: 'REF-99',
               inboxRecordId: 'sms',
             },
           ],
@@ -300,7 +303,7 @@ it('masks amounts and rates in splits, history and SMS, and hides the original b
   fireEvent.press(view.getByTestId('journal-source-row'));
   expect(view.getByText(AppConfig.strings.journalDetails.hiddenSms)).toBeTruthy();
   const tree = JSON.stringify(view.toJSON());
-  expect(tree).not.toMatch(/12\.34|83\.577|18,412|Rs\.52/);
+  expect(tree).not.toMatch(/12\.34|83\.577|18,412|Rs\.52|BANK|MerchantName|XX1234|REF-99/);
 });
 
 it('shows per-message Detach when multiple SMS are linked', () => {

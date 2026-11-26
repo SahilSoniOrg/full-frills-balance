@@ -113,7 +113,12 @@ function SmsMessage({ sms, onDetach }: { sms: SmsJournalInfoDisplay; onDetach?: 
         ]
           .filter(field => field.value)
           .map(field => (
-            <DetailRow key={field.label} label={field.label} value={field.value} selectable />
+            <DetailRow
+              key={field.label}
+              label={field.label}
+              value={privateMode ? AppConfig.privacyMask : field.value}
+              selectable={!privateMode}
+            />
           ))}
       </ListGroup>
       {onDetach ? (
@@ -133,14 +138,21 @@ function SmsMessage({ sms, onDetach }: { sms: SmsJournalInfoDisplay; onDetach?: 
   );
 }
 
-function sheetTitle(smsInfo: SmsJournalInfoDisplay[]): string {
+function sheetTitle(smsInfo: SmsJournalInfoDisplay[], privateMode: boolean): string {
   const strings = AppConfig.strings.journalDetails;
   const count = smsInfo.length;
-  if (count <= 1) return strings.smsFrom(smsInfo[0]?.sender ?? strings.unknownSender);
+  if (count <= 1) {
+    const sender = privateMode
+      ? AppConfig.privacyMask
+      : (smsInfo[0]?.sender ?? strings.unknownSender);
+    return strings.smsFrom(sender);
+  }
   const senders = [
     ...new Set(smsInfo.map(sms => sms.sender).filter((sender): sender is string => !!sender)),
   ];
-  if (senders.length === 1) return strings.smsFromMany(senders[0], count);
+  if (senders.length === 1) {
+    return strings.smsFromMany(privateMode ? AppConfig.privacyMask : senders[0], count);
+  }
   return strings.linkedSmsCount(count);
 }
 
@@ -158,6 +170,7 @@ export function JournalSmsSheet({
   onDetachSms?: (inboxRecordId: string) => void;
 }) {
   const afterDismiss = useAfterDismiss();
+  const privateMode = useEffectivePrivacyMode();
   const strings = AppConfig.strings.journalDetails;
   const detachable = smsInfo.filter(sms => sms.inboxRecordId);
   // One linked message keeps Detach in the sheet footer; several get a Detach on each card.
@@ -165,7 +178,7 @@ export function JournalSmsSheet({
   return (
     <InfoSheet
       visible={visible}
-      title={sheetTitle(smsInfo)}
+      title={sheetTitle(smsInfo, privateMode)}
       position="bottomSheet"
       accessibilityCloseLabel={strings.closeSms}
       fixedHeight={false}

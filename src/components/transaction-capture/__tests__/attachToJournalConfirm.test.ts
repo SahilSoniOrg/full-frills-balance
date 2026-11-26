@@ -42,4 +42,39 @@ describe('buildAttachToJournalConfirmMessage', () => {
     expect(message).toContain('Manual Cafe');
     expect(message).toContain('will not create a new entry');
   });
+
+  it('masks sensitive fields when privacy mode is enabled', () => {
+    const inbox: PlainInboxRecord = {
+      id: 'inbox-1',
+      channel: 'sms',
+      deviceSourceId: 'sms-1',
+      senderAddress: 'HDFCBK',
+      rawBody: 'USD 420.00 debited for CAFE.',
+      inputDate: Date.UTC(2026, 10, 11, 16, 0, 0),
+      parseStatus: 'parsed',
+      parsedAmount: 420,
+      parsedCurrencyCode: 'USD',
+      parsedMerchant: 'CAFE',
+      direction: 'debit',
+      processingStatus: 'pending',
+    };
+    const journal = {
+      id: 'j-1' as JournalId,
+      description: 'Manual Cafe',
+      journalDate: Date.UTC(2026, 10, 11, 14, 0, 0),
+      totalAmount: 420,
+      currencyCode: 'USD',
+    } as EnrichedJournal;
+
+    const message = buildAttachToJournalConfirmMessage({
+      inbox,
+      journal,
+      journalLabel: 'Manual Cafe',
+      hourCycle: '12-hour',
+      privateMode: true,
+    });
+
+    expect(message).not.toMatch(/CAFE|HDFCBK|420|Manual Cafe/);
+    expect(message).toContain('Message hidden in privacy mode');
+  });
 });

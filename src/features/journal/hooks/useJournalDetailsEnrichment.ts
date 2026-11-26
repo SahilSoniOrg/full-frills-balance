@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { combineLatest, from, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { showDetachFromJournalConfirm } from '@/src/components/transaction-capture/showDetachFromJournalConfirm';
 import { smsService } from '@/src/services/sms-service';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -41,6 +42,7 @@ export function useJournalSource(
     {},
     { keepPreviousData: false },
   );
+  const privateMode = useEffectivePrivacyMode();
   const hasError = !!error;
   const journal = options?.journal;
   const defaultCurrencyCode = options?.defaultCurrencyCode;
@@ -50,7 +52,8 @@ export function useJournalSource(
     (inboxRecordId: string) => {
       if (!journal || !defaultCurrencyCode || !hourCycle) return;
       const linked = data.sms?.find(item => item.inboxRecordId === inboxRecordId);
-      const channel = linked?.channel === 'email' ? 'email' : 'sms';
+      const channel =
+        linked?.channel === 'email' || linked?.channel === 'voice' ? linked.channel : 'sms';
       showDetachFromJournalConfirm({
         workplaceId,
         inboxId: inboxRecordId,
@@ -60,10 +63,11 @@ export function useJournalSource(
           journal.description?.trim() || journal.semanticLabel?.trim() || 'this journal',
         hourCycle,
         defaultCurrencyCode,
+        privateMode,
         onSuccess: retry,
       });
     },
-    [data.sms, defaultCurrencyCode, hourCycle, journal, retry, workplaceId],
+    [data.sms, defaultCurrencyCode, hourCycle, journal, privateMode, retry, workplaceId],
   );
 
   return useMemo(

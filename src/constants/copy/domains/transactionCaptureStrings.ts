@@ -343,6 +343,7 @@ export const transactionCaptureStrings = {
     'This will link the inbox item to the journal. It will not create a new entry.',
   attachToJournalSuccessSms: 'SMS details attached to journal',
   attachToJournalSuccessEmail: 'Email details attached to journal',
+  attachToJournalSuccessVoice: 'Voice details attached to journal',
   attachToJournalErrorTitle: 'Attach to Journal',
   detachFromJournalConfirmTitle: 'Detach from this journal?',
   detachFromJournalConfirmAction: 'Detach',
@@ -351,5 +352,6 @@ export const transactionCaptureStrings = {
     'This removes the link only. The journal stays as-is and the inbox item returns to Pending.',
   detachFromJournalSuccessSms: 'SMS detached from journal',
   detachFromJournalSuccessEmail: 'Email detached from journal',
+  detachFromJournalSuccessVoice: 'Voice draft detached from journal',
   detachFromJournalErrorTitle: 'Detach from Journal',
 } as const;

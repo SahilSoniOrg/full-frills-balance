@@ -17,6 +17,7 @@ export function showDetachFromJournalConfirm(args: {
   journalLabel: string;
   hourCycle: ResolvedHourCycle;
   defaultCurrencyCode: string;
+  privateMode?: boolean;
   onSuccess?: () => void;
 }): void {
   const {
@@ -27,9 +28,11 @@ export function showDetachFromJournalConfirm(args: {
     journalLabel,
     hourCycle,
     defaultCurrencyCode,
+    privateMode = false,
     onSuccess,
   } = args;
 
+  let submitting = false;
   const show = (inbox: Awaited<ReturnType<typeof smsService.findInboxRecord>>) => {
     confirm.show({
       title: copy.detachFromJournalConfirmTitle,
@@ -39,6 +42,7 @@ export function showDetachFromJournalConfirm(args: {
         journalLabel,
         hourCycle,
         mode: 'detach',
+        privateMode,
       }),
       messageContent: (
         <AttachToJournalConfirmContent
@@ -48,11 +52,14 @@ export function showDetachFromJournalConfirm(args: {
           hourCycle={hourCycle}
           defaultCurrencyCode={defaultCurrencyCode}
           mode="detach"
+          privateMode={privateMode}
         />
       ),
       confirmText: copy.detachFromJournalConfirmAction,
       destructive: true,
       onConfirm: () => {
+        if (submitting) return;
+        submitting = true;
         analytics.trackFeatureUsage('sms', 'inbox_accept', {
           channel,
           action: 'detach_from_journal',
@@ -63,16 +70,26 @@ export function showDetachFromJournalConfirm(args: {
             toast.success(
               channel === 'email'
                 ? copy.detachFromJournalSuccessEmail
-                : copy.detachFromJournalSuccessSms,
+                : channel === 'voice'
+                  ? copy.detachFromJournalSuccessVoice
+                  : copy.detachFromJournalSuccessSms,
             );
             onSuccess?.();
           })
           .catch(error => {
             showErrorAlert(error, copy.detachFromJournalErrorTitle, true);
+          })
+          .finally(() => {
+            submitting = false;
           });
       },
     });
   };
 
-  void smsService.findInboxRecord(workplaceId, inboxId).then(show);
+  void smsService
+    .findInboxRecord(workplaceId, inboxId)
+    .then(show)
+    .catch(error => {
+      showErrorAlert(error, copy.detachFromJournalErrorTitle, true);
+    });
 }
