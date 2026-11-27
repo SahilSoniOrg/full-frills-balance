@@ -12,6 +12,7 @@ import {
   LoadingView,
   PersonAvatar,
 } from '@/src/components/core';
+import { AccountListRow } from '@/src/components/accounts/AccountListRow';
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
@@ -24,19 +25,29 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Inline, Stack } from '@/src/design-system';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
+import { useObservable } from '@/src/hooks/useObservable';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { toast } from '@/src/services/feedback/alerts';
-import { createPerson, peopleReadService, updatePerson } from '@/src/services/people';
+import {
+  createPerson,
+  linkExistingAccount,
+  peopleReadService,
+  updatePerson,
+} from '@/src/services/people';
 import type { IconName } from '@/src/types/domainIcons';
 import type { AccountId, PersonId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { of } from 'rxjs';
 
 type LinkableAccount = Awaited<
   ReturnType<typeof peopleReadService.listLinkableAccountsForPeople>
 >[number];
+type LinkedAccount = NonNullable<
+  Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>
+>['linkedAccounts'][number]['account'];
 type PickerPerson = Awaited<ReturnType<typeof peopleReadService.listPersonPickerGroups>>[number];
 
 type InlineFieldRowProps = {
@@ -118,27 +129,44 @@ export function PersonCreationScreen() {
 
   const [existingPeople, setExistingPeople] = useState<PickerPerson[]>([]);
   const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
   const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
+  const [isLinkingAccount, setIsLinkingAccount] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
+
+  const { version: peopleTick } = useObservable(
+    () => (isEdit ? peopleReadService.observePeopleTick(workplaceId) : of(null)),
+    [isEdit, workplaceId],
+    null,
+  );
+
+  const refreshLinkedAccounts = useCallback(async () => {
+    if (!personId) {
+      setLinkedAccounts([]);
+      return;
+    }
+    const [detail, linkable] = await Promise.all([
+      peopleReadService.getPersonDetail(workplaceId, personId, workplaceCurrency),
+      peopleReadService.listLinkableAccountsForPeople(workplaceId),
+    ]);
+    setLinkedAccounts(detail?.linkedAccounts.map(linked => linked.account) ?? []);
+    setLinkableAccounts(linkable);
+  }, [personId, workplaceCurrency, workplaceId]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       try {
-        const [peopleGroups, linkable, profile] = await Promise.all([
+        const [peopleGroups, profile] = await Promise.all([
           peopleReadService.listPersonPickerGroups(workplaceId),
-          isEdit
-            ? Promise.resolve([])
-            : peopleReadService.listLinkableAccountsForPeople(workplaceId),
           personId
             ? peopleReadService.getPersonProfile(workplaceId, personId)
             : Promise.resolve(null),
         ]);
         if (!active) return;
         setExistingPeople(peopleGroups);
-        setLinkableAccounts(linkable);
         if (profile) {
           setName(profile.name);
           setIcon(profile.icon ?? Icon.User);
@@ -151,6 +179,20 @@ export function PersonCreationScreen() {
           setIsPinned(Boolean(profile.isPinned));
           setShowMoreDetails(Boolean(profile.phone || profile.email || profile.notes));
         }
+        if (isEdit && personId) {
+          const [detail, linkable] = await Promise.all([
+            peopleReadService.getPersonDetail(workplaceId, personId, workplaceCurrency),
+            peopleReadService.listLinkableAccountsForPeople(workplaceId),
+          ]);
+          if (!active) return;
+          setLinkedAccounts(detail?.linkedAccounts.map(linked => linked.account) ?? []);
+          setLinkableAccounts(linkable);
+        } else {
+          const linkable = await peopleReadService.listLinkableAccountsForPeople(workplaceId);
+          if (!active) return;
+          setLinkableAccounts(linkable);
+          setLinkedAccounts([]);
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -159,7 +201,36 @@ export function PersonCreationScreen() {
     return () => {
       active = false;
     };
-  }, [isEdit, personId, workplaceId]);
+  }, [isEdit, personId, workplaceCurrency, workplaceId]);
+
+  useEffect(() => {
+    if (!isEdit || !personId || isLoading) return;
+    let active = true;
+    // Refresh linked books when peopleTick fires after link/unlink elsewhere.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshLinkedAccounts().finally(() => {
+      if (!active) return;
+    });
+    return () => {
+      active = false;
+    };
+  }, [isEdit, isLoading, peopleTick, personId, refreshLinkedAccounts]);
+
+  const handleLinkExistingAccount = async (accountId: AccountId) => {
+    if (!personId || isLinkingAccount) return;
+    setIsLinkingAccount(true);
+    setAccountPickerOpen(false);
+    try {
+      await linkExistingAccount(workplaceId, personId, accountId);
+      toast.success('Account linked.');
+      // peopleTick will refresh linked accounts; keep an immediate refresh for snappy UI.
+      await refreshLinkedAccounts();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not link account.');
+    } finally {
+      setIsLinkingAccount(false);
+    }
+  };
 
   const fingerprint = useMemo(
     () =>
@@ -432,6 +503,50 @@ export function PersonCreationScreen() {
             ) : null}
           </ListGroup>
 
+          {isEdit ? (
+            <ListGroup
+              header="LINKED ACCOUNTS"
+              headerAccessory={
+                linkableAccounts.length > 0 ? (
+                  <AppButton
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => setAccountPickerOpen(true)}
+                    disabled={isLinkingAccount}
+                    testID="person-edit-link-account-button"
+                  >
+                    Link account
+                  </AppButton>
+                ) : undefined
+              }
+            >
+              {linkedAccounts.length === 0 ? (
+                <ListRow
+                  icon={Icon.Bank}
+                  title="No accounts linked"
+                  subtitle={
+                    linkableAccounts.length > 0
+                      ? 'Map an existing ledger account to this person'
+                      : 'Create or split to auto-create person accounts'
+                  }
+                  chevron={linkableAccounts.length > 0}
+                  onPress={
+                    linkableAccounts.length > 0 ? () => setAccountPickerOpen(true) : undefined
+                  }
+                  testID="person-edit-empty-linked-accounts"
+                />
+              ) : (
+                linkedAccounts.map(account => (
+                  <AccountListRow
+                    key={account.id}
+                    item={account}
+                    testID={`person-edit-linked-account-${account.id}`}
+                  />
+                ))
+              )}
+            </ListGroup>
+          ) : null}
+
           {showMoreDetails ? (
             <ListGroup
               header="CONTACT & NOTES"
@@ -502,10 +617,14 @@ export function PersonCreationScreen() {
       <AccountPickerModal
         visible={accountPickerOpen}
         accounts={linkableAccounts}
-        selectedId={initialAccountId || undefined}
+        selectedId={!isEdit ? initialAccountId || undefined : undefined}
         title="Link existing account"
         onClose={() => setAccountPickerOpen(false)}
         onSelect={id => {
+          if (isEdit) {
+            void handleLinkExistingAccount(id);
+            return;
+          }
           setInitialAccountId(id);
           setAccountPickerOpen(false);
         }}
