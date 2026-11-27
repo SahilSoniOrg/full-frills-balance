@@ -62,23 +62,24 @@ export async function linkExistingAccount(
   personId: PersonId,
   accountId: AccountId,
 ): Promise<PersonAccount> {
-  const account = await accountQueryRepository.find(workplaceId, accountId);
-  if (!account) throw new Error('Account not found');
-  const accounts = await accountQueryRepository.findAll(workplaceId);
-  if (accounts.some(a => a.parentAccountId === accountId))
-    throw new Error('Cannot link a group account');
-  if (
-    !isCompatiblePersonAccount({
-      id: account.id,
-      type: account.accountType,
-      subtype: account.accountSubtype ?? AccountSubtype.OTHER,
-      currencyCode: account.currencyCode,
-    })
-  )
-    throw new Error('Incompatible person account');
-  return runAccountingWriteSession(session =>
-    personWriteRepository.linkAccountInSession(session, workplaceId, personId, accountId),
-  );
+  return runAccountingWriteSession(async session => {
+    const account = await accountQueryRepository.find(workplaceId, accountId);
+    if (!account) throw new Error('Account not found');
+    const accounts = await accountQueryRepository.findAll(workplaceId);
+    if (accounts.some(a => a.parentAccountId === accountId))
+      throw new Error('Cannot link a group account');
+    if (
+      !isCompatiblePersonAccount({
+        id: account.id,
+        type: account.accountType,
+        subtype: account.accountSubtype ?? AccountSubtype.OTHER,
+        currencyCode: account.currencyCode,
+      })
+    ) {
+      throw new Error('Incompatible person account');
+    }
+    return personWriteRepository.linkAccountInSession(session, workplaceId, personId, accountId);
+  });
 }
 export async function ensurePersonAccountInSession(
   session: AccountingWriteSession,

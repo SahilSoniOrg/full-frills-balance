@@ -9,6 +9,7 @@ import {
 } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { personQueryRepository } from '@/src/data/repositories/people';
 import { assertParentHasNoTransactions } from '@/src/services/accounts/accountRules';
 import {
   createAccountTreeSnapshot,
@@ -158,6 +159,11 @@ async function moveAccountsCore(
   const receipt = await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const snapshot = createAccountTreeSnapshot(accounts);
     if (destination.parentId) {
+      if (
+        await personQueryRepository.findPersonAccountByAccountId(workplaceId, destination.parentId)
+      ) {
+        throw new Error('A People account cannot have child accounts');
+      }
       const hasTransactions = await transactionQueryRepository.hasTransactions(
         workplaceId,
         destination.parentId,
@@ -335,6 +341,9 @@ async function saveAccountTreeDraftCore(
       }
       if (parent.archivedAt) throw new Error('Archived accounts cannot have new children');
       if ((account.parentAccountId || undefined) === parentId) continue;
+      if (await personQueryRepository.findPersonAccountByAccountId(workplaceId, parentId)) {
+        throw new Error('A People account cannot have child accounts');
+      }
       const hasTransactions = await transactionQueryRepository.hasTransactions(
         workplaceId,
         parentId,

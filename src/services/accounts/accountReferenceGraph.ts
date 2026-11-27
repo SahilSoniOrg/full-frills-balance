@@ -12,6 +12,7 @@ import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcher
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { personQueryRepository } from '@/src/data/repositories/people';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import {
   formatFundingAccountIds,
@@ -163,7 +164,8 @@ export type DeleteBlockerCode =
   | 'budget_scopes'
   | 'budget_funding_accounts'
   | 'planned_payments'
-  | 'pay_from_metadata';
+  | 'pay_from_metadata'
+  | 'people';
 
 /** Structured delete gate; commands format the user-facing Error. */
 export type DeleteBlocker = {
@@ -486,6 +488,9 @@ export async function deleteBlockers(
     fromPayments,
     toPayments,
     payFromMetadata,
+    personLink,
+    openItems,
+    peopleAllocations,
   ] = await Promise.all([
     transactionQueryRepository.findAllByAccountIds(workplaceId, [accountId]),
     accountQueryRepository.queryByParentId(workplaceId, accountId).fetch(),
@@ -494,6 +499,9 @@ export async function deleteBlockers(
     plannedPaymentRepository.findAllByFromAccountIds(workplaceId, [accountId]),
     plannedPaymentRepository.findAllByToAccountIds(workplaceId, [accountId]),
     accountQueryRepository.findMetadataByPayFromAccountIds(workplaceId, [accountId]),
+    personQueryRepository.findPersonAccountByAccountId(workplaceId, accountId),
+    personQueryRepository.listOpenItems(workplaceId, { accountId }),
+    personQueryRepository.listAllocationsForAccount(workplaceId, accountId),
   ]);
 
   const assetBudgetHits = assetBudgetCandidates.filter(budget =>
@@ -503,6 +511,13 @@ export async function deleteBlockers(
   const plannedPaymentIds = new Set([...fromPayments, ...toPayments].map(payment => payment.id));
 
   const blockers: DeleteBlocker[] = [];
+  if (personLink || openItems.length || peopleAllocations.length) {
+    blockers.push({
+      code: 'people',
+      count: Number(Boolean(personLink)) + openItems.length + peopleAllocations.length,
+      label: 'People reference(s)',
+    });
+  }
   if (transactions.length > 0) {
     blockers.push({
       code: 'transactions',

@@ -14,6 +14,7 @@ import {
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { personQueryRepository } from '@/src/data/repositories/people';
 import { analytics } from '@/src/services/analytics';
 import type { CreateAccountCommandInput } from '@/src/services/accounts/accountCommands';
 import {
@@ -303,6 +304,9 @@ async function saveAccountCore(
       }
       assertParentMatchesChildType(nextType, parent);
       if (parentChanged) {
+        if (await personQueryRepository.findPersonAccountByAccountId(workplaceId, nextParentId)) {
+          throw new Error('A People account cannot have child accounts');
+        }
         const hasTransactions = await transactionQueryRepository.hasTransactions(
           workplaceId,
           nextParentId,

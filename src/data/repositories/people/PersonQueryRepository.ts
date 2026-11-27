@@ -5,6 +5,7 @@ import OpenItem from '@/src/data/models/OpenItem';
 import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import { fetchSequentiallyInChunks } from '@/src/data/repositories/fetchSequentiallyInChunks';
 
 const scoped = (workplaceId: WorkplaceId, includeDeleted = false): Q.Clause[] => [
   Q.where('workplace_id', workplaceId),
@@ -49,6 +50,48 @@ export class PersonQueryRepository {
     return this.links
       .query(...scoped(workplaceId), ...(personId ? [Q.where('person_id', personId)] : []))
       .fetch();
+  }
+  listPersonAccountsForAccounts(workplaceId: WorkplaceId, accountIds: readonly AccountId[]) {
+    return fetchSequentiallyInChunks([...new Set(accountIds)], ids =>
+      this.links.query(...scoped(workplaceId), Q.where('account_id', Q.oneOf([...ids]))).fetch(),
+    );
+  }
+  listOpenItemsForJournals(workplaceId: WorkplaceId, journalIds: readonly JournalId[]) {
+    return fetchSequentiallyInChunks([...new Set(journalIds)], ids =>
+      this.items
+        .query(...scoped(workplaceId), Q.where('originating_journal_id', Q.oneOf([...ids])))
+        .fetch(),
+    );
+  }
+  listOpenItemsByIds(workplaceId: WorkplaceId, itemIds: readonly OpenItemId[]) {
+    return fetchSequentiallyInChunks([...new Set(itemIds)], ids =>
+      this.items.query(...scoped(workplaceId), Q.where('id', Q.oneOf([...ids]))).fetch(),
+    );
+  }
+  listActiveAllocationsForItems(workplaceId: WorkplaceId, itemIds: readonly OpenItemId[]) {
+    return fetchSequentiallyInChunks([...new Set(itemIds)], ids =>
+      this.allocations
+        .query(
+          ...scoped(workplaceId),
+          Q.where('open_item_id', Q.oneOf([...ids])),
+          Q.where('is_active', true),
+        )
+        .fetch(),
+    );
+  }
+  listActiveAllocationsForJournals(workplaceId: WorkplaceId, journalIds: readonly JournalId[]) {
+    return fetchSequentiallyInChunks([...new Set(journalIds)], ids =>
+      this.allocations
+        .query(
+          ...scoped(workplaceId),
+          Q.where('settlement_journal_id', Q.oneOf([...ids])),
+          Q.where('is_active', true),
+        )
+        .fetch(),
+    );
+  }
+  listAllocationsForAccount(workplaceId: WorkplaceId, accountId: AccountId) {
+    return this.allocations.query(...scoped(workplaceId), Q.where('account_id', accountId)).fetch();
   }
   async findPersonAccountByAccountId(workplaceId: WorkplaceId, accountId: AccountId) {
     return (

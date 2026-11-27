@@ -1,5 +1,6 @@
 import {
   getStagedAccounts,
+  getStagedPersonAccounts,
   runAccountingWriteSession,
   stageAccountCreation,
   type AccountingWriteSession,
@@ -16,6 +17,7 @@ import { ValidationError } from '@/src/utils/errors';
 import { Model, Q } from '@nozbe/watermelondb';
 import { accountQueryRepository } from './AccountQueryRepository';
 import { transactionQueryRepository } from '../transaction/TransactionQueryRepository';
+import { personQueryRepository } from '../people/PersonQueryRepository';
 import type { AccountPersistenceInput } from './types';
 import { accountsCollection, accountMetadataCollection } from './accountWriteCollections';
 import { commitAccountMutationPlan } from './accountMutationCommit';
@@ -183,6 +185,17 @@ export async function createAccountInSession(
     throw new ValidationError('workplaceId is required to create an account');
   }
   await ensureUniqueAccountName(data.name, data.workplaceId);
+  if (
+    data.parentAccountId &&
+    ((await personQueryRepository.findPersonAccountByAccountId(
+      data.workplaceId,
+      data.parentAccountId,
+    )) ||
+      getStagedPersonAccounts(session, data.workplaceId).some(
+        link => link.accountId === data.parentAccountId,
+      ))
+  )
+    throw new Error('A People account cannot have child accounts');
 
   const normalizedName = data.name.trim().toLowerCase();
   if (
@@ -235,6 +248,16 @@ export async function planAccountUpdate(
   }
   const currencyChanged =
     updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode;
+  const typeChanged =
+    updates.accountType !== undefined && updates.accountType !== account.accountType;
+  const subtypeChanged =
+    updates.accountSubtype !== undefined && updates.accountSubtype !== account.accountSubtype;
+  if (
+    (currencyChanged || typeChanged || subtypeChanged) &&
+    (await personQueryRepository.findPersonAccountByAccountId(workplaceId, account.id))
+  ) {
+    throw new Error('Cannot change the type or currency of an account linked to a person');
+  }
   if (
     currencyChanged &&
     (await transactionQueryRepository.countByAccountIncludingDeleted(workplaceId, account.id)) > 0
