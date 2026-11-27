@@ -1,28 +1,19 @@
 import {
   AppButton,
-  AppIcon,
-  AppInputField,
   AppText,
   Badge,
   EmptyStateView,
   ErrorStateView,
   Icon,
   IconButton,
-  IconTile,
   InlineSearchField,
-  ListGroup,
-  ListRow,
   LoadingView,
-  PersonAvatar,
 } from '@/src/components/core';
-import { AccountPickerModal } from '@/src/components/account-selection';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { ModalActions } from '@/src/components/overlays/ModalActions';
 import { MetricHeroCard } from '@/src/components/shared/MetricHeroCard';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { Opacity, Size, Spacing } from '@/src/constants/design-tokens';
+import { Size, Spacing } from '@/src/constants/design-tokens';
 import {
   flowSignForAmount,
   signColorKey,
@@ -30,14 +21,12 @@ import {
 } from '@/src/domain/accounting/presentationPolicy';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Inline, Stack } from '@/src/design-system';
-import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { toast } from '@/src/services/feedback/alerts';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
+import { PersonCard } from '../components/PersonCard';
 import { usePeopleListViewModel } from '../hooks/usePeopleListViewModel';
 
 export function PeopleListScreen() {
@@ -45,7 +34,6 @@ export function PeopleListScreen() {
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const [isSearching, setIsSearching] = useState(false);
-  const [accountPickerOpen, setAccountPickerOpen] = useState(false);
 
   const primaryOwedToYou = useMemo(
     () =>
@@ -98,33 +86,20 @@ export function PeopleListScreen() {
             onChangeText={setQuery}
             onExpandChange={setIsSearching}
             placeholder="Search people..."
-            autoFocus={!vm.modal}
-            editable={!vm.modal}
+            autoFocus={false}
+            editable
           />
           {!isSearching ? <PrivacyToggleButton /> : null}
         </View>
       ),
     }),
-    [isSearching, setIncludeArchived, setQuery, vm.includeArchived, vm.modal, vm.query],
+    [isSearching, setIncludeArchived, setQuery, vm.includeArchived, vm.query],
   );
-
-  const handleLinkAccount = async () => {
-    try {
-      const saved = await vm.linkAccount();
-      if (saved) toast.success('Account linked.');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not link account.');
-    }
-  };
 
   const netSign = flowSignForAmount(netBalance);
   const netColor = signColorKey(netSign);
   const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
   const archivedOnlyHidden = !hasFilters && vm.people.length === 0 && vm.hasArchivedPeople;
-  const canSaveLink =
-    !vm.busy &&
-    Boolean(vm.selectedAccountId) &&
-    Boolean(vm.selectedPersonId || vm.personName.trim());
 
   if (vm.isLoading && !vm.people.length) {
     return (
@@ -222,7 +197,7 @@ export function PeopleListScreen() {
               }
               icon={archivedOnlyHidden ? Icon.Archive : Icon.User}
               primaryActionLabel={
-                hasFilters ? 'Reset filters' : archivedOnlyHidden ? 'Show archived' : 'Link account'
+                hasFilters ? 'Reset filters' : archivedOnlyHidden ? 'Show archived' : 'Add person'
               }
               onPrimaryAction={
                 hasFilters
@@ -232,188 +207,31 @@ export function PeopleListScreen() {
                     }
                   : archivedOnlyHidden
                     ? () => vm.setIncludeArchived(true)
-                    : vm.openLink
+                    : () => AppNavigation.toPersonCreation()
               }
             />
           ) : (
-            <ListGroup
-              header={`PEOPLE (${vm.people.length})`}
-              headerAccessory={
-                <Inline gap="xs">
-                  <AppButton
-                    variant="ghost"
-                    size="sm"
-                    onPress={vm.openLink}
-                    testID="people-link-existing-account-button"
-                  >
-                    Link account
-                  </AppButton>
-                  <AppButton
-                    variant="ghost"
-                    size="sm"
-                    onPress={() => AppNavigation.toPersonCreation()}
-                  >
-                    New person
-                  </AppButton>
-                </Inline>
-              }
-            >
+            <Stack gap="none">
+              <AppText
+                variant="caption"
+                color="secondary"
+                weight="semibold"
+                style={styles.sectionLabel}
+              >
+                {`PEOPLE (${vm.people.length})`}
+              </AppText>
               {vm.people.map(row => (
-                <ListRow
+                <PersonCard
                   key={row.person.id}
-                  leading={
-                    <PersonAvatar
-                      name={row.person.name}
-                      icon={row.person.icon}
-                      color={row.person.color}
-                      size={44}
-                      style={
-                        row.person.color
-                          ? undefined
-                          : {
-                              borderWidth: 1,
-                              borderColor: withOpacity(theme.primary, Opacity.medium),
-                            }
-                      }
-                    />
-                  }
-                  title={
-                    <Inline gap="sm" alignItems="center" flexWrap="wrap">
-                      <AppText variant="body" weight="semibold">
-                        {row.person.name}
-                      </AppText>
-                      {row.person.isPinned ? (
-                        <AppIcon name={Icon.Star} size={Size.iconXs} color="primary" />
-                      ) : null}
-                      {row.person.defaultCurrencyCode ? (
-                        <Badge size="sm">{row.person.defaultCurrencyCode}</Badge>
-                      ) : null}
-                      {row.person.archivedAt ? <Badge size="sm">Archived</Badge> : null}
-                      {row.hasNegativeUnassignedRemainder ? (
-                        <Badge size="sm" variant="warning">
-                          Negative remainder
-                        </Badge>
-                      ) : null}
-                    </Inline>
-                  }
-                  subtitle={
-                    <PersonBalanceBadge
-                      summary={row.balanceSummary}
-                      personName={row.person.name}
-                      compact
-                      fallbackCurrencyCode={vm.defaultCurrencyCode}
-                      formatAmount={(amount, currencyCode) =>
-                        formatMoneyAmount(amount, currencyCode, isPrivacyMode)
-                      }
-                    />
-                  }
-                  chevron
-                  wrap
+                  row={row}
+                  fallbackCurrencyCode={vm.defaultCurrencyCode}
                   onPress={() => AppNavigation.toPersonDetails(row.person.id)}
                 />
               ))}
-            </ListGroup>
+            </Stack>
           )}
         </Stack>
       </ScrollView>
-
-      <ModalSurface
-        visible={vm.modal === 'link'}
-        title="Link existing account"
-        onClose={vm.closeModal}
-        position="bottomSheet"
-        fixedHeight={false}
-        keyboardAvoiding
-        footer={
-          <ModalActions
-            actions={[
-              { label: 'Cancel', role: 'secondary', onPress: vm.closeModal },
-              {
-                label: 'Save',
-                onPress: () => void handleLinkAccount(),
-                disabled: !canSaveLink,
-                loading: vm.busy,
-              },
-            ]}
-          />
-        }
-      >
-        <Stack gap="lg">
-          <ListGroup header="1. SELECT UNLINKED ACCOUNT">
-            {vm.accountsLoading ? (
-              <LoadingView loading variant="inline" text="Loading accounts" />
-            ) : null}
-            {vm.accountsError ? (
-              <ErrorStateView
-                variant="inline"
-                message={vm.accountsError}
-                onRetry={vm.retryAccounts}
-              />
-            ) : null}
-            <ListRow
-              leading={<IconTile icon={Icon.Bank} tint="asset" />}
-              title={
-                vm.accounts.find(account => account.id === vm.selectedAccountId)?.name ??
-                'Choose account'
-              }
-              subtitle={
-                vm.accounts.find(account => account.id === vm.selectedAccountId)?.currencyCode ??
-                'No account selected'
-              }
-              chevron
-              onPress={() => {
-                if (!vm.accountsLoading && !vm.accountsError) setAccountPickerOpen(true);
-              }}
-              testID="people-link-account-picker-button"
-            />
-          </ListGroup>
-
-          <ListGroup header="2. CHOOSE PERSON OR CREATE NEW">
-            {vm.linkablePeople.map(entry => (
-              <ListRow
-                key={entry.person.id}
-                leading={
-                  <PersonAvatar
-                    name={entry.person.name}
-                    icon={entry.person.icon}
-                    color={entry.person.color}
-                    size={32}
-                  />
-                }
-                title={entry.person.name}
-                trailing={
-                  vm.selectedPersonId === entry.person.id ? (
-                    <AppIcon name={Icon.CheckCircle} size={20} color="primary" />
-                  ) : undefined
-                }
-                onPress={() => vm.selectPersonForLink(entry.person.id)}
-              />
-            ))}
-          </ListGroup>
-
-          <AppInputField
-            placeholder={
-              vm.selectedPersonId
-                ? 'Selected person above (tap again to enter a new name)'
-                : 'Or create new person name'
-            }
-            value={vm.personName}
-            onChangeText={vm.setPersonName}
-            editable={!vm.selectedPersonId}
-          />
-        </Stack>
-      </ModalSurface>
-      <AccountPickerModal
-        visible={accountPickerOpen}
-        accounts={vm.accounts}
-        selectedId={vm.selectedAccountId || undefined}
-        title="Select unlinked account"
-        onClose={() => setAccountPickerOpen(false)}
-        onSelect={id => {
-          vm.setSelectedAccountId(id);
-          setAccountPickerOpen(false);
-        }}
-      />
     </ScreenWithChrome>
   );
 }
@@ -436,5 +254,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxxxl,
+  },
+  sectionLabel: {
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
 });
