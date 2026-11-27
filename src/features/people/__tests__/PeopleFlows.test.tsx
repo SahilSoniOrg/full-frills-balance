@@ -261,10 +261,11 @@ describe('People screens', () => {
     fireEvent.changeText(getByTestId('person-name-input'), 'Priya');
     fireEvent.press(getByLabelText('Select color #10B981'));
     fireEvent.changeText(getByTestId('person-payment-handle-input'), 'priya@okaxis');
+    fireEvent.press(getByTestId('person-expand-details-button'));
     fireEvent.changeText(getByTestId('person-phone-input'), '+91 91111 22222');
     fireEvent.changeText(getByTestId('person-email-input'), 'priya@example.com');
     fireEvent.changeText(getByTestId('person-notes-input'), 'Goa trip');
-    fireEvent(getByLabelText('Pin to top'), 'valueChange', true);
+    fireEvent.press(getByTestId('person-pinned-row'));
 
     const submitButtons = getAllByText('Add person');
     fireEvent.press(submitButtons[submitButtons.length - 1]!);

@@ -1,10 +1,12 @@
 import {
+  AppButton,
+  AppCard,
   AppIcon,
   AppInputField,
+  type AppInputFieldProps,
   AppText,
-  AppToggle,
+  Badge,
   Icon,
-  IconTile,
   ListGroup,
   ListRow,
   LoadingView,
@@ -18,11 +20,9 @@ import {
 } from '@/src/components/filters/SelectionPickerSheet';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormRow } from '@/src/components/forms/FormRow';
-import { UnderlineNameField } from '@/src/components/forms/UnderlineNameField';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppearancePickerView } from '@/src/components/overlays/AppearancePickerView';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import {
   ACCOUNT_COLOR_PALETTE,
   AppConfig,
@@ -31,9 +31,10 @@ import {
   Shape,
   Size,
   Spacing,
+  Typography,
 } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
@@ -41,6 +42,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { toast } from '@/src/services/feedback/alerts';
 import { createPerson, peopleReadService, updatePerson } from '@/src/services/people';
+import type { IconName } from '@/src/types/domainIcons';
 import type { AccountId, PersonId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -64,6 +66,62 @@ type LinkableAccount = Awaited<
 >[number];
 type PickerPerson = Awaited<ReturnType<typeof peopleReadService.listPersonPickerGroups>>[number];
 
+type InlineFieldRowProps = {
+  icon: IconName;
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  multiline?: boolean;
+  testID?: string;
+} & Omit<
+  AppInputFieldProps,
+  'variant' | 'value' | 'onChangeText' | 'placeholder' | 'multiline' | 'testID'
+>;
+
+function InlineFieldRow({
+  icon,
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline = false,
+  testID,
+  ...inputProps
+}: InlineFieldRowProps) {
+  return (
+    <ListRow
+      icon={icon}
+      wrap={multiline}
+      title={
+        <View style={[styles.inlineFieldRow, multiline && styles.inlineFieldRowMultiline]}>
+          <AppText
+            variant="bodySmall"
+            color="secondary"
+            weight="medium"
+            style={[styles.inlineFieldLabel, multiline && styles.inlineMultilineLabel]}
+          >
+            {label}
+          </AppText>
+          <View style={styles.inlineFieldControl}>
+            <AppInputField
+              variant="minimal"
+              value={value}
+              onChangeText={onChangeText}
+              placeholder={placeholder}
+              multiline={multiline}
+              numberOfLines={multiline ? 3 : undefined}
+              testID={testID}
+              inputStyle={[styles.inlineInput, multiline && styles.inlineMultilineInput]}
+              {...inputProps}
+            />
+          </View>
+        </View>
+      }
+    />
+  );
+}
+
 export function PersonCreationScreen() {
   const { personId } = useLocalSearchParams<{ personId?: PersonId }>();
   const isEdit = Boolean(personId);
@@ -73,6 +131,7 @@ export function PersonCreationScreen() {
 
   const [isLoading, setIsLoading] = useState(isEdit);
   const [name, setName] = useState('');
+  const [nameFocused, setNameFocused] = useState(false);
   const [color, setColor] = useState('');
   const [defaultCurrencyCode, setDefaultCurrencyCode] = useState('');
   const [paymentHandle, setPaymentHandle] = useState('');
@@ -81,6 +140,7 @@ export function PersonCreationScreen() {
   const [notes, setNotes] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [initialAccountId, setInitialAccountId] = useState<AccountId | ''>('');
+  const [showMoreDetails, setShowMoreDetails] = useState(isEdit);
 
   const [existingPeople, setExistingPeople] = useState<PickerPerson[]>([]);
   const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
@@ -115,6 +175,7 @@ export function PersonCreationScreen() {
           setEmail(profile.email ?? '');
           setNotes(profile.notes ?? '');
           setIsPinned(Boolean(profile.isPinned));
+          setShowMoreDetails(Boolean(profile.phone || profile.email || profile.notes));
         }
       } finally {
         if (active) setIsLoading(false);
@@ -209,7 +270,7 @@ export function PersonCreationScreen() {
 
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
-      screenTitle: isEdit ? 'Edit person' : 'Add person',
+      screenTitle: isEdit ? 'Edit person' : 'New person',
       kind: 'nav',
       onBack: guard.onBack,
     }),
@@ -271,12 +332,14 @@ export function PersonCreationScreen() {
   }
 
   const trimmedName = name.trim();
+  const accentColor = color || theme.primary;
   const isSaveDisabled = !trimmedName || Boolean(duplicatePerson) || isSaving;
   const requirementHint = !trimmedName
     ? 'Enter a person name to continue.'
     : duplicatePerson
       ? `Already exists as "${duplicatePerson.personName}".`
       : undefined;
+  const hasSecondaryValues = Boolean(phone.trim() || email.trim() || notes.trim());
 
   return (
     <EntityFormScreen
@@ -289,211 +352,176 @@ export function PersonCreationScreen() {
       }}
       scrollProps={{ keyboardShouldPersistTaps: 'handled' }}
     >
-      <Stack gap="lg" paddingBottom="xl">
-        <Box paddingHorizontal="lg">
-          <Stack gap="sm">
-            <SectionLabel label="Identity" marginTop="none" />
-            <Inline gap="md" alignItems="center">
-              <PressScaleTouchable
-                onPress={() => setColorPickerOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Choose avatar color"
-                testID="person-avatar-color-button"
-              >
-                <View style={styles.avatarTrigger}>
-                  <PersonAvatar name={trimmedName || '?'} color={color || undefined} size={56} />
-                  <View
-                    style={[
-                      styles.avatarBadge,
-                      { backgroundColor: theme.surface, borderColor: theme.border },
-                    ]}
-                  >
-                    <AppIcon name={Icon.Palette} size={Size.xxs} color="primary" />
+      <View style={styles.contentColumn}>
+        <Stack gap="lg" paddingBottom="xl">
+          <AppCard padding="lg" radius="xxl" elevation="sm">
+            <Stack gap="lg">
+              <Stack gap="md" alignItems="center">
+                <PressScaleTouchable
+                  onPress={() => setColorPickerOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose avatar color"
+                  testID="person-avatar-color-button"
+                >
+                  <View style={styles.avatarTrigger}>
+                    <PersonAvatar name={trimmedName || '?'} color={color || undefined} size={76} />
+                    <View
+                      style={[
+                        styles.avatarBadge,
+                        { backgroundColor: theme.surface, borderColor: theme.border },
+                      ]}
+                    >
+                      <AppIcon name={Icon.Palette} size={Size.xs} color={theme.primary} />
+                    </View>
                   </View>
+                </PressScaleTouchable>
+
+                <View
+                  style={[
+                    styles.heroNameUnderline,
+                    {
+                      borderBottomColor: duplicatePerson
+                        ? theme.error
+                        : nameFocused
+                          ? accentColor
+                          : theme.border,
+                    },
+                  ]}
+                >
+                  <AppInputField
+                    variant="minimal"
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Name (e.g. Pri)"
+                    autoFocus={!isEdit}
+                    onFocus={() => setNameFocused(true)}
+                    onBlur={() => setNameFocused(false)}
+                    testID="person-name-input"
+                    inputStyle={styles.heroNameInput}
+                  />
                 </View>
-              </PressScaleTouchable>
-              <View style={styles.nameFieldWrap}>
-                <UnderlineNameField
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Pri"
-                  autoFocus={!isEdit}
-                  testID="person-name-input"
-                />
-              </View>
-            </Inline>
 
-            {duplicatePerson ? (
-              <AppText
-                variant="caption"
-                color="error"
-                accessibilityRole="alert"
-                testID="person-duplicate-warning"
-              >
-                {duplicatePerson.archived
-                  ? `Archived profile "${duplicatePerson.personName}" already uses this name.`
-                  : `"${duplicatePerson.personName}" already exists in this workplace.`}
-              </AppText>
-            ) : (
-              <AppText variant="caption" color="secondary">
-                {isEdit
-                  ? 'Update profile identity, payment handle, or contact preferences.'
-                  : 'Create an offline ledger profile to split bills, lend, or record repayments.'}
-              </AppText>
-            )}
+                {duplicatePerson ? (
+                  <AppText
+                    variant="caption"
+                    color="error"
+                    align="center"
+                    accessibilityRole="alert"
+                    testID="person-duplicate-warning"
+                  >
+                    {duplicatePerson.archived
+                      ? `Archived profile "${duplicatePerson.personName}" already uses this name.`
+                      : `"${duplicatePerson.personName}" already exists in this workplace.`}
+                  </AppText>
+                ) : isPinned || defaultCurrencyCode ? (
+                  <Inline gap="xs" alignItems="center">
+                    {isPinned ? (
+                      <Badge size="sm" variant="primary" icon={Icon.Star}>
+                        Pinned
+                      </Badge>
+                    ) : null}
+                    {defaultCurrencyCode ? <Badge size="sm">{defaultCurrencyCode}</Badge> : null}
+                  </Inline>
+                ) : null}
+              </Stack>
 
-            <Inline gap="sm" alignItems="center" flexWrap="wrap" style={styles.swatchRow}>
-              <PressScaleTouchable
-                onPress={() => setColor('')}
-                accessibilityRole="button"
-                accessibilityLabel="Default avatar color"
-                accessibilityState={{ selected: !color }}
-                style={[
-                  styles.autoChip,
-                  {
-                    backgroundColor: !color
-                      ? withOpacity(theme.primary, Opacity.soft)
-                      : theme.surfaceSecondary,
-                    borderColor: !color ? theme.primary : theme.border,
-                  },
-                ]}
-              >
-                <AppText variant="caption" weight={!color ? 'semibold' : 'medium'}>
-                  Default
-                </AppText>
-              </PressScaleTouchable>
-              {QUICK_COLOR_SWATCHES.map(swatch => {
-                const selected = color.toUpperCase() === swatch.toUpperCase();
-                return (
+              <View style={[styles.swatchDivider, { borderTopColor: theme.border }]}>
+                <Inline gap="sm" alignItems="center" justifyContent="center" flexWrap="wrap">
                   <PressScaleTouchable
-                    key={swatch}
-                    onPress={() => setColor(swatch)}
+                    onPress={() => setColor('')}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select color ${swatch}`}
-                    accessibilityState={{ selected }}
+                    accessibilityLabel="Default avatar color"
+                    accessibilityState={{ selected: !color }}
                     style={[
                       styles.swatchDot,
+                      styles.resetSwatch,
                       {
-                        backgroundColor: swatch,
-                        borderColor: selected ? theme.text : 'transparent',
-                        borderWidth: selected ? BorderWidth.focus : 0,
+                        backgroundColor: !color
+                          ? withOpacity(theme.primary, Opacity.soft)
+                          : theme.surfaceSecondary,
+                        borderColor: !color ? theme.primary : theme.border,
+                        borderWidth: !color ? BorderWidth.focus : 1,
                       },
                     ]}
                   >
-                    {selected ? (
-                      <AppIcon name={Icon.Check} size={Size.iconXs} color={theme.background} />
-                    ) : null}
+                    <AppIcon
+                      name={Icon.User}
+                      size={Size.iconSm}
+                      color={!color ? theme.primary : theme.textSecondary}
+                    />
                   </PressScaleTouchable>
-                );
-              })}
-              <PressScaleTouchable
-                onPress={() => setColorPickerOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel="More avatar colors"
-                style={[
-                  styles.autoChip,
-                  { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-                ]}
-              >
-                <AppText variant="caption" color="secondary">
-                  More
-                </AppText>
-              </PressScaleTouchable>
-            </Inline>
-          </Stack>
-        </Box>
+                  {QUICK_COLOR_SWATCHES.map(swatch => {
+                    const selected = color.toUpperCase() === swatch.toUpperCase();
+                    return (
+                      <PressScaleTouchable
+                        key={swatch}
+                        onPress={() => setColor(swatch)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select color ${swatch}`}
+                        accessibilityState={{ selected }}
+                        style={[
+                          styles.swatchDot,
+                          {
+                            backgroundColor: swatch,
+                            borderColor: selected ? theme.text : 'transparent',
+                            borderWidth: selected ? BorderWidth.focus : 0,
+                          },
+                        ]}
+                      >
+                        {selected ? (
+                          <AppIcon name={Icon.Check} size={Size.iconXs} color={theme.background} />
+                        ) : null}
+                      </PressScaleTouchable>
+                    );
+                  })}
+                  <PressScaleTouchable
+                    onPress={() => setColorPickerOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="More avatar colors"
+                    style={[
+                      styles.swatchDot,
+                      styles.resetSwatch,
+                      { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                    ]}
+                  >
+                    <AppIcon name={Icon.Palette} size={Size.iconSm} color={theme.textSecondary} />
+                  </PressScaleTouchable>
+                </Inline>
+              </View>
+            </Stack>
+          </AppCard>
 
-        <Box paddingHorizontal="lg">
-          <ListGroup header="DETAILS (OPTIONAL)">
-            <FormRow
+          <ListGroup header="LEDGER & PAYMENT">
+            <InlineFieldRow
               icon={Icon.Wallet}
-              title="Preferred currency"
+              label="Payment ID"
+              value={paymentHandle}
+              onChangeText={setPaymentHandle}
+              placeholder="UPI ID, @handle, or IBAN"
+              autoCapitalize="none"
+              testID="person-payment-handle-input"
+            />
+            <FormRow
+              icon={Icon.Transaction}
+              title="Currency"
               value={defaultCurrencyCode || undefined}
-              placeholder={`Workplace default (${workplaceCurrency})`}
+              placeholder={`${workplaceCurrency} (default)`}
               onPress={() => setCurrencyPickerOpen(true)}
               onClear={defaultCurrencyCode ? () => setDefaultCurrencyCode('') : undefined}
               testID="person-currency-row"
             />
             <ListRow
-              leading={<IconTile icon={Icon.Copy} tint="primary" />}
-              title="Payment handle"
-              subtitle={
-                <AppInputField
-                  value={paymentHandle}
-                  onChangeText={setPaymentHandle}
-                  placeholder="UPI ID, @handle, or IBAN"
-                  autoCapitalize="none"
-                  testID="person-payment-handle-input"
-                />
-              }
-              wrap
-            />
-            <ListRow
-              leading={<IconTile icon={Icon.MessageCircle} tint="textSecondary" />}
-              title="Phone"
-              subtitle={
-                <AppInputField
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Phone number"
-                  keyboardType="phone-pad"
-                  testID="person-phone-input"
-                />
-              }
-              wrap
-            />
-            <ListRow
-              leading={<IconTile icon={Icon.Mail} tint="textSecondary" />}
-              title="Email"
-              subtitle={
-                <AppInputField
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Email address"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  testID="person-email-input"
-                />
-              }
-              wrap
-            />
-            <ListRow
-              leading={<IconTile icon={Icon.Document} tint="textSecondary" />}
-              title="Notes"
-              subtitle={
-                <AppInputField
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder="Roommate, trip split rules, or reminders"
-                  multiline
-                  numberOfLines={3}
-                  testID="person-notes-input"
-                />
-              }
-              wrap
-            />
-            <ListRow
-              leading={<IconTile icon={Icon.Star} tint="primary" />}
+              icon={Icon.Star}
               title="Pin to top"
-              subtitle="Keep near the top of People and quick splits"
+              subtitle="Show first in People and quick splits"
+              accessibilityLabel="Pin to top"
               testID="person-pinned-row"
-              trailing={
-                <AppToggle
-                  accessibilityLabel="Pin to top"
-                  value={isPinned}
-                  onValueChange={setIsPinned}
-                />
-              }
+              trailing={<ListRow.Toggle value={isPinned} onValueChange={setIsPinned} />}
             />
-          </ListGroup>
-        </Box>
-
-        {!isEdit && linkableAccounts.length > 0 ? (
-          <Box paddingHorizontal="lg">
-            <ListGroup header="LINK ACCOUNT (OPTIONAL)">
+            {!isEdit && linkableAccounts.length > 0 ? (
               <FormRow
                 icon={Icon.Bank}
-                title="Link existing account"
+                title="Link account"
                 value={
                   selectedAccount
                     ? `${selectedAccount.name} (${selectedAccount.currencyCode})`
@@ -504,10 +532,63 @@ export function PersonCreationScreen() {
                 onClear={initialAccountId ? () => setInitialAccountId('') : undefined}
                 testID="person-initial-account-row"
               />
+            ) : null}
+          </ListGroup>
+
+          {showMoreDetails ? (
+            <ListGroup
+              header="CONTACT & NOTES"
+              headerAccessory={
+                !hasSecondaryValues ? (
+                  <AppButton variant="ghost" size="sm" onPress={() => setShowMoreDetails(false)}>
+                    Hide
+                  </AppButton>
+                ) : undefined
+              }
+            >
+              <InlineFieldRow
+                icon={Icon.MessageCircle}
+                label="Phone"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Optional phone number"
+                keyboardType="phone-pad"
+                testID="person-phone-input"
+              />
+              <InlineFieldRow
+                icon={Icon.Mail}
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Optional email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                testID="person-email-input"
+              />
+              <InlineFieldRow
+                icon={Icon.Document}
+                label="Notes"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Split rules, flatmate notes, or reminders"
+                multiline
+                testID="person-notes-input"
+              />
             </ListGroup>
-          </Box>
-        ) : null}
-      </Stack>
+          ) : (
+            <ListGroup>
+              <ListRow
+                icon={Icon.Plus}
+                title="Add contact info & notes"
+                subtitle="Phone, email, or reminder notes"
+                chevron
+                onPress={() => setShowMoreDetails(true)}
+                testID="person-expand-details-button"
+              />
+            </ListGroup>
+          )}
+        </Stack>
+      </View>
 
       <ModalSurface
         visible={colorPickerOpen}
@@ -555,7 +636,7 @@ export function PersonCreationScreen() {
           {linkableAccounts.map(account => (
             <ListRow
               key={account.id}
-              leading={<IconTile icon={Icon.Bank} tint="asset" />}
+              icon={Icon.Bank}
               title={account.name}
               subtitle={`${account.accountType} · ${account.currencyCode}`}
               trailing={
@@ -576,6 +657,12 @@ export function PersonCreationScreen() {
 }
 
 const styles = StyleSheet.create({
+  contentColumn: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
   avatarTrigger: {
     position: 'relative',
   },
@@ -583,34 +670,66 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -2,
     bottom: -2,
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: Shape.radius.full,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nameFieldWrap: {
+  heroNameUnderline: {
+    width: '100%',
+    maxWidth: 320,
+    borderBottomWidth: 1.5,
+    paddingBottom: Spacing.xs,
+  },
+  heroNameInput: {
+    textAlign: 'center',
+    fontSize: Typography.sizes.xl,
+    fontWeight: '600',
+    paddingVertical: Spacing.xs,
+  },
+  swatchDivider: {
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  swatchDot: {
+    width: 30,
+    height: 30,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetSwatch: {
+    borderWidth: 1,
+  },
+  inlineFieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  inlineFieldRowMultiline: {
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.xs,
+  },
+  inlineFieldLabel: {
+    width: 96,
+  },
+  inlineMultilineLabel: {
+    paddingTop: 2,
+  },
+  inlineFieldControl: {
     flex: 1,
     minWidth: 0,
   },
-  swatchRow: {
-    paddingTop: Spacing.xs,
+  inlineInput: {
+    paddingVertical: 0,
+    fontSize: Typography.sizes.base,
   },
-  swatchDot: {
-    width: 28,
-    height: 28,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  autoChip: {
-    height: 28,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  inlineMultilineInput: {
+    minHeight: 56,
+    paddingTop: 0,
+    textAlignVertical: 'top',
   },
   currencyBadge: {
     width: Size.xl,
