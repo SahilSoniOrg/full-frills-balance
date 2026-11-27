@@ -1,5 +1,7 @@
 import { AppCard, AppSegmentedControl, AppText, Icon, IconTile } from '@/src/components/core';
+import { Spacing } from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
+import { StyleSheet } from 'react-native';
 import { getPersonRepayablePrompt } from '../personRepayablePolicy';
 
 type Props = {
@@ -16,6 +18,7 @@ export function PersonRepayableChoice({ flow, personName, repayable, onChange }:
       variant="outline"
       padding="md"
       radius="xl"
+      style={styles.card}
       accessibilityLabel="Repayment choice"
       testID="person-repayable-choice"
     >
@@ -45,3 +48,10 @@ export function PersonRepayableChoice({ flow, personName, repayable, onChange }:
     </AppCard>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.sm,
+  },
+});

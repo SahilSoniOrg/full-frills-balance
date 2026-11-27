@@ -1,6 +1,5 @@
 import type { AccountSection } from '@/src/design-system/accountPresentation';
 import { getAccountSections } from '@/src/design-system/accountPresentation';
-import { AccountType } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import type { AccountFields, PlainAccount } from '@/src/types/plainDtos';
 
@@ -36,7 +35,7 @@ export function buildJournalPickerSections(
         a.name.localeCompare(b.name),
     );
   const personSections: AccountSection[] = data.length
-    ? [{ key: 'people', title: 'People', type: data[0]?.accountType ?? AccountType.ASSET, data }]
+    ? [{ key: 'people', title: 'People', data }]
     : [];
   return [...mySections, ...personSections];
 }

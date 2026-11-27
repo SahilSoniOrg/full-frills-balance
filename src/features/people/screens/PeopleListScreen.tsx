@@ -4,10 +4,10 @@ import {
   AppIcon,
   AppInputField,
   AppText,
-  AppToggle,
   Badge,
   EmptyStateView,
   Icon,
+  IconButton,
   IconTile,
   InlineSearchField,
   ListGroup,
@@ -17,22 +17,88 @@ import {
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
-import { Spacing } from '@/src/constants/design-tokens';
+import { MetricBreakdownRow } from '@/src/components/shared/MetricBreakdownRow';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { Box, Inline, Separator, Stack } from '@/src/design-system';
+import { withOpacity } from '@/src/design-system/colorMath';
+import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { toast } from '@/src/services/feedback/alerts';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { ScrollView, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
 import { usePeopleListViewModel } from '../hooks/usePeopleListViewModel';
-
-const chrome: TabScreenChrome = { kind: 'tab', screenTitle: 'People' };
 
 export function PeopleListScreen() {
   const vm = usePeopleListViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
+  const { theme } = useTheme();
+  const [isSearching, setIsSearching] = useState(false);
+
+  const primaryOwedToYou = useMemo(
+    () =>
+      vm.balanceTotals.owedToYou.find(([currency]) => currency === vm.defaultCurrencyCode)?.[1] ??
+      0,
+    [vm.balanceTotals.owedToYou, vm.defaultCurrencyCode],
+  );
+  const primaryYouOwe = useMemo(
+    () =>
+      vm.balanceTotals.youOwe.find(([currency]) => currency === vm.defaultCurrencyCode)?.[1] ?? 0,
+    [vm.balanceTotals.youOwe, vm.defaultCurrencyCode],
+  );
+  const netBalance = primaryOwedToYou - primaryYouOwe;
+  const secondaryCurrencies = useMemo(() => {
+    const entries: string[] = [];
+    for (const [currency, amount] of vm.balanceTotals.owedToYou) {
+      if (currency !== vm.defaultCurrencyCode && amount > 0) {
+        entries.push(`+${formatMoneyAmount(amount, currency, isPrivacyMode)} owed`);
+      }
+    }
+    for (const [currency, amount] of vm.balanceTotals.youOwe) {
+      if (currency !== vm.defaultCurrencyCode && amount > 0) {
+        entries.push(`-${formatMoneyAmount(amount, currency, isPrivacyMode)} owing`);
+      }
+    }
+    return entries;
+  }, [vm.balanceTotals, vm.defaultCurrencyCode, isPrivacyMode]);
+
+  const { setQuery, setIncludeArchived } = vm;
+  const chrome = useMemo<TabScreenChrome>(
+    () => ({
+      kind: 'tab',
+      screenTitle: 'People',
+      isSearchActive: isSearching,
+      headerActions: (
+        <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
+          {!isSearching ? (
+            <IconButton
+              name={Icon.Archive}
+              size={Size.iconSm}
+              variant={vm.includeArchived ? 'primary' : 'surface'}
+              onPress={() => setIncludeArchived(current => !current)}
+              testID="people-show-archived-button"
+              accessibilityLabel={vm.includeArchived ? 'Hide archived' : 'Show archived'}
+              accessibilityState={{ selected: vm.includeArchived }}
+            />
+          ) : null}
+          <InlineSearchField
+            value={vm.query}
+            onChangeText={setQuery}
+            onExpandChange={setIsSearching}
+            placeholder="Search people..."
+            autoFocus={!vm.modal}
+            editable={!vm.modal}
+          />
+          {!isSearching ? <PrivacyToggleButton /> : null}
+        </View>
+      ),
+    }),
+    [isSearching, setIncludeArchived, setQuery, vm.includeArchived, vm.modal, vm.query],
+  );
 
   const handleAddPerson = async () => {
     try {
@@ -52,6 +118,9 @@ export function PeopleListScreen() {
     }
   };
 
+  const netColor = netBalance > 0 ? 'income' : netBalance < 0 ? 'expense' : 'primary';
+  const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
+
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <ScrollView
@@ -60,100 +129,121 @@ export function PeopleListScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Stack gap="lg">
-          <AppCard variant="secondary" padding="md" radius="xxl">
+          <AppCard
+            elevation="md"
+            padding="xl"
+            radius="xxxl"
+            style={{ backgroundColor: theme.surface }}
+          >
             <Stack gap="md">
               <Inline justifyContent="space-between" alignItems="center" gap="sm">
-                <Stack gap="xs" flex={1}>
-                  <AppText variant="subheading" fontRole="display">
-                    Shared Books
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    Track shared bills, personal IOUs, and linked accounts.
-                  </AppText>
-                </Stack>
-                <IconTile icon={Icon.Handshake} tint="primary" size="lg" shape="circle" />
+                <AppText variant="subheading" color="secondary">
+                  Shared Books
+                </AppText>
+                <Badge size="sm">{`${vm.activePeopleCount} active`}</Badge>
               </Inline>
-              <Stack gap="xs">
-                <Inline justifyContent="space-between" alignItems="center">
-                  <AppText variant="caption" color="secondary">
-                    Active people
-                  </AppText>
-                  <Badge size="sm">{vm.activePeopleCount}</Badge>
-                </Inline>
-                <Inline gap="sm">
-                  <Box flex={1}>
-                    <Stack gap="xs">
-                      <AppText variant="caption" color="secondary">
-                        Owed to you
-                      </AppText>
-                      <AppText variant="body" weight="semibold">
-                        {vm.balanceTotals.owedToYou.length
-                          ? vm.balanceTotals.owedToYou
-                              .map(([currency, amount]) =>
-                                formatMoneyAmount(amount, currency, isPrivacyMode),
-                              )
-                              .join(' · ')
-                          : formatMoneyAmount(0, vm.defaultCurrencyCode, isPrivacyMode)}
-                      </AppText>
-                    </Stack>
-                  </Box>
-                  <Box flex={1}>
-                    <Stack gap="xs">
-                      <AppText variant="caption" color="secondary">
-                        You owe
-                      </AppText>
-                      <AppText variant="body" weight="semibold">
-                        {vm.balanceTotals.youOwe.length
-                          ? vm.balanceTotals.youOwe
-                              .map(([currency, amount]) =>
-                                formatMoneyAmount(amount, currency, isPrivacyMode),
-                              )
-                              .join(' · ')
-                          : formatMoneyAmount(0, vm.defaultCurrencyCode, isPrivacyMode)}
-                      </AppText>
-                    </Stack>
-                  </Box>
-                </Inline>
-              </Stack>
-              <ActionButtonPair
-                primary={{ label: 'Add person', onPress: vm.openCreate }}
-                secondary={{ label: 'Link existing account', onPress: vm.openLink }}
+
+              <MoneyText
+                amount={netBalance}
+                currencyCode={vm.defaultCurrencyCode}
+                formatStyle="compact"
+                variant="title"
+                prefix={netBalance > 0 ? '+' : undefined}
+                color={netColor}
+                style={styles.heroAmount}
               />
+
+              <View style={styles.breakdownContainer}>
+                <MetricBreakdownRow
+                  dotColor={theme.income}
+                  label="Owed to you"
+                  amount={primaryOwedToYou}
+                  currencyCode={vm.defaultCurrencyCode}
+                  moneyColor="income"
+                />
+                <Separator vertical background="divider" style={styles.verticalDivider} />
+                <MetricBreakdownRow
+                  dotColor={theme.expense}
+                  label="You owe"
+                  amount={primaryYouOwe}
+                  currencyCode={vm.defaultCurrencyCode}
+                  moneyColor="expense"
+                />
+              </View>
+
+              {secondaryCurrencies.length > 0 ? (
+                <AppText variant="caption" color="secondary">
+                  {secondaryCurrencies.join(' · ')}
+                </AppText>
+              ) : null}
+
+              <Separator background="divider" />
+
+              <Inline gap="sm" alignItems="center">
+                <Box flex={1}>
+                  <AppButton variant="primary" size="md" onPress={vm.openCreate}>
+                    Add person
+                  </AppButton>
+                </Box>
+                <Box flex={1}>
+                  <AppButton variant="outline" size="md" onPress={vm.openLink}>
+                    Link existing account
+                  </AppButton>
+                </Box>
+              </Inline>
             </Stack>
           </AppCard>
 
-          <Stack gap="sm">
-            <InlineSearchField
-              value={vm.query}
-              onChangeText={vm.setQuery}
-              placeholder="Search people"
-            />
+          {hasFilters ? (
             <Inline justifyContent="space-between" alignItems="center" paddingHorizontal="xs">
               <AppText variant="caption" color="secondary">
-                Show archived
+                {[
+                  vm.query.trim() ? `Filtered by "${vm.query.trim()}"` : null,
+                  vm.includeArchived ? 'Including archived' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </AppText>
-              <AppToggle
-                value={vm.includeArchived}
-                onValueChange={vm.setIncludeArchived}
-                accessibilityLabel="Show archived"
-              />
+              <AppButton
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  vm.setQuery('');
+                  vm.setIncludeArchived(false);
+                }}
+              >
+                Reset
+              </AppButton>
             </Inline>
-          </Stack>
+          ) : null}
 
           {vm.people.length === 0 ? (
             <EmptyStateView
-              title="No people yet"
-              subtitle="Add a person to track shared balances."
+              title={vm.query.trim() ? 'No matching people' : 'No people yet'}
+              subtitle={
+                vm.query.trim()
+                  ? 'Try a different name or reset filters.'
+                  : 'Add a person to track shared balances.'
+              }
               icon={Icon.User}
-              primaryActionLabel="Add person"
-              onPrimaryAction={vm.openCreate}
+              primaryActionLabel={vm.query.trim() ? 'Clear search' : 'Add person'}
+              onPrimaryAction={vm.query.trim() ? () => vm.setQuery('') : vm.openCreate}
             />
           ) : (
             <ListGroup header={`PEOPLE (${vm.people.length})`}>
               {vm.people.map(row => (
                 <ListRow
                   key={row.person.id}
-                  leading={<PersonAvatar name={row.person.name} size={44} />}
+                  leading={
+                    <PersonAvatar
+                      name={row.person.name}
+                      size={44}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: withOpacity(theme.primary, Opacity.medium),
+                      }}
+                    />
+                  }
                   title={
                     <Inline gap="sm" alignItems="center" flexWrap="wrap">
                       <AppText variant="body" weight="semibold">
@@ -302,6 +392,28 @@ export function PeopleListScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  headerActionsSearchActive: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroAmount: {
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  breakdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  verticalDivider: {
+    alignSelf: 'stretch',
+    borderRadius: Shape.radius.full,
+  },
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xxxxl,

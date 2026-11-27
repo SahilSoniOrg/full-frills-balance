@@ -18,6 +18,7 @@ import {
   AccountPickerPillGrid,
   AccountPickerRecycledList,
   AccountPickerSection,
+  NewPersonActionPill,
 } from './AccountPickerRecycledList';
 import type { AccountPickerSections } from './accountPickerRows';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
@@ -292,7 +293,13 @@ export function AccountPickerDropdown({
               accessibilityRole="button"
               accessibilityLabel="Add person or account"
               testID="add-person-or-account-button"
-              style={styles.headerPlusButton}
+              surfaceStyle={[
+                styles.archivePillButton,
+                {
+                  borderColor: withOpacity(theme.primary, Opacity.heavy),
+                  backgroundColor: withOpacity(theme.primary, Opacity.hover),
+                },
+              ]}
             >
               <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
               <AppText variant="caption" weight="semibold" color="primary">
@@ -330,27 +337,16 @@ export function AccountPickerDropdown({
               toggleSection={toggleSection}
             >
               {!isSectionCollapsed && (
-                <>
-                  <AccountPickerPillGrid
-                    accounts={section.data}
-                    selectedAccountId={selectedAccountId}
-                    onSelect={handleAccountPress}
-                  />
-                  {section.key === 'people' && onCreatePersonRequest && (
-                    <PressScaleTouchable
-                      testID="account-picker-new-person-button"
-                      accessibilityRole="button"
-                      accessibilityLabel="New person"
-                      onPress={onCreatePersonRequest}
-                      style={styles.headerPlusButton}
-                    >
-                      <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
-                      <AppText variant="caption" weight="semibold" color="primary">
-                        New person
-                      </AppText>
-                    </PressScaleTouchable>
-                  )}
-                </>
+                <AccountPickerPillGrid
+                  accounts={section.data}
+                  selectedAccountId={selectedAccountId}
+                  onSelect={handleAccountPress}
+                  trailingItem={
+                    section.key === 'people' && onCreatePersonRequest ? (
+                      <NewPersonActionPill onPress={onCreatePersonRequest} />
+                    ) : undefined
+                  }
+                />
               )}
             </AccountPickerSection>
           );

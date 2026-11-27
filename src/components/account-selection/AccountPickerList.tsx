@@ -327,7 +327,13 @@ export function AccountPickerList(props: AccountPickerListProps) {
           >
             <View style={styles.sectionTitleRow}>
               <View
-                style={[styles.sectionDot, { backgroundColor: getSectionColor(title, theme) }]}
+                style={[
+                  styles.sectionDot,
+                  {
+                    backgroundColor:
+                      key === 'people' ? theme.primary : getSectionColor(title, theme),
+                  },
+                ]}
               />
               <AppText variant="subheading" weight="bold" color="secondary">
                 {title}
@@ -369,9 +375,15 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   accessibilityRole="button"
                   accessibilityLabel="New person"
                   onPress={() => onCreatePersonRequest()}
-                  style={styles.actionButton}
+                  surfaceStyle={[
+                    styles.newPersonHeaderPill,
+                    {
+                      borderColor: withOpacity(theme.primary, Opacity.heavy),
+                      backgroundColor: withOpacity(theme.primary, Opacity.hover),
+                    },
+                  ]}
                 >
-                  <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
+                  <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.primary} />
                   <AppText variant="caption" weight="semibold" color="primary">
                     New person
                   </AppText>
@@ -538,6 +550,16 @@ const styles = StyleSheet.create({
   },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   actionButton: { padding: Spacing.xs, marginRight: Spacing.xs },
+  newPersonHeaderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,

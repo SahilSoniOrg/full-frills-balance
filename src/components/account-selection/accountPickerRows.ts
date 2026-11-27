@@ -11,7 +11,13 @@ export type AccountPickerListItem =
       sectionIndex: number;
       collapsed: boolean;
     }
-  | { key: string; kind: 'accounts'; accounts: AccountFields[] };
+  | {
+      key: string;
+      kind: 'accounts';
+      sectionKey: string;
+      isLastInSection: boolean;
+      accounts: AccountFields[];
+    };
 
 const PILLS_PER_CHUNK = 24;
 
@@ -29,6 +35,8 @@ export function buildAccountPickerRows(
       rows.push({
         key: `${section.key}:${section.data[index].id}`,
         kind: 'accounts',
+        sectionKey: section.key,
+        isLastInSection: index + PILLS_PER_CHUNK >= section.data.length,
         accounts: section.data.slice(index, index + PILLS_PER_CHUNK),
       });
     }

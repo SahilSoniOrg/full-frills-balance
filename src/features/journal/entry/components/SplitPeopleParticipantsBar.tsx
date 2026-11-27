@@ -2,19 +2,17 @@ import {
   AppButton,
   AppIcon,
   AppInputField,
-  AppSegmentedControl,
   AppText,
   Icon,
   PersonAvatar,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { Opacity, Shape, Spacing } from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import type { PersonId } from '@/src/types/ids';
 
 export type SplitParticipant = { id: PersonId; name: string; color?: string };
@@ -34,6 +32,11 @@ export type SplitPeopleParticipantsBarProps = {
   isQuickAdding: boolean;
 };
 
+const SPLIT_MODE_OPTIONS: readonly { id: SplitModeChoice; label: string }[] = [
+  { label: 'Equal split', id: 'equal' },
+  { label: 'Custom', id: 'custom' },
+];
+
 export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProps) {
   const { theme } = useTheme();
   const [quickAdd, setQuickAdd] = useState(false);
@@ -44,13 +47,56 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
     setName('');
     setQuickAdd(false);
   };
+  const isMatched = props.remainingAmountText === '0';
+
   return (
     <Stack gap="sm" style={styles.container}>
-      <AppText variant="body" weight="bold" color="primary">
-        Participants
-      </AppText>
+      <Inline justifyContent="space-between" alignItems="center" gap="sm">
+        <AppText variant="body" weight="bold" color="primary">
+          Participants
+        </AppText>
+        {props.hasParticipants ? (
+          <View
+            testID="split-participant-split-mode"
+            style={[
+              styles.modeCapsule,
+              {
+                backgroundColor: theme.surfaceSecondary,
+                borderColor: withOpacity(theme.border, Opacity.active),
+              },
+            ]}
+          >
+            {SPLIT_MODE_OPTIONS.map(option => {
+              const active = props.splitMode === option.id;
+              return (
+                <PressScaleTouchable
+                  key={option.id}
+                  onPress={() => props.onChangeSplitMode(option.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  surfaceStyle={[
+                    styles.modeOption,
+                    active && {
+                      backgroundColor: theme.primary,
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    weight="semibold"
+                    style={{ color: active ? theme.onPrimary : theme.textSecondary }}
+                  >
+                    {option.label}
+                  </AppText>
+                </PressScaleTouchable>
+              );
+            })}
+          </View>
+        ) : null}
+      </Inline>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Inline gap="sm" align="center">
+        <Inline gap="sm" alignItems="center">
           {props.people.map(person => {
             const selected = props.selectedPersonIds.includes(person.id);
             return (
@@ -72,8 +118,17 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
                   },
                 ]}
               >
-                <Inline gap="xs" align="center">
-                  <PersonAvatar name={person.name} size={24} maxChars={2} />
+                <Inline gap="xs" alignItems="center">
+                  <PersonAvatar
+                    name={person.name}
+                    size={24}
+                    maxChars={1}
+                    style={
+                      selected
+                        ? { backgroundColor: withOpacity(theme.primary, Opacity.medium) }
+                        : undefined
+                    }
+                  />
                   <AppText variant="caption" weight={selected ? 'semibold' : 'medium'}>
                     {person.name}
                   </AppText>
@@ -87,11 +142,12 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
             accessibilityRole="button"
             surfaceStyle={[
               styles.chip,
+              styles.quickAddChip,
               {
                 backgroundColor: quickAdd
                   ? withOpacity(theme.primary, Opacity.soft)
-                  : theme.surfaceSecondary,
-                borderColor: quickAdd ? theme.primary : withOpacity(theme.border, Opacity.active),
+                  : withOpacity(theme.primary, Opacity.hover),
+                borderColor: withOpacity(theme.primary, Opacity.heavy),
               },
             ]}
           >
@@ -101,44 +157,53 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
           </PressScaleTouchable>
         </Inline>
       </ScrollView>
+
       {quickAdd ? (
-        <Inline gap="sm" align="center">
+        <Inline gap="sm" alignItems="center">
           <AppInputField
             value={name}
             onChangeText={setName}
             placeholder="Person name"
             style={styles.quickAddInput}
           />
-          <AppButton onPress={submit} loading={props.isQuickAdding} disabled={!name.trim()}>
+          <AppButton
+            size="sm"
+            onPress={submit}
+            loading={props.isQuickAdding}
+            disabled={!name.trim()}
+          >
             Add
           </AppButton>
         </Inline>
       ) : null}
-      {props.hasParticipants ? (
-        <Stack gap="sm">
-          <AppSegmentedControl
-            testID="split-participant-split-mode"
-            options={[
-              { label: 'Equal split', id: 'equal' },
-              { label: 'Custom', id: 'custom' },
-            ]}
-            value={props.splitMode}
-            onChange={props.onChangeSplitMode}
-          />
-          <NoticeBanner
-            message={
-              props.remainingAmountText === '0'
-                ? 'Exact match'
-                : `Remaining to assign: ${props.remainingAmountText}`
-            }
-            tone={props.remainingAmountText === '0' ? 'neutral' : 'info'}
-          />
+
+      {props.hasParticipants && !isMatched ? (
+        <Inline justifyContent="space-between" alignItems="center" gap="sm" flexWrap="wrap">
+          <Inline gap="xs" alignItems="center">
+            <AppIcon name={Icon.Info} size={14} color={theme.warning} />
+            <AppText variant="caption" weight="medium" color="secondary">
+              {`Remaining to assign: ${props.remainingAmountText}`}
+            </AppText>
+          </Inline>
           {props.canAddRemainingToYours ? (
-            <AppButton testID="split-add-remaining" onPress={props.onAddRemainingToYours}>
-              Add remaining to yours
-            </AppButton>
+            <PressScaleTouchable
+              testID="split-add-remaining"
+              accessibilityRole="button"
+              onPress={props.onAddRemainingToYours}
+              surfaceStyle={[
+                styles.addRemainingPill,
+                {
+                  backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                  borderColor: withOpacity(theme.primary, Opacity.heavy),
+                },
+              ]}
+            >
+              <AppText variant="caption" weight="semibold" color="primary">
+                Add remaining to yours
+              </AppText>
+            </PressScaleTouchable>
           ) : null}
-        </Stack>
+        </Inline>
       ) : null}
     </Stack>
   );
@@ -149,6 +214,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
   },
+  modeCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 2,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
+    gap: 2,
+  },
+  modeOption: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+  },
   chip: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
@@ -157,7 +235,16 @@ const styles = StyleSheet.create({
     minHeight: 36,
     justifyContent: 'center',
   },
+  quickAddChip: {
+    borderStyle: 'dashed',
+  },
   quickAddInput: {
     flex: 1,
+  },
+  addRemainingPill: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
   },
 });

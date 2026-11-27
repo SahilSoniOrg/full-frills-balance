@@ -18,6 +18,30 @@ import {
 
 const MAX_LIST_HEIGHT = 400;
 
+export function NewPersonActionPill({ onPress }: { onPress: () => void }) {
+  const { theme } = useTheme();
+  return (
+    <PressScaleTouchable
+      testID="account-picker-new-person-button"
+      accessibilityRole="button"
+      accessibilityLabel="New person"
+      onPress={onPress}
+      surfaceStyle={[
+        styles.newPersonPill,
+        {
+          borderColor: withOpacity(theme.primary, Opacity.heavy),
+          backgroundColor: withOpacity(theme.primary, Opacity.hover),
+        },
+      ]}
+    >
+      <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.primary} />
+      <AppText variant="caption" weight="semibold" color="primary">
+        New person
+      </AppText>
+    </PressScaleTouchable>
+  );
+}
+
 export function AccountPickerSection({
   section,
   index,
@@ -32,6 +56,10 @@ export function AccountPickerSection({
   children?: ReactNode;
 }) {
   const { theme } = useTheme();
+  const dotColor =
+    section.key === 'people'
+      ? theme.primary
+      : getSectionColor(section.type ?? section.title, theme);
   return (
     <View
       style={[
@@ -50,12 +78,7 @@ export function AccountPickerSection({
         accessibilityLabel={`${section.title}, ${section.data.length} accounts, ${collapsed ? 'collapsed' : 'expanded'}`}
       >
         <View style={styles.sectionTitleRow}>
-          <View
-            style={[
-              styles.sectionDot,
-              { backgroundColor: getSectionColor(section.type ?? section.title, theme) },
-            ]}
-          />
+          <View style={[styles.sectionDot, { backgroundColor: dotColor }]} />
           <AppText
             variant="caption"
             weight="bold"
@@ -90,10 +113,12 @@ export function AccountPickerPillGrid({
   accounts,
   selectedAccountId,
   onSelect,
+  trailingItem,
 }: {
   accounts: AccountFields[];
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
+  trailingItem?: ReactNode;
 }) {
   const hasSelection = Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID);
   return (
@@ -106,6 +131,7 @@ export function AccountPickerPillGrid({
           onSelectId={onSelect}
         />
       ))}
+      {trailingItem}
     </View>
   );
 }
@@ -136,6 +162,11 @@ export function AccountPickerRecycledList({
           accounts={item.accounts}
           selectedAccountId={selectedAccountId}
           onSelect={onSelect}
+          trailingItem={
+            item.sectionKey === 'people' && item.isLastInSection && onCreatePersonRequest ? (
+              <NewPersonActionPill onPress={onCreatePersonRequest} />
+            ) : undefined
+          }
         />
       ) : (
         <AccountPickerSection
@@ -143,21 +174,7 @@ export function AccountPickerRecycledList({
           index={item.sectionIndex}
           collapsed={item.collapsed}
           toggleSection={toggleSection}
-        >
-          {item.section.key === 'people' && !item.collapsed && onCreatePersonRequest && (
-            <PressScaleTouchable
-              testID="account-picker-new-person-button"
-              accessibilityRole="button"
-              accessibilityLabel="New person"
-              onPress={onCreatePersonRequest}
-            >
-              <AppIcon name={Icon.Plus} size={Size.xs} />
-              <AppText variant="caption" weight="semibold">
-                New person
-              </AppText>
-            </PressScaleTouchable>
-          )}
-        </AccountPickerSection>
+        />
       ),
     [onSelect, selectedAccountId, toggleSection, onCreatePersonRequest],
   );
