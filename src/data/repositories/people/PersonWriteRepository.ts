@@ -12,10 +12,12 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction } from '@/src/types/enums';
+import type { IconName } from '@/src/types/domainIcons';
 import { Q } from '@nozbe/watermelondb';
 export type PersonProfileInput = {
   name: string;
   notes?: string;
+  icon?: IconName;
   color?: string;
   defaultCurrencyCode?: string;
   paymentHandle?: string;
@@ -73,6 +75,7 @@ export class PersonWriteRepository {
   ) {
     const name = await this.assertUniqueName(w, input.name);
     const notes = trimOptionalText(input.notes);
+    const icon = input.icon;
     const color = trimOptionalText(input.color);
     const defaultCurrencyCode = trimOptionalText(input.defaultCurrencyCode)?.toUpperCase();
     const paymentHandle = trimOptionalText(input.paymentHandle);
@@ -83,6 +86,7 @@ export class PersonWriteRepository {
       r.workplaceId = w;
       r.name = name;
       r.notes = notes;
+      r.icon = icon;
       r.color = color;
       r.defaultCurrencyCode = defaultCurrencyCode;
       r.paymentHandle = paymentHandle;
@@ -102,6 +106,7 @@ export class PersonWriteRepository {
           changes: {
             name,
             notes,
+            icon,
             color,
             defaultCurrencyCode,
             paymentHandle,
@@ -128,6 +133,7 @@ export class PersonWriteRepository {
       normalizedPatch.name = await this.assertUniqueName(w, patch.name ?? '', id);
     }
     if ('notes' in patch) normalizedPatch.notes = trimOptionalText(patch.notes);
+    if ('icon' in patch) normalizedPatch.icon = patch.icon;
     if ('color' in patch) normalizedPatch.color = trimOptionalText(patch.color);
     if ('defaultCurrencyCode' in patch) {
       normalizedPatch.defaultCurrencyCode = trimOptionalText(

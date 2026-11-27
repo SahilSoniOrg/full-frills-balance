@@ -141,6 +141,7 @@ export function useJournalEntryShell(): JournalEntryShell {
             entries.map(entry => ({
               id: entry.person.id,
               name: entry.person.name,
+              icon: entry.person.icon,
               color: entry.person.color,
             })),
           );

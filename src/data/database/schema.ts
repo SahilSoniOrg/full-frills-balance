@@ -3,7 +3,7 @@ import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 import { CREATE_LEDGER_READ_INDEXES_SQL, DROP_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 
 export const schema = appSchema({
-  version: 41,
+  version: 40,
   unsafeSql: (sql, kind) =>
     `${sql}\n${kind === 'drop_indices' ? DROP_LEDGER_READ_INDEXES_SQL : CREATE_LEDGER_READ_INDEXES_SQL}`,
   tables: [
@@ -422,6 +422,7 @@ END;`,
             ? [
                 { name: 'name', type: 'string', isIndexed: true },
                 { name: 'notes', type: 'string', isOptional: true },
+                { name: 'icon', type: 'string', isOptional: true },
                 { name: 'color', type: 'string', isOptional: true },
                 { name: 'default_currency_code', type: 'string', isOptional: true },
                 { name: 'payment_handle', type: 'string', isOptional: true },

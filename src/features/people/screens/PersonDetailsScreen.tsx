@@ -199,7 +199,12 @@ function PersonDetailsScreenContent() {
           <AppCard padding="md" elevation="sm" radius="xxl">
             <Stack gap="sm">
               <Inline gap="md" alignItems="center">
-                <PersonAvatar name={detail.person.name} color={detail.person.color} size={64} />
+                <PersonAvatar
+                  name={detail.person.name}
+                  icon={detail.person.icon}
+                  color={detail.person.color}
+                  size={64}
+                />
                 <Stack gap="xs" flex={1}>
                   <Inline gap="sm" alignItems="center" flexWrap="wrap">
                     <AppText variant="title" fontRole="display">

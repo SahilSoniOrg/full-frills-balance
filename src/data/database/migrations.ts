@@ -1183,7 +1183,13 @@ BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_rebuild_inten
           columns: [
             { name: 'name', type: 'string', isIndexed: true },
             { name: 'notes', type: 'string', isOptional: true },
+            { name: 'icon', type: 'string', isOptional: true },
             { name: 'color', type: 'string', isOptional: true },
+            { name: 'default_currency_code', type: 'string', isOptional: true },
+            { name: 'payment_handle', type: 'string', isOptional: true },
+            { name: 'phone', type: 'string', isOptional: true },
+            { name: 'email', type: 'string', isOptional: true },
+            { name: 'is_pinned', type: 'boolean', isOptional: true },
             { name: 'archived_at', type: 'number', isOptional: true, isIndexed: true },
             { name: 'created_at', type: 'number', isIndexed: true },
             { name: 'updated_at', type: 'number' },
@@ -1241,21 +1247,6 @@ CREATE TRIGGER IF NOT EXISTS trg_settlement_allocations_workplace_id_check BEFOR
 CREATE UNIQUE INDEX IF NOT EXISTS person_accounts_active_wp_account ON person_accounts (workplace_id, account_id) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_items (workplace_id, originating_journal_id, account_id) WHERE deleted_at IS NULL;
 `),
-      ],
-    },
-    {
-      toVersion: 41,
-      steps: [
-        addColumns({
-          table: 'people',
-          columns: [
-            { name: 'default_currency_code', type: 'string', isOptional: true },
-            { name: 'payment_handle', type: 'string', isOptional: true },
-            { name: 'phone', type: 'string', isOptional: true },
-            { name: 'email', type: 'string', isOptional: true },
-            { name: 'is_pinned', type: 'boolean', isOptional: true },
-          ],
-        }),
       ],
     },
   ],

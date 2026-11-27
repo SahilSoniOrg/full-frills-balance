@@ -1,8 +1,11 @@
 import { AppText } from '@/src/components/core/AppText';
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { Opacity } from '@/src/constants/design-tokens';
 import { getReadableColor, withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { personInitials } from '@/src/components/core/personName';
+import type { IconName } from '@/src/types/domainIcons';
+import { isValidIconName } from '@/src/types/domainIcons';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /** Shared diameter for header trigger + drawer profile. */
@@ -12,6 +15,8 @@ export type PersonAvatarProps = {
   name: string;
   /** Optional accent color stored on the person profile. */
   color?: string;
+  /** Optional selected glyph; initials remain the fallback for older profiles. */
+  icon?: IconName;
   /** Outer diameter in px. Defaults to {@link PERSON_AVATAR_SIZE}. */
   size?: number;
   /** Letter count for initials (default 2 — same in header + drawer). */
@@ -24,6 +29,7 @@ export type PersonAvatarProps = {
 export function PersonAvatar({
   name,
   color,
+  icon,
   size = PERSON_AVATAR_SIZE,
   maxChars = 2,
   style,
@@ -56,15 +62,23 @@ export function PersonAvatar({
         style,
       ]}
     >
-      <AppText
-        variant={textVariant}
-        weight="semibold"
-        color={hasCustomColor ? undefined : 'secondary'}
-        style={textColor ? { color: textColor } : undefined}
-        numberOfLines={1}
-      >
-        {personInitials(name, maxChars)}
-      </AppText>
+      {icon && isValidIconName(icon) ? (
+        <AppIcon
+          name={icon}
+          size={Math.round(size * 0.44)}
+          color={textColor ?? theme.textSecondary}
+        />
+      ) : (
+        <AppText
+          variant={textVariant}
+          weight="semibold"
+          color={hasCustomColor ? undefined : 'secondary'}
+          style={textColor ? { color: textColor } : undefined}
+          numberOfLines={1}
+        >
+          {personInitials(name, maxChars)}
+        </AppText>
+      )}
     </View>
   );
 }

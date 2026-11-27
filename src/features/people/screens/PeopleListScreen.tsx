@@ -261,6 +261,7 @@ export function PeopleListScreen() {
                   leading={
                     <PersonAvatar
                       name={row.person.name}
+                      icon={row.person.icon}
                       color={row.person.color}
                       size={44}
                       style={
@@ -366,7 +367,12 @@ export function PeopleListScreen() {
               <ListRow
                 key={entry.person.id}
                 leading={
-                  <PersonAvatar name={entry.person.name} color={entry.person.color} size={32} />
+                  <PersonAvatar
+                    name={entry.person.name}
+                    icon={entry.person.icon}
+                    color={entry.person.color}
+                    size={32}
+                  />
                 }
                 title={entry.person.name}
                 trailing={

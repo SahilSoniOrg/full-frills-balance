@@ -1,4 +1,6 @@
 import { fireEvent, render, waitFor } from '@/src/testing/render';
+import { Icon } from '@/src/components/core';
+import { AppearancePickerHost } from '@/src/components/overlays/AppearancePickerHost';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { PeopleListScreen } from '../screens/PeopleListScreen';
@@ -252,14 +254,22 @@ describe('People screens', () => {
   });
 
   it('validates duplicate person names and creates enriched profiles in PersonCreationScreen', async () => {
-    const { getAllByText, getByLabelText, getByTestId } = render(<PersonCreationScreen />);
+    const { getAllByText, getByLabelText, getByTestId, getByText } = render(
+      <>
+        <PersonCreationScreen />
+        <AppearancePickerHost />
+      </>,
+    );
     await waitFor(() => expect(getByTestId('person-name-input')).toBeTruthy());
 
     fireEvent.changeText(getByTestId('person-name-input'), 'ari');
     await waitFor(() => expect(getByTestId('person-duplicate-warning')).toBeTruthy());
 
     fireEvent.changeText(getByTestId('person-name-input'), 'Priya');
-    fireEvent.press(getByLabelText('Select color #10B981'));
+    fireEvent.press(getByTestId('person-appearance-button'));
+    fireEvent.press(getByText('Color'));
+    fireEvent.press(getByLabelText('Color #10B981'));
+    fireEvent.press(getByText('Done'));
     fireEvent.changeText(getByTestId('person-payment-handle-input'), 'priya@okaxis');
     fireEvent.press(getByTestId('person-expand-details-button'));
     fireEvent.changeText(getByTestId('person-phone-input'), '+91 91111 22222');
@@ -272,6 +282,7 @@ describe('People screens', () => {
     await waitFor(() =>
       expect(mockCreatePerson).toHaveBeenCalledWith(mockWorkplaceId, {
         name: 'Priya',
+        icon: Icon.User,
         color: '#10B981',
         defaultCurrencyCode: undefined,
         paymentHandle: 'priya@okaxis',

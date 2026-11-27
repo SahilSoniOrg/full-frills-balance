@@ -321,6 +321,7 @@ export class PeopleReadService {
     return people.map(person => ({
       personId: person.id,
       personName: person.name,
+      icon: person.icon,
       color: person.color,
       defaultCurrencyCode: person.defaultCurrencyCode,
       isPinned: Boolean(person.isPinned),

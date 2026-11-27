@@ -14,8 +14,9 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { PersonId } from '@/src/types/ids';
+import type { IconName } from '@/src/types/domainIcons';
 
-export type SplitParticipant = { id: PersonId; name: string; color?: string };
+export type SplitParticipant = { id: PersonId; name: string; icon?: IconName; color?: string };
 export type SplitModeChoice = 'equal' | 'custom';
 
 export type SplitPeopleParticipantsBarProps = {
@@ -122,6 +123,7 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
                 <Inline gap="xs" alignItems="center">
                   <PersonAvatar
                     name={person.name}
+                    icon={person.icon}
                     color={selected ? theme.primary : person.color}
                     size={24}
                     maxChars={1}

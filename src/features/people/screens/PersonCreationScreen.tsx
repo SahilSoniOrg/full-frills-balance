@@ -12,6 +12,7 @@ import {
   LoadingView,
   PersonAvatar,
 } from '@/src/components/core';
+import { AccountPickerModal } from '@/src/components/account-selection';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import {
   SelectionPickerSheet,
@@ -21,21 +22,10 @@ import {
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormRow } from '@/src/components/forms/FormRow';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppearancePickerView } from '@/src/components/overlays/AppearancePickerView';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import {
-  ACCOUNT_COLOR_PALETTE,
-  AppConfig,
-  BorderWidth,
-  Opacity,
-  Shape,
-  Size,
-  Spacing,
-  Typography,
-} from '@/src/constants';
+import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
+import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Inline, Stack } from '@/src/design-system';
-import { withOpacity } from '@/src/design-system/colorMath';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -47,17 +37,6 @@ import type { AccountId, PersonId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-
-const QUICK_COLOR_SWATCHES = [
-  '#10B981',
-  '#0EA5E9',
-  '#6366F1',
-  '#8B5CF6',
-  '#EC4899',
-  '#EF4444',
-  '#F59E0B',
-  '#64748B',
-] as const;
 
 const POPULAR_CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD', 'AED'] as const;
 
@@ -132,6 +111,7 @@ export function PersonCreationScreen() {
   const [isLoading, setIsLoading] = useState(isEdit);
   const [name, setName] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
+  const [icon, setIcon] = useState<IconName>(Icon.User);
   const [color, setColor] = useState('');
   const [defaultCurrencyCode, setDefaultCurrencyCode] = useState('');
   const [paymentHandle, setPaymentHandle] = useState('');
@@ -144,7 +124,6 @@ export function PersonCreationScreen() {
 
   const [existingPeople, setExistingPeople] = useState<PickerPerson[]>([]);
   const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -168,6 +147,7 @@ export function PersonCreationScreen() {
         setLinkableAccounts(linkable);
         if (profile) {
           setName(profile.name);
+          setIcon(profile.icon ?? Icon.User);
           setColor(profile.color ?? '');
           setDefaultCurrencyCode(profile.defaultCurrencyCode ?? '');
           setPaymentHandle(profile.paymentHandle ?? '');
@@ -191,6 +171,7 @@ export function PersonCreationScreen() {
     () =>
       JSON.stringify({
         name,
+        icon,
         color,
         defaultCurrencyCode,
         paymentHandle,
@@ -204,6 +185,7 @@ export function PersonCreationScreen() {
       color,
       defaultCurrencyCode,
       email,
+      icon,
       initialAccountId,
       isPinned,
       name,
@@ -270,7 +252,7 @@ export function PersonCreationScreen() {
 
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
-      screenTitle: isEdit ? 'Edit person' : 'New person',
+      screenTitle: isEdit ? 'Edit person' : 'Add person',
       kind: 'nav',
       onBack: guard.onBack,
     }),
@@ -285,6 +267,7 @@ export function PersonCreationScreen() {
     try {
       const payload = {
         name: trimmedName,
+        icon,
         color: color.trim() || undefined,
         defaultCurrencyCode: defaultCurrencyCode.trim() || undefined,
         paymentHandle: paymentHandle.trim() || undefined,
@@ -358,20 +341,37 @@ export function PersonCreationScreen() {
             <Stack gap="lg">
               <Stack gap="md" alignItems="center">
                 <PressScaleTouchable
-                  onPress={() => setColorPickerOpen(true)}
+                  onPress={() =>
+                    void openAppearancePicker({
+                      mode: 'both',
+                      title: 'Person appearance',
+                      selectedIcon: icon,
+                      selectedColor: color,
+                      defaultAccentColor: theme.primary,
+                      previewLabel: 'Selected person icon',
+                      defaultColorLabel: 'Default color',
+                      onIconSelect: setIcon,
+                      onColorSelect: setColor,
+                    })
+                  }
                   accessibilityRole="button"
-                  accessibilityLabel="Choose avatar color"
-                  testID="person-avatar-color-button"
+                  accessibilityLabel="Change person appearance"
+                  testID="person-appearance-button"
                 >
                   <View style={styles.avatarTrigger}>
-                    <PersonAvatar name={trimmedName || '?'} color={color || undefined} size={76} />
+                    <PersonAvatar
+                      name={trimmedName || '?'}
+                      icon={icon}
+                      color={color || undefined}
+                      size={76}
+                    />
                     <View
                       style={[
                         styles.avatarBadge,
                         { backgroundColor: theme.surface, borderColor: theme.border },
                       ]}
                     >
-                      <AppIcon name={Icon.Palette} size={Size.xs} color={theme.primary} />
+                      <AppIcon name={Icon.Edit} size={Size.xs} color={theme.primary} />
                     </View>
                   </View>
                 </PressScaleTouchable>
@@ -424,70 +424,6 @@ export function PersonCreationScreen() {
                   </Inline>
                 ) : null}
               </Stack>
-
-              <View style={[styles.swatchDivider, { borderTopColor: theme.border }]}>
-                <Inline gap="sm" alignItems="center" justifyContent="center" flexWrap="wrap">
-                  <PressScaleTouchable
-                    onPress={() => setColor('')}
-                    accessibilityRole="button"
-                    accessibilityLabel="Default avatar color"
-                    accessibilityState={{ selected: !color }}
-                    style={[
-                      styles.swatchDot,
-                      styles.resetSwatch,
-                      {
-                        backgroundColor: !color
-                          ? withOpacity(theme.primary, Opacity.soft)
-                          : theme.surfaceSecondary,
-                        borderColor: !color ? theme.primary : theme.border,
-                        borderWidth: !color ? BorderWidth.focus : 1,
-                      },
-                    ]}
-                  >
-                    <AppIcon
-                      name={Icon.User}
-                      size={Size.iconSm}
-                      color={!color ? theme.primary : theme.textSecondary}
-                    />
-                  </PressScaleTouchable>
-                  {QUICK_COLOR_SWATCHES.map(swatch => {
-                    const selected = color.toUpperCase() === swatch.toUpperCase();
-                    return (
-                      <PressScaleTouchable
-                        key={swatch}
-                        onPress={() => setColor(swatch)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Select color ${swatch}`}
-                        accessibilityState={{ selected }}
-                        style={[
-                          styles.swatchDot,
-                          {
-                            backgroundColor: swatch,
-                            borderColor: selected ? theme.text : 'transparent',
-                            borderWidth: selected ? BorderWidth.focus : 0,
-                          },
-                        ]}
-                      >
-                        {selected ? (
-                          <AppIcon name={Icon.Check} size={Size.iconXs} color={theme.background} />
-                        ) : null}
-                      </PressScaleTouchable>
-                    );
-                  })}
-                  <PressScaleTouchable
-                    onPress={() => setColorPickerOpen(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="More avatar colors"
-                    style={[
-                      styles.swatchDot,
-                      styles.resetSwatch,
-                      { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-                    ]}
-                  >
-                    <AppIcon name={Icon.Palette} size={Size.iconSm} color={theme.textSecondary} />
-                  </PressScaleTouchable>
-                </Inline>
-              </View>
             </Stack>
           </AppCard>
 
@@ -590,25 +526,6 @@ export function PersonCreationScreen() {
         </Stack>
       </View>
 
-      <ModalSurface
-        visible={colorPickerOpen}
-        title="Avatar color"
-        onClose={() => setColorPickerOpen(false)}
-        position="bottomSheet"
-        fixedHeight={false}
-      >
-        <AppearancePickerView
-          mode="color"
-          showTitle={false}
-          selectedColor={color || ACCOUNT_COLOR_PALETTE[0]}
-          onColorSelect={nextColor => {
-            setColor(nextColor);
-            setColorPickerOpen(false);
-          }}
-          onClose={() => setColorPickerOpen(false)}
-        />
-      </ModalSurface>
-
       <SelectionPickerSheet
         visible={currencyPickerOpen}
         title="Preferred currency"
@@ -625,33 +542,17 @@ export function PersonCreationScreen() {
         accessibilityCloseLabel={AppConfig.strings.common.closeCurrencyPicker}
       />
 
-      <ModalSurface
+      <AccountPickerModal
         visible={accountPickerOpen}
+        accounts={linkableAccounts}
+        selectedId={initialAccountId || undefined}
         title="Link existing account"
         onClose={() => setAccountPickerOpen(false)}
-        position="bottomSheet"
-        fixedHeight={false}
-      >
-        <ListGroup>
-          {linkableAccounts.map(account => (
-            <ListRow
-              key={account.id}
-              icon={Icon.Bank}
-              title={account.name}
-              subtitle={`${account.accountType} · ${account.currencyCode}`}
-              trailing={
-                initialAccountId === account.id ? (
-                  <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color="primary" />
-                ) : undefined
-              }
-              onPress={() => {
-                setInitialAccountId(account.id);
-                setAccountPickerOpen(false);
-              }}
-            />
-          ))}
-        </ListGroup>
-      </ModalSurface>
+        onSelect={id => {
+          setInitialAccountId(id);
+          setAccountPickerOpen(false);
+        }}
+      />
     </EntityFormScreen>
   );
 }
@@ -688,20 +589,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.xl,
     fontWeight: '600',
     paddingVertical: Spacing.xs,
-  },
-  swatchDivider: {
-    paddingTop: Spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  swatchDot: {
-    width: 30,
-    height: 30,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resetSwatch: {
-    borderWidth: 1,
   },
   inlineFieldRow: {
     flexDirection: 'row',
