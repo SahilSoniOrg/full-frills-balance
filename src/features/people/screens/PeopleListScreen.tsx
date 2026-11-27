@@ -21,6 +21,11 @@ import { MetricBreakdownRow } from '@/src/components/shared/MetricBreakdownRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import {
+  flowSignForAmount,
+  signColorKey,
+  signPrefix,
+} from '@/src/domain/accounting/presentationPolicy';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Separator, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -118,7 +123,8 @@ export function PeopleListScreen() {
     }
   };
 
-  const netColor = netBalance > 0 ? 'income' : netBalance < 0 ? 'expense' : 'primary';
+  const netSign = flowSignForAmount(netBalance);
+  const netColor = signColorKey(netSign);
   const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
   const archivedOnlyHidden = !hasFilters && vm.people.length === 0 && vm.hasArchivedPeople;
   const canSavePerson = !vm.busy && Boolean(vm.personName.trim());
@@ -154,11 +160,11 @@ export function PeopleListScreen() {
                   Net balance
                 </AppText>
                 <MoneyText
-                  amount={netBalance}
+                  amount={Math.abs(netBalance)}
                   currencyCode={vm.defaultCurrencyCode}
                   formatStyle="default"
                   variant="title"
-                  prefix={netBalance > 0 ? '+' : undefined}
+                  prefix={signPrefix(netSign)}
                   color={netColor}
                   style={styles.heroAmount}
                 />
