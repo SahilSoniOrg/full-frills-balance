@@ -16,8 +16,15 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { personObserveQueries, personQueryRepository } from '@/src/data/repositories/people';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import {
+  observeWorkplaceAccounts,
+  observeWorkplaceActiveTransactionCount,
+  observeWorkplaceJournalMeta,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
+import { Animation } from '@/src/constants/design-tokens';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { auditTime, combineLatest, from, map, merge, startWith, switchMap } from 'rxjs';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
@@ -350,13 +357,23 @@ export class PeopleReadService {
   }
 
   observePeopleTick(workplaceId: WorkplaceId) {
+    // Person balances come from live ledger reads, so journal/transaction/account
+    // changes must tick the people screens the same way account details do.
     return merge(
       personObserveQueries.observePeople(workplaceId, { includeArchived: true }),
       personObserveQueries.observePersonAccounts(workplaceId),
       personObserveQueries.observeOpenItems(workplaceId),
       personObserveQueries.observeSettlementAllocations(workplaceId),
       personObserveQueries.observeBalanceSnapshots(workplaceId),
-    ).pipe(startWith(null));
+      observeWorkplaceJournalMeta(workplaceId),
+      observeWorkplaceActiveTransactionCount(workplaceId),
+      observeWorkplaceAccounts(workplaceId),
+      exchangeRateRepository.observeRevision(),
+    ).pipe(
+      map(() => null),
+      startWith(null),
+      firstFastDebounce(Animation.dataRefreshDebounce),
+    );
   }
 
   async listSelectableAccounts(workplaceId: WorkplaceId) {

@@ -20,13 +20,39 @@ export class PersonObserveQueries {
         ...(!options.includeArchived ? [Q.where('archived_at', Q.eq(null))] : []),
         Q.sortBy('name', Q.asc),
       )
-      .observeWithColumns(['name', 'notes', 'color', 'archived_at', 'deleted_at', 'updated_at']);
+      .observeWithColumns([
+        'name',
+        'notes',
+        'icon',
+        'color',
+        'default_currency_code',
+        'payment_handle',
+        'phone',
+        'email',
+        'is_pinned',
+        'archived_at',
+        'deleted_at',
+        'updated_at',
+      ]);
   }
   observePerson(workplaceId: WorkplaceId, personId: PersonId) {
     return database.collections
       .get<Person>('people')
       .query(...base(workplaceId), Q.where('id', personId))
-      .observeWithColumns(['name', 'notes', 'color', 'archived_at', 'deleted_at', 'updated_at']);
+      .observeWithColumns([
+        'name',
+        'notes',
+        'icon',
+        'color',
+        'default_currency_code',
+        'payment_handle',
+        'phone',
+        'email',
+        'is_pinned',
+        'archived_at',
+        'deleted_at',
+        'updated_at',
+      ]);
   }
   observePersonAccounts(workplaceId: WorkplaceId, personId?: PersonId) {
     return database.collections
