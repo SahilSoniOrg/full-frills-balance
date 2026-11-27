@@ -17,7 +17,7 @@ import {
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { MetricBreakdownRow } from '@/src/components/shared/MetricBreakdownRow';
+import { titleAmountFit } from '@/src/components/shared/FitText';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
@@ -142,9 +142,9 @@ export function PeopleListScreen() {
       >
         <Stack gap="lg" style={styles.contentColumn}>
           <AppCard
-            elevation="md"
-            padding="xl"
-            radius="xxxl"
+            elevation="sm"
+            padding="lg"
+            radius="xxl"
             style={{ backgroundColor: theme.surface }}
           >
             <Stack gap="md">
@@ -166,26 +166,25 @@ export function PeopleListScreen() {
                   variant="title"
                   prefix={signPrefix(netSign)}
                   color={netColor}
+                  fit={titleAmountFit}
                   style={styles.heroAmount}
                 />
               </Stack>
 
+              <Separator background="divider" />
+
               <View style={styles.breakdownContainer}>
-                <MetricBreakdownRow
-                  dotColor={primaryOwedToYou > 0 ? theme.income : theme.textTertiary}
+                <BalanceBreakdown
                   label="Owed to you"
                   amount={primaryOwedToYou}
                   currencyCode={vm.defaultCurrencyCode}
-                  formatStyle="default"
                   moneyColor={primaryOwedToYou > 0 ? 'income' : 'secondary'}
                 />
                 <Separator vertical background="divider" style={styles.verticalDivider} />
-                <MetricBreakdownRow
-                  dotColor={primaryYouOwe > 0 ? theme.expense : theme.textTertiary}
+                <BalanceBreakdown
                   label="You owe"
                   amount={primaryYouOwe}
                   currencyCode={vm.defaultCurrencyCode}
-                  formatStyle="default"
                   moneyColor={primaryYouOwe > 0 ? 'expense' : 'secondary'}
                 />
               </View>
@@ -195,21 +194,6 @@ export function PeopleListScreen() {
                   {secondaryCurrencies.join(' · ')}
                 </AppText>
               ) : null}
-
-              <Separator background="divider" />
-
-              <Inline gap="sm" alignItems="center">
-                <Box flex={1}>
-                  <AppButton variant="primary" size="md" onPress={vm.openCreate}>
-                    Add person
-                  </AppButton>
-                </Box>
-                <Box flex={1}>
-                  <AppButton variant="outline" size="md" onPress={vm.openLink}>
-                    Link existing account
-                  </AppButton>
-                </Box>
-              </Inline>
             </Stack>
           </AppCard>
 
@@ -250,7 +234,7 @@ export function PeopleListScreen() {
                   ? 'Try a different name or reset active filters.'
                   : archivedOnlyHidden
                     ? 'Turn on archived people to view or restore past ledgers.'
-                    : 'Use Add person above to start tracking shared balances.'
+                    : 'Use the Add button in the tab bar to start tracking shared balances.'
               }
               icon={archivedOnlyHidden ? Icon.Archive : Icon.User}
               primaryActionLabel={
@@ -268,7 +252,19 @@ export function PeopleListScreen() {
               }
             />
           ) : (
-            <ListGroup header={`PEOPLE (${vm.people.length})`}>
+            <ListGroup
+              header={`PEOPLE (${vm.people.length})`}
+              headerAccessory={
+                <AppButton
+                  variant="ghost"
+                  size="sm"
+                  onPress={vm.openLink}
+                  testID="people-link-existing-account-button"
+                >
+                  Link account
+                </AppButton>
+              }
+            >
               {vm.people.map(row => (
                 <ListRow
                   key={row.person.id}
@@ -300,6 +296,7 @@ export function PeopleListScreen() {
                       summary={row.balanceSummary}
                       personName={row.person.name}
                       compact
+                      fallbackCurrencyCode={vm.defaultCurrencyCode}
                       formatAmount={(amount, currencyCode) =>
                         formatMoneyAmount(amount, currencyCode, isPrivacyMode)
                       }
@@ -453,6 +450,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
+  breakdownItem: {
+    flex: 1,
+    minWidth: 0,
+    gap: Spacing.xs,
+  },
   verticalDivider: {
     alignSelf: 'stretch',
     borderRadius: Shape.radius.full,
@@ -467,3 +469,31 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxxl,
   },
 });
+
+function BalanceBreakdown({
+  label,
+  amount,
+  currencyCode,
+  moneyColor,
+}: {
+  label: string;
+  amount: number;
+  currencyCode: string;
+  moneyColor: 'income' | 'expense' | 'secondary';
+}) {
+  return (
+    <View style={styles.breakdownItem}>
+      <AppText variant="caption" color="secondary">
+        {label}
+      </AppText>
+      <MoneyText
+        amount={amount}
+        currencyCode={currencyCode}
+        formatStyle="default"
+        variant="body"
+        weight="semibold"
+        color={moneyColor}
+      />
+    </View>
+  );
+}

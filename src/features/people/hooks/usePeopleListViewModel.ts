@@ -2,7 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { createPerson, linkExistingAccount, peopleReadService } from '@/src/services/people';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import type { PersonId, AccountId } from '@/src/types/ids';
 
 export type PeopleListEntry = Awaited<
@@ -19,9 +19,8 @@ export function usePeopleListViewModel() {
   const [accounts, setAccounts] = useState<LinkableAccount[]>([]);
   const [query, setQuery] = useState('');
   const [includeArchived, setIncludeArchived] = useState(false);
-  const [modal, setModal] = useState<'create' | 'link' | null>(
-    params.create === '1' ? 'create' : null,
-  );
+  const [localModal, setLocalModal] = useState<'create' | 'link' | null>(null);
+  const modal = params.create === '1' ? 'create' : localModal;
   const [personName, setPersonName] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState<PersonId | ''>('');
   const [selectedAccountId, setSelectedAccountId] = useState<AccountId | ''>('');
@@ -81,16 +80,20 @@ export function usePeopleListViewModel() {
     }
     return { owedToYou: [...owedToYou], youOwe: [...youOwe] };
   }, [activePeople]);
-  const closeModal = () => setModal(null);
+  const closeModal = () => {
+    setLocalModal(null);
+    setPersonName('');
+    if (params.create === '1') router.setParams({ create: undefined });
+  };
   const openCreate = () => {
     setPersonName('');
-    setModal('create');
+    setLocalModal('create');
   };
   const openLink = () => {
     setPersonName('');
     setSelectedPersonId('');
     setSelectedAccountId('');
-    setModal('link');
+    setLocalModal('link');
   };
   const selectPersonForLink = (personId: PersonId) => {
     setSelectedPersonId(current => {
@@ -139,7 +142,6 @@ export function usePeopleListViewModel() {
     includeArchived,
     setIncludeArchived,
     modal,
-    setModal,
     closeModal,
     openCreate,
     openLink,
