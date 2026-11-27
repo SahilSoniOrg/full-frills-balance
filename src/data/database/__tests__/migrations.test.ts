@@ -19,7 +19,7 @@ import { resetDatabase } from '@/src/testing/resetDatabase';
 import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 40;
+const EXPECTED_SCHEMA_VERSION = 41;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);
