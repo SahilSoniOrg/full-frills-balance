@@ -1,3 +1,0 @@
-[submodule ".agent/external/agent-skills/react-native-skill"]
-	path = .agent/external/agent-skills/react-native-skill
-	url = https://github.com/callstackincubator/agent-skills.git
