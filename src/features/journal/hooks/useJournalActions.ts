@@ -1,5 +1,6 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
 import type { PostingPlan } from '@/src/types/domainTransaction';
+import type { JournalRepaymentAllocation } from '@/src/types/journalWrite';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
@@ -20,6 +21,7 @@ type PostPostingPlanParams = {
   launchSource?: string;
   /** New future-dated entries save as PLANNED; 'auto' also posts them on their date. */
   planned?: PlannedJournalMode;
+  repaymentAllocation?: JournalRepaymentAllocation;
 };
 
 /**

@@ -40,7 +40,6 @@ import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
 import {
   autoSettlePerson,
-  allocateUnassignedRepayment,
   createPerson,
   ensurePersonAccount,
   peopleReadService,
@@ -184,6 +183,9 @@ export function useJournalEntryShell(): JournalEntryShell {
     (result: { journalId?: JournalId; action?: 'created' | 'updated' }) => Promise<void>
   >(async () => {});
   const transferSeededRef = useRef(false);
+  const getRepaymentAllocationRef = useRef<
+    () => import('@/src/types/journalWrite').JournalRepaymentAllocation | undefined
+  >(() => undefined);
   const reduceMotion = useReducedMotion();
   const [saveSuccessPulse, setSaveSuccessPulse] = useState(false);
   const onSuccess = useCallback(() => {
@@ -229,6 +231,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,
     onAfterSave: result => onAfterSaveRef.current(result),
+    getRepaymentAllocation: () => getRepaymentAllocationRef.current(),
     onSuccess,
   });
   const { editor, splitState } = session;
@@ -245,21 +248,16 @@ export function useJournalEntryShell(): JournalEntryShell {
     useJournalEntryModeState(editor, seed.editorMode);
 
   useEffect(() => {
-    onAfterSaveRef.current = async result => {
-      if (!result.journalId) return;
+    getRepaymentAllocationRef.current = () => {
       const plan = transferOpenItemPlanRef.current;
-      if (
-        activeMode === 'basic' &&
+      return activeMode === 'basic' &&
         editor.transactionType === 'transfer' &&
         plan?.allocations.length
-      ) {
-        await allocateUnassignedRepayment(workplaceId, {
-          personId: plan.personId,
-          targetAccountId: plan.targetAccountId,
-          settlementJournalId: result.journalId,
-          allocations: plan.allocations,
-        });
-      }
+        ? plan
+        : undefined;
+    };
+    onAfterSaveRef.current = async result => {
+      if (!result.journalId) return;
       if (activeMode === 'allocation') {
         const personIds = new Set(
           peopleGroups
@@ -299,7 +297,7 @@ export function useJournalEntryShell(): JournalEntryShell {
           (item && accounts.find(account => account.id === item.item.accountId)) ||
           linked.find(entry => entry.account.accountSubtype === AccountSubtype.RECEIVABLE)
             ?.account ||
-          linked.find(entry => entry.account.accountSubtype === AccountSubtype.PAYABLE)?.account;
+          linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
         const cashAccount = accounts.find(
           account =>
             account.accountType === AccountType.ASSET &&
@@ -309,7 +307,7 @@ export function useJournalEntryShell(): JournalEntryShell {
             ),
         );
         if (!personAccount || !cashAccount) return;
-        const personAsSource = personAccount.accountSubtype === AccountSubtype.RECEIVABLE;
+        const personAsSource = personAccount.accountType === AccountType.ASSET;
         const source = personAsSource ? personAccount : cashAccount;
         const destination = personAsSource ? cashAccount : personAccount;
         updateLines(

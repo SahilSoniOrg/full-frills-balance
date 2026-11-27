@@ -55,13 +55,13 @@ export function TransferOpenItemsCard(p: Props) {
                 Math.abs(p.activeAmount - c.amount) < 0.005;
               const handleChipPress = () => {
                 p.onQuickFillAmount(String(c.amount));
-                if (
-                  c.id !== 'full' &&
-                  c.id !== 'half' &&
-                  p.allocationMode === 'pick' &&
-                  !p.selectedItemIds[c.id]
-                ) {
-                  p.onToggleItem(c.id as OpenItemId);
+                if (c.id !== 'full' && c.id !== 'half') {
+                  if (p.allocationMode !== 'pick') p.onAllocationModeChange('pick');
+                  for (const item of p.items) {
+                    if (Boolean(p.selectedItemIds[item.item.id]) !== (item.item.id === c.id)) {
+                      p.onToggleItem(item.item.id);
+                    }
+                  }
                 }
               };
               return (

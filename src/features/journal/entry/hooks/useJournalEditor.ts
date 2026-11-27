@@ -19,6 +19,8 @@ import { useJournalEditorLineState } from './useJournalEditorLineState';
 import { useJournalEditorSubmission } from './useJournalEditorSubmission';
 
 export interface UseJournalEditorOptions {
+  getRepaymentAllocation?: () =>
+    import('@/src/types/journalWrite').JournalRepaymentAllocation | undefined;
   journalId?: JournalId;
   copyFromJournalId?: JournalId;
   initialMode?: 'simple' | 'advanced';
@@ -59,6 +61,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     smsId,
     smsRecordId,
     launchSource,
+    getRepaymentAllocation,
     onAfterSave,
     onSuccess,
   } = options;
@@ -153,6 +156,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     smsRecordId,
     launchSource,
     planned: plannedMode,
+    getRepaymentAllocation,
     onAfterSave,
     onSuccess,
   });

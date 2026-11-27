@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { peopleReadService } from '@/src/services/people';
-import type { OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
+import type { AccountId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 
 export type TransferOpenItem = {
   item: { id: OpenItemId; originalAmount: number; currencyCode: string };
@@ -50,6 +50,7 @@ type Props = {
   transferAmountText: string;
   precision?: number;
   currencyCode?: string;
+  accountId?: AccountId;
 };
 export function useTransferOpenItems({
   workplaceId,
@@ -59,10 +60,11 @@ export function useTransferOpenItems({
   transferAmountText,
   precision = 2,
   currencyCode,
+  accountId,
 }: Props) {
   const [openItems, setOpenItems] = useState<
     {
-      item: { id: OpenItemId; originalAmount: number; currencyCode: string };
+      item: { id: OpenItemId; accountId: AccountId; originalAmount: number; currencyCode: string };
       remainder: number;
     }[]
   >([]);
@@ -88,8 +90,12 @@ export function useTransferOpenItems({
   }, [workplaceId, workplaceCurrency, personId]);
   const activeCurrency = currencyCode ?? workplaceCurrency;
   const items = useMemo(
-    () => openItems.filter(x => x.item.currencyCode === activeCurrency),
-    [openItems, activeCurrency],
+    () =>
+      openItems.filter(
+        x =>
+          x.item.currencyCode === activeCurrency && (!accountId || x.item.accountId === accountId),
+      ),
+    [openItems, activeCurrency, accountId],
   );
   const totalOpenRemainder = items.reduce((sum, x) => sum + x.remainder, 0);
   const quickFillChips = buildTransferOpenItemQuickFillChips(items, precision);

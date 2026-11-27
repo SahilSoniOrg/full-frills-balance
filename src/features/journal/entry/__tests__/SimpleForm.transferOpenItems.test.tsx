@@ -27,7 +27,12 @@ describe('SimpleForm transfer open items', () => {
     const getPersonDetail = jest.spyOn(peopleReadService, 'getPersonDetail').mockResolvedValue({
       openItems: [
         {
-          item: { id: asOpenItemId('open-item-1'), originalAmount: 80, currencyCode: 'USD' },
+          item: {
+            id: asOpenItemId('open-item-1'),
+            accountId: personAccountId,
+            originalAmount: 80,
+            currencyCode: 'USD',
+          },
           remainder: 40,
         },
       ],
@@ -36,8 +41,8 @@ describe('SimpleForm transfer open items', () => {
       type: 'transfer',
       amount: '0',
       displayCurrency: 'USD',
-      sourceId: sourceAccountId,
-      destinationId: personAccountId,
+      sourceId: personAccountId,
+      destinationId: sourceAccountId,
       allAccounts: [account(sourceAccountId, 'Cash'), account(personAccountId, 'Person')],
       accountSections: [],
       fxPair: { isCrossCurrency: false },

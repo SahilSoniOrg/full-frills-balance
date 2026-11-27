@@ -131,12 +131,22 @@ export const SimpleForm = React.memo(function SimpleForm({
   const transferPersonGroup = transferPersonAccountId
     ? peopleGroups?.find(group => group.accountIds.includes(transferPersonAccountId))
     : undefined;
-  const transferTargetAccountId =
-    transferPersonAccountId === editor.destinationId ? editor.sourceId : editor.destinationId;
+  const transferPersonAccount = editor.allAccounts.find(
+    account => account.id === transferPersonAccountId,
+  );
+  const isReducingPersonBalance = Boolean(
+    transferPersonAccount &&
+    ((transferPersonAccount.accountType === AccountType.ASSET &&
+      transferPersonAccountId === editor.sourceId) ||
+      (transferPersonAccount.accountType === AccountType.LIABILITY &&
+        transferPersonAccountId === editor.destinationId)),
+  );
+  const transferTargetAccountId = transferPersonAccountId;
   const transferOpenItems = useTransferOpenItems({
     workplaceId: workplaceId!,
     workplaceCurrency: workplaceCurrency ?? editor.displayCurrency,
     personId: workplaceId ? (transferPersonGroup?.personId as PersonId | undefined) : undefined,
+    accountId: transferPersonAccountId,
     initialOpenItemId,
     transferAmountText: editor.amount,
     precision,
@@ -146,6 +156,7 @@ export const SimpleForm = React.memo(function SimpleForm({
     if (
       editor.type !== 'transfer' ||
       !transferPersonGroup ||
+      !isReducingPersonBalance ||
       !transferTargetAccountId ||
       !workplaceId
     ) {
@@ -160,6 +171,7 @@ export const SimpleForm = React.memo(function SimpleForm({
     });
   }, [
     editor.type,
+    isReducingPersonBalance,
     onTransferOpenItemPlanChange,
     transferOpenItems.allocationMode,
     transferOpenItems.selectedAllocations,
@@ -240,6 +252,7 @@ export const SimpleForm = React.memo(function SimpleForm({
       />
       {editor.type === 'transfer' &&
         transferPersonGroup &&
+        isReducingPersonBalance &&
         transferOpenItems.openItems.length > 0 && (
           <TransferOpenItemsCard
             items={transferOpenItems.openItems}
