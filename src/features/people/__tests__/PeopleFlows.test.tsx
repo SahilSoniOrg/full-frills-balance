@@ -17,6 +17,7 @@ const mockToTransferRepayment = jest.fn();
 const mockToSettleUp = jest.fn();
 const mockCreatePerson = jest.fn(async () => ({ id: 'p-new', name: 'New Person' }));
 const mockUpdatePerson = jest.fn(async () => ({ id: 'p-ari', name: 'Ari Updated' }));
+const mockLinkExistingAccount = jest.fn(async () => undefined);
 const mockSetClipboard = jest.fn(async () => true);
 
 let mockParams: Record<string, string> = {};
@@ -115,6 +116,30 @@ jest.mock('@/src/services/feedback/alerts', () => ({
   showConfirmationAlert: jest.fn(),
 }));
 
+jest.mock('@/src/features/journal', () => ({
+  useJournalEntryList: () => ({
+    items: [],
+    journals: [],
+    isLoading: false,
+    isLoadingMore: false,
+    error: null,
+    retry: jest.fn(),
+    onEndReached: jest.fn(),
+  }),
+}));
+
+jest.mock('@/src/components/journal/JournalEntryListView', () => {
+  const React = jest.requireActual('react') as typeof import('react');
+  const { View } = jest.requireActual('react-native') as typeof import('react-native');
+  return {
+    JournalEntryListView: ({
+      ListHeaderComponent,
+    }: {
+      ListHeaderComponent?: React.ReactElement | null;
+    }) => React.createElement(View, { testID: 'person-history-list' }, ListHeaderComponent),
+  };
+});
+
 jest.mock('@/src/services/people', () => {
   const { of: rxOf } = jest.requireActual('rxjs') as typeof import('rxjs');
   const { TransactionType: rxTxType } = jest.requireActual(
@@ -127,7 +152,8 @@ jest.mock('@/src/services/people', () => {
       (mockUpdatePerson as (...a: unknown[]) => unknown)(...args),
     setPersonArchived: jest.fn(),
     softDeletePerson: jest.fn(),
-    linkExistingAccount: jest.fn(),
+    linkExistingAccount: (...args: unknown[]) =>
+      (mockLinkExistingAccount as (...a: unknown[]) => unknown)(...args),
     allocateUnassignedRepayment: jest.fn(),
     executeWeAreSettled: jest.fn(),
     peopleReadService: {
@@ -232,12 +258,11 @@ describe('People screens', () => {
     expect(mockToPersonDetails).toHaveBeenCalledWith(mockPersonAri.id);
   });
 
-  it('keeps New person available alongside account linking in the directory', async () => {
-    const { getByText } = render(<PeopleListScreen />);
-    await waitFor(() => expect(getByText('Ari')).toBeTruthy());
-    expect(getByText('New person')).toBeTruthy();
-    fireEvent.press(getByText('New person'));
-    expect(mockToPersonCreation).toHaveBeenCalled();
+  it('renders people as cards without directory create or link actions', async () => {
+    const { getByTestId, queryByText } = render(<PeopleListScreen />);
+    await waitFor(() => expect(getByTestId(`person-card-${mockPersonAri.id}`)).toBeTruthy());
+    expect(queryByText('New person')).toBeNull();
+    expect(queryByText('Link account')).toBeNull();
   });
 
   it('renders PersonDetailsScreen profile attributes and copies payment handle', async () => {
@@ -255,9 +280,10 @@ describe('People screens', () => {
     fireEvent.press(getByTestId('person-split-expense-button'));
     expect(mockToSplitJournalEntry).toHaveBeenCalledWith({ personId: mockPersonAri.id });
     fireEvent.press(getByTestId('person-settle-up-button'));
+    fireEvent.press(getByTestId('person-settle-money-received'));
     expect(mockToTransferRepayment).toHaveBeenCalledWith({
       personId: mockPersonAri.id,
-      openItemId: undefined,
+      openItemId: mockOpenItem.id,
     });
   });
 
@@ -305,8 +331,12 @@ describe('People screens', () => {
 
   it('loads existing profile in PersonCreationScreen edit mode and calls updatePerson', async () => {
     mockParams = { personId: mockPersonAri.id };
-    const { getByDisplayValue, getByText } = render(<PersonCreationScreen />);
+    const { getByDisplayValue, getByTestId, getByText } = render(<PersonCreationScreen />);
     await waitFor(() => expect(getByDisplayValue('Ari')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByTestId(`person-edit-linked-account-${mockRecvAccount.id}`)).toBeTruthy(),
+    );
+    expect(getByTestId('person-edit-link-account-button')).toBeTruthy();
     fireEvent.changeText(getByDisplayValue('Flatmate split ledger'), 'Updated note');
     fireEvent.press(getByText('Save changes'));
     await waitFor(() =>
