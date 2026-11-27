@@ -1,6 +1,10 @@
 import { AccountPickerPill } from './AccountPickerList';
 import { NewPersonActionPill } from './NewPersonActionPill';
-import { formatPersonPickerLabel, type PersonPickerGroup } from './personAccountGrouping';
+import {
+  formatPersonPickerLabel,
+  isPersonPickerSelection,
+  type PersonPickerGroup,
+} from './personAccountGrouping';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -112,7 +116,9 @@ export function AccountPickerPillGrid({
             item={account}
             displayLabel={personLabel}
             toneColor={personLabel ? theme.transfer : undefined}
-            isSelected={hasSelection && selectedAccountId === account.id}
+            isSelected={
+              hasSelection && isPersonPickerSelection(account.id, selectedAccountId, peopleGroups)
+            }
             onSelectId={onSelect}
           />
         );

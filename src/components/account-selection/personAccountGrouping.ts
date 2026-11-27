@@ -12,13 +12,13 @@ export interface PersonPickerGroup {
   accountIds: readonly AccountId[];
 }
 
-const PERSON_ROLE_LABELS: Record<AccountType, string> = {
-  [AccountType.ASSET]: 'Owes you',
-  [AccountType.LIABILITY]: 'You owe',
-  [AccountType.EXPENSE]: 'Shared cost',
-  [AccountType.INCOME]: 'Shared income',
-  [AccountType.EQUITY]: 'Settled balance',
-};
+const PERSON_ACCOUNT_PRIORITY: AccountType[] = [
+  AccountType.ASSET,
+  AccountType.LIABILITY,
+  AccountType.EXPENSE,
+  AccountType.INCOME,
+  AccountType.EQUITY,
+];
 
 export function formatPersonPickerLabel(
   account: Pick<AccountFields, 'id' | 'name' | 'accountType' | 'currencyCode'>,
@@ -27,9 +27,61 @@ export function formatPersonPickerLabel(
   if (!peopleGroups || peopleGroups.length === 0) return undefined;
   const person = peopleGroups.find(group => group.accountIds.includes(account.id));
   if (!person) return undefined;
+  return person.accountIds.length > 1
+    ? `${person.personName} · ${person.accountIds.length}`
+    : person.personName;
+}
+
+export function formatPersonAccountRoleLabel(
+  account: Pick<AccountFields, 'id' | 'name' | 'accountType' | 'currencyCode'>,
+  peopleGroups?: readonly PersonPickerGroup[],
+): string {
+  const person = peopleGroups?.find(group => group.accountIds.includes(account.id));
   const accountType = toAccountType(account.accountType);
-  if (!accountType) return account.name;
-  return `${person.personName} · ${PERSON_ROLE_LABELS[accountType]} · ${account.currencyCode} · ${account.name}`;
+  const role =
+    accountType === AccountType.ASSET
+      ? 'Owes you'
+      : accountType === AccountType.LIABILITY
+        ? 'You owe'
+        : accountType === AccountType.EXPENSE
+          ? 'Shared cost'
+          : accountType === AccountType.INCOME
+            ? 'Shared income'
+            : accountType === AccountType.EQUITY
+              ? 'Settled balance'
+              : undefined;
+  if (!person || !role) return account.name;
+  return `${role} · ${account.currencyCode} · ${account.name}`;
+}
+
+export function pickPersonRepresentativeAccount<T extends AccountFields | PlainAccount>(
+  accounts: readonly T[],
+): T | undefined {
+  if (accounts.length === 0) return undefined;
+  for (const type of PERSON_ACCOUNT_PRIORITY) {
+    const match = accounts.find(account => toAccountType(account.accountType) === type);
+    if (match) return match;
+  }
+  return accounts[0];
+}
+
+export function linkedAccountsForPerson<T extends AccountFields | PlainAccount>(
+  person: PersonPickerGroup,
+  accounts: readonly T[],
+): T[] {
+  const ids = new Set(person.accountIds);
+  return accounts.filter(account => ids.has(account.id));
+}
+
+export function isPersonPickerSelection(
+  accountId: AccountId,
+  selectedId: AccountId | undefined,
+  peopleGroups?: readonly PersonPickerGroup[],
+): boolean {
+  if (!selectedId) return false;
+  if (accountId === selectedId) return true;
+  const person = peopleGroups?.find(group => group.accountIds.includes(accountId));
+  return Boolean(person?.accountIds.includes(selectedId));
 }
 
 export function buildJournalPickerSections(
@@ -43,21 +95,35 @@ export function buildJournalPickerSections(
   const mySections = getAccountSections(
     filteredAccounts.filter(account => !personAccountIds.has(account.id)),
   );
-  const personNameForAccount = (id: AccountId) =>
-    peopleGroups.find(group => group.accountIds.includes(id))?.personName ?? '';
-  const data = filteredAccounts
-    .filter(account => personAccountIds.has(account.id))
-    .filter(account => {
-      const person = peopleGroups.find(group => group.accountIds.includes(account.id));
-      return includeArchivedPeople || !person?.archived;
+  const personAccounts = filteredAccounts.filter(account => {
+    if (!personAccountIds.has(account.id)) return false;
+    const person = peopleGroups.find(group => group.accountIds.includes(account.id));
+    return includeArchivedPeople || !person?.archived;
+  });
+  const byPerson = new Map<string, (AccountFields | PlainAccount)[]>();
+  for (const account of personAccounts) {
+    const person = peopleGroups.find(group => group.accountIds.includes(account.id));
+    if (!person) continue;
+    const rows = byPerson.get(person.personId) ?? [];
+    rows.push(account);
+    byPerson.set(person.personId, rows);
+  }
+  const peopleData = [...byPerson.entries()]
+    .map(([personId, accounts]) => {
+      const person = peopleGroups.find(group => group.personId === personId);
+      const representative = pickPersonRepresentativeAccount(accounts);
+      return person && representative
+        ? { personName: person.personName, account: representative }
+        : null;
     })
-    .sort(
-      (a, b) =>
-        personNameForAccount(a.id).localeCompare(personNameForAccount(b.id)) ||
-        a.name.localeCompare(b.name),
-    );
-  const personSections: AccountSection[] = data.length
-    ? [{ key: 'people', title: 'People', data }]
+    .filter((row): row is { personName: string; account: AccountFields | PlainAccount } =>
+      Boolean(row),
+    )
+    .sort((a, b) => a.personName.localeCompare(b.personName))
+    .map(row => row.account);
+
+  const personSections: AccountSection[] = peopleData.length
+    ? [{ key: 'people', title: 'People', data: peopleData }]
     : [];
   return [...mySections, ...personSections];
 }

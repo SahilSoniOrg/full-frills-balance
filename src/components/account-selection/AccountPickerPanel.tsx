@@ -27,8 +27,10 @@ import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { AccountPickerDropdown } from './AccountPickerPanel.parts';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
-import { FOLDER_STROKE_WIDTH, useFolderLayoutAnimation } from './useFolderLayoutAnimation';
+import { PersonAccountChooserModal } from './PersonAccountChooserModal';
 import type { PersonPickerGroup } from './personAccountGrouping';
+import { usePersonLinkedAccountSelect } from './usePersonLinkedAccountSelect';
+import { FOLDER_STROKE_WIDTH, useFolderLayoutAnimation } from './useFolderLayoutAnimation';
 
 export type ExpansionPosition = 'left' | 'right' | null;
 
@@ -134,13 +136,18 @@ export function AccountPickerPanel({
 
   if (isRevealVisible && !hasOpenedDropdown) setHasOpenedDropdown(true);
 
-  const handleSelect = useCallback(
+  const commitSelect = useCallback(
     (id: AccountId) => {
       Keyboard.dismiss();
       onSelect(id);
     },
     [onSelect],
   );
+  const personSelect = usePersonLinkedAccountSelect({
+    accounts,
+    peopleGroups,
+    onSelect: commitSelect,
+  });
 
   const handleClear = useCallback(() => {
     Keyboard.dismiss();
@@ -162,12 +169,21 @@ export function AccountPickerPanel({
         onCreateAccountRequest={onCreateAccountRequest}
         peopleGroups={peopleGroups}
         onCreatePersonRequest={onCreatePersonRequest}
-        onSelect={handleSelect}
+        onSelect={personSelect.selectAccount}
         sections={sections}
         setShowArchived={setShowArchived}
         showArchived={showArchived}
         testID={dropdownTestID}
         toggleSection={toggleSection}
+      />
+      <PersonAccountChooserModal
+        visible={personSelect.chooserVisible}
+        personName={personSelect.chooserPersonName}
+        accounts={personSelect.chooserAccounts}
+        peopleGroups={peopleGroups}
+        selectedId={activeAccountId}
+        onClose={personSelect.closeChooser}
+        onSelect={personSelect.confirmChooserAccount}
       />
     </View>
   );

@@ -30,7 +30,13 @@ import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useAccountPickerList } from './useAccountPickerList';
 import { NewPersonActionPill } from './NewPersonActionPill';
-import { formatPersonPickerLabel, type PersonPickerGroup } from './personAccountGrouping';
+import { PersonAccountChooserModal } from './PersonAccountChooserModal';
+import {
+  formatPersonPickerLabel,
+  isPersonPickerSelection,
+  type PersonPickerGroup,
+} from './personAccountGrouping';
+import { usePersonLinkedAccountSelect } from './usePersonLinkedAccountSelect';
 
 export type CreateAccountIntent = {
   suggestedName: string;
@@ -219,15 +225,24 @@ export function AccountPickerList(props: AccountPickerListProps) {
     () => ({ selectedIds, collapsedSections, isSearchMode }),
     [selectedIds, collapsedSections, isSearchMode],
   );
+  const commitSingleSelect = useCallback(
+    (id: AccountId) => {
+      onSelect?.(id);
+      Keyboard.dismiss();
+    },
+    [onSelect],
+  );
+  const personSelect = usePersonLinkedAccountSelect({
+    accounts,
+    peopleGroups,
+    onSelect: commitSingleSelect,
+  });
   const handleToggleSelection = useCallback(
     (id: AccountId) => {
       if (isMultiple && onToggle) onToggle(id);
-      else if (onSelect) {
-        onSelect(id);
-        Keyboard.dismiss();
-      }
+      else personSelect.selectAccount(id);
     },
-    [isMultiple, onToggle, onSelect],
+    [isMultiple, onToggle, personSelect],
   );
   const renderEmpty = useCallback(
     () => (
@@ -334,13 +349,16 @@ export function AccountPickerList(props: AccountPickerListProps) {
           <View pointerEvents="box-none" style={styles.pillGrid}>
             {accountsInRow.map(account => {
               const personLabel = formatPersonPickerLabel(account, peopleGroups);
+              const selected = [...selectedIds].some(id =>
+                isPersonPickerSelection(account.id, id, peopleGroups),
+              );
               return (
                 <AccountPickerPill
                   key={account.id}
                   item={account}
                   displayLabel={personLabel}
                   toneColor={personLabel ? theme.transfer : undefined}
-                  isSelected={selectedIds.has(account.id)}
+                  isSelected={selected}
                   isMultiple={isMultiple}
                   isPinnedArchived={pinnedAccountIds.has(account.id)}
                   onPress={() => handleToggleSelection(account.id)}
@@ -446,6 +464,17 @@ export function AccountPickerList(props: AccountPickerListProps) {
           </AppButton>
         </View>
       )}
+      {!isMultiple ? (
+        <PersonAccountChooserModal
+          visible={personSelect.chooserVisible}
+          personName={personSelect.chooserPersonName}
+          accounts={personSelect.chooserAccounts}
+          peopleGroups={peopleGroups}
+          selectedId={[...selectedIds][0]}
+          onClose={personSelect.closeChooser}
+          onSelect={personSelect.confirmChooserAccount}
+        />
+      ) : null}
     </View>
   );
 }
