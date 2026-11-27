@@ -196,13 +196,12 @@ export function SplitForm({
         return;
       }
       if (!workplaceId) return;
-      const target =
-        allAccounts.find(
-          account =>
-            group.accountIds.includes(account.id) &&
-            account.accountType === AccountType.ASSET &&
-            account.currencyCode.toUpperCase() === currencyCode,
-        ) ?? allAccounts.find(account => group.accountIds.includes(account.id));
+      const target = allAccounts.find(
+        account =>
+          group.accountIds.includes(account.id) &&
+          account.accountType === AccountType.ASSET &&
+          account.currencyCode.toUpperCase() === currencyCode,
+      );
       const account =
         target ?? (await ensurePersonAccount(workplaceId, personId, 'receivable', currencyCode));
       if (splitMode === 'equal') pendingEqualizeRef.current = true;

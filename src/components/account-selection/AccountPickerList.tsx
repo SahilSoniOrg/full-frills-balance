@@ -152,7 +152,7 @@ export const AccountPickerPill = React.memo(
       <PressScaleTouchable
         pressScale="subtle"
         accessibilityRole={isMultiple ? 'checkbox' : 'button'}
-        accessibilityLabel={item.name}
+        accessibilityLabel={visibleName}
         accessibilityState={isMultiple ? { checked: isSelected } : { selected: isSelected }}
         testID={testID ?? `account-picker-option-${item.id}`}
         onPress={handlePress}

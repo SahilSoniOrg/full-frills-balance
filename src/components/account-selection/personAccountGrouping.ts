@@ -21,7 +21,7 @@ const PERSON_ROLE_LABELS: Record<AccountType, string> = {
 };
 
 export function formatPersonPickerLabel(
-  account: Pick<AccountFields, 'id' | 'name' | 'accountType'>,
+  account: Pick<AccountFields, 'id' | 'name' | 'accountType' | 'currencyCode'>,
   peopleGroups?: readonly PersonPickerGroup[],
 ): string | undefined {
   if (!peopleGroups || peopleGroups.length === 0) return undefined;
@@ -29,11 +29,7 @@ export function formatPersonPickerLabel(
   if (!person) return undefined;
   const accountType = toAccountType(account.accountType);
   if (!accountType) return account.name;
-  const samePersonAccounts = person.accountIds.length;
-  if (samePersonAccounts === 1 && accountType === AccountType.ASSET) {
-    return `${person.personName} · Owes you`;
-  }
-  return `${person.personName} · ${PERSON_ROLE_LABELS[accountType]}`;
+  return `${person.personName} · ${PERSON_ROLE_LABELS[accountType]} · ${account.currencyCode} · ${account.name}`;
 }
 
 export function buildJournalPickerSections(
