@@ -141,6 +141,16 @@ export function AccountsListView({
           <DisclosureToggle
             label={section.title}
             meta={section.count}
+            trailing={
+              <MoneyText
+                amount={section.total}
+                currencyCode={currencyCode}
+                formatStyle="short"
+                variant="body"
+                weight="bold"
+                style={{ color: section.totalColor }}
+              />
+            }
             expanded={!section.isCollapsed}
             onToggle={() => handleToggleSection(section.title)}
             onLongPress={() => {
@@ -152,16 +162,9 @@ export function AccountsListView({
             accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
             style={styles.sectionHeaderPressable}
             testID={`section-control-${section.title.toLowerCase()}`}
+            showChevron={!selectionCheckbox}
           />
           {selectionCheckbox}
-          <MoneyText
-            amount={section.total}
-            currencyCode={currencyCode}
-            formatStyle="short"
-            variant="body"
-            weight="bold"
-            style={{ color: section.totalColor }}
-          />
         </Inline>
       );
     },
