@@ -561,6 +561,21 @@ export function repaymentCandidates(
   personId: PersonId,
   precisionByCurrency: ReadonlyMap<string, number>,
 ) {
+  const effectivePrecisionByCurrency = new Map(precisionByCurrency);
+  for (const account of accounts.values()) {
+    if (!effectivePrecisionByCurrency.has(account.currencyCode)) {
+      effectivePrecisionByCurrency.set(
+        account.currencyCode,
+        getCurrencyPrecision(account.currencyCode),
+      );
+    }
+  }
+  if (!effectivePrecisionByCurrency.has(journal.currencyCode)) {
+    effectivePrecisionByCurrency.set(
+      journal.currencyCode,
+      getCurrencyPrecision(journal.currencyCode),
+    );
+  }
   if (
     !isRepaymentJournal(journal) ||
     legs.length !== 2 ||
@@ -570,7 +585,7 @@ export function repaymentCandidates(
 
   const balance = evaluateJournalBalance({
     journalCurrency: journal.currencyCode,
-    precisionByCurrency,
+    precisionByCurrency: effectivePrecisionByCurrency,
     lines: legs.map(leg => ({
       id: leg.id,
       accountId: leg.accountId,

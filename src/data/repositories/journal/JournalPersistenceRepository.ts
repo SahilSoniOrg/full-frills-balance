@@ -352,7 +352,7 @@ export class JournalPersistenceRepository {
     session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     captureJournalId: JournalId,
-    changes: { before?: AuditJsonObject; after?: AuditJsonObject },
+    changes: { before?: AuditJsonObject; after?: AuditJsonObject; details?: AuditJsonObject },
     auditMetadata?: AuditEventMetadata,
   ): Promise<JournalPersistenceResult> {
     return stageJournalImpact(

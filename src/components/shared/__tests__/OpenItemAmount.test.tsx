@@ -6,9 +6,9 @@ describe('OpenItemAmount', () => {
     const { getByText } = render(
       <OpenItemAmount remainder={5} originalAmount={10} currencyCode="USD" isPrivacyMode={false} />,
     );
-    expect(getByText('USD 5.00 remaining')).toBeTruthy();
+    expect(getByText('$5.00 remaining')).toBeTruthy();
     expect(getByText('Partial')).toBeTruthy();
-    expect(getByText('of USD 10.00 total')).toBeTruthy();
+    expect(getByText('of $10.00 total')).toBeTruthy();
   });
 
   it('respects privacy mode for both amounts', () => {

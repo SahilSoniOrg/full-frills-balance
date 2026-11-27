@@ -378,7 +378,22 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
         updateLine,
         updateLines,
         setLines,
-        addLine: jest.fn(),
+        addLine: (transactionType = TransactionType.DEBIT, seed) => {
+          setLines(previous => [
+            ...previous,
+            {
+              id: asTransactionId(`added-${previous.length}`),
+              accountId: seed?.accountId ?? EMPTY_ACCOUNT_ID,
+              accountName: seed?.accountName ?? '',
+              accountType: seed?.accountType ?? AccountType.ASSET,
+              accountCurrency: seed?.accountCurrency,
+              amount: seed?.amount ?? '',
+              transactionType,
+              notes: seed?.notes ?? '',
+              exchangeRate: seed?.exchangeRate ?? '',
+            },
+          ]);
+        },
         fetchRatesForLines,
         setIsGuidedMode: jest.fn(),
       }),

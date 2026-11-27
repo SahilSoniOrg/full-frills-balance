@@ -254,8 +254,16 @@ export function planWeAreSettled(x: {
   if (x.accounts.some(a => a.hasNegativeUnassignedRemainder)) {
     throw new Error('negative unassigned balance');
   }
-  const workplacePrecision =
-    x.precisionByCurrency.get(x.workplaceCurrency) ?? getCurrencyPrecision(x.workplaceCurrency);
+  const precisionByCurrency = new Map(x.precisionByCurrency);
+  if (!precisionByCurrency.has(x.workplaceCurrency)) {
+    precisionByCurrency.set(x.workplaceCurrency, getCurrencyPrecision(x.workplaceCurrency));
+  }
+  for (const account of x.accounts) {
+    if (!precisionByCurrency.has(account.currencyCode)) {
+      precisionByCurrency.set(account.currencyCode, getCurrencyPrecision(account.currencyCode));
+    }
+  }
+  const workplacePrecision = precisionByCurrency.get(x.workplaceCurrency)!;
   let netMinorUnits = 0;
   const lines: JournalWriteLine[] = [];
   const allocations: PlannedAllocation[] = [];
@@ -263,8 +271,7 @@ export function planWeAreSettled(x: {
   for (const account of x.accounts) {
     const role = x.roles.get(account.accountId);
     if (role !== 'receivable' && role !== 'payable') continue;
-    const precision =
-      x.precisionByCurrency.get(account.currencyCode) ?? getCurrencyPrecision(account.currencyCode);
+    const precision = precisionByCurrency.get(account.currencyCode)!;
     const closeUnits =
       toMinorUnits(account.trackedOpenRemainderSum, precision) +
       Math.max(0, toMinorUnits(account.unassignedBalance, precision));
@@ -297,7 +304,7 @@ export function planWeAreSettled(x: {
 
     const valued = evaluateJournalBalance({
       journalCurrency: x.workplaceCurrency,
-      precisionByCurrency: x.precisionByCurrency,
+      precisionByCurrency,
       lines: [
         {
           id: 'target',
@@ -344,7 +351,7 @@ export function planWeAreSettled(x: {
   if (lines.length >= 2) {
     const fullCheck = evaluateJournalBalance({
       journalCurrency: x.workplaceCurrency,
-      precisionByCurrency: x.precisionByCurrency,
+      precisionByCurrency,
       lines: lines.map((line, index) => ({
         ...line,
         id: String(index),

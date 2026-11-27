@@ -58,7 +58,12 @@ export function WeAreSettledPreviewModal({
       footer={
         <Inline gap="sm" alignItems="center">
           <Box flex={1}>
-            <AppButton variant="outline" onPress={onCancel} disabled={isConfirming}>
+            <AppButton
+              variant="outline"
+              onPress={onCancel}
+              disabled={isConfirming}
+              accessibilityLabel="Cancel"
+            >
               Cancel
             </AppButton>
           </Box>
@@ -68,6 +73,7 @@ export function WeAreSettledPreviewModal({
               onPress={onConfirm}
               disabled={Boolean(blockedReason) || isConfirming}
               loading={isConfirming}
+              accessibilityLabel="Confirm"
             >
               Confirm
             </AppButton>

@@ -212,7 +212,16 @@ export async function syncPutJournalPeopleInSession(input: SyncInput): Promise<v
   ];
   const integrity = evaluateJournalEditIntegrity({
     journalId,
-    items: existingItems.map(item => ({ ...item, createdAt: item.createdAt?.getTime() })),
+    items: existingItems.map(item => ({
+      id: item.id,
+      personId: item.personId,
+      accountId: item.accountId,
+      originatingJournalId: item.originatingJournalId,
+      currencyCode: item.currencyCode,
+      originalAmount: item.originalAmount,
+      direction: item.direction,
+      createdAt: item.createdAt?.getTime(),
+    })),
     allocations: allocations.map(row => ({
       id: row.id,
       openItemId: row.openItemId,

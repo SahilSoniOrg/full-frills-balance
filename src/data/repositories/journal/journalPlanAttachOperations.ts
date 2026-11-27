@@ -398,6 +398,10 @@ export async function stagePlanAttach(
           changes: {
             before: beforeSnapshot,
             after: afterSnapshot,
+            undoTransactionSnapshots: {
+              before: beforeSnapshot.transactions,
+              after: afterSnapshot.transactions,
+            },
             plannedPaymentId: input.plannedPaymentId,
             upgraded: shouldRewrite,
             ...(input.observationId ? { observationId: input.observationId } : {}),
@@ -451,12 +455,13 @@ export async function stageUndoPlanAttach(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,
   captureJournalId: JournalId,
-  changes: { before?: AuditJsonObject; after?: AuditJsonObject },
+  changes: { before?: AuditJsonObject; after?: AuditJsonObject; details?: AuditJsonObject },
   auditMetadata?: AuditEventMetadata,
 ): Promise<JournalPersistenceResult> {
   const before = asRecord(changes.before);
   const after = asRecord(changes.after);
   if (!before || !after) throw new Error(REVERT_CONFLICT_MESSAGE);
+  const transactionSnapshots = asRecord(asRecord(changes.details)?.undoTransactionSnapshots);
 
   const captureJournal = await findActiveJournal(captureJournalId, workplaceId);
   if (!captureJournal) throw new Error('Journal not found');
@@ -495,9 +500,12 @@ export async function stageUndoPlanAttach(
     'transactions',
     'captureMetadataJson',
   ] as const) {
-    if (!Object.prototype.hasOwnProperty.call(after, field)) continue;
+    const expected =
+      field === 'transactions' && !Object.prototype.hasOwnProperty.call(after, field)
+        ? transactionSnapshots?.after
+        : after[field];
+    if (!Object.prototype.hasOwnProperty.call(after, field) && expected === undefined) continue;
     const actual = currentAfter[field];
-    const expected = after[field];
     const matches =
       field === 'transactions' && Array.isArray(actual) && Array.isArray(expected)
         ? matchesAuditValue(
@@ -566,8 +574,9 @@ export async function stageUndoPlanAttach(
     transaction => transaction.deletedAt?.getTime() === retiredDeletedAt,
   );
 
-  const beforeTransactions = Array.isArray(before.transactions)
-    ? (before.transactions as ReturnType<typeof auditTransactions>)
+  const rawBeforeTransactions = before.transactions ?? transactionSnapshots?.before;
+  const beforeTransactions = Array.isArray(rawBeforeTransactions)
+    ? (rawBeforeTransactions as ReturnType<typeof auditTransactions>)
     : null;
   if (!beforeTransactions) throw new Error(REVERT_CONFLICT_MESSAGE);
 

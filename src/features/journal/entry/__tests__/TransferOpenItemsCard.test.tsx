@@ -63,7 +63,7 @@ describe('TransferOpenItemsCard', () => {
         onQuickFillAmount={jest.fn()}
       />,
     );
-    fireEvent.press(getByText(/USD 3\.00 remaining/));
+    fireEvent.press(getByText(/\$3\.00 remaining/));
     expect(toggle).toHaveBeenCalledWith('a');
   });
   it('uses the shared remainder/original labels and selects an item from its quick fill', () => {
@@ -85,8 +85,8 @@ describe('TransferOpenItemsCard', () => {
         onSelectOnlyItem={only}
       />,
     );
-    expect(getByText('USD 3.00 remaining')).toBeTruthy();
-    expect(getByText('of USD 8.00 total')).toBeTruthy();
+    expect(getByText('$3.00 remaining')).toBeTruthy();
+    expect(getByText('of $8.00 total')).toBeTruthy();
     fireEvent.press(getByText(/Item 1/));
     expect(quick).toHaveBeenCalledWith('3');
     expect(only).toHaveBeenCalledWith('a');

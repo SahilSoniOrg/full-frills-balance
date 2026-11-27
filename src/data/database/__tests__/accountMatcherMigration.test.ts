@@ -27,7 +27,7 @@ describe('account matcher schema (v36)', () => {
       migrations.sortedMigrations
         .filter(migration => migration.toVersion >= 36)
         .map(migration => migration.toVersion),
-    ).toEqual([36, 37, 38, 39, 40]);
+    ).toEqual([36, 37, 38, 39, 40, 41]);
     expect(schema.tables.account_matchers.columnArray.map(column => column.name)).toEqual(
       MATCHER_COLUMNS,
     );
