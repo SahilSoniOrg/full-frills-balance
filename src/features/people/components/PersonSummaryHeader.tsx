@@ -1,4 +1,11 @@
-import { AppText, Badge, Icon, IconButton, PersonAvatar } from '@/src/components/core';
+import {
+  AppText,
+  Badge,
+  Icon,
+  IconButton,
+  PersonAvatar,
+  type IconName,
+} from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Spacing, Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -15,7 +22,7 @@ const TITLE_BALANCE_FIT = {
 
 type PersonLike = {
   name: string;
-  icon?: string | null;
+  icon?: IconName | null;
   color?: string | null;
   isPinned?: boolean;
   archivedAt?: Date | string | null;
@@ -84,7 +91,12 @@ export function PersonSummaryHeader({ person, summary, formatAmount, onSettle }:
   return (
     <View style={styles.card} testID="person-summary-header">
       <View style={styles.header}>
-        <PersonAvatar name={person.name} icon={person.icon} color={person.color} size={52} />
+        <PersonAvatar
+          name={person.name}
+          icon={person.icon ?? undefined}
+          color={person.color ?? undefined}
+          size={52}
+        />
         <View style={styles.titleInfo}>
           <View style={styles.nameRow}>
             <AppText variant="title" fontRole="display" numberOfLines={2} style={styles.name}>

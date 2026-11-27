@@ -17,7 +17,13 @@ import {
   updatePerson,
 } from '@/src/services/people';
 import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
-import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
+import {
+  asAccountId,
+  type AccountId,
+  type JournalId,
+  type OpenItemId,
+  type PersonId,
+} from '@/src/types/ids';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { setStringAsync } from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
@@ -71,9 +77,8 @@ export function usePersonDetailsViewModel() {
     () => (detail?.linkedAccounts.map(linked => linked.account.id) ?? []).slice().sort().join('|'),
     [detail],
   );
-  const linkedAccountIds = useMemo(
-    () =>
-      linkedAccountIdsKey ? (linkedAccountIdsKey.split('|') as AccountId[]) : ([] as AccountId[]),
+  const linkedAccountIds = useMemo<AccountId[]>(
+    () => (linkedAccountIdsKey ? linkedAccountIdsKey.split('|').map(asAccountId) : []),
     [linkedAccountIdsKey],
   );
 
