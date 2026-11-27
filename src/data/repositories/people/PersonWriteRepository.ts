@@ -13,6 +13,24 @@ import {
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction } from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
+export type PersonProfileInput = {
+  name: string;
+  notes?: string;
+  color?: string;
+  defaultCurrencyCode?: string;
+  paymentHandle?: string;
+  phone?: string;
+  email?: string;
+  isPinned?: boolean;
+};
+
+export type PersonProfilePatch = Partial<PersonProfileInput>;
+
+const trimOptionalText = (value?: string): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
 export class PersonWriteRepository {
   private people() {
     return database.collections.get<Person>('people');
@@ -33,16 +51,44 @@ export class PersonWriteRepository {
     if (!x[0]) throw new Error('Person not found in workplace');
     return x[0];
   }
+  private async assertUniqueName(w: WorkplaceId, name: string, excludeId?: PersonId) {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Name cannot be empty');
+    const normalized = trimmed.toLocaleLowerCase();
+    const existing = await this.people()
+      .query(Q.where('workplace_id', w), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    const conflict = existing.find(
+      row => row.id !== excludeId && row.name.trim().toLocaleLowerCase() === normalized,
+    );
+    if (conflict) {
+      throw new Error(`A person named "${trimmed}" already exists.`);
+    }
+    return trimmed;
+  }
   async createPersonInSession(
     s: AccountingWriteSession,
     w: WorkplaceId,
-    input: { name: string; notes?: string; color?: string },
+    input: PersonProfileInput,
   ) {
+    const name = await this.assertUniqueName(w, input.name);
+    const notes = trimOptionalText(input.notes);
+    const color = trimOptionalText(input.color);
+    const defaultCurrencyCode = trimOptionalText(input.defaultCurrencyCode)?.toUpperCase();
+    const paymentHandle = trimOptionalText(input.paymentHandle);
+    const phone = trimOptionalText(input.phone);
+    const email = trimOptionalText(input.email);
+    const isPinned = input.isPinned ?? false;
     const x = this.people().prepareCreate(r => {
       r.workplaceId = w;
-      r.name = input.name;
-      r.notes = input.notes;
-      r.color = input.color;
+      r.name = name;
+      r.notes = notes;
+      r.color = color;
+      r.defaultCurrencyCode = defaultCurrencyCode;
+      r.paymentHandle = paymentHandle;
+      r.phone = phone;
+      r.email = email;
+      r.isPinned = isPinned;
       r.createdAt = new Date();
       r.updatedAt = new Date();
     });
@@ -53,8 +99,17 @@ export class PersonWriteRepository {
           entityType: 'person',
           entityId: x.id,
           action: AuditAction.CREATE,
-          changes: input,
-          displayName: input.name,
+          changes: {
+            name,
+            notes,
+            color,
+            defaultCurrencyCode,
+            paymentHandle,
+            phone,
+            email,
+            isPinned,
+          },
+          displayName: name,
         },
         w,
       ),
@@ -65,16 +120,40 @@ export class PersonWriteRepository {
     s: AccountingWriteSession,
     w: WorkplaceId,
     id: PersonId,
-    patch: { name?: string; notes?: string; color?: string },
+    patch: PersonProfilePatch,
   ) {
     const x = await this.person(w, id);
+    const normalizedPatch: PersonProfilePatch = {};
+    if ('name' in patch) {
+      normalizedPatch.name = await this.assertUniqueName(w, patch.name ?? '', id);
+    }
+    if ('notes' in patch) normalizedPatch.notes = trimOptionalText(patch.notes);
+    if ('color' in patch) normalizedPatch.color = trimOptionalText(patch.color);
+    if ('defaultCurrencyCode' in patch) {
+      normalizedPatch.defaultCurrencyCode = trimOptionalText(
+        patch.defaultCurrencyCode,
+      )?.toUpperCase();
+    }
+    if ('paymentHandle' in patch) {
+      normalizedPatch.paymentHandle = trimOptionalText(patch.paymentHandle);
+    }
+    if ('phone' in patch) normalizedPatch.phone = trimOptionalText(patch.phone);
+    if ('email' in patch) normalizedPatch.email = trimOptionalText(patch.email);
+    if ('isPinned' in patch) normalizedPatch.isPinned = Boolean(patch.isPinned);
+
     stageModelWrite(s, () => [
       x.prepareUpdate(r => {
-        Object.assign(r, patch);
+        Object.assign(r, normalizedPatch);
         r.updatedAt = new Date();
       }),
       auditRepository.prepareLog(
-        { entityType: 'person', entityId: id, action: AuditAction.UPDATE, changes: patch },
+        {
+          entityType: 'person',
+          entityId: id,
+          action: AuditAction.UPDATE,
+          changes: normalizedPatch,
+          displayName: normalizedPatch.name ?? x.name,
+        },
         w,
       ),
     ]);
@@ -117,8 +196,16 @@ export class PersonWriteRepository {
       ),
     ]);
   }
-  async linkAccountInSession(s: AccountingWriteSession, w: WorkplaceId, p: PersonId, a: AccountId) {
-    await this.person(w, p);
+  async linkAccountInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    p: PersonId,
+    a: AccountId,
+    options?: { skipPersonLookup?: boolean },
+  ) {
+    if (!options?.skipPersonLookup) {
+      await this.person(w, p);
+    }
     const matches = await this.links()
       .query(
         Q.where('workplace_id', w),

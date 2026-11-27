@@ -68,6 +68,11 @@ export interface CanonicalPerson {
   name: string;
   notes?: string;
   color?: string;
+  defaultCurrencyCode?: string;
+  paymentHandle?: string;
+  phone?: string;
+  email?: string;
+  isPinned?: boolean;
   archivedAt?: number;
   createdAt?: number;
   updatedAt?: number;

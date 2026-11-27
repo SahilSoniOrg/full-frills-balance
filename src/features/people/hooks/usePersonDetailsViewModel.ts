@@ -12,12 +12,14 @@ import {
   peopleReadService,
   renamePerson,
   setPersonArchived,
+  updatePerson,
 } from '@/src/services/people';
 import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
 import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
 import { AccountType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { formatShortDate } from '@/src/utils/dateFormatting';
+import { setStringAsync } from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -56,6 +58,7 @@ export function usePersonDetailsViewModel() {
     includeOpenItems: true,
     includeRepayments: true,
     includeBalances: true,
+    includePaymentHandle: true,
   });
 
   const load = useCallback(async () => {
@@ -90,6 +93,7 @@ export function usePersonDetailsViewModel() {
     return {
       workplaceId,
       recipientName: detail.person.name,
+      paymentHandle: detail.person.paymentHandle,
       date: formatShortDate(new Date()),
       items: detail.openItems.map(entry => ({
         ...entry.item,
@@ -222,6 +226,25 @@ export function usePersonDetailsViewModel() {
     }
   }, [detail, load, workplaceId]);
 
+  const handleTogglePin = useCallback(async () => {
+    if (!detail) return;
+    try {
+      const next = !detail.person.isPinned;
+      await updatePerson(workplaceId, detail.person.id, { isPinned: next });
+      toast.success(next ? 'Pinned to top.' : 'Unpinned person.');
+      await load();
+    } catch (error) {
+      showErrorAlert(error instanceof Error ? error.message : 'Could not update pin state');
+    }
+  }, [detail, load, workplaceId]);
+
+  const handleCopyPaymentHandle = useCallback(async () => {
+    const handle = detail?.person.paymentHandle?.trim();
+    if (!handle) return;
+    await setStringAsync(handle);
+    toast.success('Copied payment handle.');
+  }, [detail]);
+
   const handleLinkAccount = useCallback(
     async (accountId: AccountId) => {
       if (!detail) return;
@@ -339,8 +362,11 @@ export function usePersonDetailsViewModel() {
     onMatchExisting: () =>
       detail && AppNavigation.toSettleUp({ personId: detail.person.id, mode: 'match' }),
     onOpenJournal: (journalId: JournalId) => AppNavigation.toJournalDetails(journalId),
+    onEditProfile: () => detail && AppNavigation.toPersonEdit(detail.person.id, workplaceId),
     onRename: handleRename,
     onToggleArchive: handleToggleArchive,
+    onTogglePin: handleTogglePin,
+    onCopyPaymentHandle: handleCopyPaymentHandle,
     onLinkAccount: handleLinkAccount,
     onApplyUnassigned: handleApplyUnassigned,
     onStartWeAreSettled: handleStartWeAreSettled,

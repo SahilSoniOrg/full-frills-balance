@@ -210,6 +210,11 @@ export function prepareAuxiliaryImportRecords(
       r.name = x.name;
       r.notes = x.notes;
       r.color = x.color;
+      r.defaultCurrencyCode = x.defaultCurrencyCode;
+      r.paymentHandle = x.paymentHandle;
+      r.phone = x.phone;
+      r.email = x.email;
+      r.isPinned = x.isPinned;
       r.archivedAt = x.archivedAt == null ? undefined : new Date(x.archivedAt);
       r._raw._status = 'synced';
       setRecordTimestamps(r, {

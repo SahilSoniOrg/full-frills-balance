@@ -583,11 +583,14 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
     const summary = buildPersonShareSummary({
       recipientName: 'Priya',
       date: '2026-11-26',
+      paymentHandle: 'priya@okaxis',
       items,
       allocations,
       includeRepayments: true,
+      includePaymentHandle: true,
     });
     expect(summary).toContain('Summary for Priya');
+    expect(summary).toContain('Payment handle: priya@okaxis');
     expect(summary).toContain('INR 2000');
   });
 });

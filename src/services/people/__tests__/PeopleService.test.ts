@@ -502,4 +502,37 @@ describe('PeopleService integration', () => {
       }),
     ).rejects.toThrow();
   });
+
+  it('creates a person with initial linked account and updates rich profile attributes', async () => {
+    const cashReceivable = await createAccount({
+      name: 'Pri Receivable',
+      accountType: AccountType.ASSET,
+      accountSubtype: AccountSubtype.RECEIVABLE,
+    });
+    const pri = await PeopleService.createPerson(workplaceId, {
+      name: 'Pri',
+      color: '#6366F1',
+      defaultCurrencyCode: 'USD',
+      paymentHandle: 'pri@upi',
+      initialAccountId: cashReceivable.id,
+    });
+    const detail = await PeopleService.peopleReadService.getPersonDetail(
+      workplaceId,
+      pri.id,
+      'INR',
+    );
+    expect(detail?.linkedAccounts.map(a => a.account.id)).toEqual([cashReceivable.id]);
+    expect(detail?.person.defaultCurrencyCode).toBe('USD');
+
+    const updated = await PeopleService.updatePerson(workplaceId, pri.id, {
+      phone: '555-0100',
+      email: 'pri@example.com',
+      notes: 'Flatmate',
+      isPinned: true,
+    });
+    expect(updated.phone).toBe('555-0100');
+    expect(updated.email).toBe('pri@example.com');
+    expect(updated.notes).toBe('Flatmate');
+    expect(updated.isPinned).toBe(true);
+  });
 });

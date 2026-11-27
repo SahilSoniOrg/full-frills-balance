@@ -12,6 +12,7 @@ export function createPeopleShareable(input: {
   workplaceId: WorkplaceId;
   recipientName: string;
   date: string;
+  paymentHandle?: string;
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];
   balances?: readonly PersonCurrencyBalance[];
@@ -19,6 +20,7 @@ export function createPeopleShareable(input: {
   includeOpenItems?: boolean;
   includeRepayments?: boolean;
   includeBalances?: boolean;
+  includePaymentHandle?: boolean;
 }): Shareable {
   return {
     id: `person-summary-${input.workplaceId}`,

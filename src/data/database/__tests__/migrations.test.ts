@@ -16,8 +16,10 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/domain/accounting/BalanceEffects';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
+import { runMigrationSqlFixture } from './migrationSqlHarness';
+
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 40;
+const EXPECTED_SCHEMA_VERSION = 41;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);
@@ -31,14 +33,48 @@ function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): v
 }
 
 describe('database migrations (LokiJS)', () => {
-  it('includes the v40 People books tables and upgrade step', () => {
-    expect(schema.version).toBe(40);
+  it('includes the v40 People books tables and v41 person profile enrichment columns', () => {
+    expect(schema.version).toBe(41);
     for (const table of ['people', 'person_accounts', 'open_items', 'settlement_allocations']) {
       expect(schema.tables[table]).toBeDefined();
     }
-    const migration = migrations.sortedMigrations.find(step => step.toVersion === 40);
-    expect(migration).toBeDefined();
-    expect(migration?.steps.filter(step => step.type === 'create_table')).toHaveLength(4);
+    const v40Migration = migrations.sortedMigrations.find(step => step.toVersion === 40);
+    expect(v40Migration).toBeDefined();
+    expect(v40Migration?.steps.filter(step => step.type === 'create_table')).toHaveLength(4);
+
+    const v41Migration = migrations.sortedMigrations.find(step => step.toVersion === 41);
+    expect(v41Migration).toBeDefined();
+    const result = runMigrationSqlFixture(
+      `
+create_table('people', payload['columns'])
+db.execute("INSERT INTO people (id, name, notes, color, created_at, updated_at, workplace_id) VALUES ('p1', 'Pri', 'Roommate', '#2563EB', 1, 2, 'wp1')")
+apply_steps(payload['steps'])
+db.row_factory = sqlite3.Row
+print(json.dumps(dict(db.execute('SELECT * FROM people').fetchone())))
+`,
+      {
+        steps: v41Migration?.steps,
+        columns: schema.tables.people.columnArray.filter(
+          column =>
+            !['default_currency_code', 'payment_handle', 'phone', 'email', 'is_pinned'].includes(
+              column.name,
+            ),
+        ),
+      },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      id: 'p1',
+      name: 'Pri',
+      notes: 'Roommate',
+      color: '#2563EB',
+      default_currency_code: null,
+      payment_handle: null,
+      phone: null,
+      email: null,
+      is_pinned: null,
+    });
   });
 
   const workplaceId = 'wp-migration-test' as WorkplaceId;

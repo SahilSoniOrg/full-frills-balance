@@ -309,6 +309,10 @@ export class PeopleReadService {
     );
   }
 
+  async getPersonProfile(workplaceId: WorkplaceId, personId: PersonId) {
+    return personQueryRepository.findPerson(workplaceId, personId);
+  }
+
   async listPersonPickerGroups(workplaceId: WorkplaceId) {
     const [people, links] = await Promise.all([
       personQueryRepository.listPeople(workplaceId, { includeArchived: true }),
@@ -317,6 +321,9 @@ export class PeopleReadService {
     return people.map(person => ({
       personId: person.id,
       personName: person.name,
+      color: person.color,
+      defaultCurrencyCode: person.defaultCurrencyCode,
+      isPinned: Boolean(person.isPinned),
       archived: Boolean(person.archivedAt),
       accountIds: links.filter(link => link.personId === person.id).map(link => link.accountId),
     }));

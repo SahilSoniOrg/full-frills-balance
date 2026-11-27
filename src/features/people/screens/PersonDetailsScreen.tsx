@@ -97,12 +97,18 @@ function PersonDetailsScreenContent() {
               ]
             : []),
           {
-            label: 'Rename',
+            label: 'Edit details',
             icon: Icon.Edit,
+            onPress: vm.onEditProfile,
+            testID: 'person-edit-profile-button',
+          },
+          {
+            label: detail.person.isPinned ? 'Unpin' : 'Pin to top',
+            icon: Icon.Star,
             onPress: () => {
-              vm.setRenameDraft(detail.person.name);
-              vm.setRenameOpen(true);
+              void vm.onTogglePin();
             },
+            testID: 'person-toggle-pin-button',
           },
           {
             label: detail.person.archivedAt ? 'Unarchive' : 'Archive',
@@ -193,12 +199,20 @@ function PersonDetailsScreenContent() {
           <AppCard padding="md" elevation="sm" radius="xxl">
             <Stack gap="sm">
               <Inline gap="md" alignItems="center">
-                <PersonAvatar name={detail.person.name} size={64} />
+                <PersonAvatar name={detail.person.name} color={detail.person.color} size={64} />
                 <Stack gap="xs" flex={1}>
                   <Inline gap="sm" alignItems="center" flexWrap="wrap">
                     <AppText variant="title" fontRole="display">
                       {detail.person.name}
                     </AppText>
+                    {detail.person.isPinned ? (
+                      <Badge size="sm" variant="primary" icon={Icon.Star}>
+                        Pinned
+                      </Badge>
+                    ) : null}
+                    {detail.person.defaultCurrencyCode ? (
+                      <Badge size="sm">{detail.person.defaultCurrencyCode}</Badge>
+                    ) : null}
                     {detail.person.archivedAt ? <Badge size="sm">Archived</Badge> : null}
                   </Inline>
                   <PersonBalanceBadge
@@ -286,6 +300,46 @@ function PersonDetailsScreenContent() {
                 .map(a => a.account.name)
                 .join(', ')}. Review entries before closing.`}
             />
+          ) : null}
+
+          {detail.person.paymentHandle ||
+          detail.person.phone ||
+          detail.person.email ||
+          detail.person.notes ? (
+            <ListGroup header="PROFILE">
+              {detail.person.paymentHandle ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.Wallet} tint="primary" />}
+                  title={detail.person.paymentHandle}
+                  subtitle="Payment handle · Tap to copy"
+                  trailing={<AppIcon name={Icon.Copy} size={Size.iconSm} color="primary" />}
+                  onPress={() => void vm.onCopyPaymentHandle()}
+                  testID="person-copy-payment-handle-button"
+                />
+              ) : null}
+              {detail.person.phone ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.MessageCircle} tint="textSecondary" />}
+                  title={detail.person.phone}
+                  subtitle="Phone"
+                />
+              ) : null}
+              {detail.person.email ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.Mail} tint="textSecondary" />}
+                  title={detail.person.email}
+                  subtitle="Email"
+                />
+              ) : null}
+              {detail.person.notes ? (
+                <ListRow
+                  leading={<IconTile icon={Icon.Document} tint="textSecondary" />}
+                  title="Notes"
+                  subtitle={detail.person.notes}
+                  wrap
+                />
+              ) : null}
+            </ListGroup>
           ) : null}
 
           <ListGroup header="OPEN ITEMS">
@@ -445,6 +499,9 @@ function PersonDetailsScreenContent() {
               ['includeOpenItems', 'Open items'],
               ['includeRepayments', 'Repayments'],
               ['includeBalances', 'Balances'],
+              ...(detail.person.paymentHandle
+                ? ([['includePaymentHandle', 'Payment handle']] as const)
+                : []),
             ] as const
           ).map(([key, label]) => (
             <Inline key={key} justifyContent="space-between" alignItems="center">

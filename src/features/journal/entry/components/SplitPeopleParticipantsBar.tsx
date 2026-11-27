@@ -122,6 +122,7 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
                 <Inline gap="xs" alignItems="center">
                   <PersonAvatar
                     name={person.name}
+                    color={selected ? theme.primary : person.color}
                     size={24}
                     maxChars={1}
                     style={

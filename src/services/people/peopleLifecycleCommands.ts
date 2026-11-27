@@ -5,7 +5,12 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { personQueryRepository, personWriteRepository } from '@/src/data/repositories/people';
+import {
+  personQueryRepository,
+  personWriteRepository,
+  type PersonProfileInput,
+  type PersonProfilePatch,
+} from '@/src/data/repositories/people';
 import { isCompatiblePersonAccount } from '@/src/domain/people';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
@@ -15,12 +20,30 @@ import type Person from '@/src/data/models/Person';
 import type PersonAccount from '@/src/data/models/PersonAccount';
 import type { PersonAccountRole } from '@/src/domain/people';
 
+export type { PersonProfileInput, PersonProfilePatch };
+
 export function createPerson(
   workplaceId: WorkplaceId,
-  input: { name: string; notes?: string; color?: string },
+  input: PersonProfileInput & { initialAccountId?: AccountId },
+): Promise<Person> {
+  return runAccountingWriteSession(async session => {
+    const { initialAccountId, ...profile } = input;
+    const person = await personWriteRepository.createPersonInSession(session, workplaceId, profile);
+    if (initialAccountId) {
+      await linkValidatedAccountInSession(session, workplaceId, person.id, initialAccountId, {
+        skipPersonLookup: true,
+      });
+    }
+    return person;
+  });
+}
+export function updatePerson(
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  patch: PersonProfilePatch,
 ): Promise<Person> {
   return runAccountingWriteSession(session =>
-    personWriteRepository.createPersonInSession(session, workplaceId, input),
+    personWriteRepository.updatePersonInSession(session, workplaceId, personId, patch),
   );
 }
 export function renamePerson(
@@ -28,11 +51,7 @@ export function renamePerson(
   personId: PersonId,
   name: string,
 ): Promise<Person> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error('Name cannot be empty');
-  return runAccountingWriteSession(session =>
-    personWriteRepository.updatePersonInSession(session, workplaceId, personId, { name: trimmed }),
-  );
+  return updatePerson(workplaceId, personId, { name });
 }
 export function setPersonArchived(
   workplaceId: WorkplaceId,
@@ -57,29 +76,45 @@ export async function softDeletePerson(
     personWriteRepository.softDeletePersonInSession(session, workplaceId, personId),
   );
 }
+async function linkValidatedAccountInSession(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  accountId: AccountId,
+  options?: { skipPersonLookup?: boolean },
+): Promise<PersonAccount> {
+  const account = await accountQueryRepository.find(workplaceId, accountId);
+  if (!account) throw new Error('Account not found');
+  const accounts = await accountQueryRepository.findAll(workplaceId);
+  if (accounts.some(a => a.parentAccountId === accountId))
+    throw new Error('Cannot link a group account');
+  if (
+    !isCompatiblePersonAccount({
+      id: account.id,
+      type: account.accountType,
+      subtype: account.accountSubtype ?? AccountSubtype.OTHER,
+      currencyCode: account.currencyCode,
+    })
+  ) {
+    throw new Error('Incompatible person account');
+  }
+  return personWriteRepository.linkAccountInSession(
+    session,
+    workplaceId,
+    personId,
+    accountId,
+    options,
+  );
+}
+
 export async function linkExistingAccount(
   workplaceId: WorkplaceId,
   personId: PersonId,
   accountId: AccountId,
 ): Promise<PersonAccount> {
-  return runAccountingWriteSession(async session => {
-    const account = await accountQueryRepository.find(workplaceId, accountId);
-    if (!account) throw new Error('Account not found');
-    const accounts = await accountQueryRepository.findAll(workplaceId);
-    if (accounts.some(a => a.parentAccountId === accountId))
-      throw new Error('Cannot link a group account');
-    if (
-      !isCompatiblePersonAccount({
-        id: account.id,
-        type: account.accountType,
-        subtype: account.accountSubtype ?? AccountSubtype.OTHER,
-        currencyCode: account.currencyCode,
-      })
-    ) {
-      throw new Error('Incompatible person account');
-    }
-    return personWriteRepository.linkAccountInSession(session, workplaceId, personId, accountId);
-  });
+  return runAccountingWriteSession(session =>
+    linkValidatedAccountInSession(session, workplaceId, personId, accountId),
+  );
 }
 export async function ensurePersonAccountInSession(
   session: AccountingWriteSession,

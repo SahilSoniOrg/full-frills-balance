@@ -6,6 +6,11 @@ export default class Person extends BaseScopedModel<PersonId> {
   @field('name') name!: string;
   @field('notes') notes?: string;
   @field('color') color?: string;
+  @field('default_currency_code') defaultCurrencyCode?: string;
+  @field('payment_handle') paymentHandle?: string;
+  @field('phone') phone?: string;
+  @field('email') email?: string;
+  @field('is_pinned') isPinned?: boolean;
   @date('archived_at') archivedAt?: Date;
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
@@ -16,6 +21,11 @@ export const toPlainPerson = (x: Person) => ({
   name: x.name,
   notes: x.notes,
   color: x.color,
+  defaultCurrencyCode: x.defaultCurrencyCode,
+  paymentHandle: x.paymentHandle,
+  phone: x.phone,
+  email: x.email,
+  isPinned: x.isPinned,
   archivedAt: x.archivedAt?.getTime(),
   createdAt: x.createdAt?.getTime(),
   updatedAt: x.updatedAt?.getTime(),

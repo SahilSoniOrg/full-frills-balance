@@ -1,12 +1,15 @@
 export { PeopleReadService, peopleReadService } from './peopleReadService';
 export {
   createPerson,
+  updatePerson,
   renamePerson,
   setPersonArchived,
   softDeletePerson,
   linkExistingAccount,
   ensurePersonAccountInSession,
   ensurePersonAccount,
+  type PersonProfileInput,
+  type PersonProfilePatch,
 } from './peopleLifecycleCommands';
 export { saveSplitExpense, saveFriendPaidBill, recordPersonMovement } from './peopleSplitCommands';
 export {

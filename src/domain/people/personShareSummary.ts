@@ -6,6 +6,7 @@ import { openItemRemainder } from './personBalanceProjection';
 export function buildPersonShareSummary(input: {
   recipientName: string;
   date: string;
+  paymentHandle?: string;
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];
   balances?: readonly PersonCurrencyBalance[];
@@ -13,9 +14,13 @@ export function buildPersonShareSummary(input: {
   includeOpenItems?: boolean;
   includeRepayments?: boolean;
   includeBalances?: boolean;
+  includePaymentHandle?: boolean;
 }): string {
   const lines = [`Summary for ${input.recipientName}`];
   if (input.includeDate !== false) lines.push(`Date: ${input.date}`);
+  if (input.includePaymentHandle && input.paymentHandle?.trim()) {
+    lines.push(`Payment handle: ${input.paymentHandle.trim()}`);
+  }
   const items = [...input.items].sort(
     (a, b) =>
       (a.journalDate ?? a.createdAt ?? 0) - (b.journalDate ?? b.createdAt ?? 0) ||

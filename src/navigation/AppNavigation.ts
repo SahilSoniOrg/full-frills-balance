@@ -177,12 +177,17 @@ export const AppNavigation = {
     router.push(buildRoute('/(tabs)/people', params));
   },
 
-  toPersonCreation: (workplaceId?: string) => {
+  toPersonCreation: (workplaceId?: string, personId?: string) => {
     router.push(
       buildRoute('/person-creation', {
         workplaceId: launchWorkplaceId(workplaceId),
+        ...(personId ? { personId } : {}),
       }),
     );
+  },
+
+  toPersonEdit: (personId: string, workplaceId?: string) => {
+    AppNavigation.toPersonCreation(workplaceId, personId);
   },
 
   toPersonDetails: (personId: string) => {

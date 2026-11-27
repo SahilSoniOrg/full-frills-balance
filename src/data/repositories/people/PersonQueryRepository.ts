@@ -38,13 +38,18 @@ export class PersonQueryRepository {
     );
   }
   async listPeople(workplaceId: WorkplaceId, options: { includeArchived?: boolean } = {}) {
-    return this.people
+    const rows = await this.people
       .query(
         ...scoped(workplaceId),
         ...(!options.includeArchived ? [Q.where('archived_at', Q.eq(null))] : []),
         Q.sortBy('name', Q.asc),
       )
       .fetch();
+    return [...rows].sort(
+      (a, b) =>
+        Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned)) ||
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    );
   }
   listPersonAccounts(workplaceId: WorkplaceId, personId?: PersonId) {
     return this.links

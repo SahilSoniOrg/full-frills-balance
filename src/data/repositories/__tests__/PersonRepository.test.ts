@@ -113,4 +113,53 @@ describe('PersonRepository', () => {
     );
     expect((await emissions.nextValue)[0].name).toBe('Second');
   });
+
+  it('persists enriched profile fields, enforces unique names, and sorts pinned people first', async () => {
+    const zara = await runAccountingWriteSession(session =>
+      personWriteRepository.createPersonInSession(session, wp, {
+        name: '  Zara  ',
+        color: '#10B981',
+        defaultCurrencyCode: 'usd',
+        paymentHandle: 'zara@upi',
+        phone: '+91 90000 00000',
+        email: 'zara@example.com',
+        notes: 'Roommate',
+        isPinned: true,
+      }),
+    );
+    expect(zara.name).toBe('Zara');
+    expect(zara.defaultCurrencyCode).toBe('USD');
+    expect(zara.paymentHandle).toBe('zara@upi');
+    expect(zara.phone).toBe('+91 90000 00000');
+    expect(zara.email).toBe('zara@example.com');
+    expect(zara.notes).toBe('Roommate');
+    expect(zara.isPinned).toBe(true);
+
+    const aaron = await runAccountingWriteSession(session =>
+      personWriteRepository.createPersonInSession(session, wp, { name: 'Aaron' }),
+    );
+    expect((await personQueryRepository.listPeople(wp)).map(p => p.id)).toEqual([
+      zara.id,
+      aaron.id,
+    ]);
+
+    await expect(
+      runAccountingWriteSession(session =>
+        personWriteRepository.createPersonInSession(session, wp, { name: 'zara' }),
+      ),
+    ).rejects.toThrow(/already exists/);
+
+    const updated = await runAccountingWriteSession(session =>
+      personWriteRepository.updatePersonInSession(session, wp, zara.id, {
+        notes: '   ',
+        isPinned: false,
+      }),
+    );
+    expect(updated.notes ?? undefined).toBeUndefined();
+    expect(updated.isPinned).toBe(false);
+    expect((await personQueryRepository.listPeople(wp)).map(p => p.id)).toEqual([
+      aaron.id,
+      zara.id,
+    ]);
+  });
 });

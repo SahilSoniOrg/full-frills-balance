@@ -71,7 +71,7 @@ function SettleUpScreenContent() {
         >
           <Stack gap="lg">
             <Inline gap="md" alignItems="center">
-              <PersonAvatar name={vm.detail.person.name} size={44} />
+              <PersonAvatar name={vm.detail.person.name} color={vm.detail.person.color} size={44} />
               <Stack gap="none" flex={1}>
                 <AppText variant="subheading" fontRole="display">
                   {vm.detail.person.name}

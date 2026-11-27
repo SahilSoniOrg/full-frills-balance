@@ -261,11 +261,16 @@ export function PeopleListScreen() {
                   leading={
                     <PersonAvatar
                       name={row.person.name}
+                      color={row.person.color}
                       size={44}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: withOpacity(theme.primary, Opacity.medium),
-                      }}
+                      style={
+                        row.person.color
+                          ? undefined
+                          : {
+                              borderWidth: 1,
+                              borderColor: withOpacity(theme.primary, Opacity.medium),
+                            }
+                      }
                     />
                   }
                   title={
@@ -273,6 +278,12 @@ export function PeopleListScreen() {
                       <AppText variant="body" weight="semibold">
                         {row.person.name}
                       </AppText>
+                      {row.person.isPinned ? (
+                        <AppIcon name={Icon.Star} size={Size.iconXs} color="primary" />
+                      ) : null}
+                      {row.person.defaultCurrencyCode ? (
+                        <Badge size="sm">{row.person.defaultCurrencyCode}</Badge>
+                      ) : null}
                       {row.person.archivedAt ? <Badge size="sm">Archived</Badge> : null}
                       {row.hasNegativeUnassignedRemainder ? (
                         <Badge size="sm" variant="warning">
@@ -354,7 +365,9 @@ export function PeopleListScreen() {
             {vm.people.map(entry => (
               <ListRow
                 key={entry.person.id}
-                leading={<PersonAvatar name={entry.person.name} size={32} />}
+                leading={
+                  <PersonAvatar name={entry.person.name} color={entry.person.color} size={32} />
+                }
                 title={entry.person.name}
                 trailing={
                   vm.selectedPersonId === entry.person.id ? (

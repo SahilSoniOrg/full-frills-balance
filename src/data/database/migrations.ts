@@ -1243,5 +1243,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_i
 `),
       ],
     },
+    {
+      toVersion: 41,
+      steps: [
+        addColumns({
+          table: 'people',
+          columns: [
+            { name: 'default_currency_code', type: 'string', isOptional: true },
+            { name: 'payment_handle', type: 'string', isOptional: true },
+            { name: 'phone', type: 'string', isOptional: true },
+            { name: 'email', type: 'string', isOptional: true },
+            { name: 'is_pinned', type: 'boolean', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });
