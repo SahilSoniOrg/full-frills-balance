@@ -42,7 +42,7 @@ export function evaluateJournalEditIntegrity(input: {
           classifyPersonDebtPosting(l) === 'increasing',
       )
       .reduce((s, l) => s + l.amount, 0);
-    if (before > 0 && after === 0)
+    if (before > 0 && after === 0 && allocated > 0)
       conflicts.push({ code: 'origin_removed', openItemIds: [item.id] });
     else if (after < allocated)
       conflicts.push({ code: 'origin_below_allocations', openItemIds: [item.id] });

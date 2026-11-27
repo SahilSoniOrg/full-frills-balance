@@ -205,7 +205,12 @@ export class PersonWriteRepository {
     }
     return x;
   }
-  async softDeleteOpenItemsInSession(s: AccountingWriteSession, w: WorkplaceId, ids: OpenItemId[]) {
+  async softDeleteOpenItemsInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    ids: OpenItemId[],
+    deletedAt = new Date(),
+  ) {
     if (ids.length === 0) return;
     const xs = await this.items()
       .query(
@@ -214,12 +219,11 @@ export class PersonWriteRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-    stageModelWrite(
-      s,
+    stageModelWrite(s, () =>
       xs.map(x =>
         x.prepareUpdate(r => {
-          r.deletedAt = new Date();
-          r.updatedAt = new Date();
+          r.deletedAt = deletedAt;
+          r.updatedAt = deletedAt;
         }),
       ),
     );
@@ -258,6 +262,7 @@ export class PersonWriteRepository {
     s: AccountingWriteSession,
     w: WorkplaceId,
     ids: string[],
+    deactivatedAt = new Date(),
   ) {
     if (ids.length === 0) return;
     const xs = await this.allocations()
@@ -267,12 +272,11 @@ export class PersonWriteRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-    stageModelWrite(
-      s,
+    stageModelWrite(s, () =>
       xs.map(x =>
         x.prepareUpdate(r => {
           r.isActive = false;
-          r.updatedAt = new Date();
+          r.updatedAt = deactivatedAt;
         }),
       ),
     );

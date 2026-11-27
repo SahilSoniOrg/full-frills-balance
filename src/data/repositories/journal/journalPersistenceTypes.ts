@@ -9,6 +9,7 @@ import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 
 export interface PutJournalInput extends JournalWriteFields {
+  deferPlannedRepaymentAllocation?: boolean;
   journalId?: JournalId;
   /** Internal: create a historical/retired row in the same atomic batch. */
   initialDeletedAt?: number;
@@ -19,6 +20,7 @@ export interface PutJournalInput extends JournalWriteFields {
 }
 
 export interface PutJournalPatchInput {
+  deferPlannedRepaymentAllocation?: boolean;
   journalId: JournalId;
   journalDate?: number;
   description?: string;

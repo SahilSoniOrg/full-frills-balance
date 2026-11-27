@@ -35,6 +35,7 @@ import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 import {
   guardAndSyncJournalDeleteOrReverseInSession,
+  restoreJournalPeopleInSession,
   syncPutJournalPeopleInSession,
 } from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
@@ -99,13 +100,19 @@ export async function stageDelete(
     const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
     assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
   }
+  const { deletedAt, transactions } = await stageSoftDelete(
+    session,
+    workplaceId,
+    [journal],
+    auditMetadata,
+  );
   await guardAndSyncJournalDeleteOrReverseInSession({
     session,
     workplaceId,
     journalIds: [journalId],
     action: 'delete',
+    deletedAt,
   });
-  const { transactions } = await stageSoftDelete(session, workplaceId, [journal], auditMetadata);
   return rebuildImpactFor([journal], transactions);
 }
 
@@ -118,13 +125,14 @@ export async function stageBulkDelete(
   if (journals.length === 0) {
     return { ...emptyRebuildImpact(), undoToken: { journals: [], transactions: [] } };
   }
+  const { deletedAt, transactions } = await stageSoftDelete(session, workplaceId, journals);
   await guardAndSyncJournalDeleteOrReverseInSession({
     session,
     workplaceId,
     journalIds: journals.map(journal => journal.id),
     action: 'delete',
+    deletedAt,
   });
-  const { deletedAt, transactions } = await stageSoftDelete(session, workplaceId, journals);
   return {
     ...rebuildImpactFor(journals, transactions),
     undoToken: {
@@ -209,6 +217,14 @@ export async function stageRecover(
     session,
     transactions: resultingTransactions.map(toPersistenceLine),
   });
+  if (previousDeletedAt) {
+    await restoreJournalPeopleInSession(
+      session,
+      workplaceId,
+      [journalId],
+      previousDeletedAt.getTime(),
+    );
+  }
 
   const now = new Date();
   stageModelWrite(session, () => [
@@ -294,6 +310,7 @@ export async function stageBulkRestore(
     });
   }
 
+  await restoreJournalPeopleInSession(session, workplaceId, journalIds, deletedAt!);
   const previousDeletedAtById = new Map(journals.map(journal => [journal.id, journal.deletedAt]));
   const now = new Date();
   stageModelWrite(session, () => [

@@ -284,6 +284,9 @@ describe('Journal People integrity', () => {
     );
     await repository.reverse(settlement.journal.id, 'Correction', workplaceId);
     expect(
+      await personQueryRepository.listOpenItems(workplaceId, { personId: person.id }),
+    ).toHaveLength(1);
+    expect(
       await personQueryRepository.listSettlementAllocations(workplaceId, {
         openItemId: item.id,
         activeOnly: true,

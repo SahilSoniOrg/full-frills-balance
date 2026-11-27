@@ -39,6 +39,7 @@ import { REVERT_CONFLICT_MESSAGE } from '@/src/domain/audit/revertErrors';
 import { parseJSONRecord } from '@/src/utils/serialization';
 import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 import { Q } from '@nozbe/watermelondb';
+import { syncPutJournalPeopleInSession } from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
 export const PLAN_ATTACH_AUDIT_EVENT = 'journal.planned_payment_attached' as const;
 export const PLAN_ATTACH_AUDIT_SOURCE = 'evidence_driven';
@@ -240,6 +241,17 @@ export async function stagePlanAttach(
     workplaceId,
     session,
     transactions: nextLines,
+  });
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId: captureJournal.id,
+    status: JournalStatus.POSTED,
+    accountsById: validated.accountsById,
+    beforeTransactions: captureTransactions,
+    newLines: validated.lines,
+    allocatePlannedRepayment: true,
+    skipOpenItemSync: true,
   });
 
   const beforeMetadataJson = existingMetadata?.metadataJson;

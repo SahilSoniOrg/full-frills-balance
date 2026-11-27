@@ -129,6 +129,13 @@ export async function preparePutOperations(
     accountsById: balance.accountsById,
     beforeTransactions: oldTransactions,
     newLines: lines,
+    isReversal: Boolean(input.originalJournalId ?? existing?.originalJournalId),
+    allocatePlannedRepayment: Boolean(
+      !input.deferPlannedRepaymentAllocation &&
+      (input.plannedPaymentId ?? existing?.plannedPaymentId) &&
+      status === JournalStatus.POSTED &&
+      (!existing || existing.status !== JournalStatus.POSTED),
+    ),
   });
 
   await stagePutCaptureMetadata({
@@ -288,6 +295,7 @@ export async function stagePost(
     accountsById: validated.accountsById,
     beforeTransactions: transactions,
     newLines: transactions.map(toPersistenceLine),
+    allocatePlannedRepayment: Boolean(journal.plannedPaymentId),
   });
 
   const now = new Date();
