@@ -52,7 +52,7 @@ describe('people previews', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(getByText(/Negative unassigned remainder: Amount exceeds balance/)).toBeTruthy();
+    expect(getByText('Amount exceeds balance')).toBeTruthy();
     fireEvent.press(getByText('Confirm'));
     expect(onConfirm).not.toHaveBeenCalled();
   });
