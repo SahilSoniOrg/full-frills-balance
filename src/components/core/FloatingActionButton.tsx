@@ -15,6 +15,7 @@ export type FloatingActionButtonProps = {
   icon?: IconName;
   placement?: 'end' | 'center';
   accessibilityLabel?: string;
+  testID?: string;
   bottomOffset?: number;
 };
 
@@ -25,6 +26,7 @@ export const FloatingActionButton = ({
   icon = Icon.Add,
   placement = 'end',
   accessibilityLabel,
+  testID,
   bottomOffset,
 }: FloatingActionButtonProps) => {
   const { theme } = useTheme();
@@ -52,7 +54,7 @@ export const FloatingActionButton = ({
           { backgroundColor: theme.primary },
         ]}
         onPress={handlePress}
-        testID="fab-button"
+        testID={testID ?? 'fab-button'}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? label ?? 'Create new item'}
       >

@@ -1,4 +1,5 @@
 import { AppText, Badge } from '@/src/components/core';
+import { Icon } from '@/src/types/domainIcons';
 import { Inline, Stack } from '@/src/design-system';
 import type { PersonBalanceSummary } from '@/src/domain/people/personTypes';
 import { View } from 'react-native';
@@ -7,6 +8,7 @@ type Props = {
   summary: PersonBalanceSummary;
   personName: string;
   compact?: boolean;
+  fallbackCurrencyCode?: string;
   formatAmount?: (amount: number, currencyCode: string) => string;
 };
 
@@ -14,6 +16,7 @@ export function PersonBalanceBadge({
   summary,
   personName,
   compact = false,
+  fallbackCurrencyCode,
   formatAmount = (amount, currency) => `${currency} ${amount.toFixed(2)}`,
 }: Props) {
   const activeCurrencies = summary.currencies.filter(
@@ -23,9 +26,16 @@ export function PersonBalanceBadge({
   return (
     <Stack gap={compact ? 'xs' : 'sm'} accessibilityLabel={`${personName} balances`}>
       {activeCurrencies.length === 0 ? (
-        <AppText variant={compact ? 'caption' : 'body'} color="secondary">
-          All settled
-        </AppText>
+        <Inline gap="sm" alignItems="center" flexWrap="wrap">
+          <Badge size="sm" variant="income" icon={Icon.CheckCircle}>
+            All settled
+          </Badge>
+          {compact && fallbackCurrencyCode ? (
+            <AppText variant="caption" color="secondary" tabular>
+              Net {formatAmount(0, fallbackCurrencyCode)}
+            </AppText>
+          ) : null}
+        </Inline>
       ) : (
         activeCurrencies.map(balance => (
           <View key={balance.currencyCode}>
@@ -71,7 +81,9 @@ export function PersonBalanceBadge({
           </View>
         ))
       )}
-      {summary.convertedNet?.isInformational && !compact ? (
+      {summary.convertedNet?.isInformational &&
+      !compact &&
+      (activeCurrencies.length > 0 || summary.convertedNet.amount !== 0) ? (
         <Inline gap="xs" alignItems="center">
           <Badge size="sm">
             Est. net ~{formatAmount(summary.convertedNet.amount, summary.convertedNet.currencyCode)}

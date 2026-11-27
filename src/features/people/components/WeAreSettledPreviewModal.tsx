@@ -117,7 +117,7 @@ export function WeAreSettledPreviewModal({
         {blockedReason ? (
           <View accessibilityRole="alert">
             <Badge variant="warning" size="md">
-              Negative unassigned remainder: {blockedReason}
+              {blockedReason}
             </Badge>
           </View>
         ) : (
