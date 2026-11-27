@@ -1,59 +1,67 @@
 import {
   AppButton,
-  AppCard,
   AppIcon,
   AppInputField,
   AppText,
   AppToggle,
-  Badge,
   EmptyStateView,
   Icon,
   IconTile,
   ListGroup,
   ListRow,
   LoadingView,
-  PersonAvatar,
 } from '@/src/components/core';
-import { AccountListRow } from '@/src/components/accounts/AccountListRow';
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
-import { MoneyText } from '@/src/components/shared/MoneyText';
 import { OpenItemAmount } from '@/src/components/shared/OpenItemAmount';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
-import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
+import { Layout, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
-import { safeAdd } from '@/src/domain/money/money';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { formatShortDate } from '@/src/utils/dateFormatting';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountType } from '@/src/types/enums';
-import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
+import { PersonLinkedAccountsSection } from '../components/PersonLinkedAccountsSection';
+import { PersonSettleSheet } from '../components/PersonSettleSheet';
+import { PersonSummaryHeader } from '../components/PersonSummaryHeader';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
 import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
 
-const ACCOUNT_TYPE_SUMMARY = [
-  { type: AccountType.EXPENSE, label: 'Expenses', tint: 'expense' },
-  { type: AccountType.INCOME, label: 'Income', tint: 'income' },
-  { type: AccountType.ASSET, label: 'Assets', tint: 'asset' },
-  { type: AccountType.LIABILITY, label: 'Liabilities', tint: 'liability' },
-] as const;
-
 function PersonDetailsScreenContent() {
   const vm = usePersonDetailsViewModel();
-  const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
-  const [addAccountAfterSummaryDismiss, setAddAccountAfterSummaryDismiss] = useState(false);
+  const [settleSheetOpen, setSettleSheetOpen] = useState(false);
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
   const detail = vm.detail;
+
+  const openItems = useMemo(
+    () => detail?.openItems.filter(entry => entry.remainder > 0) ?? [],
+    [detail],
+  );
+  const openItemsMirrorHero = useMemo(() => {
+    if (!detail || openItems.length !== 1) return false;
+    const entry = openItems[0]!;
+    const active = detail.balanceSummary.currencies.filter(
+      balance => balance.owedToYou !== 0 || balance.youOwe !== 0 || balance.net !== 0,
+    );
+    if (active.length !== 1) return false;
+    const balance = active[0]!;
+    const heroAmount =
+      balance.owedToYou !== 0 && balance.youOwe === 0
+        ? balance.owedToYou
+        : balance.youOwe !== 0 && balance.owedToYou === 0
+          ? balance.youOwe
+          : Math.abs(balance.net);
+    return entry.item.currencyCode === balance.currencyCode && entry.remainder === heroAmount;
+  }, [detail, openItems]);
+  const showOpenItems = openItems.length > 1 || (openItems.length === 1 && !openItemsMirrorHero);
 
   const chrome = buildDetailNavChrome({
     phase,
@@ -71,16 +79,6 @@ function PersonDetailsScreenContent() {
     },
     headerActions: detail ? (
       <DetailHeaderMenuActions
-        leadingActions={[
-          {
-            name: Icon.Repeat,
-            onPress: () => vm.onSettleUp(),
-            variant: 'surface',
-            iconColor: theme.text,
-            accessibilityLabel: 'Record repayment',
-            testID: 'person-settle-up-button',
-          },
-        ]}
         actions={[
           {
             label: 'Match existing',
@@ -88,17 +86,6 @@ function PersonDetailsScreenContent() {
             onPress: vm.onMatchExisting,
             testID: 'person-match-repayment-button',
           },
-          ...(vm.settledPreview?.blockedReason !== 'Nothing open to close'
-            ? [
-                {
-                  label: vm.isPreviewing ? 'Preparing settlement…' : "We're settled",
-                  icon: Icon.CheckCircle,
-                  onPress: vm.onStartWeAreSettled,
-                  disabled: vm.isPreviewing,
-                  testID: 'person-we-are-settled-button',
-                },
-              ]
-            : []),
           {
             label: 'Edit details',
             icon: Icon.Edit,
@@ -137,7 +124,13 @@ function PersonDetailsScreenContent() {
       />
     ) : undefined,
   });
-
+  const negativeAccounts = useMemo(
+    () =>
+      detail?.linkedAccounts.filter(
+        linked => linked.unassignedState.hasNegativeUnassignedRemainder,
+      ) ?? [],
+    [detail],
+  );
   if (vm.isLoading) {
     return (
       <ScreenWithChrome chrome={chrome} scrollable={false}>
@@ -159,311 +152,169 @@ function PersonDetailsScreenContent() {
     );
   }
 
-  const openItems = detail.openItems.filter(entry => entry.remainder > 0);
-  const negativeAccounts = detail.linkedAccounts.filter(
-    linked => linked.unassignedState.hasNegativeUnassignedRemainder,
-  );
-  const accountSummaries = ACCOUNT_TYPE_SUMMARY.map(group => {
-    const accounts = detail.linkedAccounts.filter(
-      linked => linked.account.accountType === group.type,
-    );
-    const totals = new Map<string, number>();
-    for (const linked of accounts) {
-      const currencyCode = linked.account.currencyCode;
-      totals.set(
-        currencyCode,
-        safeAdd(
-          totals.get(currencyCode) ?? 0,
-          linked.unassignedState.ledgerBalanceInNormalDirection,
-          getCurrencyPrecision(currencyCode),
-        ),
-      );
-    }
-    return {
-      ...group,
-      accounts,
-      accountCount: accounts.length,
-      totals: [...totals]
-        .map(([currencyCode, amount]) => ({ currencyCode, amount }))
-        .sort(
-          (a, b) =>
-            Number(b.currencyCode === vm.workplaceCurrency) -
-              Number(a.currencyCode === vm.workplaceCurrency) ||
-            a.currencyCode.localeCompare(b.currencyCode),
-        ),
-    };
-  });
-  const selectedAccountSummary = accountSummaries.find(group => group.type === selectedAccountType);
+  const listHeader = (
+    <Stack gap="md" marginBottom="xs">
+      <PersonSummaryHeader
+        person={detail.person}
+        summary={detail.balanceSummary}
+        formatAmount={(amount, currencyCode) =>
+          formatMoneyAmount(amount, currencyCode, isPrivacyMode)
+        }
+        onSettle={() => setSettleSheetOpen(true)}
+      />
 
-  return (
-    <ScreenWithChrome chrome={chrome} scrollable>
-      <Box padding="lg" paddingBottom="xxxl">
-        <Stack gap="xl">
-          <AppCard padding="md" elevation="sm" radius="xxl">
-            <Stack gap="sm">
-              <Inline gap="md" alignItems="center">
-                <PersonAvatar
-                  name={detail.person.name}
-                  icon={detail.person.icon}
-                  color={detail.person.color}
-                  size={64}
-                />
-                <Stack gap="xs" flex={1}>
-                  <Inline gap="sm" alignItems="center" flexWrap="wrap">
-                    <AppText variant="title" fontRole="display">
-                      {detail.person.name}
-                    </AppText>
-                    {detail.person.isPinned ? (
-                      <Badge size="sm" variant="primary" icon={Icon.Star}>
-                        Pinned
-                      </Badge>
-                    ) : null}
-                    {detail.person.defaultCurrencyCode ? (
-                      <Badge size="sm">{detail.person.defaultCurrencyCode}</Badge>
-                    ) : null}
-                    {detail.person.archivedAt ? <Badge size="sm">Archived</Badge> : null}
-                  </Inline>
-                  <PersonBalanceBadge
-                    summary={detail.balanceSummary}
-                    personName={detail.person.name}
-                    formatAmount={(amount, currencyCode) =>
-                      formatMoneyAmount(amount, currencyCode, isPrivacyMode)
-                    }
-                  />
-                </Stack>
-              </Inline>
-              <View style={[styles.accountSummaryGrid, { borderColor: theme.border }]}>
-                {accountSummaries.map((group, index) => {
-                  const itemStyle = [
-                    styles.accountSummaryItem,
-                    index < accountSummaries.length - 1 && styles.accountSummaryItemDivider,
-                    { borderColor: theme.border },
-                  ];
-                  const itemContent = (
-                    <>
-                      <Inline gap="xs" alignItems="center" justifyContent="space-between">
-                        <AppText
-                          variant="caption"
-                          color={group.tint}
-                          weight="medium"
-                          numberOfLines={1}
-                        >
-                          {group.label}
-                        </AppText>
-                        {group.accountCount > 0 ? (
-                          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={group.tint} />
-                        ) : null}
-                      </Inline>
-                      {group.totals.length > 0 ? (
-                        <View style={styles.currencyTotals}>
-                          {group.totals.map(total => (
-                            <MoneyText
-                              key={total.currencyCode}
-                              amount={total.amount}
-                              currencyCode={total.currencyCode}
-                              variant="bodySmall"
-                              color={group.tint}
-                              weight="semibold"
-                            />
-                          ))}
-                        </View>
-                      ) : (
-                        <AppText variant="caption" color="secondary">
-                          No accounts
-                        </AppText>
-                      )}
-                    </>
-                  );
-                  const itemProps = {
-                    accessibilityLabel: `${group.label}, ${group.accountCount} ${group.accountCount === 1 ? 'account' : 'accounts'}`,
-                    accessibilityHint:
-                      group.accountCount > 0 ? 'Shows the linked accounts' : undefined,
-                    testID: `person-account-summary-${group.type.toLowerCase()}`,
-                    style: itemStyle,
-                  };
-                  return group.accountCount > 0 ? (
-                    <PressScaleTouchable
-                      key={group.type}
-                      {...itemProps}
-                      accessibilityRole="button"
-                      onPress={() => setSelectedAccountType(group.type)}
-                    >
-                      {itemContent}
-                    </PressScaleTouchable>
-                  ) : (
-                    <View key={group.type} {...itemProps}>
-                      {itemContent}
-                    </View>
-                  );
-                })}
-              </View>
-            </Stack>
-          </AppCard>
+      {negativeAccounts.length > 0 ? (
+        <NoticeBanner
+          tone="warning"
+          icon={Icon.Info}
+          message={`Unassigned remainder is negative on ${negativeAccounts
+            .map(a => a.account.name)
+            .join(', ')}. Review entries before closing.`}
+        />
+      ) : null}
 
-          {negativeAccounts.length > 0 ? (
-            <NoticeBanner
-              tone="warning"
-              icon={Icon.Info}
-              message={`Unassigned remainder is negative on ${negativeAccounts
-                .map(a => a.account.name)
-                .join(', ')}. Review entries before closing.`}
-            />
-          ) : null}
-
-          {detail.person.paymentHandle ||
-          detail.person.phone ||
-          detail.person.email ||
-          detail.person.notes ? (
-            <ListGroup header="PROFILE">
-              {detail.person.paymentHandle ? (
-                <ListRow
-                  leading={<IconTile icon={Icon.Wallet} tint="primary" />}
-                  title={detail.person.paymentHandle}
-                  subtitle="Payment handle · Tap to copy"
-                  trailing={<AppIcon name={Icon.Copy} size={Size.iconSm} color="primary" />}
-                  onPress={() => void vm.onCopyPaymentHandle()}
-                  testID="person-copy-payment-handle-button"
-                />
-              ) : null}
-              {detail.person.phone ? (
-                <ListRow
-                  leading={<IconTile icon={Icon.MessageCircle} tint="textSecondary" />}
-                  title={detail.person.phone}
-                  subtitle="Phone"
-                />
-              ) : null}
-              {detail.person.email ? (
-                <ListRow
-                  leading={<IconTile icon={Icon.Mail} tint="textSecondary" />}
-                  title={detail.person.email}
-                  subtitle="Email"
-                />
-              ) : null}
-              {detail.person.notes ? (
-                <ListRow
-                  leading={<IconTile icon={Icon.Document} tint="textSecondary" />}
-                  title="Notes"
-                  subtitle={detail.person.notes}
-                  wrap
-                />
-              ) : null}
-            </ListGroup>
-          ) : null}
-
-          <ListGroup header="OPEN ITEMS">
-            {openItems.length === 0 ? (
+      {showOpenItems ? (
+        <ListGroup header="OPEN ITEMS">
+          {openItems.map(entry => {
+            const settledRatio =
+              entry.item.originalAmount > 0
+                ? Math.max(
+                    0,
+                    Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100),
+                  )
+                : 0;
+            return (
               <ListRow
-                leading={<IconTile icon={Icon.CheckCircle} tint="income" />}
-                title="No open items remaining."
-                subtitle="All tracked IOUs are settled."
-              />
-            ) : (
-              openItems.map(entry => {
-                const settledRatio =
-                  entry.item.originalAmount > 0
-                    ? Math.max(
-                        0,
-                        Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100),
-                      )
-                    : 0;
-                return (
-                  <ListRow
-                    key={entry.item.id}
-                    leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                    title={
-                      <OpenItemAmount
-                        remainder={entry.remainder}
-                        originalAmount={entry.item.originalAmount}
-                        currencyCode={entry.item.currencyCode}
-                        isPrivacyMode={isPrivacyMode}
-                      />
-                    }
-                    trailing={
-                      <AppButton
-                        size="sm"
-                        variant="outline"
-                        onPress={() => vm.onSettleUp(entry.item.id)}
-                      >
-                        Settle
-                      </AppButton>
+                key={entry.item.id}
+                leading={<IconTile icon={Icon.Receipt} tint="warning" />}
+                title={
+                  <OpenItemAmount
+                    remainder={entry.remainder}
+                    originalAmount={entry.item.originalAmount}
+                    currencyCode={entry.item.currencyCode}
+                    isPrivacyMode={isPrivacyMode}
+                  />
+                }
+              >
+                {settledRatio > 0 ? (
+                  <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${settledRatio}%`,
+                          backgroundColor: theme.income,
+                        },
+                      ]}
+                    />
+                  </View>
+                ) : null}
+              </ListRow>
+            );
+          })}
+        </ListGroup>
+      ) : null}
+
+      {detail.unallocatedRepayments.length > 0 ? (
+        <ListGroup header="UNALLOCATED REPAYMENTS">
+          {detail.unallocatedRepayments.map(repayment => (
+            <ListRow
+              key={`${repayment.journalId}-${repayment.accountId}`}
+              leading={<IconTile icon={Icon.Wallet} tint="primary" />}
+              title={formatMoneyAmount(repayment.amount, repayment.currencyCode, isPrivacyMode)}
+              subtitle="Not yet applied to an open item"
+              trailing={
+                openItems.length > 0 ? (
+                  <AppButton
+                    size="sm"
+                    variant="outline"
+                    onPress={() =>
+                      vm.setAllocateTarget({
+                        accountId: repayment.accountId,
+                        settlementJournalId: repayment.journalId,
+                        amount: repayment.amount,
+                      })
                     }
                   >
-                    <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
-                            width: `${settledRatio}%`,
-                            backgroundColor: theme.income,
-                          },
-                        ]}
-                      />
-                    </View>
-                  </ListRow>
-                );
-              })
-            )}
-          </ListGroup>
+                    Apply
+                  </AppButton>
+                ) : undefined
+              }
+            />
+          ))}
+        </ListGroup>
+      ) : null}
 
-          {detail.unallocatedRepayments.length > 0 ? (
-            <ListGroup header="UNALLOCATED REPAYMENTS">
-              {detail.unallocatedRepayments.map(repayment => (
-                <ListRow
-                  key={`${repayment.journalId}-${repayment.accountId}`}
-                  leading={<IconTile icon={Icon.Wallet} tint="primary" />}
-                  title={formatMoneyAmount(repayment.amount, repayment.currencyCode, isPrivacyMode)}
-                  subtitle="Not yet applied to an open item"
-                  trailing={
-                    openItems.length > 0 ? (
-                      <AppButton
-                        size="sm"
-                        variant="outline"
-                        onPress={() =>
-                          vm.setAllocateTarget({
-                            accountId: repayment.accountId,
-                            settlementJournalId: repayment.journalId,
-                            amount: repayment.amount,
-                          })
-                        }
-                      >
-                        Apply
-                      </AppButton>
-                    ) : undefined
-                  }
-                />
-              ))}
-            </ListGroup>
+      <PersonLinkedAccountsSection
+        personName={detail.person.name}
+        linkedAccounts={detail.linkedAccounts}
+        onLink={() => vm.setLinkModalOpen(true)}
+        formatAmount={(amount, currencyCode) =>
+          formatMoneyAmount(amount, currencyCode, isPrivacyMode)
+        }
+      />
+
+      {detail.person.paymentHandle ||
+      detail.person.phone ||
+      detail.person.email ||
+      detail.person.notes ? (
+        <ListGroup header="PROFILE">
+          {detail.person.paymentHandle ? (
+            <ListRow
+              leading={<IconTile icon={Icon.Wallet} tint="primary" />}
+              title={detail.person.paymentHandle}
+              subtitle="Payment handle · Tap to copy"
+              trailing={<AppIcon name={Icon.Copy} size={Size.iconSm} color="primary" />}
+              onPress={() => void vm.onCopyPaymentHandle()}
+              testID="person-copy-payment-handle-button"
+            />
           ) : null}
+          {detail.person.phone ? (
+            <ListRow
+              leading={<IconTile icon={Icon.MessageCircle} tint="textSecondary" />}
+              title={detail.person.phone}
+              subtitle="Phone"
+            />
+          ) : null}
+          {detail.person.email ? (
+            <ListRow
+              leading={<IconTile icon={Icon.Mail} tint="textSecondary" />}
+              title={detail.person.email}
+              subtitle="Email"
+            />
+          ) : null}
+          {detail.person.notes ? (
+            <ListRow
+              leading={<IconTile icon={Icon.Document} tint="textSecondary" />}
+              title="Notes"
+              subtitle={detail.person.notes}
+              wrap
+            />
+          ) : null}
+        </ListGroup>
+      ) : null}
 
-          <ListGroup header="HISTORY">
-            {vm.history.length === 0 ? (
-              <ListRow
-                leading={<IconTile icon={Icon.Document} tint="textSecondary" />}
-                title="No posted transactions yet."
-                subtitle="Splits and repayments will appear here."
-              />
-            ) : (
-              vm.history.map(item => (
-                <ListRow
-                  key={item.id ?? item.journalId}
-                  leading={<IconTile icon={Icon.Document} tint="primary" />}
-                  title={item.description || item.accountName}
-                  subtitle={`${formatShortDate(item.journalDate)} · ${item.accountName}`}
-                  trailing={
-                    <MoneyText
-                      amount={item.amount}
-                      currencyCode={item.currencyCode}
-                      variant="body"
-                    />
-                  }
-                  chevron
-                  onPress={() => vm.onOpenJournal(item.journalId)}
-                />
-              ))
-            )}
-          </ListGroup>
-        </Stack>
-      </Box>
+      <ScreenSectionHeader title="History" />
+    </Stack>
+  );
+
+  return (
+    <ScreenWithChrome chrome={chrome} scrollable={false}>
+      <View style={styles.container}>
+        <JournalEntryListView
+          items={vm.journalItems}
+          isLoading={vm.isLoadingActivity}
+          isLoadingMore={vm.isLoadingMoreActivity}
+          error={vm.activityError}
+          retry={vm.retryActivity}
+          onEndReached={vm.onEndReachedActivity}
+          emptyTitle="No posted transactions yet"
+          emptySubtitle="Splits and repayments will appear here."
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={styles.listContent}
+          style={styles.list}
+        />
+      </View>
 
       <ModalSurface
         visible={vm.sharePreviewOpen}
@@ -519,49 +370,20 @@ function PersonDetailsScreenContent() {
         }}
       />
 
-      <ModalSurface
-        visible={selectedAccountSummary != null}
-        title={`${selectedAccountSummary?.label ?? 'Linked'} accounts`}
-        onClose={() => setSelectedAccountType(null)}
-        onDismiss={() => {
-          if (!addAccountAfterSummaryDismiss) return;
-          setAddAccountAfterSummaryDismiss(false);
-          vm.setLinkModalOpen(true);
-        }}
-        position="bottomSheet"
-        fixedHeight={false}
-        footer={
-          <AppButton
-            style={{ width: '100%' }}
-            onPress={() => {
-              setAddAccountAfterSummaryDismiss(true);
-              setSelectedAccountType(null);
-            }}
-            testID="person-add-linked-account-button"
-          >
-            Add account
-          </AppButton>
+      <PersonSettleSheet
+        visible={settleSheetOpen}
+        personName={detail.person.name}
+        hasReceivable={detail.balanceSummary.currencies.some(balance => balance.owedToYou > 0)}
+        hasPayable={detail.balanceSummary.currencies.some(balance => balance.youOwe > 0)}
+        onClose={() => setSettleSheetOpen(false)}
+        onMoneyReceived={() =>
+          vm.onSettleUp(openItems.length === 1 ? openItems[0]!.item.id : undefined)
         }
-      >
-        {selectedAccountSummary ? (
-          <ListGroup>
-            {selectedAccountSummary.accounts.map(linked => (
-              <AccountListRow
-                key={linked.account.id}
-                item={linked.account}
-                testID={`person-summary-account-${linked.account.id}`}
-                trailingAccessory={
-                  <MoneyText
-                    amount={linked.unassignedState.ledgerBalanceInNormalDirection}
-                    currencyCode={linked.account.currencyCode}
-                    variant="bodySmall"
-                  />
-                }
-              />
-            ))}
-          </ListGroup>
-        ) : null}
-      </ModalSurface>
+        onClearOpenBalances={() => {
+          void vm.onStartWeAreSettled();
+        }}
+        onPartialForgive={() => vm.onSettleUp()}
+      />
 
       <ModalSurface
         visible={Boolean(vm.allocateTarget)}
@@ -668,25 +490,16 @@ function PersonDetailsScreenContent() {
 export const PersonDetailsScreen = withPrivacyScope(PersonDetailsScreenContent);
 
 const styles = StyleSheet.create({
-  accountSummaryGrid: {
-    flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth,
+  container: {
+    flex: 1,
   },
-  accountSummaryItem: {
-    flexBasis: 0,
-    flexGrow: 1,
-    minWidth: 0,
-    gap: Spacing.xs,
-    minHeight: Size.buttonMd,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.sm,
+  list: {
+    flex: 1,
   },
-  accountSummaryItemDivider: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-  },
-  currencyTotals: {
-    alignItems: 'flex-start',
-    gap: Spacing.xs,
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Layout.listBottomInset.fab,
   },
   progressTrack: {
     height: Spacing.xs,

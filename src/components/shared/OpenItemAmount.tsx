@@ -21,9 +21,11 @@ export function OpenItemAmount({
         <AppText variant="body" weight="semibold" tabular>
           {formatMoneyAmount(remainder, currencyCode, isPrivacyMode)} remaining
         </AppText>
-        <Badge size="sm" variant={partial ? 'warning' : 'default'}>
-          {partial ? 'Partial' : 'Open'}
-        </Badge>
+        {partial ? (
+          <Badge size="sm" variant="warning">
+            Partial
+          </Badge>
+        ) : null}
       </Inline>
       <AppText variant="caption" color="secondary" tabular>
         of {formatMoneyAmount(originalAmount, currencyCode, isPrivacyMode)} total

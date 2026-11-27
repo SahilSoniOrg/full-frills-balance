@@ -1,5 +1,8 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
+import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
+import { useJournalEntryList } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useShareable } from '@/src/hooks/useShareable';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -14,7 +17,6 @@ import {
   updatePerson,
 } from '@/src/services/people';
 import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
-import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
 import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { setStringAsync } from 'expo-clipboard';
@@ -25,7 +27,6 @@ type PersonDetailData = Awaited<ReturnType<typeof peopleReadService.getPersonDet
 type LinkableAccount = Awaited<
   ReturnType<typeof peopleReadService.listLinkableAccountsForPeople>
 >[number];
-type HistoryRow = Awaited<ReturnType<typeof peopleReadService.listPersonJournalHistory>>[number];
 
 export function usePersonDetailsViewModel() {
   const { personId } = useLocalSearchParams<{ personId: PersonId }>();
@@ -45,13 +46,8 @@ export function usePersonDetailsViewModel() {
   const [snapshot, setSnapshot] = useState<{
     scope: string;
     detail: PersonDetailData;
-    history: HistoryRow[];
   }>();
   const detail = snapshot?.scope === scope ? snapshot.detail : null;
-  const history = useMemo(
-    () => (snapshot?.scope === scope ? snapshot.history : []),
-    [scope, snapshot],
-  );
   const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -71,6 +67,27 @@ export function usePersonDetailsViewModel() {
     includePaymentHandle: true,
   });
 
+  const linkedAccountIdsKey = useMemo(
+    () => (detail?.linkedAccounts.map(linked => linked.account.id) ?? []).slice().sort().join('|'),
+    [detail],
+  );
+  const linkedAccountIds = useMemo(
+    () =>
+      linkedAccountIdsKey ? (linkedAccountIdsKey.split('|') as AccountId[]) : ([] as AccountId[]),
+    [linkedAccountIdsKey],
+  );
+
+  const journalList = useJournalEntryList({
+    workplaceId,
+    enabled: Boolean(detail && linkedAccountIds.length > 0),
+    statuses: [...ACTIVE_JOURNAL_STATUSES],
+    // One card per journal (not per linked leg). Expanding scoped legs duplicates
+    // transfers that touch two accounts for the same person.
+    queryOptions: { accountIds: linkedAccountIds },
+    disableSelection: true,
+    shareTitle: detail ? `Activity with ${detail.person.name}` : 'Person activity',
+  });
+
   const load = useCallback(
     async (signal?: AbortSignal) => {
       if (!personId) {
@@ -79,13 +96,14 @@ export function usePersonDetailsViewModel() {
       }
       const request = ++loadRequest.current;
       try {
-        const [nextDetail, nextHistory] = await Promise.all([
-          peopleReadService.getPersonDetail(workplaceId, personId, defaultCurrencyCode),
-          peopleReadService.listPersonJournalHistory(workplaceId, personId, signal),
-        ]);
+        const nextDetail = await peopleReadService.getPersonDetail(
+          workplaceId,
+          personId,
+          defaultCurrencyCode,
+        );
         if (signal?.aborted || latestScope.current !== scope || request !== loadRequest.current)
           return;
-        setSnapshot({ scope, detail: nextDetail, history: nextHistory });
+        setSnapshot({ scope, detail: nextDetail });
       } catch (error) {
         if (!signal?.aborted)
           showErrorAlert(error instanceof Error ? error.message : 'Could not load person');
@@ -128,7 +146,9 @@ export function usePersonDetailsViewModel() {
 
   const shareInput = useMemo(() => {
     if (!detail) return null;
-    const dates = new Map(history.map(row => [row.journalId, row.journalDate]));
+    const dates = new Map(
+      journalList.journals.map(journal => [journal.id, journal.journalDate] as const),
+    );
     return {
       workplaceId,
       recipientName: detail.person.name,
@@ -150,7 +170,7 @@ export function usePersonDetailsViewModel() {
       balances: detail.balanceSummary.currencies,
       ...shareFields,
     };
-  }, [detail, history, shareFields, workplaceId]);
+  }, [detail, journalList.journals, shareFields, workplaceId]);
   const shareable = useMemo(
     () => (shareInput ? createPeopleShareable(shareInput) : null),
     [shareInput],
@@ -210,13 +230,16 @@ export function usePersonDetailsViewModel() {
   ]);
 
   const foreignCurrencies = settlement?.foreignCurrencies ?? [];
-  const settledPreview =
-    settlement && detail
-      ? {
-          ...settlement,
-          forgivenAccountName: detail.person.name + ' (' + settlement.forgivenAccountType + ')',
-        }
-      : null;
+  const settledPreview = useMemo(
+    () =>
+      settlement && detail
+        ? {
+            ...settlement,
+            forgivenAccountName: detail.person.name + ' (' + settlement.forgivenAccountType + ')',
+          }
+        : null,
+    [detail, settlement],
+  );
 
   const handleToggleArchive = useCallback(async () => {
     if (!detail) return;
@@ -349,7 +372,12 @@ export function usePersonDetailsViewModel() {
     personId,
     workplaceCurrency: defaultCurrencyCode,
     detail,
-    history,
+    journalItems: journalList.items,
+    isLoadingActivity: journalList.isLoading,
+    isLoadingMoreActivity: journalList.isLoadingMore,
+    activityError: journalList.error,
+    retryActivity: journalList.retry,
+    onEndReachedActivity: journalList.onEndReached,
     linkableAccounts,
     isLoading,
     foreignCurrencies,
@@ -378,7 +406,6 @@ export function usePersonDetailsViewModel() {
       detail && AppNavigation.toTransferRepayment({ personId: detail.person.id, openItemId }),
     onMatchExisting: () =>
       detail && AppNavigation.toSettleUp({ personId: detail.person.id, mode: 'match' }),
-    onOpenJournal: (journalId: JournalId) => AppNavigation.toJournalDetails(journalId),
     onEditProfile: () => detail && AppNavigation.toPersonEdit(detail.person.id, workplaceId),
     onToggleArchive: handleToggleArchive,
     onTogglePin: handleTogglePin,
