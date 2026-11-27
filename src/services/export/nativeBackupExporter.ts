@@ -78,6 +78,21 @@ export async function exportWorkplacesToJSON(
         ((index + (taskIndex + 1) / exportTasks.length) / workplaceIds.length) * 0.8,
       );
     }
+    const exportedOpenItems = (data.openItems ?? []).filter(row => {
+      const item = row as { originatingJournalId?: string };
+      return exportedJournalIds.has(item.originatingJournalId ?? '');
+    });
+    const exportedOpenItemIds = new Set(
+      exportedOpenItems.map(row => String((row as { id?: string }).id ?? '')),
+    );
+    data.openItems = exportedOpenItems;
+    data.settlementAllocations = (data.settlementAllocations ?? []).filter(row => {
+      const allocation = row as { openItemId?: string; settlementJournalId?: string };
+      return (
+        exportedOpenItemIds.has(allocation.openItemId ?? '') &&
+        exportedJournalIds.has(allocation.settlementJournalId ?? '')
+      );
+    });
     const workplaceMetadata: ExportWorkplaceMetadata = {
       id: workplace.id,
       name: workplace.name,
