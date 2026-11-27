@@ -3,6 +3,8 @@ import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import { peopleReadService, recordRepayment } from '@/src/services/people';
 import { AccountType } from '@/src/types/enums';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
 import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,6 +30,8 @@ export function useSettleUpViewModel() {
     JournalId | undefined
   >();
   const [selectedItemIds, setSelectedItemIds] = useState<Record<string, boolean>>({});
+  const [allocationDrafts, setAllocationDrafts] = useState<Record<string, string>>({});
+  const [exchangeRate, setExchangeRate] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -92,6 +96,52 @@ export function useSettleUpViewModel() {
   const selectMatchedJournal = useCallback((journal: CompatibleJournal) => {
     setSelectedExistingJournalId(journal.journalId);
   }, []);
+  const selectedJournal = compatibleJournals.find(
+    item => item.journalId === selectedExistingJournalId,
+  );
+  const isCrossCurrency = Boolean(
+    selectedJournal && targetAccount && selectedJournal.currencyCode !== targetAccount.currencyCode,
+  );
+  const repaymentPreview = useMemo(() => {
+    if (!selectedJournal || !targetAccount) return null;
+    const rate = isCrossCurrency ? Number(exchangeRate) : 1;
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+    const precision = getCurrencyPrecision(targetAccount.currencyCode);
+    let remaining = toMinorUnits(selectedJournal.cashAmount / rate, precision);
+    const allocations: { openItemId: OpenItemId; amount: number }[] = [];
+    for (const entry of targetOpenItems) {
+      if (!selectedItemIds[entry.item.id]) continue;
+      const draft = allocationDrafts[entry.item.id]?.trim();
+      const amount = draft
+        ? toMinorUnits(Number(draft), precision)
+        : Math.min(remaining, toMinorUnits(entry.remainder, precision));
+      if (
+        !Number.isFinite(amount) ||
+        amount < 0 ||
+        (draft && amount === 0) ||
+        amount > remaining ||
+        amount > toMinorUnits(entry.remainder, precision)
+      )
+        return null;
+      if (amount > 0)
+        allocations.push({ openItemId: entry.item.id, amount: fromMinorUnits(amount, precision) });
+      remaining -= amount;
+    }
+    return {
+      rate,
+      allocations,
+      unassignedAmount: fromMinorUnits(remaining, precision),
+      amount: fromMinorUnits(toMinorUnits(selectedJournal.cashAmount / rate, precision), precision),
+    };
+  }, [
+    allocationDrafts,
+    exchangeRate,
+    isCrossCurrency,
+    selectedItemIds,
+    selectedJournal,
+    targetAccount,
+    targetOpenItems,
+  ]);
 
   const handleSubmit = useCallback(async () => {
     const journal = compatibleJournals.find(item => item.journalId === selectedExistingJournalId);
@@ -99,13 +149,13 @@ export function useSettleUpViewModel() {
       showErrorAlert('Select an existing repayment and a person account');
       return;
     }
-    const allocations: { openItemId: OpenItemId; amount: number }[] = [];
-    for (const entry of targetOpenItems) {
-      if (selectedItemIds[entry.item.id])
-        allocations.push({ openItemId: entry.item.id, amount: entry.remainder });
+    if (!repaymentPreview) {
+      showErrorAlert('Check the exchange rate and selected allocation amounts');
+      return;
     }
-    if (allocations.length === 0) {
-      showErrorAlert('Select at least one open item to allocate');
+    const { rate, allocations, unassignedAmount } = repaymentPreview;
+    if (isCrossCurrency && (allocations.length === 0 || unassignedAmount !== 0)) {
+      showErrorAlert('Select open items that cover the converted repayment');
       return;
     }
     setIsSubmitting(true);
@@ -119,8 +169,10 @@ export function useSettleUpViewModel() {
         journalCurrency: journal.currencyCode,
         description: journal.description || 'Repayment',
         existingJournalId: journal.journalId,
+        expectedJournalUpdatedAt: journal.journalUpdatedAt,
         allocations,
-        unassignedAmount: 0,
+        unassignedAmount,
+        ...(isCrossCurrency ? { exchangeRate: rate, targetAmount: repaymentPreview.amount } : {}),
       });
       toast.success('Repayment recorded.');
       AppNavigation.back();
@@ -133,9 +185,9 @@ export function useSettleUpViewModel() {
     compatibleJournals,
     detail,
     selectedExistingJournalId,
-    selectedItemIds,
     targetAccount,
-    targetOpenItems,
+    isCrossCurrency,
+    repaymentPreview,
     workplaceId,
   ]);
 
@@ -148,6 +200,12 @@ export function useSettleUpViewModel() {
     setTargetAccountId,
     targetAccount,
     targetOpenItems,
+    isCrossCurrency,
+    repaymentPreview,
+    exchangeRate,
+    setExchangeRate,
+    allocationDrafts,
+    setAllocationDrafts,
     compatibleJournals,
     selectedExistingJournalId,
     selectMatchedJournal,

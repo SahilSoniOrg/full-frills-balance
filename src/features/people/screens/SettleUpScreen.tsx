@@ -1,6 +1,7 @@
 import {
   AppButton,
   AppIcon,
+  AppInputField,
   AppText,
   EmptyStateView,
   Icon,
@@ -129,6 +130,16 @@ function SettleUpScreenContent() {
               )}
             </ListGroup>
 
+            {vm.isCrossCurrency ? (
+              <AppInputField
+                accessibilityLabel="Exchange rate"
+                value={vm.exchangeRate}
+                onChangeText={vm.setExchangeRate}
+                keyboardType="decimal-pad"
+                placeholder="Payment currency per target currency"
+              />
+            ) : null}
+
             <ListGroup header="PERSON ACCOUNT">
               {debtAccounts.length === 0 ? (
                 <ListRow
@@ -160,40 +171,81 @@ function SettleUpScreenContent() {
                 {vm.targetOpenItems.map(entry => {
                   const selected = Boolean(vm.selectedItemIds[entry.item.id]);
                   return (
-                    <ListRow
-                      key={entry.item.id}
-                      leading={
-                        <IconTile icon={Icon.Receipt} tint={selected ? 'income' : 'warning'} />
-                      }
-                      title={formatMoneyAmount(
-                        entry.remainder,
-                        entry.item.currencyCode,
-                        isPrivacyMode,
-                      )}
-                      subtitle={`Original ${formatMoneyAmount(entry.item.originalAmount, entry.item.currencyCode, isPrivacyMode)}`}
-                      trailing={
-                        <AppIcon
-                          name={selected ? Icon.CheckCircle : Icon.Circle}
-                          size={20}
-                          color={selected ? 'primary' : 'textSecondary'}
+                    <Stack key={entry.item.id} gap="xs">
+                      <ListRow
+                        leading={
+                          <IconTile icon={Icon.Receipt} tint={selected ? 'income' : 'warning'} />
+                        }
+                        title={formatMoneyAmount(
+                          entry.remainder,
+                          entry.item.currencyCode,
+                          isPrivacyMode,
+                        )}
+                        subtitle={`Original ${formatMoneyAmount(entry.item.originalAmount, entry.item.currencyCode, isPrivacyMode)}`}
+                        trailing={
+                          <AppIcon
+                            name={selected ? Icon.CheckCircle : Icon.Circle}
+                            size={20}
+                            color={selected ? 'primary' : 'textSecondary'}
+                          />
+                        }
+                        onPress={() => vm.toggleOpenItem(entry.item.id)}
+                      />
+                      {selected ? (
+                        <AppInputField
+                          accessibilityLabel="Amount to apply"
+                          keyboardType="decimal-pad"
+                          value={vm.allocationDrafts[entry.item.id] ?? ''}
+                          onChangeText={text =>
+                            vm.setAllocationDrafts(current => ({
+                              ...current,
+                              [entry.item.id]: text,
+                            }))
+                          }
+                          placeholder="Amount to apply (automatic if blank)"
                         />
-                      }
-                      onPress={() => vm.toggleOpenItem(entry.item.id)}
-                    />
+                      ) : null}
+                    </Stack>
                   );
                 })}
+              </ListGroup>
+            ) : null}
+            {vm.repaymentPreview && vm.targetAccount ? (
+              <ListGroup header="REPAYMENT PREVIEW">
+                <ListRow
+                  title="Applied to person account"
+                  subtitle={formatMoneyAmount(
+                    vm.repaymentPreview.amount,
+                    vm.targetAccount.currencyCode,
+                    isPrivacyMode,
+                  )}
+                />
+                <ListRow
+                  title="Left unassigned"
+                  subtitle={formatMoneyAmount(
+                    vm.repaymentPreview.unassignedAmount,
+                    vm.targetAccount.currencyCode,
+                    isPrivacyMode,
+                  )}
+                />
+                {vm.repaymentPreview.allocations.map(allocation => (
+                  <ListRow
+                    key={allocation.openItemId}
+                    title="Open item allocation"
+                    subtitle={formatMoneyAmount(
+                      allocation.amount,
+                      vm.targetAccount!.currencyCode,
+                      isPrivacyMode,
+                    )}
+                  />
+                ))}
               </ListGroup>
             ) : null}
           </Stack>
         </ScrollView>
         <SubmitFooter
           label="Match & allocate"
-          disabled={
-            !vm.selectedExistingJournalId ||
-            !vm.targetAccountId ||
-            vm.targetOpenItems.length === 0 ||
-            vm.isSubmitting
-          }
+          disabled={!vm.selectedExistingJournalId || !vm.targetAccountId || vm.isSubmitting}
           loading={vm.isSubmitting}
           onPress={() => void vm.onSubmit()}
           testID="settle-up-submit-button"
