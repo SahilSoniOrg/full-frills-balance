@@ -13,6 +13,12 @@ import type { PersonBalanceSummary } from '@/src/domain/people/personTypes';
 import { View } from 'react-native';
 
 type Props = {
+  closingLines?: readonly {
+    accountName: string;
+    amount: number;
+    currencyCode: string;
+    exchangeRate?: number;
+  }[];
   visible: boolean;
   personName: string;
   summary: PersonBalanceSummary;
@@ -29,6 +35,7 @@ type Props = {
 export function WeAreSettledPreviewModal({
   visible,
   personName,
+  closingLines = [],
   summary,
   workplaceCurrency,
   closingResidual,
@@ -87,6 +94,13 @@ export function WeAreSettledPreviewModal({
         ) : null}
 
         <ListGroup header="CLOSING ADJUSTMENT">
+          {closingLines.map((line, index) => (
+            <ListRow
+              key={`${line.accountName}-${index}`}
+              title={line.accountName}
+              subtitle={`${formatAmount(line.amount, line.currencyCode)}${line.exchangeRate ? ` · Rate ${line.exchangeRate}` : ''}`}
+            />
+          ))}
           <ListRow
             leading={
               <IconTile

@@ -1,6 +1,6 @@
 import { safeAdd } from '@/src/domain/money/money';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
-import type { OpenItem, SettlementAllocation } from './personTypes';
+import type { OpenItem, PersonCurrencyBalance, SettlementAllocation } from './personTypes';
 import { openItemRemainder } from './personBalanceProjection';
 
 export function buildPersonShareSummary(input: {
@@ -8,6 +8,7 @@ export function buildPersonShareSummary(input: {
   date: string;
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];
+  balances?: readonly PersonCurrencyBalance[];
   includeDate?: boolean;
   includeOpenItems?: boolean;
   includeRepayments?: boolean;
@@ -24,30 +25,46 @@ export function buildPersonShareSummary(input: {
     lines.push('Open items:');
     for (const item of items) {
       const remainder = openItemRemainder(item, input.allocations);
-      if (remainder > 0) lines.push(`- ${item.currencyCode} ${remainder}`);
+      if (remainder > 0)
+        lines.push(
+          `- ${item.direction === 'payable' ? 'I owe you' : 'You owe me'} ${item.currencyCode} ${remainder} remaining of ${item.originalAmount}${item.journalDate ? ` (${new Date(item.journalDate).toLocaleDateString()})` : ''}`,
+        );
     }
   }
   if (input.includeRepayments) {
     lines.push('Repayments:');
     for (const allocation of input.allocations
-      .filter(a => a.active)
+      .filter(a => a.active && (!a.kind || a.kind === 'repayment'))
       .sort((a, b) => a.journalId.localeCompare(b.journalId))) {
       const item = items.find(i => i.id === allocation.openItemId);
-      if (item) lines.push(`- ${item.currencyCode} ${allocation.amount}`);
+      if (item)
+        lines.push(
+          `- ${item.direction === 'payable' ? 'I paid you' : 'You paid me'} ${item.currencyCode} ${allocation.amount}${allocation.journalDate ? ` (${new Date(allocation.journalDate).toLocaleDateString()})` : ''}`,
+        );
     }
   }
   if (input.includeBalances !== false) {
-    const totals = new Map<string, number>();
+    const totals = new Map<string, { owedToYou: number; youOwe: number }>();
     for (const item of items) {
       const p = getCurrencyPrecision(item.currencyCode);
-      totals.set(
-        item.currencyCode,
-        safeAdd(totals.get(item.currencyCode) ?? 0, openItemRemainder(item, input.allocations), p),
-      );
+      const balance = totals.get(item.currencyCode) ?? { owedToYou: 0, youOwe: 0 };
+      const key = item.direction === 'payable' ? 'youOwe' : 'owedToYou';
+      balance[key] = safeAdd(balance[key], openItemRemainder(item, input.allocations), p);
+      totals.set(item.currencyCode, balance);
     }
     lines.push('Remaining balances:');
-    for (const [currency, amount] of [...totals].sort(([a], [b]) => a.localeCompare(b)))
-      lines.push(`- ${currency} ${amount}`);
+    const balances =
+      input.balances ??
+      [...totals].map(([currencyCode, balance]) => ({
+        currencyCode,
+        ...balance,
+        net: balance.owedToYou - balance.youOwe,
+      }));
+    for (const balance of balances) {
+      lines.push(
+        `- ${balance.currencyCode}: you owe me ${balance.owedToYou}, I owe you ${balance.youOwe}, net owed to me ${balance.net}`,
+      );
+    }
   }
   return lines.join('\n');
 }

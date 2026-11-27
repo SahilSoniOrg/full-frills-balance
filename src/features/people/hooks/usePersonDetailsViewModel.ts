@@ -14,6 +14,7 @@ import {
   setPersonArchived,
 } from '@/src/services/people';
 import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
+import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
 import { AccountType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { formatShortDate } from '@/src/utils/dateFormatting';
@@ -50,6 +51,12 @@ export function usePersonDetailsViewModel() {
   const [settledFxOpen, setSettledFxOpen] = useState(false);
   const [settledPreviewOpen, setSettledPreviewOpen] = useState(false);
   const [fxRatesDraft, setFxRatesDraft] = useState<Record<string, string>>({});
+  const [sharePreviewOpen, setSharePreviewOpen] = useState(false);
+  const [shareFields, setShareFields] = useState({
+    includeOpenItems: true,
+    includeRepayments: true,
+    includeBalances: true,
+  });
 
   const load = useCallback(async () => {
     if (!personId) {
@@ -77,22 +84,38 @@ export function usePersonDetailsViewModel() {
     return () => clearTimeout(timer);
   }, [load, tick]);
 
-  const shareable = useMemo(() => {
+  const shareInput = useMemo(() => {
     if (!detail) return null;
-    return createPeopleShareable({
+    const dates = new Map(history.map(row => [row.journalId, row.journalDate]));
+    return {
       workplaceId,
       recipientName: detail.person.name,
-      date: formatShortDate(detail.person.updatedAt ?? new Date()),
-      items: detail.openItems.map(entry => entry.item),
+      date: formatShortDate(new Date()),
+      items: detail.openItems.map(entry => ({
+        ...entry.item,
+        journalDate: dates.get(entry.item.originatingJournalId),
+      })),
       allocations: detail.activeAllocations.map(a => ({
         id: a.id,
         openItemId: a.openItemId,
         journalId: a.settlementJournalId,
         amount: a.amount,
         active: a.isActive,
+        kind: a.allocationKind,
+        journalDate: dates.get(a.settlementJournalId),
       })),
-    });
-  }, [detail, workplaceId]);
+      balances: detail.balanceSummary.currencies,
+      ...shareFields,
+    };
+  }, [detail, history, shareFields, workplaceId]);
+  const shareable = useMemo(
+    () => (shareInput ? createPeopleShareable(shareInput) : null),
+    [shareInput],
+  );
+  const sharePreview = useMemo(
+    () => (shareInput ? buildPersonShareSummary(shareInput) : ''),
+    [shareInput],
+  );
   const share = useShareable(shareable);
 
   const foreignCurrencies = useMemo(() => {
@@ -113,7 +136,7 @@ export function usePersonDetailsViewModel() {
         closingResidual: 0,
         forgivenAccountName: `Forgiven ${detail.person.name}`,
         forgivenAccountType: 'Expense' as const,
-        blockedReason: `${negative.account.name} has unassigned remainder ${negative.unassignedState.unassignedBalance}`,
+        blockedReason: `${negative.account.name} has a negative unassigned remainder`,
       };
     }
     const roles = new Map<string, 'receivable' | 'payable'>();
@@ -132,7 +155,7 @@ export function usePersonDetailsViewModel() {
     }
     const rateMap = new Map<string, number>();
     for (const currency of foreignCurrencies) {
-      const parsed = Number(fxRatesDraft[currency] ?? '1');
+      const parsed = Number(fxRatesDraft[currency] ?? '');
       if (Number.isFinite(parsed) && parsed > 0) rateMap.set(currency, parsed);
     }
     try {
@@ -148,16 +171,17 @@ export function usePersonDetailsViewModel() {
         })),
         roles,
         workplaceCurrency: defaultCurrencyCode,
-        expenseAccountId: 'preview-expense' as AccountId,
-        incomeAccountId: 'preview-income' as AccountId,
+        expenseAccountId: '__pending_expense__' as AccountId,
+        incomeAccountId: '__pending_income__' as AccountId,
         precisionByCurrency,
         exchangeRateByCurrency: rateMap,
       });
-      const residualExpense = plan.lines.find(l => l.accountId === 'preview-expense');
-      const residualIncome = plan.lines.find(l => l.accountId === 'preview-income');
+      const residualExpense = plan.lines.find(l => l.accountId === '__pending_expense__');
+      const residualIncome = plan.lines.find(l => l.accountId === '__pending_income__');
       const closingResidual = residualExpense?.amount ?? residualIncome?.amount ?? 0;
       return {
         closingResidual,
+        plan,
         forgivenAccountName: residualIncome
           ? `${detail.person.name} (Income)`
           : `${detail.person.name} (Expense)`,
@@ -239,13 +263,6 @@ export function usePersonDetailsViewModel() {
   const handleStartWeAreSettled = useCallback(() => {
     if (!detail) return;
     if (foreignCurrencies.length > 0) {
-      setFxRatesDraft(prev => {
-        const next = { ...prev };
-        for (const currency of foreignCurrencies) {
-          if (!next[currency]) next[currency] = '1';
-        }
-        return next;
-      });
       setSettledFxOpen(true);
     } else {
       setSettledPreviewOpen(true);
@@ -253,7 +270,7 @@ export function usePersonDetailsViewModel() {
   }, [detail, foreignCurrencies]);
 
   const handleConfirmWeAreSettled = useCallback(async () => {
-    if (!detail) return;
+    if (!detail || !settledPreview?.plan || settledPreview.blockedReason) return;
     const rateMap = new Map<string, number>();
     for (const currency of foreignCurrencies) {
       const parsed = Number(fxRatesDraft[currency]);
@@ -268,6 +285,7 @@ export function usePersonDetailsViewModel() {
         personId: detail.person.id,
         workplaceCurrency: defaultCurrencyCode,
         exchangeRateByCurrency: rateMap,
+        expectedPlan: settledPreview.plan,
       });
       setSettledPreviewOpen(false);
       toast.success('Balances closed.');
@@ -275,7 +293,15 @@ export function usePersonDetailsViewModel() {
     } catch (error) {
       showErrorAlert(error instanceof Error ? error.message : 'Could not settle balances');
     }
-  }, [defaultCurrencyCode, detail, foreignCurrencies, fxRatesDraft, load, workplaceId]);
+  }, [
+    defaultCurrencyCode,
+    detail,
+    foreignCurrencies,
+    fxRatesDraft,
+    load,
+    settledPreview,
+    workplaceId,
+  ]);
 
   return {
     personId,
@@ -300,6 +326,11 @@ export function usePersonDetailsViewModel() {
     setSettledPreviewOpen,
     fxRatesDraft,
     setFxRatesDraft,
+    sharePreviewOpen,
+    setSharePreviewOpen,
+    shareFields,
+    setShareFields,
+    sharePreview,
     onBack: AppNavigation.back,
     onSplitExpense: () =>
       detail && AppNavigation.toSplitJournalEntry({ personId: detail.person.id }),
@@ -314,6 +345,7 @@ export function usePersonDetailsViewModel() {
     onApplyUnassigned: handleApplyUnassigned,
     onStartWeAreSettled: handleStartWeAreSettled,
     onConfirmWeAreSettled: handleConfirmWeAreSettled,
-    onShare: share.share,
+    onShare: () => setSharePreviewOpen(true),
+    onConfirmShare: share.share,
   };
 }

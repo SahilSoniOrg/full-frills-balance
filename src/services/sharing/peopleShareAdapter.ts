@@ -1,5 +1,9 @@
 import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
-import type { OpenItem, SettlementAllocation } from '@/src/domain/people/personTypes';
+import type {
+  OpenItem,
+  PersonCurrencyBalance,
+  SettlementAllocation,
+} from '@/src/domain/people/personTypes';
 import type { WorkplaceId } from '@/src/types/ids';
 import { ShareFormat, type Shareable } from '@/src/types/sharing';
 import { throwIfShareAborted } from './sharingCancellation';
@@ -10,6 +14,7 @@ export function createPeopleShareable(input: {
   date: string;
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];
+  balances?: readonly PersonCurrencyBalance[];
   includeDate?: boolean;
   includeOpenItems?: boolean;
   includeRepayments?: boolean;

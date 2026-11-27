@@ -2,6 +2,7 @@ import {
   AppButton,
   AppInputField,
   AppText,
+  AppToggle,
   Badge,
   EmptyStateView,
   Icon,
@@ -342,6 +343,46 @@ function PersonDetailsScreenContent() {
       </Box>
 
       <ModalSurface
+        visible={vm.sharePreviewOpen}
+        title="Share summary"
+        onClose={() => vm.setSharePreviewOpen(false)}
+        position="bottomSheet"
+        fixedHeight={false}
+        footer={
+          <AppButton
+            onPress={() => {
+              vm.setSharePreviewOpen(false);
+              void vm.onConfirmShare();
+            }}
+          >
+            Share
+          </AppButton>
+        }
+      >
+        <Stack gap="md">
+          {(
+            [
+              ['includeOpenItems', 'Open items'],
+              ['includeRepayments', 'Repayments'],
+              ['includeBalances', 'Balances'],
+            ] as const
+          ).map(([key, label]) => (
+            <Inline key={key} justifyContent="space-between" alignItems="center">
+              <AppText>{label}</AppText>
+              <AppToggle
+                accessibilityLabel={label}
+                value={vm.shareFields[key]}
+                onValueChange={value => vm.setShareFields(fields => ({ ...fields, [key]: value }))}
+              />
+            </Inline>
+          ))}
+          <AppText>
+            {isPrivacyMode ? 'Turn off privacy mode to preview the summary.' : vm.sharePreview}
+          </AppText>
+        </Stack>
+      </ModalSurface>
+
+      <ModalSurface
         visible={vm.renameOpen}
         title="Rename person"
         onClose={() => vm.setRenameOpen(false)}
@@ -467,6 +508,14 @@ function PersonDetailsScreenContent() {
           summary={detail.balanceSummary}
           workplaceCurrency={vm.workplaceCurrency}
           closingResidual={vm.settledPreview.closingResidual}
+          closingLines={vm.settledPreview.plan?.lines.map(line => ({
+            accountName:
+              detail.linkedAccounts.find(link => link.account.id === line.accountId)?.account
+                .name ?? vm.settledPreview!.forgivenAccountName,
+            amount: line.amount,
+            currencyCode: line.currencyCode ?? vm.workplaceCurrency,
+            exchangeRate: line.exchangeRate,
+          }))}
           forgivenAccountName={vm.settledPreview.forgivenAccountName}
           forgivenAccountType={vm.settledPreview.forgivenAccountType}
           blockedReason={vm.settledPreview.blockedReason}
