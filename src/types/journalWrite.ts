@@ -1,5 +1,11 @@
 import { JournalStatus, TransactionType } from './enums';
-import { AccountId, JournalId, PlannedPaymentId } from './ids';
+import { AccountId, JournalId, OpenItemId, PersonId, PlannedPaymentId } from './ids';
+
+export interface JournalRepaymentAllocation {
+  personId: PersonId;
+  targetAccountId: AccountId;
+  allocations: readonly { openItemId: OpenItemId; amount: number }[];
+}
 
 export interface JournalWriteLine {
   accountId: AccountId;

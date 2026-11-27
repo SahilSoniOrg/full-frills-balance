@@ -25,9 +25,10 @@ import type Journal from '@/src/data/models/Journal';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { preferences } from '@/src/services/preferences';
-import { AccountSubtype, AccountType, JournalStatus } from '@/src/types/enums';
+import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { asAccountId } from '@/src/types/ids';
+import type { JournalRepaymentAllocation, JournalWriteLine } from '@/src/types/journalWrite';
 import { ensurePersonAccountInSession } from './peopleLifecycleCommands';
 
 export interface RepaymentAllocationInput {
@@ -45,6 +46,7 @@ export interface RecordRepaymentInput {
   description?: string;
   notes?: string;
   existingJournalId?: JournalId;
+  expectedJournalUpdatedAt?: number;
   allocations: readonly RepaymentAllocationInput[];
   unassignedAmount?: number;
   exchangeRate?: number;
@@ -63,6 +65,112 @@ export interface ExecuteWeAreSettledInput {
   workplaceCurrency: string;
   journalDate?: number;
   exchangeRateByCurrency?: ReadonlyMap<string, number>;
+  expectedPlan?: {
+    lines: readonly import('@/src/types/journalWrite').JournalWriteLine[];
+    allocations: readonly { openItemId: string; amount: number }[];
+  };
+}
+
+function settlementPlanKey(plan: {
+  lines: readonly import('@/src/types/journalWrite').JournalWriteLine[];
+  allocations: readonly { openItemId: string; amount: number }[];
+}): string {
+  return JSON.stringify({
+    lines: plan.lines
+      .map(line => [
+        line.accountId,
+        line.amount,
+        line.transactionType,
+        line.currencyCode,
+        line.exchangeRate ?? 1,
+      ])
+      .sort(),
+    allocations: plan.allocations.map(a => [a.openItemId, a.amount]).sort(),
+  });
+}
+
+export async function stageJournalRepaymentAllocations(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  journalId: JournalId,
+  lines: readonly JournalWriteLine[],
+  input: JournalRepaymentAllocation,
+): Promise<void> {
+  const [account, link, items, allocations, journalAllocations] = await Promise.all([
+    accountQueryRepository.find(workplaceId, input.targetAccountId),
+    personQueryRepository.findPersonAccountByAccountId(workplaceId, input.targetAccountId),
+    personQueryRepository.listOpenItems(workplaceId, {
+      personId: input.personId,
+      accountId: input.targetAccountId,
+    }),
+    personQueryRepository.listSettlementAllocations(workplaceId, {
+      personId: input.personId,
+      activeOnly: true,
+    }),
+    personQueryRepository.listSettlementAllocations(workplaceId, {
+      settlementJournalId: journalId,
+      activeOnly: true,
+    }),
+  ]);
+  if (!account || link?.personId !== input.personId)
+    throw new Error('Person account is no longer available');
+  const precision = getCurrencyPrecision(account.currencyCode);
+  if (journalAllocations.length) {
+    const unchanged =
+      journalAllocations.length === input.allocations.length &&
+      journalAllocations.every(
+        existing =>
+          existing.personId === input.personId &&
+          existing.accountId === input.targetAccountId &&
+          input.allocations.some(
+            requested =>
+              requested.openItemId === existing.openItemId &&
+              toMinorUnits(requested.amount, precision) ===
+                toMinorUnits(existing.amount, precision),
+          ),
+      );
+    if (unchanged) return;
+    throw new Error(
+      'This journal already has allocations. Resolve them before changing the repayment.',
+    );
+  }
+  const reducing = lines
+    .filter(
+      line =>
+        line.accountId === account.id &&
+        classifyPersonDebtPosting({
+          accountType: account.accountType,
+          transactionType: line.transactionType,
+        }) === 'reducing',
+    )
+    .reduce((sum, line) => sum + toMinorUnits(line.amount, precision), 0);
+  const seen = new Set<string>();
+  let total = 0;
+  for (const allocation of input.allocations) {
+    const item = items.find(candidate => candidate.id === allocation.openItemId);
+    if (!item || seen.has(allocation.openItemId)) throw new Error('Invalid open item selection');
+    seen.add(allocation.openItemId);
+    const units = toMinorUnits(allocation.amount, precision);
+    const remainder = toMinorUnits(
+      openItemRemainder(toDomainItems([item])[0], toDomainAllocations(allocations)),
+      precision,
+    );
+    if (units <= 0 || units > remainder) throw new Error('Allocation exceeds open item remainder');
+    total += units;
+  }
+  if (total > reducing) throw new Error('Allocation exceeds the repayment amount');
+  await personWriteRepository.createSettlementAllocationsInSession(
+    session,
+    workplaceId,
+    input.allocations.map(allocation => ({
+      personId: input.personId,
+      openItemId: allocation.openItemId,
+      settlementJournalId: journalId,
+      accountId: input.targetAccountId,
+      allocationKind: 'repayment' as const,
+      amount: fromMinorUnits(toMinorUnits(allocation.amount, precision), precision),
+    })),
+  );
 }
 
 function toDomainItems(
@@ -158,7 +266,14 @@ export async function autoSettlePersonInSession(
   ]);
 
   const accountById = new Map(allAccounts.map(account => [account.id, account]));
-  const domainItems = toDomainItems(items);
+  const originJournals = await journalQueryRepository.findByIds(workplaceId, [
+    ...new Set(items.map(item => item.originatingJournalId)),
+  ]);
+  const originDates = new Map(originJournals.map(journal => [journal.id, journal.journalDate]));
+  const domainItems = toDomainItems(items).map(item => ({
+    ...item,
+    journalDate: originDates.get(item.originatingJournalId),
+  }));
   const domainAllocations = toDomainAllocations(allocations);
   const roles = new Map<string, 'receivable' | 'payable'>();
   const states: AccountUnassignedState[] = [];
@@ -278,6 +393,52 @@ export async function recordRepayment(
 
     const role = roleForLinkedAccount(targetAccount);
     if (!role) throw new Error('Target account must be a receivable or payable account');
+    const existingTransactions = existingJournal
+      ? await transactionQueryRepository.findByJournal(workplaceId, existingJournal.id)
+      : [];
+    let existingCashLine: (typeof existingTransactions)[number] | undefined;
+    if (existingJournal) {
+      if (existingJournal.status !== JournalStatus.POSTED || existingTransactions.length !== 2) {
+        throw new Error('This movement is no longer eligible for matching');
+      }
+      if (
+        (input.expectedJournalUpdatedAt !== undefined &&
+          existingJournal.updatedAt?.getTime() !== input.expectedJournalUpdatedAt) ||
+        existingJournal.currencyCode !== input.journalCurrency ||
+        input.cashAccountId === input.targetAccountId
+      ) {
+        throw new Error('This movement changed. Review it again before matching.');
+      }
+      existingCashLine = existingTransactions.find(tx => tx.accountId === input.cashAccountId);
+      const expectedType = role === 'receivable' ? TransactionType.DEBIT : TransactionType.CREDIT;
+      const cashPrecision = getCurrencyPrecision(
+        existingCashLine?.currencyCode ?? input.journalCurrency,
+      );
+      if (
+        !existingCashLine ||
+        existingCashLine.transactionType !== expectedType ||
+        toMinorUnits(existingCashLine.amount, cashPrecision) !==
+          toMinorUnits(input.cashAmount, cashPrecision)
+      ) {
+        throw new Error(
+          'The selected movement has a different amount or direction. Review it again.',
+        );
+      }
+      const otherLine = existingTransactions.find(tx => tx.id !== existingCashLine!.id);
+      if (!otherLine) throw new Error('The selected movement is incomplete');
+      const otherLink = await personQueryRepository.findPersonAccountByAccountId(
+        workplaceId,
+        otherLine.accountId,
+      );
+      if (otherLink && otherLink.personId !== input.personId)
+        throw new Error('The movement belongs to another person');
+      const priorAllocations = await personQueryRepository.listSettlementAllocations(workplaceId, {
+        settlementJournalId: existingJournal.id,
+        activeOnly: true,
+      });
+      if (priorAllocations.length)
+        throw new Error('This movement already has repayment allocations');
+    }
 
     const domainItems = toDomainItems(items);
     const domainAllocations = toDomainAllocations(allocations);
@@ -303,13 +464,22 @@ export async function recordRepayment(
           unassignedAmount: input.unassignedAmount ?? 0,
           repaymentLegAmount: input.cashAmount,
           currencyCode: targetAccount.currencyCode,
-          target: targetState,
+          target: existingTransactions.some(
+            tx =>
+              tx.accountId === targetAccount.id &&
+              classifyPersonDebtPosting({
+                accountType: targetAccount.accountType,
+                transactionType: tx.transactionType,
+              }) === 'reducing',
+          )
+            ? { ...targetState, hasNegativeUnassignedRemainder: false }
+            : targetState,
           role,
         })
       : await (async () => {
-          if (input.allocations.length !== 1) {
+          if (!input.allocations.length) {
             throw new Error(
-              'Cross-currency repayment requires explicitly assigning one target open item',
+              'Cross-currency repayment requires explicitly assigning target open items',
             );
           }
           const allocation = input.allocations[0]!;
@@ -337,9 +507,12 @@ export async function recordRepayment(
             exchangeRate: input.exchangeRate,
             journalCurrency,
             precisionByCurrency,
-            targetAmount: input.targetAmount ?? allocation.amount,
+            targetAmount:
+              input.targetAmount ?? input.allocations.reduce((sum, item) => sum + item.amount, 0),
             role,
             activeAllocations: domainAllocations,
+            items: domainItems,
+            assigned: input.allocations,
           });
         })();
 
@@ -352,7 +525,20 @@ export async function recordRepayment(
         notes: input.notes ?? existingJournal?.notes,
         currencyCode: journalCurrency,
         status: JournalStatus.POSTED,
-        transactions: plan.lines,
+        transactions: existingCashLine
+          ? plan.lines.map(line =>
+              line.accountId === input.cashAccountId
+                ? {
+                    ...line,
+                    amount: existingCashLine!.amount,
+                    transactionType: existingCashLine!.transactionType,
+                    currencyCode: existingCashLine!.currencyCode,
+                    exchangeRate: existingCashLine!.exchangeRate,
+                    notes: existingCashLine!.notes,
+                  }
+                : line,
+            )
+          : plan.lines,
       },
       workplaceId,
     );
@@ -527,6 +713,12 @@ export async function executeWeAreSettled(
       precisionByCurrency,
       exchangeRateByCurrency: input.exchangeRateByCurrency ?? new Map(),
     });
+
+    if (input.expectedPlan && settlementPlanKey(input.expectedPlan) !== settlementPlanKey(plan)) {
+      throw new Error(
+        'Balances changed since the preview. Review the updated settlement before confirming.',
+      );
+    }
 
     if (plan.lines.length < 2) {
       throw new Error('Nothing to settle for this person');

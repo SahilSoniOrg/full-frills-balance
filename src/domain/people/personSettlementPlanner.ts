@@ -33,8 +33,15 @@ export function planSameCurrencyRepayment(x: {
   if (x.target.hasNegativeUnassignedRemainder) throw new Error('negative unassigned balance');
   let total = toMinorUnits(x.unassignedAmount, precision);
   if (total < 0) throw new Error('unassigned amount cannot be negative');
+  const seen = new Set<string>();
   for (const a of x.assigned) {
-    if (a.amount < 0) throw new Error('allocation amount cannot be negative');
+    if (
+      !Number.isFinite(a.amount) ||
+      toMinorUnits(a.amount, precision) <= 0 ||
+      seen.has(a.openItemId)
+    )
+      throw new Error('invalid allocation amount or duplicate open item');
+    seen.add(a.openItemId);
     const item = x.items.find(i => i.id === a.openItemId);
     if (
       !item ||
@@ -79,6 +86,8 @@ export function planCrossCurrencyRepayment(x: {
   targetAmount?: number;
   role: 'receivable' | 'payable';
   activeAllocations?: readonly SettlementAllocation[];
+  items?: readonly OpenItem[];
+  assigned?: readonly PlannedAllocation[];
 }): PlannedSettlement {
   if (!x.openItem.accountId || x.exchangeRate <= 0 || x.cashAmount <= 0)
     throw new Error('explicit target and positive FX rate required');
@@ -88,12 +97,28 @@ export function planCrossCurrencyRepayment(x: {
   const targetAmount =
     x.targetAmount ??
     fromMinorUnits(toMinorUnits(x.cashAmount / x.exchangeRate, precision), precision);
-  const remainder = openItemRemainder(x.openItem, x.activeAllocations ?? []);
-  if (
-    targetAmount <= 0 ||
-    toMinorUnits(targetAmount, precision) > toMinorUnits(remainder, precision)
-  )
-    throw new Error('target amount exceeds open item remainder');
+  const assignments = x.assigned ?? [{ openItemId: x.openItem.id, amount: targetAmount }];
+  const seen = new Set<string>();
+  let assignedUnits = 0;
+  for (const assignment of assignments) {
+    const item = (x.items ?? [x.openItem]).find(
+      candidate => candidate.id === assignment.openItemId,
+    );
+    const amount = toMinorUnits(assignment.amount, precision);
+    if (
+      !item ||
+      item.accountId !== x.openItem.accountId ||
+      seen.has(item.id) ||
+      amount <= 0 ||
+      amount > toMinorUnits(openItemRemainder(item, x.activeAllocations ?? []), precision)
+    ) {
+      throw new Error('target amount exceeds open item remainder');
+    }
+    seen.add(item.id);
+    assignedUnits += amount;
+  }
+  if (targetAmount <= 0 || assignedUnits !== toMinorUnits(targetAmount, precision))
+    throw new Error('allocation total mismatch');
   const payable = x.role === 'payable';
   const cashType = payable ? TransactionType.CREDIT : TransactionType.DEBIT;
   const personType = payable ? TransactionType.DEBIT : TransactionType.CREDIT;
@@ -124,7 +149,7 @@ export function planCrossCurrencyRepayment(x: {
     throw new Error(`FX journal is not balanced: ${result.issues.map(i => i.code).join(', ')}`);
   return {
     lines,
-    allocations: [{ openItemId: x.openItem.id, amount: targetAmount, kind: 'repayment' }],
+    allocations: assignments.map(assignment => ({ ...assignment, kind: 'repayment' })),
   };
 }
 

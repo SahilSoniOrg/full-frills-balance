@@ -1,12 +1,15 @@
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { TransactionType } from '@/src/types/enums';
+import { InboxProcessingStatus, JournalStatus, TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
 import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import type { CreateJournalData } from '@/src/types/journalWrite';
+import type { CreateJournalData, JournalRepaymentAllocation } from '@/src/types/journalWrite';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { stageJournalRepaymentAllocations } from '@/src/services/people/peopleSettlementCommands';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { analytics } from '@/src/services/analytics';
@@ -26,6 +29,7 @@ import {
 } from './journalDomainTypes';
 import type Journal from '@/src/data/models/Journal';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
+import { generator } from '@/src/utils/idGenerator';
 
 export type JournalSaveHost = {
   clearSuggestionsCache: (workplaceId?: WorkplaceId) => void;
@@ -54,6 +58,7 @@ export type JournalSaveHost = {
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   }) => Promise<SubmitJournalResult>;
 };
@@ -69,6 +74,7 @@ export async function postPostingPlan(
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   },
 ): Promise<SubmitJournalResult> {
@@ -119,6 +125,7 @@ export async function postPostingPlan(
     mode: params.mode,
     launchSource: params.launchSource,
     planned: params.planned,
+    repaymentAllocation: params.repaymentAllocation,
     workplaceId: params.workplaceId,
   });
 }
@@ -140,6 +147,7 @@ export async function saveJournalEntry(
     launchSource?: string;
     /** Ignored unless the date is still in the future. */
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   },
 ): Promise<SubmitJournalResult> {
@@ -150,6 +158,7 @@ export async function saveJournalEntry(
     newJournalCurrencyCode,
     launchSource,
     planned,
+    repaymentAllocation,
     ...entryParams
   } = params;
 
@@ -177,6 +186,59 @@ export async function saveJournalEntry(
 
     const { journalData } = assembled;
     const currencyCode = journalData.currencyCode;
+
+    if (repaymentAllocation?.allocations.length) {
+      const write = withPlannedStatus(journalData, planned);
+      if (write.status && write.status !== JournalStatus.POSTED) {
+        throw new Error('Repayment allocations require a posted journal');
+      }
+      const smsRecord =
+        !journalId && params.smsRecordId
+          ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
+          : null;
+      const auditMetadata = smsRecord ? { correlationId: generator() } : undefined;
+      const result = await runAccountingWriteSession(async session => {
+        const saved = await journalPersistenceRepository.putInSession(
+          session,
+          { ...write, ...(journalId ? { journalId } : {}), deferPlannedRepaymentAllocation: true },
+          workplaceId,
+          auditMetadata,
+        );
+        if (saved.status !== JournalStatus.POSTED)
+          throw new Error('Repayment allocations require a posted journal');
+        await stageJournalRepaymentAllocations(
+          session,
+          workplaceId,
+          saved.journal.id,
+          write.transactions,
+          repaymentAllocation,
+        );
+        if (smsRecord) {
+          await transactionInboxRepository.stageLinkByIdInSession(
+            session,
+            workplaceId,
+            smsRecord.id,
+            saved.journal.id,
+            InboxProcessingStatus.IMPORTED,
+            auditMetadata,
+          );
+        }
+        return saved;
+      });
+      host.clearSuggestionsCache(workplaceId);
+      analytics.trackFeatureUsage('journal', journalId ? 'update' : 'create', {
+        mode,
+        currency: currencyCode,
+        count: journalData.transactions.length,
+        ...(!journalId ? { source: launchSource ?? (params.smsRecordId ? 'sms' : 'manual') } : {}),
+      });
+      if (!journalId) analytics.trackConversion('transaction_created');
+      return {
+        success: true,
+        action: journalId ? 'updated' : 'created',
+        journalId: result.journal.id,
+      };
+    }
 
     if (journalId) {
       const updatedJournal = await host.updateJournal(
@@ -213,7 +275,10 @@ export async function saveJournalEntry(
     if (error instanceof JournalBalanceError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: 'Failed to save transaction' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save transaction',
+    };
   }
 }
 

@@ -24,6 +24,7 @@ const asDomainItems = (items: Awaited<ReturnType<typeof personQueryRepository.li
     originatingJournalId: item.originatingJournalId,
     currencyCode: item.currencyCode,
     originalAmount: item.originalAmount,
+    direction: item.direction,
     createdAt: item.createdAt?.getTime(),
   }));
 const asDomainAllocations = (
@@ -87,7 +88,9 @@ export class PeopleReadService {
                       ? 'expense'
                       : account.accountType === 'INCOME'
                         ? 'income'
-                        : 'receivable',
+                        : account.accountType === AccountType.LIABILITY
+                          ? 'payable'
+                          : 'receivable',
               currencyCode: account.currencyCode,
             }) as const,
         );
@@ -148,7 +151,17 @@ export class PeopleReadService {
       personQueryRepository.listSettlementAllocations(workplaceId, { personId, activeOnly: true }),
       accountQueryRepository.findAll(workplaceId),
     ]);
-    const domainItems = asDomainItems(items);
+    const originJournals = await journalQueryRepository.findByIds(workplaceId, [
+      ...new Set(items.map(item => item.originatingJournalId)),
+    ]);
+    const originDates = new Map(originJournals.map(journal => [journal.id, journal.journalDate]));
+    const domainItems = asDomainItems(items)
+      .map(item => ({ ...item, journalDate: originDates.get(item.originatingJournalId) }))
+      .sort(
+        (a, b) =>
+          (a.journalDate ?? a.createdAt ?? 0) - (b.journalDate ?? b.createdAt ?? 0) ||
+          a.id.localeCompare(b.id),
+      );
     const domainAllocations = asDomainAllocations(allocations);
     const accountById = new Map(accounts.map(account => [account.id, account]));
     const linkedAccounts = await Promise.all(
@@ -181,7 +194,9 @@ export class PeopleReadService {
                   ? 'expense'
                   : account.accountType === 'INCOME'
                     ? 'income'
-                    : 'receivable',
+                    : account.accountType === AccountType.LIABILITY
+                      ? 'payable'
+                      : 'receivable',
           currencyCode: account.currencyCode,
         }) as const,
     );
@@ -414,6 +429,7 @@ export class PeopleReadService {
           {
             journalId: journal.id,
             journalDate: journal.journalDate,
+            journalUpdatedAt: journal.updatedAt?.getTime(),
             description: journal.description,
             currencyCode: journal.currencyCode,
             cashAccountId: cashLine.accountId,

@@ -30,6 +30,7 @@ export interface OpenItem {
   originatingJournalId: JournalId;
   currencyCode: string;
   originalAmount: number;
+  direction?: 'receivable' | 'payable';
   createdAt?: number;
   journalDate?: number;
 }
@@ -39,6 +40,8 @@ export interface SettlementAllocation {
   journalId: JournalId;
   amount: number;
   active: boolean;
+  journalDate?: number;
+  kind?: 'repayment' | 'write_off' | 'auto_settle';
 }
 export interface PersonCurrencyBalance {
   currencyCode: string;
