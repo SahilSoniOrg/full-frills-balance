@@ -57,6 +57,7 @@ const composerRoutes = [
   ['account-creation', 'account', 'account_setup'],
   ['account-matcher-editor', 'account', 'account_matcher_configuration'],
   ['category-creation', 'account', 'category_setup'],
+  ['person-creation', 'people', 'person_creation'],
   ['planned-payment-form', 'commitments', 'commitment_configuration'],
   ['budget-edit', 'budget', 'budget_configuration'],
 ] as const;

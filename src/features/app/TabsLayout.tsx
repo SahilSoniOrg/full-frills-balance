@@ -45,7 +45,7 @@ export function TabsLayout() {
           AppNavigation.toAccountCreation(undefined, workplaceId);
           break;
         case 'person':
-          AppNavigation.toPeople({ create: '1' });
+          AppNavigation.toPersonCreation(workplaceId);
           break;
         case 'category':
           AppNavigation.toCategoryCreation(undefined, workplaceId);

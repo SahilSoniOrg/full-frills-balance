@@ -2,7 +2,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { createPerson, linkExistingAccount, peopleReadService } from '@/src/services/people';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
 import type { PersonId, AccountId } from '@/src/types/ids';
 
 export type PeopleListEntry = Awaited<
@@ -14,13 +13,11 @@ export type LinkableAccount = Awaited<
 
 export function usePeopleListViewModel() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const params = useLocalSearchParams<{ create?: string }>();
   const [people, setPeople] = useState<PeopleListEntry[]>([]);
   const [accounts, setAccounts] = useState<LinkableAccount[]>([]);
   const [query, setQuery] = useState('');
   const [includeArchived, setIncludeArchived] = useState(false);
-  const [localModal, setLocalModal] = useState<'create' | 'link' | null>(null);
-  const modal = params.create === '1' ? 'create' : localModal;
+  const [modal, setModal] = useState<'link' | null>(null);
   const [personName, setPersonName] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState<PersonId | ''>('');
   const [selectedAccountId, setSelectedAccountId] = useState<AccountId | ''>('');
@@ -81,19 +78,14 @@ export function usePeopleListViewModel() {
     return { owedToYou: [...owedToYou], youOwe: [...youOwe] };
   }, [activePeople]);
   const closeModal = () => {
-    setLocalModal(null);
+    setModal(null);
     setPersonName('');
-    if (params.create === '1') router.setParams({ create: undefined });
-  };
-  const openCreate = () => {
-    setPersonName('');
-    setLocalModal('create');
   };
   const openLink = () => {
     setPersonName('');
     setSelectedPersonId('');
     setSelectedAccountId('');
-    setLocalModal('link');
+    setModal('link');
   };
   const selectPersonForLink = (personId: PersonId) => {
     setSelectedPersonId(current => {
@@ -101,18 +93,6 @@ export function usePeopleListViewModel() {
       if (next) setPersonName('');
       return next;
     });
-  };
-  const addPerson = async (): Promise<boolean> => {
-    if (!personName.trim()) return false;
-    setBusy(true);
-    try {
-      await createPerson(workplaceId, { name: personName.trim() });
-      closeModal();
-      setTick(value => value + 1);
-      return true;
-    } finally {
-      setBusy(false);
-    }
   };
   const linkAccount = async (personId?: PersonId): Promise<boolean> => {
     if (!selectedAccountId) return false;
@@ -143,7 +123,6 @@ export function usePeopleListViewModel() {
     setIncludeArchived,
     modal,
     closeModal,
-    openCreate,
     openLink,
     personName,
     setPersonName,
@@ -153,7 +132,6 @@ export function usePeopleListViewModel() {
     selectedAccountId,
     setSelectedAccountId,
     busy,
-    addPerson,
     linkAccount,
     reload: () => setTick(value => value + 1),
   };

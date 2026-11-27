@@ -105,15 +105,6 @@ export function PeopleListScreen() {
     [isSearching, setIncludeArchived, setQuery, vm.includeArchived, vm.modal, vm.query],
   );
 
-  const handleAddPerson = async () => {
-    try {
-      const saved = await vm.addPerson();
-      if (saved) toast.success('Person added.');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not add person.');
-    }
-  };
-
   const handleLinkAccount = async () => {
     try {
       const saved = await vm.linkAccount();
@@ -127,7 +118,6 @@ export function PeopleListScreen() {
   const netColor = signColorKey(netSign);
   const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
   const archivedOnlyHidden = !hasFilters && vm.people.length === 0 && vm.hasArchivedPeople;
-  const canSavePerson = !vm.busy && Boolean(vm.personName.trim());
   const canSaveLink =
     !vm.busy &&
     Boolean(vm.selectedAccountId) &&
@@ -311,45 +301,6 @@ export function PeopleListScreen() {
           )}
         </Stack>
       </ScrollView>
-
-      <ModalSurface
-        visible={vm.modal === 'create'}
-        title="Add person"
-        onClose={vm.closeModal}
-        position="center"
-        fixedHeight={false}
-        keyboardAvoiding
-        footer={
-          <Inline gap="sm">
-            <Box flex={1}>
-              <AppButton variant="outline" onPress={vm.closeModal}>
-                Cancel
-              </AppButton>
-            </Box>
-            <Box flex={1}>
-              <AppButton
-                loading={vm.busy}
-                disabled={!canSavePerson}
-                onPress={() => void handleAddPerson()}
-              >
-                Save
-              </AppButton>
-            </Box>
-          </Inline>
-        }
-      >
-        <Stack gap="sm">
-          <AppText variant="caption" color="secondary">
-            Create an offline ledger profile to split bills, lend, or record repayments.
-          </AppText>
-          <AppInputField
-            placeholder="Person name"
-            value={vm.personName}
-            onChangeText={vm.setPersonName}
-            autoFocus
-          />
-        </Stack>
-      </ModalSurface>
 
       <ModalSurface
         visible={vm.modal === 'link'}
