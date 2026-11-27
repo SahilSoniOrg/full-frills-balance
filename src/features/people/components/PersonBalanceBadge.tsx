@@ -22,6 +22,13 @@ export function PersonBalanceBadge({
   const activeCurrencies = summary.currencies.filter(
     balance => balance.owedToYou !== 0 || balance.youOwe !== 0 || balance.net !== 0,
   );
+  const showConvertedNet =
+    Boolean(summary.convertedNet?.isInformational) &&
+    !compact &&
+    (activeCurrencies.length > 1 ||
+      (activeCurrencies.length === 1 &&
+        summary.convertedNet!.currencyCode !== activeCurrencies[0]!.currencyCode) ||
+      (activeCurrencies.length === 0 && summary.convertedNet!.amount !== 0));
 
   return (
     <Stack gap={compact ? 'xs' : 'sm'} accessibilityLabel={`${personName} balances`}>
@@ -37,53 +44,54 @@ export function PersonBalanceBadge({
           ) : null}
         </Inline>
       ) : (
-        activeCurrencies.map(balance => (
-          <View key={balance.currencyCode}>
-            <Inline gap="sm" alignItems="center" justifyContent="space-between" flexWrap="wrap">
-              <Stack gap="none" flex={1}>
-                {balance.owedToYou !== 0 ? (
-                  <AppText
-                    variant={compact ? 'caption' : 'body'}
-                    weight="semibold"
-                    color="income"
-                    tabular
-                  >
-                    {compact
-                      ? `Owes you ${formatAmount(balance.owedToYou, balance.currencyCode)}`
-                      : `${personName} owes you ${formatAmount(balance.owedToYou, balance.currencyCode)}`}
-                  </AppText>
+        activeCurrencies.map(balance => {
+          const showBothDirections = balance.owedToYou !== 0 && balance.youOwe !== 0;
+          return (
+            <View key={balance.currencyCode}>
+              <Inline gap="sm" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                <Stack gap="none" flex={1}>
+                  {balance.owedToYou !== 0 ? (
+                    <AppText
+                      variant={compact ? 'caption' : 'body'}
+                      weight="semibold"
+                      color="income"
+                      tabular
+                    >
+                      {compact
+                        ? `Owes you ${formatAmount(balance.owedToYou, balance.currencyCode)}`
+                        : `${personName} owes you ${formatAmount(balance.owedToYou, balance.currencyCode)}`}
+                    </AppText>
+                  ) : null}
+                  {balance.youOwe !== 0 ? (
+                    <AppText
+                      variant={compact ? 'caption' : 'body'}
+                      weight="semibold"
+                      color="expense"
+                      tabular
+                    >
+                      {compact
+                        ? `You owe ${formatAmount(balance.youOwe, balance.currencyCode)}`
+                        : `You owe ${personName} ${formatAmount(balance.youOwe, balance.currencyCode)}`}
+                    </AppText>
+                  ) : null}
+                  {!compact && showBothDirections ? (
+                    <AppText variant="caption" color="secondary" tabular>
+                      Net: {formatAmount(balance.net, balance.currencyCode)}
+                    </AppText>
+                  ) : null}
+                </Stack>
+                {compact ? (
+                  <Badge variant={balance.net >= 0 ? 'income' : 'expense'} size="sm">
+                    {balance.net >= 0 ? '+' : ''}
+                    {formatAmount(balance.net, balance.currencyCode)}
+                  </Badge>
                 ) : null}
-                {balance.youOwe !== 0 ? (
-                  <AppText
-                    variant={compact ? 'caption' : 'body'}
-                    weight="semibold"
-                    color="expense"
-                    tabular
-                  >
-                    {compact
-                      ? `You owe ${formatAmount(balance.youOwe, balance.currencyCode)}`
-                      : `You owe ${personName} ${formatAmount(balance.youOwe, balance.currencyCode)}`}
-                  </AppText>
-                ) : null}
-                {!compact ? (
-                  <AppText variant="caption" color="secondary" tabular>
-                    Net: {formatAmount(balance.net, balance.currencyCode)}
-                  </AppText>
-                ) : null}
-              </Stack>
-              {compact ? (
-                <Badge variant={balance.net >= 0 ? 'income' : 'expense'} size="sm">
-                  {balance.net >= 0 ? '+' : ''}
-                  {formatAmount(balance.net, balance.currencyCode)}
-                </Badge>
-              ) : null}
-            </Inline>
-          </View>
-        ))
+              </Inline>
+            </View>
+          );
+        })
       )}
-      {summary.convertedNet?.isInformational &&
-      !compact &&
-      (activeCurrencies.length > 0 || summary.convertedNet.amount !== 0) ? (
+      {showConvertedNet && summary.convertedNet ? (
         <Inline gap="xs" alignItems="center">
           <Badge size="sm">
             Est. net ~{formatAmount(summary.convertedNet.amount, summary.convertedNet.currencyCode)}

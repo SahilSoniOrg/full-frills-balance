@@ -22,7 +22,29 @@ describe('people previews', () => {
     );
     expect(getByText('Ari owes you USD 8.00')).toBeTruthy();
     expect(getByText('You owe Ari USD 2.00')).toBeTruthy();
+    expect(getByText('Net: USD 6.00')).toBeTruthy();
     expect(getByText('Est. net ~INR 500.00')).toBeTruthy();
+  });
+
+  it('hides redundant net and same-currency estimate on a one-sided balance', () => {
+    const { getByText, queryByText } = render(
+      <PersonBalanceBadge
+        personName="Dad"
+        summary={{
+          personId: 'dad',
+          currencies: [{ currencyCode: 'INR', owedToYou: 200, youOwe: 0, net: 200 }],
+          convertedNet: {
+            currencyCode: 'INR',
+            amount: 200,
+            isInformational: true,
+            missingCurrencies: [],
+          },
+        }}
+      />,
+    );
+    expect(getByText('Dad owes you INR 200.00')).toBeTruthy();
+    expect(queryByText('Net: INR 200.00')).toBeNull();
+    expect(queryByText('Est. net ~INR 200.00')).toBeNull();
   });
   it('shows the exact split preview amounts', () => {
     const { getByTestId } = render(
