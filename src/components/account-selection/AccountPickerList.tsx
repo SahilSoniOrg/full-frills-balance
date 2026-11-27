@@ -302,9 +302,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
                 </PressScaleTouchable>
               )}
-              {key === 'people' && onCreatePersonRequest && !isSearchMode && (
-                <NewPersonActionPill onPress={() => onCreatePersonRequest()} />
-              )}
               {!isSearchMode && (
                 <AppIcon
                   name={isCollapsed ? Icon.ChevronDown : Icon.ChevronUp}
@@ -417,6 +414,13 @@ export function AccountPickerList(props: AccountPickerListProps) {
           contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled
           ListEmptyComponent={renderEmpty}
+          ListHeaderComponent={
+            !isSearchMode && onCreatePersonRequest ? (
+              <View style={styles.personActionHeader}>
+                <NewPersonActionPill onPress={onCreatePersonRequest} />
+              </View>
+            ) : null
+          }
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
           keyboardShouldPersistTaps="always"
@@ -457,6 +461,11 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1 },
   countIndicator: { marginTop: Spacing.xs, paddingHorizontal: Spacing.xs },
   listWrapper: { flex: 1, minHeight: 0, width: '100%' },
+  personActionHeader: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    alignItems: 'flex-start',
+  },
   list: { flex: 1, minHeight: 0, width: '100%' },
   listContent: { flexGrow: 1, paddingBottom: Spacing.xl },
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },

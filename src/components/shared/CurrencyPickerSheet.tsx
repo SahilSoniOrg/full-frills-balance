@@ -5,7 +5,7 @@ import {
   type SelectionSection,
 } from '@/src/components/filters/SelectionPickerSheet';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { toCurrencyPickerSections } from '@/src/features/accounts/helpers/currencyPickerOptions';
+import { toCurrencyPickerSections } from '@/src/components/shared/currencyPickerOptions';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useMemo } from 'react';

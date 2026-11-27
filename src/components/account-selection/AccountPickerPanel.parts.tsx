@@ -292,6 +292,13 @@ export function AccountPickerDropdown({
         </View>
       </View>
 
+      {onCreatePersonRequest &&
+      (sections.length === 0 || Platform.OS === 'web' || visibleAccountCount <= 32) ? (
+        <View style={{ paddingVertical: Spacing.xs, alignItems: 'flex-start' }}>
+          <NewPersonActionPill onPress={onCreatePersonRequest} />
+        </View>
+      ) : null}
+
       {sections.length === 0 ? (
         <View style={[styles.emptyContainer, { borderColor: theme.border }]}>
           <AppText variant="body" color="secondary">
@@ -330,11 +337,6 @@ export function AccountPickerDropdown({
                     selectedAccountId={selectedAccountId}
                     onSelect={handleAccountPress}
                     peopleGroups={peopleGroups}
-                    trailingItem={
-                      section.key === 'people' && onCreatePersonRequest ? (
-                        <NewPersonActionPill onPress={onCreatePersonRequest} />
-                      ) : undefined
-                    }
                   />
                 )}
               </AccountPickerSection>

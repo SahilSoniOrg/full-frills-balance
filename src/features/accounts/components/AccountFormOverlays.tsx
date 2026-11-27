@@ -5,7 +5,7 @@ import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig } from '@/src/constants/app-config';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
-import { CurrencyPickerSheet } from '@/src/features/accounts/components/CurrencyPickerSheet';
+import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';

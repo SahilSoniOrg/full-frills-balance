@@ -2,7 +2,7 @@ import {
   POPULAR_CURRENCY_CODES,
   resolveCurrencySymbol,
   toCurrencyPickerSections,
-} from '@/src/features/accounts/helpers/currencyPickerOptions';
+} from '@/src/components/shared/currencyPickerOptions';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 
 const currencies = [

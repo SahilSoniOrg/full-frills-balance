@@ -151,11 +151,6 @@ export function AccountPickerRecycledList({
           selectedAccountId={selectedAccountId}
           onSelect={onSelect}
           peopleGroups={peopleGroups}
-          trailingItem={
-            item.sectionKey === 'people' && item.isLastInSection && onCreatePersonRequest ? (
-              <NewPersonActionPill onPress={onCreatePersonRequest} />
-            ) : undefined
-          }
         />
       ) : (
         <AccountPickerSection
@@ -171,6 +166,9 @@ export function AccountPickerRecycledList({
   return (
     <FlashList
       data={rows}
+      ListHeaderComponent={
+        onCreatePersonRequest ? <NewPersonActionPill onPress={onCreatePersonRequest} /> : null
+      }
       renderItem={renderItem}
       keyExtractor={item => item.key}
       getItemType={item => item.kind}
