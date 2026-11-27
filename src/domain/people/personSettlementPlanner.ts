@@ -2,7 +2,8 @@ import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEv
 import { toMinorUnits, fromMinorUnits } from '@/src/domain/money/money';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { TransactionType } from '@/src/types/enums';
-import type { AccountId } from '@/src/types/ids';
+import { asOpenItemId, type AccountId } from '@/src/types/ids';
+import { allocatePersonRepaymentMinorUnits } from './personRepaymentAllocation';
 import type { JournalWriteLine } from '@/src/types/journalWrite';
 import type { OpenItem, SettlementAllocation, AccountUnassignedState } from './personTypes';
 import { openItemRemainder } from './personBalanceProjection';
@@ -17,6 +18,23 @@ export interface PlannedSettlement {
   allocations: PlannedAllocation[];
 }
 
+function repaymentItemCapacities(
+  items: readonly OpenItem[],
+  allocations: readonly SettlementAllocation[],
+  precision: number,
+) {
+  return items.map(item => ({
+    openItemId: asOpenItemId(item.id),
+    availableMinor: Math.max(
+      0,
+      toMinorUnits(openItemRemainder(item, allocations, precision), precision),
+    ),
+    journalDate: item.journalDate ?? item.createdAt ?? 0,
+    createdAt: item.createdAt ?? 0,
+    id: item.id,
+  }));
+}
+
 export function planSameCurrencyRepayment(x: {
   cashAccountId: AccountId;
   targetAccountId: AccountId;
@@ -28,34 +46,25 @@ export function planSameCurrencyRepayment(x: {
   currencyCode: string;
   target: AccountUnassignedState;
   role?: 'receivable' | 'payable';
+  precision?: number;
 }): PlannedSettlement {
-  const precision = getCurrencyPrecision(x.currencyCode);
+  const precision = x.precision ?? getCurrencyPrecision(x.currencyCode);
   if (x.target.hasNegativeUnassignedRemainder) throw new Error('negative unassigned balance');
-  let total = toMinorUnits(x.unassignedAmount, precision);
-  if (total < 0) throw new Error('unassigned amount cannot be negative');
-  const seen = new Set<string>();
-  for (const a of x.assigned) {
-    if (
-      !Number.isFinite(a.amount) ||
-      toMinorUnits(a.amount, precision) <= 0 ||
-      seen.has(a.openItemId)
-    )
-      throw new Error('invalid allocation amount or duplicate open item');
-    seen.add(a.openItemId);
-    const item = x.items.find(i => i.id === a.openItemId);
-    if (
-      !item ||
-      item.accountId !== x.targetAccountId ||
-      toMinorUnits(a.amount, precision) >
-        toMinorUnits(openItemRemainder(item, x.activeAllocations), precision)
-    ) {
-      throw new Error('allocation exceeds open remainder');
-    }
-    total += toMinorUnits(a.amount, precision);
-  }
-  if (total !== toMinorUnits(x.repaymentLegAmount, precision)) {
-    throw new Error('allocation total mismatch');
-  }
+  const unassigned = toMinorUnits(x.unassignedAmount, precision);
+  if (unassigned < 0) throw new Error('unassigned amount cannot be negative');
+  const plan = allocatePersonRepaymentMinorUnits({
+    amountMinor: toMinorUnits(x.repaymentLegAmount, precision),
+    items: repaymentItemCapacities(
+      x.items.filter(item => item.accountId === x.targetAccountId),
+      x.activeAllocations,
+      precision,
+    ),
+    requestedAllocations: x.assigned.map(row => ({
+      openItemId: asOpenItemId(row.openItemId),
+      amountMinor: toMinorUnits(row.amount, precision),
+    })),
+  });
+  if (plan.unallocatedMinor !== unassigned) throw new Error('allocation total mismatch');
   const payable = x.role === 'payable';
   return {
     allocations: x.assigned.map(a => ({ ...a, kind: 'repayment' })),
@@ -89,7 +98,13 @@ export function planCrossCurrencyRepayment(x: {
   items?: readonly OpenItem[];
   assigned?: readonly PlannedAllocation[];
 }): PlannedSettlement {
-  if (!x.openItem.accountId || x.exchangeRate <= 0 || x.cashAmount <= 0)
+  if (
+    !x.openItem.accountId ||
+    !Number.isFinite(x.exchangeRate) ||
+    x.exchangeRate <= 0 ||
+    !Number.isFinite(x.cashAmount) ||
+    x.cashAmount <= 0
+  )
     throw new Error('explicit target and positive FX rate required');
   const precision =
     x.precisionByCurrency.get(x.openItem.currencyCode) ??
@@ -98,27 +113,20 @@ export function planCrossCurrencyRepayment(x: {
     x.targetAmount ??
     fromMinorUnits(toMinorUnits(x.cashAmount / x.exchangeRate, precision), precision);
   const assignments = x.assigned ?? [{ openItemId: x.openItem.id, amount: targetAmount }];
-  const seen = new Set<string>();
-  let assignedUnits = 0;
-  for (const assignment of assignments) {
-    const item = (x.items ?? [x.openItem]).find(
-      candidate => candidate.id === assignment.openItemId,
-    );
-    const amount = toMinorUnits(assignment.amount, precision);
-    if (
-      !item ||
-      item.accountId !== x.openItem.accountId ||
-      seen.has(item.id) ||
-      amount <= 0 ||
-      amount > toMinorUnits(openItemRemainder(item, x.activeAllocations ?? []), precision)
-    ) {
-      throw new Error('target amount exceeds open item remainder');
-    }
-    seen.add(item.id);
-    assignedUnits += amount;
-  }
-  if (targetAmount <= 0 || assignedUnits !== toMinorUnits(targetAmount, precision))
-    throw new Error('allocation total mismatch');
+  if (targetAmount <= 0) throw new Error('allocation total mismatch');
+  const allocation = allocatePersonRepaymentMinorUnits({
+    amountMinor: toMinorUnits(targetAmount, precision),
+    items: repaymentItemCapacities(
+      (x.items ?? [x.openItem]).filter(item => item.accountId === x.openItem.accountId),
+      x.activeAllocations ?? [],
+      precision,
+    ),
+    requestedAllocations: assignments.map(row => ({
+      openItemId: asOpenItemId(row.openItemId),
+      amountMinor: toMinorUnits(row.amount, precision),
+    })),
+  });
+  if (allocation.unallocatedMinor !== 0) throw new Error('allocation total mismatch');
   const payable = x.role === 'payable';
   const cashType = payable ? TransactionType.CREDIT : TransactionType.DEBIT;
   const personType = payable ? TransactionType.DEBIT : TransactionType.CREDIT;
@@ -158,11 +166,12 @@ export function planAutoSettle(x: {
   accounts: readonly AccountUnassignedState[];
   roles: ReadonlyMap<string, 'receivable' | 'payable'>;
   activeAllocations: readonly SettlementAllocation[];
+  precisionByCurrency?: ReadonlyMap<string, number>;
 }): PlannedSettlement {
   const lines: JournalWriteLine[] = [];
   const allocations: PlannedAllocation[] = [];
   for (const currency of new Set(x.accounts.map(a => a.currencyCode))) {
-    const precision = getCurrencyPrecision(currency);
+    const precision = x.precisionByCurrency?.get(currency) ?? getCurrencyPrecision(currency);
     const recv = x.accounts.filter(
       a => a.currencyCode === currency && x.roles.get(a.accountId) === 'receivable',
     );
@@ -179,25 +188,29 @@ export function planAutoSettle(x: {
     const allocateSide = (accounts: AccountUnassignedState[], kind: 'receivable' | 'payable') => {
       let left = target;
       const accountUnits = new Map<string, number>();
-      const ordered = [...x.items]
-        .filter(i => i.currencyCode === currency && accounts.some(a => a.accountId === i.accountId))
-        .sort((a, b) => (a.journalDate ?? a.createdAt ?? 0) - (b.journalDate ?? b.createdAt ?? 0));
-      for (const item of ordered) {
-        if (!left) break;
-        const units = Math.min(
-          left,
-          toMinorUnits(Math.max(0, openItemRemainder(item, x.activeAllocations)), precision),
+      const sideAccountIds = new Set(accounts.map(account => account.accountId));
+      const sideItems = x.items.filter(
+        item => item.currencyCode === currency && sideAccountIds.has(item.accountId),
+      );
+      const sideItemsById = new Map(sideItems.map(item => [item.id, item]));
+      const itemPlan = allocatePersonRepaymentMinorUnits({
+        amountMinor: target,
+        items: repaymentItemCapacities(sideItems, x.activeAllocations, precision),
+      });
+      for (const allocation of itemPlan.allocations) {
+        const item = sideItemsById.get(allocation.openItemId);
+        if (!item) throw new Error('Open item no longer available for auto-settlement');
+        allocations.push({
+          openItemId: item.id,
+          amount: fromMinorUnits(allocation.amountMinor, precision),
+          kind: 'auto_settle',
+        });
+        accountUnits.set(
+          item.accountId,
+          (accountUnits.get(item.accountId) ?? 0) + allocation.amountMinor,
         );
-        if (units > 0) {
-          allocations.push({
-            openItemId: item.id,
-            amount: fromMinorUnits(units, precision),
-            kind: 'auto_settle',
-          });
-          accountUnits.set(item.accountId, (accountUnits.get(item.accountId) ?? 0) + units);
-          left -= units;
-        }
       }
+      left = itemPlan.unallocatedMinor;
       for (const account of accounts) {
         if (!left) break;
         const units = Math.min(
@@ -261,11 +274,12 @@ export function planWeAreSettled(x: {
       account.currencyCode === x.workplaceCurrency
         ? 1
         : x.exchangeRateByCurrency.get(account.currencyCode);
-    if (!rate || rate <= 0) throw new Error(`missing FX rate for ${account.currencyCode}`);
+    if (!rate || !Number.isFinite(rate) || rate <= 0)
+      throw new Error(`missing FX rate for ${account.currencyCode}`);
 
     const closeAmount = fromMinorUnits(closeUnits, precision);
     for (const item of x.items.filter(i => i.accountId === account.accountId)) {
-      const remainder = openItemRemainder(item, x.activeAllocations);
+      const remainder = openItemRemainder(item, x.activeAllocations, precision);
       if (toMinorUnits(remainder, precision) > 0) {
         allocations.push({ openItemId: item.id, amount: remainder, kind: 'write_off' });
       }

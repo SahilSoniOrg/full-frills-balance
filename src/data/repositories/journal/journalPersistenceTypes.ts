@@ -1,6 +1,7 @@
 import type Journal from '@/src/data/models/Journal';
 import type Account from '@/src/data/models/Account';
 import type {
+  JournalRepaymentAllocation,
   JournalWriteFields,
   JournalWriteLine,
   JournalWriteMetadata,
@@ -9,7 +10,7 @@ import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 
 export interface PutJournalInput extends JournalWriteFields {
-  deferPlannedRepaymentAllocation?: boolean;
+  skipPeopleAutoSettlement?: boolean;
   journalId?: JournalId;
   /** Internal: create a historical/retired row in the same atomic batch. */
   initialDeletedAt?: number;
@@ -20,7 +21,7 @@ export interface PutJournalInput extends JournalWriteFields {
 }
 
 export interface PutJournalPatchInput {
-  deferPlannedRepaymentAllocation?: boolean;
+  skipPeopleAutoSettlement?: boolean;
   journalId: JournalId;
   journalDate?: number;
   description?: string;
@@ -29,6 +30,7 @@ export interface PutJournalPatchInput {
   status?: JournalStatus;
   originalJournalId?: JournalId;
   plannedPaymentId?: PlannedPaymentId;
+  repaymentAllocation?: JournalRepaymentAllocation;
   displayType?: JournalDisplayType;
   transactions?: JournalWriteLine[];
   metadata?: JournalWriteMetadata;

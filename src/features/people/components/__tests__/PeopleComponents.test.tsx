@@ -56,4 +56,24 @@ describe('people previews', () => {
     fireEvent.press(getByText('Confirm'));
     expect(onConfirm).not.toHaveBeenCalled();
   });
+  it('keeps settlement preview open and disables confirmation while the write is pending', () => {
+    const onCancel = jest.fn();
+    const onConfirm = jest.fn();
+    const { getByRole } = render(
+      <WeAreSettledPreviewModal
+        visible
+        isConfirming
+        personName="Ari"
+        summary={{ personId: 'ari', currencies: [] }}
+        workplaceCurrency="USD"
+        closingResidual={0}
+        forgivenAccountName="Rounding"
+        forgivenAccountType="Expense"
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />,
+    );
+    expect(getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    expect(getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
 });

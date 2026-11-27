@@ -92,9 +92,9 @@ export type AccountImportSourceBag = {
   }[];
   balanceSnapshots?: readonly { id: string; accountId: string }[];
   accountMatchers?: readonly { id: string; accountId: string }[];
-  personAccounts?: readonly { id: string; accountId: string }[];
-  openItems?: readonly { id: string; accountId: string }[];
-  settlementAllocations?: readonly { id: string; accountId: string }[];
+  personAccounts?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
+  openItems?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
+  settlementAllocations?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
 };
 
 export type AccountReferenceSite = {
@@ -373,7 +373,12 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     mergeBehavior: 'none',
     deletePolicy: 'block',
     importPolicy: 'reject',
-    extractImportRefs: data => collectScalarRefs(key, data[source] || [], row => row.accountId),
+    extractImportRefs: data =>
+      collectScalarRefs(
+        key,
+        (data[source] || []).filter(row => row.deletedAt == null),
+        row => row.accountId,
+      ),
     formatMissingImportError: missing => missingImportError(label, missing),
   })),
 ];

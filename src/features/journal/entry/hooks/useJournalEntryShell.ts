@@ -33,21 +33,17 @@ import {
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
-import {
-  autoSettlePerson,
-  createPerson,
-  ensurePersonAccount,
-  peopleReadService,
-} from '@/src/services/people';
+import { createPersonWithReceivable, peopleReadService } from '@/src/services/people';
+import { logger } from '@/src/services/observability/logger';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
 import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
-import type { JournalId, OpenItemId, PersonId } from '@/src/types/ids';
+import type { OpenItemId, PersonId } from '@/src/types/ids';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -121,37 +117,24 @@ export function useJournalEntryShell(): JournalEntryShell {
   const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
 
   const { accounts } = useAccounts(workplaceId);
-  const { data: peopleTick } = useObservable(
-    () => peopleReadService.observePeopleTick(workplaceId),
+  const { data: peopleGroups } = useObservable(
+    () => peopleReadService.observePersonPickerGroups(workplaceId),
     [workplaceId],
-    null,
+    [],
+    { resetKey: workplaceId },
   );
-  const [peopleGroups, setPeopleGroups] = useState<PersonPickerGroup[]>([]);
-  const [people, setPeople] = useState<SplitParticipant[]>([]);
-  useEffect(() => {
-    let current = true;
-    void Promise.all([
-      peopleReadService.listPersonPickerGroups(workplaceId),
-      peopleReadService.listPeopleWithBalances(workplaceId, workplaceCurrency),
-    ])
-      .then(([groups, entries]) => {
-        if (current) {
-          setPeopleGroups(groups);
-          setPeople(
-            entries.map(entry => ({
-              id: entry.person.id,
-              name: entry.person.name,
-              icon: entry.person.icon,
-              color: entry.person.color,
-            })),
-          );
-        }
-      })
-      .catch(() => {});
-    return () => {
-      current = false;
-    };
-  }, [peopleTick, workplaceId, workplaceCurrency]);
+  const people = useMemo(
+    () =>
+      peopleGroups
+        .filter(group => !group.archived)
+        .map(group => ({
+          id: group.personId,
+          name: group.personName,
+          icon: group.icon,
+          color: group.color,
+        })),
+    [peopleGroups],
+  );
   const transferOpenItemPlanRef = useRef<{
     personId: PersonId;
     targetAccountId: AccountId;
@@ -166,13 +149,10 @@ export function useJournalEntryShell(): JournalEntryShell {
   );
   const onQuickAddPerson = useCallback(
     async (name: string, currencyCode?: string) => {
-      const person = await createPerson(workplaceId, { name });
-      const account = await ensurePersonAccount(
-        workplaceId,
-        person.id,
-        'receivable',
-        currencyCode ?? workplaceCurrency,
-      );
+      const { account } = await createPersonWithReceivable(workplaceId, {
+        name,
+        currencyCode: currencyCode ?? workplaceCurrency,
+      });
       return account.id;
     },
     [workplaceId, workplaceCurrency],
@@ -180,9 +160,6 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
   const saveLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onAfterSaveRef = useRef<
-    (result: { journalId?: JournalId; action?: 'created' | 'updated' }) => Promise<void>
-  >(async () => {});
   const transferSeededRef = useRef(false);
   const getRepaymentAllocationRef = useRef<
     () => import('@/src/types/journalWrite').JournalRepaymentAllocation | undefined
@@ -231,7 +208,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialDate: seed.date,
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,
-    onAfterSave: result => onAfterSaveRef.current(result),
     getRepaymentAllocation: () => getRepaymentAllocationRef.current(),
     onSuccess,
   });
@@ -252,25 +228,14 @@ export function useJournalEntryShell(): JournalEntryShell {
     getRepaymentAllocationRef.current = () => {
       const plan = transferOpenItemPlanRef.current;
       return activeMode === 'basic' &&
+        editor.savedStatus !== JournalStatus.POSTED &&
         editor.transactionType === 'transfer' &&
-        plan?.allocations.length
+        plan &&
+        (plan.allocations.length > 0 || plan.allocationMode === 'pick')
         ? plan
         : undefined;
     };
-    onAfterSaveRef.current = async result => {
-      if (!result.journalId) return;
-      if (activeMode === 'allocation') {
-        const personIds = new Set(
-          peopleGroups
-            .filter(group => editor.lines.some(line => group.accountIds.includes(line.accountId)))
-            .map(group => group.personId as PersonId),
-        );
-        await Promise.all(
-          [...personIds].map(personId => autoSettlePerson(workplaceId, personId, Date.now())),
-        );
-      }
-    };
-  }, [activeMode, editor.lines, editor.transactionType, peopleGroups, workplaceId]);
+  }, [activeMode, editor.savedStatus, editor.transactionType]);
 
   useEffect(() => {
     if (
@@ -287,17 +252,14 @@ export function useJournalEntryShell(): JournalEntryShell {
       .getPersonDetail(workplaceId, seed.personId, workplaceCurrency)
       .then(detail => {
         if (!detail) return;
-        const personAccountIds = new Set(
-          peopleGroups.find(group => group.personId === seed.personId)?.accountIds ?? [],
-        );
+        const personAccountIds = new Set(peopleGroups.flatMap(group => group.accountIds));
         const linked = detail.linkedAccounts;
         const item = seed.openItemId
           ? detail.openItems.find(row => row.item.id === seed.openItemId)
           : undefined;
         const personAccount =
           (item && accounts.find(account => account.id === item.item.accountId)) ||
-          linked.find(entry => entry.account.accountSubtype === AccountSubtype.RECEIVABLE)
-            ?.account ||
+          linked.find(entry => entry.account.accountType === AccountType.ASSET)?.account ||
           linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
         const cashAccount = accounts.find(
           account =>
@@ -316,18 +278,21 @@ export function useJournalEntryShell(): JournalEntryShell {
             lines.map(line => [
               line.id,
               line.transactionType === TransactionType.CREDIT
-                ? lineAccountPatch(source.id, source, source.accountType)
-                : {
-                    ...lineAccountPatch(destination.id, destination, destination.accountType),
-                    ...(item && !seed.amount && item.remainder > 0
+                ? {
+                    ...lineAccountPatch(source.id, source, source.accountType),
+                    ...(item &&
+                    !seed.amount &&
+                    item.remainder > 0 &&
+                    (personAsSource || source.currencyCode === destination.currencyCode)
                       ? { amount: String(item.remainder) }
                       : {}),
-                  },
+                  }
+                : lineAccountPatch(destination.id, destination, destination.accountType),
             ]),
           ),
         );
       })
-      .catch(() => {});
+      .catch(error => logger.warn('Could not load People transfer details', { error }));
   }, [
     accounts,
     lines,

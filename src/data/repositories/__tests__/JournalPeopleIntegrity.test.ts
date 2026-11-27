@@ -79,6 +79,75 @@ describe('Journal People integrity', () => {
         })
       )[0].id,
     ).toBe(allocation.id);
+    await repository.put({ journalId: original.journal.id, notes: 'Metadata only' }, workplaceId);
+    const [afterMetadataPatch] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: original.journal.id,
+    });
+    expect(afterMetadataPatch.id).toBe(item.id);
+    expect(afterMetadataPatch.originalAmount).toBe(100);
+  });
+
+  it('includes allocations staged earlier in a journal batch when checking item capacity', async () => {
+    const receivable = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Receivable',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const cash = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const equity = await accountWriteRepository.create({
+      workplaceId,
+      name: 'Equity',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
+    });
+    const person = await runAccountingWriteSession(s =>
+      personWriteRepository.createPersonInSession(s, workplaceId, { name: 'Batch Ada' }),
+    );
+    await runAccountingWriteSession(s =>
+      personWriteRepository.linkAccountInSession(s, workplaceId, person.id, receivable.id),
+    );
+    const origin = await repository.put(
+      {
+        journalDate: 1,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivable.id, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: equity.id, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
+    const [item] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: origin.journal.id,
+    });
+    const repayment = (date: number) => ({
+      journalDate: date,
+      currencyCode: 'USD',
+      transactions: [
+        { accountId: receivable.id, amount: 60, transactionType: TransactionType.CREDIT },
+        { accountId: cash.id, amount: 60, transactionType: TransactionType.DEBIT },
+      ],
+      repaymentAllocation: {
+        personId: person.id,
+        targetAccountId: receivable.id,
+        allocations: [{ openItemId: item.id, amount: 60 }],
+      },
+    });
+    await expect(repository.putMany([repayment(2), repayment(3)], workplaceId)).rejects.toThrow(
+      /Allocation exceeds open item remainder/,
+    );
+    expect(
+      await personQueryRepository.listSettlementAllocations(workplaceId, {
+        openItemId: item.id,
+        activeOnly: true,
+      }),
+    ).toHaveLength(0);
   });
 
   it('blocks removal below active allocations and deletion of allocated origin journals', async () => {

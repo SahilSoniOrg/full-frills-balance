@@ -37,6 +37,7 @@ export interface OpenItem {
 export interface SettlementAllocation {
   id: SettlementAllocationId;
   openItemId: OpenItemId;
+  accountId?: AccountId;
   journalId: JournalId;
   amount: number;
   active: boolean;

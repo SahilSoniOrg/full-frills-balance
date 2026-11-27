@@ -15,12 +15,14 @@ import {
   PersonAvatar,
 } from '@/src/components/core';
 import { AccountListRow } from '@/src/components/accounts/AccountListRow';
+import { AccountPickerModal } from '@/src/components/account-selection';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { OpenItemAmount } from '@/src/components/shared/OpenItemAmount';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -89,9 +91,10 @@ function PersonDetailsScreenContent() {
           ...(vm.settledPreview?.blockedReason !== 'Nothing open to close'
             ? [
                 {
-                  label: "We're settled",
+                  label: vm.isPreviewing ? 'Preparing settlement…' : "We're settled",
                   icon: Icon.CheckCircle,
                   onPress: vm.onStartWeAreSettled,
+                  disabled: vm.isPreviewing,
                   testID: 'person-we-are-settled-button',
                 },
               ]
@@ -363,36 +366,17 @@ function PersonDetailsScreenContent() {
                         Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100),
                       )
                     : 0;
-                const isPartial = entry.remainder < entry.item.originalAmount;
                 return (
                   <ListRow
                     key={entry.item.id}
                     leading={<IconTile icon={Icon.Receipt} tint="warning" />}
                     title={
-                      <Stack gap="xs">
-                        <Inline gap="sm" alignItems="center">
-                          <AppText variant="body" weight="semibold" tabular>
-                            {formatMoneyAmount(
-                              entry.remainder,
-                              entry.item.currencyCode,
-                              isPrivacyMode,
-                            )}{' '}
-                            remaining
-                          </AppText>
-                          <Badge size="sm" variant={isPartial ? 'warning' : 'default'}>
-                            {isPartial ? 'Partial' : 'Open'}
-                          </Badge>
-                        </Inline>
-                        <AppText variant="caption" color="secondary" tabular>
-                          of{' '}
-                          {formatMoneyAmount(
-                            entry.item.originalAmount,
-                            entry.item.currencyCode,
-                            isPrivacyMode,
-                          )}{' '}
-                          total
-                        </AppText>
-                      </Stack>
+                      <OpenItemAmount
+                        remainder={entry.remainder}
+                        originalAmount={entry.item.originalAmount}
+                        currencyCode={entry.item.currencyCode}
+                        isPrivacyMode={isPrivacyMode}
+                      />
                     }
                     trailing={
                       <AppButton
@@ -427,7 +411,7 @@ function PersonDetailsScreenContent() {
                 <ListRow
                   key={`${repayment.journalId}-${repayment.accountId}`}
                   leading={<IconTile icon={Icon.Wallet} tint="primary" />}
-                  title={formatMoneyAmount(repayment.amount, vm.workplaceCurrency, isPrivacyMode)}
+                  title={formatMoneyAmount(repayment.amount, repayment.currencyCode, isPrivacyMode)}
                   subtitle="Not yet applied to an open item"
                   trailing={
                     openItems.length > 0 ? (
@@ -461,7 +445,7 @@ function PersonDetailsScreenContent() {
             ) : (
               vm.history.map(item => (
                 <ListRow
-                  key={item.journalId}
+                  key={item.id ?? item.journalId}
                   leading={<IconTile icon={Icon.Document} tint="primary" />}
                   title={item.description || item.accountName}
                   subtitle={`${formatShortDate(item.journalDate)} · ${item.accountName}`}
@@ -524,58 +508,16 @@ function PersonDetailsScreenContent() {
         </Stack>
       </ModalSurface>
 
-      <ModalSurface
-        visible={vm.renameOpen}
-        title="Rename person"
-        onClose={() => vm.setRenameOpen(false)}
-        position="center"
-        fixedHeight={false}
-        keyboardAvoiding
-        footer={
-          <Inline gap="sm">
-            <Box flex={1}>
-              <AppButton variant="outline" onPress={() => vm.setRenameOpen(false)}>
-                Cancel
-              </AppButton>
-            </Box>
-            <Box flex={1}>
-              <AppButton onPress={() => void vm.onRename()}>Save</AppButton>
-            </Box>
-          </Inline>
-        }
-      >
-        <AppInputField
-          value={vm.renameDraft}
-          onChangeText={vm.setRenameDraft}
-          placeholder="Name"
-          autoFocus
-        />
-      </ModalSurface>
-
-      <ModalSurface
+      <AccountPickerModal
         visible={vm.linkModalOpen}
+        accounts={vm.linkableAccounts}
         title="Link existing account"
         onClose={() => vm.setLinkModalOpen(false)}
-        position="bottomSheet"
-        fixedHeight={false}
-      >
-        <ListGroup>
-          {vm.linkableAccounts.length === 0 ? (
-            <ListRow title="No unlinked compatible accounts found." />
-          ) : (
-            vm.linkableAccounts.map(account => (
-              <ListRow
-                key={account.id}
-                leading={<IconTile icon={Icon.Bank} tint="asset" />}
-                title={account.name}
-                subtitle={`${account.accountType} · ${account.currencyCode}`}
-                chevron
-                onPress={() => void vm.onLinkAccount(account.id)}
-              />
-            ))
-          )}
-        </ListGroup>
-      </ModalSurface>
+        onSelect={id => {
+          vm.setLinkModalOpen(false);
+          void vm.onLinkAccount(id);
+        }}
+      />
 
       <ModalSurface
         visible={selectedAccountSummary != null}
@@ -635,8 +577,14 @@ function PersonDetailsScreenContent() {
               <ListRow
                 key={entry.item.id}
                 leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                title={formatMoneyAmount(entry.remainder, entry.item.currencyCode, isPrivacyMode)}
-                subtitle="Tap to apply"
+                title={
+                  <OpenItemAmount
+                    remainder={entry.remainder}
+                    originalAmount={entry.item.originalAmount}
+                    currencyCode={entry.item.currencyCode}
+                    isPrivacyMode={isPrivacyMode}
+                  />
+                }
                 chevron
                 onPress={() => void vm.onApplyUnassigned(entry.item.id)}
               />
@@ -690,6 +638,7 @@ function PersonDetailsScreenContent() {
       {vm.settledPreview ? (
         <WeAreSettledPreviewModal
           visible={vm.settledPreviewOpen}
+          isConfirming={vm.isConfirmingSettlement}
           personName={detail.person.name}
           summary={detail.balanceSummary}
           workplaceCurrency={vm.workplaceCurrency}

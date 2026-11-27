@@ -6,17 +6,38 @@ import {
   projectLinkedAccount,
   summarizePerson,
 } from '@/src/domain/people';
+import type Account from '@/src/data/models/Account';
+import type Journal from '@/src/data/models/Journal';
+import type PersonAccount from '@/src/data/models/PersonAccount';
+import type Transaction from '@/src/data/models/Transaction';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { personObserveQueries, personQueryRepository } from '@/src/data/repositories/people';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
-import { merge, startWith } from 'rxjs';
+import { auditTime, combineLatest, from, map, merge, startWith, switchMap } from 'rxjs';
+import { currencyReadService } from '@/src/services/currency-read-service';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
+import {
+  acceptsRepaymentDirection,
+  availableRepaymentMinorUnits,
+  isRepaymentJournal,
+} from '@/src/domain/people/personRepaymentPolicy';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import {
+  journalObserveQueries,
+  type JournalTimelineCursor,
+} from '@/src/data/repositories/journal/JournalObserveQueries';
+import { iterateEnrichedJournalTimeline } from '@/src/services/journal/journalTimelineReadModel';
+import { debtAccountRole, personAccountRole } from './peopleLedgerReads';
 
-const asDomainItems = (items: Awaited<ReturnType<typeof personQueryRepository.listOpenItems>>) =>
+export const asDomainItems = (
+  items: Awaited<ReturnType<typeof personQueryRepository.listOpenItems>>,
+) =>
   items.map(item => ({
     id: item.id,
     personId: item.personId,
@@ -27,7 +48,7 @@ const asDomainItems = (items: Awaited<ReturnType<typeof personQueryRepository.li
     direction: item.direction,
     createdAt: item.createdAt?.getTime(),
   }));
-const asDomainAllocations = (
+export const asDomainAllocations = (
   allocations: Awaited<ReturnType<typeof personQueryRepository.listSettlementAllocations>>,
 ) =>
   allocations.map(allocation => ({
@@ -36,7 +57,205 @@ const asDomainAllocations = (
     journalId: allocation.settlementJournalId,
     amount: allocation.amount,
     active: allocation.isActive,
+    kind: allocation.allocationKind,
   }));
+
+function groupBy<Row, Key>(rows: readonly Row[], keyFor: (row: Row) => Key): Map<Key, Row[]> {
+  const groups = new Map<Key, Row[]>();
+  for (const row of rows) {
+    const key = keyFor(row);
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+  return groups;
+}
+
+type LinkedAccount = { link: PersonAccount; account: Account };
+type RepaymentEntry = {
+  journalId: JournalId;
+  accountId: AccountId;
+  currencyCode: string;
+  amount: number;
+};
+
+async function loadPersonProjection(
+  workplaceId: WorkplaceId,
+  workplaceCurrency: string,
+  personId?: PersonId,
+) {
+  const [links, items, allocations, precisionByCurrency] = await Promise.all([
+    personQueryRepository.listPersonAccounts(workplaceId, personId),
+    personQueryRepository.listOpenItems(workplaceId, { personId }),
+    personQueryRepository.listSettlementAllocations(workplaceId, { personId, activeOnly: true }),
+    currencyReadService.getAllPrecisions(),
+  ]);
+  const accountIds = [...new Set(links.map(link => link.accountId))];
+  const [accounts, balances, origins] = await Promise.all([
+    accountIds.length ? accountQueryRepository.findAllByIds(workplaceId, accountIds) : [],
+    accountIds.length
+      ? balanceReadService.getAccountBalances(
+          workplaceId,
+          undefined,
+          workplaceCurrency,
+          undefined,
+          accountIds,
+        )
+      : [],
+    personId
+      ? journalQueryRepository.findByIds(workplaceId, [
+          ...new Set(items.map(item => item.originatingJournalId)),
+        ])
+      : [],
+  ]);
+  const accountsById = new Map(accounts.map(account => [account.id, account]));
+  const linked = links.flatMap<LinkedAccount>(link => {
+    const account = accountsById.get(link.accountId);
+    return account ? [{ link, account }] : [];
+  });
+  const originDates = new Map(origins.map(journal => [journal.id, journal.journalDate]));
+  const domainItems = asDomainItems(items).map(item => ({
+    ...item,
+    journalDate: originDates.get(item.originatingJournalId),
+  }));
+  const quotes: Record<string, number> = {};
+  await Promise.all(
+    [...new Set(accounts.map(account => account.currencyCode))].map(async currency => {
+      if (currency === workplaceCurrency) quotes[currency] = 1;
+      else {
+        const rate = await exchangeRateRepository.getCachedRate(currency, workplaceCurrency);
+        if (rate) quotes[currency] = rate.rate;
+      }
+    }),
+  );
+  return {
+    linksByPerson: groupBy(linked, row => row.link.personId),
+    itemsByPerson: groupBy(domainItems, row => row.personId),
+    allocationsByItem: groupBy(asDomainAllocations(allocations), row => row.openItemId),
+    allocations,
+    precisionByCurrency,
+    quotes,
+    balances: new Map(balances.map(row => [row.accountId, row.directBalance])),
+  };
+}
+
+function projectPerson(
+  personId: PersonId,
+  workplaceCurrency: string,
+  data: Awaited<ReturnType<typeof loadPersonProjection>>,
+) {
+  const links = data.linksByPerson.get(personId) ?? [];
+  const items = data.itemsByPerson.get(personId) ?? [];
+  const precision = (currency: string) =>
+    data.precisionByCurrency.get(currency) ?? getCurrencyPrecision(currency);
+  const openItems = items.map(item => ({
+    item,
+    remainder: openItemRemainder(
+      item,
+      data.allocationsByItem.get(item.id) ?? [],
+      precision(item.currencyCode),
+    ),
+  }));
+  const itemsByAccount = groupBy(items, item => item.accountId);
+  const linkedAccounts = links.map(({ link, account }) => {
+    const accountItems = itemsByAccount.get(account.id) ?? [];
+    return {
+      ...link,
+      account,
+      unassignedState: projectLinkedAccount({
+        accountId: account.id,
+        currencyCode: account.currencyCode,
+        ledgerBalanceInNormalDirection: data.balances.get(account.id) ?? 0,
+        items: accountItems,
+        allocations: accountItems.flatMap(item => data.allocationsByItem.get(item.id) ?? []),
+        precision: precision(account.currencyCode),
+      }),
+    };
+  });
+  const balanceSummary = summarizePerson({
+    personId,
+    accounts: links.flatMap(({ account }) => {
+      const role = personAccountRole(account.accountType);
+      return role
+        ? [{ personId, accountId: account.id, role, currencyCode: account.currencyCode }]
+        : [];
+    }),
+    items,
+    allocations: [],
+    accountLedgerBalances: data.balances,
+    convertedCurrency: workplaceCurrency,
+    quotes: data.quotes,
+    precisionByCurrency: data.precisionByCurrency,
+  });
+  return { linkedAccounts, openItems, balanceSummary };
+}
+
+async function listAvailableRepayments(
+  workplaceId: WorkplaceId,
+  accounts: readonly Account[],
+  allocations: Awaited<ReturnType<typeof personQueryRepository.listSettlementAllocations>>,
+  precisionByCurrency: ReadonlyMap<string, number>,
+): Promise<RepaymentEntry[]> {
+  if (!accounts.length) return [];
+  const byAccount = new Map(accounts.map(account => [account.id, account]));
+  const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
+    workplaceId,
+    [...byAccount.keys()],
+    0,
+    Number.MAX_SAFE_INTEGER,
+  );
+  const groups = groupBy(transactions, row => row.journalId);
+  const allocationsByJournal = groupBy(allocations, row => row.settlementJournalId);
+  const journals = await journalQueryRepository.findByIds(workplaceId, [...groups.keys()]);
+  return journals
+    .filter(isRepaymentJournal)
+    .sort((a, b) => b.journalDate - a.journalDate || a.id.localeCompare(b.id))
+    .flatMap(journal => {
+      const legs = groupBy(groups.get(journal.id) ?? [], row => row.accountId);
+      return [...legs].flatMap(([accountId, lines]) => {
+        const account = byAccount.get(accountId);
+        if (!account) return [];
+        const precision =
+          precisionByCurrency.get(account.currencyCode) ??
+          getCurrencyPrecision(account.currencyCode);
+        const reducing = lines.reduce((sum, line) => {
+          const direction = classifyPersonDebtPosting({
+            accountType: account.accountType,
+            transactionType: line.transactionType,
+          });
+          return direction === 'reducing' ? sum + toMinorUnits(line.amount, precision) : sum;
+        }, 0);
+        const amount = fromMinorUnits(
+          availableRepaymentMinorUnits(
+            reducing,
+            (allocationsByJournal.get(journal.id) ?? []).filter(row => row.accountId === accountId),
+            precision,
+          ),
+          precision,
+        );
+        return amount > 0
+          ? [{ journalId: journal.id, accountId, currencyCode: account.currencyCode, amount }]
+          : [];
+      });
+    });
+}
+
+function pickerGroups(
+  people: Awaited<ReturnType<typeof personQueryRepository.listPeople>>,
+  links: readonly PersonAccount[],
+) {
+  const linksByPerson = groupBy(links, link => link.personId);
+  return people.map(person => ({
+    personId: person.id,
+    personName: person.name,
+    icon: person.icon,
+    color: person.color,
+    defaultCurrencyCode: person.defaultCurrencyCode,
+    isPinned: Boolean(person.isPinned),
+    archived: Boolean(person.archivedAt),
+    accountIds: (linksByPerson.get(person.id) ?? []).map(link => link.accountId),
+  }));
+}
 
 export class PeopleReadService {
   async listPeopleWithBalances(
@@ -44,223 +263,90 @@ export class PeopleReadService {
     workplaceCurrency: string,
     options: { includeArchived?: boolean } = {},
   ) {
-    const [people, links, items, allocations, accounts] = await Promise.all([
+    const [people, data] = await Promise.all([
       personQueryRepository.listPeople(workplaceId, options),
-      personQueryRepository.listPersonAccounts(workplaceId),
-      personQueryRepository.listOpenItems(workplaceId),
-      personQueryRepository.listSettlementAllocations(workplaceId, { activeOnly: true }),
-      accountQueryRepository.findAll(workplaceId),
+      loadPersonProjection(workplaceId, workplaceCurrency),
     ]);
-    const domainItems = asDomainItems(items);
-    const domainAllocations = asDomainAllocations(allocations);
-    const accountById = new Map(accounts.map(account => [account.id, account]));
-    const linked = links
-      .map(link => ({ link, account: accountById.get(link.accountId) }))
-      .filter(
-        (x): x is { link: (typeof links)[number]; account: NonNullable<typeof x.account> } =>
-          !!x.account,
-      );
-    const balances = new Map<AccountId, number>();
-    await Promise.all(
-      linked.map(async ({ account }) => {
-        const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
-        balances.set(account.id, balance.balance);
-      }),
-    );
-    return Promise.all(
-      people.map(async person => {
-        const personLinks = linked.filter(x => x.link.personId === person.id);
-        const personItems = domainItems.filter(item => item.personId === person.id);
-        const personAllocations = domainAllocations.filter(allocation =>
-          items.some(item => item.id === allocation.openItemId && item.personId === person.id),
-        );
-        const personAccounts = personLinks.map(
-          ({ account }) =>
-            ({
-              personId: person.id,
-              accountId: account.id,
-              role:
-                account.accountSubtype === 'RECEIVABLE'
-                  ? 'receivable'
-                  : account.accountSubtype === 'PAYABLE' || account.accountSubtype === 'LOAN'
-                    ? 'payable'
-                    : account.accountType === 'EXPENSE'
-                      ? 'expense'
-                      : account.accountType === 'INCOME'
-                        ? 'income'
-                        : account.accountType === AccountType.LIABILITY
-                          ? 'payable'
-                          : 'receivable',
-              currencyCode: account.currencyCode,
-            }) as const,
-        );
-        const quotes: Record<string, number> = {};
-        await Promise.all(
-          [...new Set(personAccounts.map(a => a.currencyCode))].map(async currency => {
-            if (currency === workplaceCurrency) quotes[currency] = 1;
-            else {
-              const quote = await exchangeRateRepository.getCachedRate(currency, workplaceCurrency);
-              if (quote) quotes[currency] = quote.rate;
-            }
-          }),
-        );
-        const summary = summarizePerson({
-          personId: person.id,
-          accounts: personAccounts,
-          items: personItems,
-          allocations: personAllocations,
-          accountLedgerBalances: balances,
-          convertedCurrency: workplaceCurrency,
-          quotes,
-        });
-        const linkedAccounts = personLinks.map(({ link, account }) => ({
-          ...link,
-          account,
-          unassignedState: projectLinkedAccount({
-            accountId: account.id,
-            currencyCode: account.currencyCode,
-            ledgerBalanceInNormalDirection: balances.get(account.id) ?? 0,
-            items: personItems,
-            allocations: personAllocations,
-          }),
-        }));
-        return {
-          person,
-          linkedAccounts,
-          balanceSummary: summary,
-          currencies: summary.currencies,
-          convertedNet: summary.convertedNet,
-          openItems: personItems.map(item => ({
-            item,
-            remainder: openItemRemainder(item, personAllocations),
-          })),
-          hasNegativeUnassignedRemainder: linkedAccounts.some(
-            a => a.unassignedState.hasNegativeUnassignedRemainder,
-          ),
-        };
-      }),
-    );
+    return people.map(person => {
+      const projection = projectPerson(person.id, workplaceCurrency, data);
+      return {
+        person,
+        ...projection,
+        currencies: projection.balanceSummary.currencies,
+        convertedNet: projection.balanceSummary.convertedNet,
+        hasNegativeUnassignedRemainder: projection.linkedAccounts.some(
+          row =>
+            debtAccountRole(row.account.accountType) &&
+            row.unassignedState.hasNegativeUnassignedRemainder,
+        ),
+      };
+    });
   }
 
   async getPersonDetail(workplaceId: WorkplaceId, personId: PersonId, workplaceCurrency: string) {
     const person = await personQueryRepository.findPerson(workplaceId, personId);
     if (!person) return null;
-    const [links, items, allocations, accounts] = await Promise.all([
-      personQueryRepository.listPersonAccounts(workplaceId, personId),
-      personQueryRepository.listOpenItems(workplaceId, { personId }),
-      personQueryRepository.listSettlementAllocations(workplaceId, { personId, activeOnly: true }),
-      accountQueryRepository.findAll(workplaceId),
-    ]);
-    const originJournals = await journalQueryRepository.findByIds(workplaceId, [
-      ...new Set(items.map(item => item.originatingJournalId)),
-    ]);
-    const originDates = new Map(originJournals.map(journal => [journal.id, journal.journalDate]));
-    const domainItems = asDomainItems(items)
-      .map(item => ({ ...item, journalDate: originDates.get(item.originatingJournalId) }))
-      .sort(
-        (a, b) =>
-          (a.journalDate ?? a.createdAt ?? 0) - (b.journalDate ?? b.createdAt ?? 0) ||
-          a.id.localeCompare(b.id),
-      );
-    const domainAllocations = asDomainAllocations(allocations);
-    const accountById = new Map(accounts.map(account => [account.id, account]));
-    const linkedAccounts = await Promise.all(
-      links.map(async link => {
-        const account = accountById.get(link.accountId);
-        if (!account) return null;
-        const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
-        const state = projectLinkedAccount({
-          accountId: account.id,
-          currencyCode: account.currencyCode,
-          ledgerBalanceInNormalDirection: balance.balance,
-          items: domainItems,
-          allocations: domainAllocations,
-        });
-        return { ...link, account, unassignedState: state };
-      }),
+    const data = await loadPersonProjection(workplaceId, workplaceCurrency, personId);
+    const projection = projectPerson(personId, workplaceCurrency, data);
+    const debtAccounts = projection.linkedAccounts
+      .map(row => row.account)
+      .filter(account => debtAccountRole(account.accountType));
+    return {
+      person,
+      ...projection,
+      precisionByCurrency: data.precisionByCurrency,
+      activeAllocations: data.allocations,
+      unallocatedRepayments: await listAvailableRepayments(
+        workplaceId,
+        debtAccounts,
+        data.allocations,
+        data.precisionByCurrency,
+      ),
+    };
+  }
+
+  observePersonPickerGroups(workplaceId: WorkplaceId) {
+    return combineLatest([
+      personObserveQueries.observePeople(workplaceId, { includeArchived: true }),
+      personObserveQueries.observePersonAccounts(workplaceId),
+    ]).pipe(
+      auditTime(0),
+      map(([people, links]) => pickerGroups(people, links)),
     );
-    const validLinks = linkedAccounts.filter((x): x is NonNullable<typeof x> => !!x);
-    const personAccounts = validLinks.map(
-      ({ account }) =>
-        ({
-          personId,
-          accountId: account.id,
-          role:
-            account.accountSubtype === 'RECEIVABLE'
-              ? 'receivable'
-              : account.accountSubtype === 'PAYABLE' || account.accountSubtype === 'LOAN'
-                ? 'payable'
-                : account.accountType === 'EXPENSE'
-                  ? 'expense'
-                  : account.accountType === 'INCOME'
-                    ? 'income'
-                    : account.accountType === AccountType.LIABILITY
-                      ? 'payable'
-                      : 'receivable',
-          currencyCode: account.currencyCode,
-        }) as const,
-    );
-    const ledger = new Map<AccountId, number>();
-    await Promise.all(
-      validLinks.map(async ({ account }) =>
-        ledger.set(
-          account.id,
-          (await balanceReadService.getAccountBalance(account.id, workplaceId)).balance,
+  }
+
+  observeOpenItems(workplaceId: WorkplaceId, personId: PersonId, accountId: AccountId) {
+    return combineLatest([
+      personObserveQueries.observeOpenItems(workplaceId, personId),
+      personObserveQueries.observeSettlementAllocations(workplaceId, personId),
+    ]).pipe(
+      auditTime(0),
+      switchMap(([items, allocations]) =>
+        from(
+          (async () => {
+            const scoped = items.filter(item => item.accountId === accountId);
+            const [journals, precisionByCurrency] = await Promise.all([
+              journalQueryRepository.findByIds(workplaceId, [
+                ...new Set(scoped.map(item => item.originatingJournalId)),
+              ]),
+              currencyReadService.getAllPrecisions(),
+            ]);
+            const dates = new Map(journals.map(journal => [journal.id, journal.journalDate]));
+            const byItem = groupBy(asDomainAllocations(allocations), row => row.openItemId);
+            return asDomainItems(scoped)
+              .map(item => ({
+                item: { ...item, journalDate: dates.get(item.originatingJournalId) },
+                remainder: openItemRemainder(
+                  item,
+                  byItem.get(item.id) ?? [],
+                  precisionByCurrency.get(item.currencyCode),
+                ),
+              }))
+              .filter(row => row.remainder > 0);
+          })(),
         ),
       ),
     );
-    const quotes: Record<string, number> = {};
-    await Promise.all(
-      [...new Set(personAccounts.map(a => a.currencyCode))].map(async currency => {
-        if (currency === workplaceCurrency) quotes[currency] = 1;
-        else {
-          const rate = await exchangeRateRepository.getCachedRate(currency, workplaceCurrency);
-          if (rate) quotes[currency] = rate.rate;
-        }
-      }),
-    );
-    const balanceSummary = summarizePerson({
-      personId,
-      accounts: personAccounts,
-      items: domainItems,
-      allocations: domainAllocations,
-      accountLedgerBalances: ledger,
-      convertedCurrency: workplaceCurrency,
-      quotes,
-    });
-    const repaymentTransactions = (
-      await Promise.all(
-        validLinks
-          .filter(x => {
-            const role = personAccounts.find(a => a.accountId === x.account.id)?.role;
-            return role === 'receivable' || role === 'payable';
-          })
-          .map(x => transactionQueryRepository.findByAccount(workplaceId, x.account.id)),
-      )
-    ).flat();
-    const accountTypeById = new Map(validLinks.map(x => [x.account.id, x.account.accountType]));
-    const unallocatedRepayments = repaymentTransactions.filter(tx => {
-      const accountType = accountTypeById.get(tx.accountId);
-      if (!accountType) return false;
-      if (
-        classifyPersonDebtPosting({ accountType, transactionType: tx.transactionType }) !==
-        'reducing'
-      ) {
-        return false;
-      }
-      return !domainAllocations.some(a => a.journalId === tx.journalId);
-    });
-    return {
-      person,
-      linkedAccounts: validLinks,
-      openItems: domainItems.map(item => ({
-        item,
-        remainder: openItemRemainder(item, domainAllocations),
-      })),
-      activeAllocations: allocations,
-      balanceSummary,
-      unallocatedRepayments,
-    };
   }
 
   observePeopleTick(workplaceId: WorkplaceId) {
@@ -318,16 +404,7 @@ export class PeopleReadService {
       personQueryRepository.listPeople(workplaceId, { includeArchived: true }),
       personQueryRepository.listPersonAccounts(workplaceId),
     ]);
-    return people.map(person => ({
-      personId: person.id,
-      personName: person.name,
-      icon: person.icon,
-      color: person.color,
-      defaultCurrencyCode: person.defaultCurrencyCode,
-      isPinned: Boolean(person.isPinned),
-      archived: Boolean(person.archivedAt),
-      accountIds: links.filter(link => link.personId === person.id).map(link => link.accountId),
-    }));
+    return pickerGroups(people, links);
   }
 
   async getJournalForSplit(workplaceId: WorkplaceId, journalId: JournalId) {
@@ -391,108 +468,164 @@ export class PeopleReadService {
     };
   }
 
-  async listCompatibleRepaymentJournals(workplaceId: WorkplaceId, personId: PersonId) {
-    const [journals, links, accounts, allocations] = await Promise.all([
-      journalQueryRepository.findRecentPosted(workplaceId, 100),
+  async listCompatibleRepaymentJournals(
+    workplaceId: WorkplaceId,
+    personId: PersonId,
+    options: { query?: string; cursor?: JournalTimelineCursor; createdBefore?: number } = {},
+  ) {
+    const createdBefore = options.createdBefore ?? Date.now();
+    const page = await journalObserveQueries.fetchTimelinePage(
+      { workplaceId, status: [JournalStatus.POSTED], searchQuery: options.query?.trim() },
+      { limit: 40, createdBefore, cursor: options.cursor },
+    );
+    const ids = page.journals.map(journal => journal.id);
+    const [journals, links, accounts, allocations, txs, precision] = await Promise.all([
+      journalQueryRepository.findByIds(workplaceId, ids),
       personQueryRepository.listPersonAccounts(workplaceId),
       accountQueryRepository.findAll(workplaceId),
-      personQueryRepository.listSettlementAllocations(workplaceId, { activeOnly: true }),
+      personQueryRepository.listActiveAllocationsForJournals(workplaceId, ids),
+      transactionQueryRepository.findByJournals(workplaceId, ids),
+      currencyReadService.getAllPrecisions(),
     ]);
-    if (journals.length === 0) return [];
-    const txs = await transactionQueryRepository.findByJournals(
-      workplaceId,
-      journals.map(journal => journal.id),
-    );
-    const txByJournal = new Map<JournalId, typeof txs>();
-    for (const tx of txs) {
-      const group = txByJournal.get(tx.journalId) ?? [];
-      group.push(tx);
-      txByJournal.set(tx.journalId, group);
-    }
+    const journalById = new Map(journals.map(journal => [journal.id, journal]));
+    const legsByJournal = groupBy(txs, row => row.journalId);
     const accountById = new Map(accounts.map(account => [account.id, account]));
-    const linkedPersonByAccount = new Map(links.map(link => [link.accountId, link.personId]));
-    const allocatedJournalIds = new Set(allocations.map(a => a.settlementJournalId));
-    return journals
-      .filter(journal => !allocatedJournalIds.has(journal.id))
-      .flatMap(journal => {
-        const journalTxs = txByJournal.get(journal.id) ?? [];
-        if (journalTxs.length !== 2) return [];
-        const cashLine = journalTxs.find(
-          tx =>
-            !linkedPersonByAccount.has(tx.accountId) &&
-            [AccountType.ASSET, AccountType.LIABILITY].includes(
-              accountById.get(tx.accountId)?.accountType ?? AccountType.EXPENSE,
-            ),
-        );
-        if (!cashLine) return [];
-        const touchesThisPerson = journalTxs.some(
-          tx => linkedPersonByAccount.get(tx.accountId) === personId,
-        );
-        const touchesOtherPerson = journalTxs.some(tx => {
-          const owner = linkedPersonByAccount.get(tx.accountId);
-          return owner && owner !== personId;
-        });
-        if (touchesOtherPerson) return [];
-        return [
-          {
-            journalId: journal.id,
-            journalDate: journal.journalDate,
-            journalUpdatedAt: journal.updatedAt?.getTime(),
-            description: journal.description,
-            currencyCode: journal.currencyCode,
-            cashAccountId: cashLine.accountId,
-            cashAccountName: accountById.get(cashLine.accountId)?.name ?? 'Account',
-            cashAmount: cashLine.amount,
-            cashTransactionType: cashLine.transactionType,
-            touchesPersonAccount: touchesThisPerson,
-          },
-        ];
-      });
+    const personByAccount = new Map(links.map(link => [link.accountId, link.personId]));
+    const targets = links.flatMap(link => {
+      const account = link.personId === personId ? accountById.get(link.accountId) : undefined;
+      return account && debtAccountRole(account.accountType) ? [account] : [];
+    });
+    const allocated = new Set(allocations.map(row => row.settlementJournalId));
+    const matches = ids.flatMap(id => {
+      const journal = journalById.get(id);
+      if (!journal || allocated.has(id)) return [];
+      return repaymentCandidates(
+        journal,
+        legsByJournal.get(id) ?? [],
+        accountById,
+        personByAccount,
+        targets,
+        personId,
+        precision,
+      );
+    });
+    return { matches, nextCursor: page.nextCursor, createdBefore };
   }
 
-  async listPersonJournalHistory(workplaceId: WorkplaceId, personId: PersonId) {
-    const [links, accounts] = await Promise.all([
-      personQueryRepository.listPersonAccounts(workplaceId, personId),
-      accountQueryRepository.findAll(workplaceId),
-    ]);
-    if (links.length === 0) return [];
-    const txs = (
-      await Promise.all(
-        links.map(link => transactionQueryRepository.findByAccount(workplaceId, link.accountId)),
-      )
-    ).flat();
-    const journalIds = [...new Set(txs.map(tx => tx.journalId))];
-    if (journalIds.length === 0) return [];
-    const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-    const accountById = new Map(accounts.map(account => [account.id, account]));
-    const journalMap = new Map(journals.map(journal => [journal.id, journal]));
-    const byJournal = new Map<
-      JournalId,
+  async listPersonJournalHistory(
+    workplaceId: WorkplaceId,
+    personId: PersonId,
+    signal?: AbortSignal,
+  ) {
+    const links = await personQueryRepository.listPersonAccounts(workplaceId, personId);
+    const accountIds = [...new Set(links.map(link => link.accountId))];
+    if (accountIds.length === 0) return [];
+    const scoped = new Set(accountIds);
+    const rows = [];
+    for await (const journals of iterateEnrichedJournalTimeline(
       {
-        journalId: JournalId;
-        journalDate: number;
-        description?: string;
-        currencyCode: string;
-        amount: number;
-        accountName: string;
-        status: string;
-      }
-    >();
-    for (const tx of txs) {
-      const journal = journalMap.get(tx.journalId);
-      if (!journal || byJournal.has(journal.id)) continue;
-      byJournal.set(journal.id, {
+        workplaceId,
+        dateRange: { accountIds },
+        status: [JournalStatus.POSTED, JournalStatus.REVERSED],
+      },
+      signal ?? new AbortController().signal,
+    )) {
+      rows.push(
+        ...journals.flatMap(journal =>
+          journal.accounts
+            .filter(leg => scoped.has(leg.id) && leg.amount != null)
+            .map(leg => ({
+              id: leg.transactionId ?? journal.id + '-' + leg.id,
+              journalId: journal.id,
+              journalDate: journal.journalDate,
+              description: journal.description,
+              currencyCode: leg.currencyCode ?? leg.transactionCurrencyCode ?? journal.currencyCode,
+              amount: leg.amount ?? 0,
+              accountName: leg.name,
+              status: journal.status,
+            })),
+        ),
+      );
+    }
+    return rows;
+  }
+}
+
+/** Shared by discovery and the serialized write-time matching check. */
+export function repaymentCandidates(
+  journal: Journal,
+  legs: readonly Transaction[],
+  accounts: ReadonlyMap<AccountId, Account>,
+  people: ReadonlyMap<AccountId, PersonId>,
+  targets: readonly Account[],
+  personId: PersonId,
+  precisionByCurrency: ReadonlyMap<string, number>,
+) {
+  if (
+    !isRepaymentJournal(journal) ||
+    legs.length !== 2 ||
+    legs.some(leg => people.has(leg.accountId) && people.get(leg.accountId) !== personId)
+  )
+    return [];
+
+  const balance = evaluateJournalBalance({
+    journalCurrency: journal.currencyCode,
+    precisionByCurrency,
+    lines: legs.map(leg => ({
+      id: leg.id,
+      accountId: leg.accountId,
+      accountCurrency: accounts.get(leg.accountId)?.currencyCode,
+      amount: leg.amount,
+      exchangeRate: leg.exchangeRate,
+      transactionType: leg.transactionType,
+    })),
+  });
+  if (!balance.isBalanced) return [];
+
+  return legs.flatMap(cash => {
+    const account = accounts.get(cash.accountId);
+    if (!account || people.has(account.id) || !debtAccountRole(account.accountType)) return [];
+    const value = balance.lineValues.find(row => row.id === cash.id);
+    const counter = legs.find(row => row.id !== cash.id);
+    if (!value || !counter) return [];
+    const targetAccountIds = targets
+      .filter(target => acceptsRepaymentDirection(target.accountType, cash.transactionType))
+      .map(target => target.id);
+    if (!targetAccountIds.length) return [];
+    return [
+      {
+        id: cash.id,
         journalId: journal.id,
         journalDate: journal.journalDate,
+        journalUpdatedAt: journal.updatedAt?.getTime(),
         description: journal.description,
         currencyCode: journal.currencyCode,
-        amount: tx.amount,
-        accountName: accountById.get(tx.accountId)?.name ?? 'Account',
-        status: journal.status,
-      });
-    }
-    return [...byJournal.values()].sort((a, b) => b.journalDate - a.journalDate);
-  }
+        cashAccountId: cash.accountId,
+        cashAccountName: account.name,
+        cashAmount: value.nativeAmount,
+        cashCurrencyCode: value.accountCurrency,
+        cashRate: value.exchangeRate,
+        journalAmount: value.journalAmount,
+        cashTransactionType: cash.transactionType,
+        counterAccountId: counter.accountId,
+        counterAccountName: accounts.get(counter.accountId)?.name ?? 'Account',
+        targetAccountIds,
+        expectedCurrent: {
+          updatedAt: journal.updatedAt?.toISOString() ?? null,
+          status: journal.status,
+          currencyCode: journal.currencyCode,
+          transactions: legs.map(leg => ({
+            accountId: leg.accountId,
+            amount: leg.amount,
+            transactionType: leg.transactionType,
+            notes: leg.notes ?? null,
+            exchangeRate: leg.exchangeRate ?? null,
+            currencyCode: leg.currencyCode ?? null,
+          })),
+        },
+      },
+    ];
+  });
 }
 
 export const peopleReadService = new PeopleReadService();

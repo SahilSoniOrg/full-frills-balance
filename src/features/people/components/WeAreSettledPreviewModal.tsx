@@ -20,6 +20,7 @@ type Props = {
     exchangeRate?: number;
   }[];
   visible: boolean;
+  isConfirming?: boolean;
   personName: string;
   summary: PersonBalanceSummary;
   workplaceCurrency: string;
@@ -34,6 +35,7 @@ type Props = {
 
 export function WeAreSettledPreviewModal({
   visible,
+  isConfirming = false,
   personName,
   closingLines = [],
   summary,
@@ -50,18 +52,23 @@ export function WeAreSettledPreviewModal({
     <ModalSurface
       visible={visible}
       title={`Settle with ${personName}`}
-      onClose={onCancel}
+      onClose={isConfirming ? () => {} : onCancel}
       position="bottomSheet"
       fixedHeight={false}
       footer={
         <Inline gap="sm" alignItems="center">
           <Box flex={1}>
-            <AppButton variant="outline" onPress={onCancel}>
+            <AppButton variant="outline" onPress={onCancel} disabled={isConfirming}>
               Cancel
             </AppButton>
           </Box>
           <Box flex={1}>
-            <AppButton variant="primary" onPress={onConfirm} disabled={Boolean(blockedReason)}>
+            <AppButton
+              variant="primary"
+              onPress={onConfirm}
+              disabled={Boolean(blockedReason) || isConfirming}
+              loading={isConfirming}
+            >
               Confirm
             </AppButton>
           </Box>

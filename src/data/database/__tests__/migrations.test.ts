@@ -34,7 +34,7 @@ function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): v
 
 describe('database migrations (LokiJS)', () => {
   it('creates the People tables and full person profile in one v40 migration', () => {
-    expect(schema.version).toBe(40);
+    expect(schema.version).toBe(41);
     for (const table of ['people', 'person_accounts', 'open_items', 'settlement_allocations']) {
       expect(schema.tables[table]).toBeDefined();
     }

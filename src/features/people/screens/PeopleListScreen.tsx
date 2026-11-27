@@ -1,33 +1,35 @@
 import {
   AppButton,
-  AppCard,
   AppIcon,
   AppInputField,
   AppText,
   Badge,
   EmptyStateView,
+  ErrorStateView,
   Icon,
   IconButton,
   IconTile,
   InlineSearchField,
   ListGroup,
   ListRow,
+  LoadingView,
   PersonAvatar,
 } from '@/src/components/core';
+import { AccountPickerModal } from '@/src/components/account-selection';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { titleAmountFit } from '@/src/components/shared/FitText';
-import { MoneyText } from '@/src/components/shared/MoneyText';
+import { ModalActions } from '@/src/components/overlays/ModalActions';
+import { MetricHeroCard } from '@/src/components/shared/MetricHeroCard';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { Opacity, Size, Spacing } from '@/src/constants/design-tokens';
 import {
   flowSignForAmount,
   signColorKey,
   signPrefix,
 } from '@/src/domain/accounting/presentationPolicy';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { Box, Inline, Separator, Stack } from '@/src/design-system';
+import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -43,6 +45,7 @@ export function PeopleListScreen() {
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const [isSearching, setIsSearching] = useState(false);
+  const [accountPickerOpen, setAccountPickerOpen] = useState(false);
 
   const primaryOwedToYou = useMemo(
     () =>
@@ -123,6 +126,21 @@ export function PeopleListScreen() {
     Boolean(vm.selectedAccountId) &&
     Boolean(vm.selectedPersonId || vm.personName.trim());
 
+  if (vm.isLoading && !vm.people.length) {
+    return (
+      <ScreenWithChrome chrome={chrome} scrollable={false}>
+        <LoadingView loading />
+      </ScreenWithChrome>
+    );
+  }
+  if (vm.loadError && !vm.people.length) {
+    return (
+      <ScreenWithChrome chrome={chrome} scrollable={false}>
+        <ErrorStateView message={vm.loadError} onRetry={vm.reload} />
+      </ScreenWithChrome>
+    );
+  }
+
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
       <ScrollView
@@ -131,61 +149,37 @@ export function PeopleListScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Stack gap="lg" style={styles.contentColumn}>
-          <AppCard
-            elevation="sm"
-            padding="lg"
-            radius="xxl"
-            style={{ backgroundColor: theme.surface }}
-          >
-            <Stack gap="md">
-              <Inline justifyContent="space-between" alignItems="center" gap="sm">
-                <AppText variant="subheading" color="secondary">
-                  Shared Books
-                </AppText>
+          <MetricHeroCard
+            title="Shared Books"
+            amount={Math.abs(netBalance)}
+            currencyCode={vm.defaultCurrencyCode}
+            amountColor={theme[netColor]}
+            prefix={signPrefix(netSign)}
+            middle={
+              <Inline justifyContent="flex-end">
                 <Badge size="sm">{`${vm.activePeopleCount} active`}</Badge>
               </Inline>
-
-              <Stack gap="xs">
-                <AppText variant="caption" color="secondary">
-                  Net balance
-                </AppText>
-                <MoneyText
-                  amount={Math.abs(netBalance)}
-                  currencyCode={vm.defaultCurrencyCode}
-                  formatStyle="default"
-                  variant="title"
-                  prefix={signPrefix(netSign)}
-                  color={netColor}
-                  fit={titleAmountFit}
-                  style={styles.heroAmount}
-                />
-              </Stack>
-
-              <Separator background="divider" />
-
-              <View style={styles.breakdownContainer}>
-                <BalanceBreakdown
-                  label="Owed to you"
-                  amount={primaryOwedToYou}
-                  currencyCode={vm.defaultCurrencyCode}
-                  moneyColor={primaryOwedToYou > 0 ? 'income' : 'secondary'}
-                />
-                <Separator vertical background="divider" style={styles.verticalDivider} />
-                <BalanceBreakdown
-                  label="You owe"
-                  amount={primaryYouOwe}
-                  currencyCode={vm.defaultCurrencyCode}
-                  moneyColor={primaryYouOwe > 0 ? 'expense' : 'secondary'}
-                />
-              </View>
-
-              {secondaryCurrencies.length > 0 ? (
+            }
+            left={{
+              dotColor: theme.income,
+              label: 'Owed to you',
+              amount: primaryOwedToYou,
+              moneyColor: primaryOwedToYou > 0 ? 'income' : 'secondary',
+            }}
+            right={{
+              dotColor: theme.expense,
+              label: 'You owe',
+              amount: primaryYouOwe,
+              moneyColor: primaryYouOwe > 0 ? 'expense' : 'secondary',
+            }}
+            footer={
+              secondaryCurrencies.length > 0 ? (
                 <AppText variant="caption" color="secondary">
                   {secondaryCurrencies.join(' · ')}
                 </AppText>
-              ) : null}
-            </Stack>
-          </AppCard>
+              ) : undefined
+            }
+          />
 
           {hasFilters && vm.people.length > 0 ? (
             <Inline justifyContent="space-between" alignItems="center" paddingHorizontal="xs">
@@ -228,7 +222,7 @@ export function PeopleListScreen() {
               }
               icon={archivedOnlyHidden ? Icon.Archive : Icon.User}
               primaryActionLabel={
-                hasFilters ? 'Reset filters' : archivedOnlyHidden ? 'Show archived' : undefined
+                hasFilters ? 'Reset filters' : archivedOnlyHidden ? 'Show archived' : 'Link account'
               }
               onPrimaryAction={
                 hasFilters
@@ -238,21 +232,30 @@ export function PeopleListScreen() {
                     }
                   : archivedOnlyHidden
                     ? () => vm.setIncludeArchived(true)
-                    : undefined
+                    : vm.openLink
               }
             />
           ) : (
             <ListGroup
               header={`PEOPLE (${vm.people.length})`}
               headerAccessory={
-                <AppButton
-                  variant="ghost"
-                  size="sm"
-                  onPress={vm.openLink}
-                  testID="people-link-existing-account-button"
-                >
-                  Link account
-                </AppButton>
+                <Inline gap="xs">
+                  <AppButton
+                    variant="ghost"
+                    size="sm"
+                    onPress={vm.openLink}
+                    testID="people-link-existing-account-button"
+                  >
+                    Link account
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => AppNavigation.toPersonCreation()}
+                  >
+                    New person
+                  </AppButton>
+                </Inline>
               }
             >
               {vm.people.map(row => (
@@ -322,48 +325,51 @@ export function PeopleListScreen() {
         fixedHeight={false}
         keyboardAvoiding
         footer={
-          <Inline gap="sm">
-            <Box flex={1}>
-              <AppButton variant="outline" onPress={vm.closeModal}>
-                Cancel
-              </AppButton>
-            </Box>
-            <Box flex={1}>
-              <AppButton
-                loading={vm.busy}
-                disabled={!canSaveLink}
-                onPress={() => void handleLinkAccount()}
-              >
-                Save
-              </AppButton>
-            </Box>
-          </Inline>
+          <ModalActions
+            actions={[
+              { label: 'Cancel', role: 'secondary', onPress: vm.closeModal },
+              {
+                label: 'Save',
+                onPress: () => void handleLinkAccount(),
+                disabled: !canSaveLink,
+                loading: vm.busy,
+              },
+            ]}
+          />
         }
       >
         <Stack gap="lg">
           <ListGroup header="1. SELECT UNLINKED ACCOUNT">
-            {vm.accounts.length === 0 ? (
-              <ListRow title="No unlinked compatible accounts" />
-            ) : (
-              vm.accounts.map(account => (
-                <ListRow
-                  key={account.id}
-                  leading={<IconTile icon={Icon.Bank} tint="asset" />}
-                  title={account.name}
-                  subtitle={`${account.accountType} · ${account.currencyCode}`}
-                  trailing={
-                    vm.selectedAccountId === account.id ? (
-                      <AppIcon name={Icon.CheckCircle} size={20} color="primary" />
-                    ) : undefined
-                  }
-                  onPress={() => vm.setSelectedAccountId(account.id)}
-                />
-              ))
-            )}
+            {vm.accountsLoading ? (
+              <LoadingView loading variant="inline" text="Loading accounts" />
+            ) : null}
+            {vm.accountsError ? (
+              <ErrorStateView
+                variant="inline"
+                message={vm.accountsError}
+                onRetry={vm.retryAccounts}
+              />
+            ) : null}
+            <ListRow
+              leading={<IconTile icon={Icon.Bank} tint="asset" />}
+              title={
+                vm.accounts.find(account => account.id === vm.selectedAccountId)?.name ??
+                'Choose account'
+              }
+              subtitle={
+                vm.accounts.find(account => account.id === vm.selectedAccountId)?.currencyCode ??
+                'No account selected'
+              }
+              chevron
+              onPress={() => {
+                if (!vm.accountsLoading && !vm.accountsError) setAccountPickerOpen(true);
+              }}
+              testID="people-link-account-picker-button"
+            />
           </ListGroup>
 
           <ListGroup header="2. CHOOSE PERSON OR CREATE NEW">
-            {vm.people.map(entry => (
+            {vm.linkablePeople.map(entry => (
               <ListRow
                 key={entry.person.id}
                 leading={
@@ -397,6 +403,17 @@ export function PeopleListScreen() {
           />
         </Stack>
       </ModalSurface>
+      <AccountPickerModal
+        visible={accountPickerOpen}
+        accounts={vm.accounts}
+        selectedId={vm.selectedAccountId || undefined}
+        title="Select unlinked account"
+        onClose={() => setAccountPickerOpen(false)}
+        onSelect={id => {
+          vm.setSelectedAccountId(id);
+          setAccountPickerOpen(false);
+        }}
+      />
     </ScreenWithChrome>
   );
 }
@@ -411,24 +428,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  heroAmount: {
-    marginTop: Spacing.none,
-    marginBottom: Spacing.none,
-  },
-  breakdownContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  breakdownItem: {
-    flex: 1,
-    minWidth: 0,
-    gap: Spacing.xs,
-  },
-  verticalDivider: {
-    alignSelf: 'stretch',
-    borderRadius: Shape.radius.full,
-  },
   contentColumn: {
     width: '100%',
     maxWidth: 720,
@@ -439,31 +438,3 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxxl,
   },
 });
-
-function BalanceBreakdown({
-  label,
-  amount,
-  currencyCode,
-  moneyColor,
-}: {
-  label: string;
-  amount: number;
-  currencyCode: string;
-  moneyColor: 'income' | 'expense' | 'secondary';
-}) {
-  return (
-    <View style={styles.breakdownItem}>
-      <AppText variant="caption" color="secondary">
-        {label}
-      </AppText>
-      <MoneyText
-        amount={amount}
-        currencyCode={currencyCode}
-        formatStyle="default"
-        variant="body"
-        weight="semibold"
-        color={moneyColor}
-      />
-    </View>
-  );
-}

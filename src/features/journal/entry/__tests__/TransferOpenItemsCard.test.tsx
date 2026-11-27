@@ -1,7 +1,15 @@
 import { fireEvent, render } from '@/src/testing/render';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { peopleReadService } from '@/src/services/people';
-import type { PersonId, OpenItemId } from '@/src/types/ids';
+import {
+  asAccountId,
+  asJournalId,
+  asOpenItemId,
+  asPersonId,
+  asWorkplaceId,
+  type OpenItemId,
+} from '@/src/types/ids';
+import { of } from 'rxjs';
 import { TransferOpenItemsCard } from '../components/TransferOpenItemsCard';
 import {
   buildTransferOpenItemAllocations,
@@ -55,8 +63,33 @@ describe('TransferOpenItemsCard', () => {
         onQuickFillAmount={jest.fn()}
       />,
     );
-    fireEvent.press(getByText(/Original/));
+    fireEvent.press(getByText(/USD 3\.00 remaining/));
     expect(toggle).toHaveBeenCalledWith('a');
+  });
+  it('uses the shared remainder/original labels and selects an item from its quick fill', () => {
+    const quick = jest.fn();
+    const only = jest.fn();
+    const { getByText } = render(
+      <TransferOpenItemsCard
+        items={[
+          { item: { id: 'a' as OpenItemId, originalAmount: 8, currencyCode: 'USD' }, remainder: 3 },
+        ]}
+        totalOpenRemainder={3}
+        currencyCode="USD"
+        quickFillChips={[{ id: 'a', label: 'Item 1', amount: 3 }]}
+        allocationMode="fifo"
+        onAllocationModeChange={jest.fn()}
+        selectedItemIds={{}}
+        onToggleItem={jest.fn()}
+        onQuickFillAmount={quick}
+        onSelectOnlyItem={only}
+      />,
+    );
+    expect(getByText('USD 3.00 remaining')).toBeTruthy();
+    expect(getByText('of USD 8.00 total')).toBeTruthy();
+    fireEvent.press(getByText(/Item 1/));
+    expect(quick).toHaveBeenCalledWith('3');
+    expect(only).toHaveBeenCalledWith('a');
   });
   it('builds capped allocations in input order and generates full/half/item chips', () => {
     const items = [
@@ -80,27 +113,40 @@ describe('TransferOpenItemsCard', () => {
     ]);
   });
   it('loads open items through peopleReadService and computes pick allocations', async () => {
-    const detail = {
-      openItems: [
-        { item: { id: 'a' as OpenItemId, originalAmount: 5, currencyCode: 'USD' }, remainder: 2 },
-        { item: { id: 'b' as OpenItemId, originalAmount: 6, currencyCode: 'USD' }, remainder: 4 },
-      ],
-    };
-    const spy = jest
-      .spyOn(peopleReadService, 'getPersonDetail')
-      .mockResolvedValue(detail as Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>);
+    const accountId = asAccountId('account');
+    const personId = asPersonId('person');
+    const spy = jest.spyOn(peopleReadService, 'observeOpenItems').mockReturnValue(
+      of(
+        ['a', 'b'].map((id, index) => ({
+          item: {
+            id: asOpenItemId(id),
+            accountId,
+            personId,
+            originatingJournalId: asJournalId('journal-' + id),
+            direction: 'receivable' as const,
+            journalDate: index + 1,
+            createdAt: index + 1,
+            originalAmount: 6,
+            currencyCode: 'USD',
+          },
+          remainder: index ? 4 : 2,
+        })),
+      ),
+    );
     const { result } = renderHook(() =>
       useTransferOpenItems({
-        workplaceId: 'w' as never,
-        workplaceCurrency: 'USD',
-        personId: 'p' as PersonId,
-        transferAmountText: '5',
+        workplaceId: asWorkplaceId('w'),
+        personId,
+        accountId,
+        transferAmount: 5,
+        precision: 2,
       }),
     );
     await waitFor(() => expect(result.current.openItems).toHaveLength(2));
+    act(() => result.current.setAllocationMode('pick'));
     act(() => {
-      result.current.setSelectedItemIds({ a: true, b: true });
-      result.current.setAllocationMode('pick');
+      result.current.toggleItem(asOpenItemId('a'));
+      result.current.toggleItem(asOpenItemId('b'));
     });
     expect(result.current.selectedAllocations).toEqual([
       { openItemId: 'a', amount: 2 },

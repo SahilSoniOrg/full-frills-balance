@@ -127,15 +127,23 @@ export async function preparePutOperations(
     journalId: journal.id,
     status,
     accountsById: balance.accountsById,
+    precisionByAccountId: balance.precisionByAccountId,
     beforeTransactions: oldTransactions,
     newLines: lines,
-    isReversal: Boolean(input.originalJournalId ?? existing?.originalJournalId),
+    isReversal: Boolean(
+      input.originalJournalId ?? existing?.originalJournalId ?? existing?.reversingJournalId,
+    ),
     allocatePlannedRepayment: Boolean(
-      !input.deferPlannedRepaymentAllocation &&
-      (input.plannedPaymentId ?? existing?.plannedPaymentId) &&
+      (input.plannedPaymentId ??
+        (existing?.status === JournalStatus.PLANNED || existing?.plannedPaymentId)) &&
       status === JournalStatus.POSTED &&
       (!existing || existing.status !== JournalStatus.POSTED),
     ),
+    repaymentAllocation: input.repaymentAllocation,
+    journalDate,
+    previousStatus: existing?.status,
+    previousJournalDate: existing?.journalDate,
+    skipPeopleAutoSettlement: input.skipPeopleAutoSettlement,
   });
 
   await stagePutCaptureMetadata({
@@ -293,9 +301,13 @@ export async function stagePost(
     journalId,
     status: JournalStatus.POSTED,
     accountsById: validated.accountsById,
+    precisionByAccountId: validated.precisionByAccountId,
     beforeTransactions: transactions,
     newLines: transactions.map(toPersistenceLine),
-    allocatePlannedRepayment: Boolean(journal.plannedPaymentId),
+    allocatePlannedRepayment: true,
+    journalDate: postedAt,
+    previousStatus: journal.status,
+    previousJournalDate: journal.journalDate,
   });
 
   const now = new Date();

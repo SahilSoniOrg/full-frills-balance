@@ -1,13 +1,9 @@
 import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
-import { asAccountId, asJournalId } from '@/src/types/ids';
+import { asAccountId, asJournalId, asOpenItemId } from '@/src/types/ids';
 import {
-  buildDirectPersonMovement,
-  buildFriendPaidSplit,
+  allocatePersonRepaymentMinorUnits,
   buildPersonShareSummary,
-  buildUserPaidSplit,
   classifyPersonDebtPosting,
-  customSplit,
-  equalSplit,
   evaluateJournalDeleteOrReverseIntegrity,
   evaluateJournalEditIntegrity,
   expectedPersonAccount,
@@ -29,6 +25,39 @@ const precisionMap = new Map([
 ]);
 
 describe('people domain policy & balance projections', () => {
+  it('allocates integer minor units FIFO with deterministic tie breaks and supports explicit none', () => {
+    const items = [
+      {
+        openItemId: asOpenItemId('late'),
+        availableMinor: 6000,
+        journalDate: 2,
+        createdAt: 1,
+        id: 'late',
+      },
+      {
+        openItemId: asOpenItemId('first'),
+        availableMinor: 6000,
+        journalDate: 1,
+        createdAt: 3,
+        id: 'first',
+      },
+      {
+        openItemId: asJournalId('tie') as unknown as import('@/src/types/ids').OpenItemId,
+        availableMinor: 1000,
+        journalDate: 1,
+        createdAt: 3,
+        id: 'tie',
+      },
+    ];
+    expect(allocatePersonRepaymentMinorUnits({ amountMinor: 10000, items }).allocations).toEqual([
+      { openItemId: items[1].openItemId, amountMinor: 6000 },
+      { openItemId: items[2].openItemId, amountMinor: 1000 },
+      { openItemId: items[0].openItemId, amountMinor: 3000 },
+    ]);
+    expect(
+      allocatePersonRepaymentMinorUnits({ amountMinor: 10000, items, requestedAllocations: [] }),
+    ).toEqual({ allocations: [], unallocatedMinor: 10000 });
+  });
   it('maps the 4-cell money flow and repayment matrix', () => {
     expect(expectedPersonAccount('outflow', true)).toEqual({
       role: 'receivable',
@@ -189,14 +218,7 @@ describe('people domain policy & balance projections', () => {
 });
 
 describe('split planning', () => {
-  it('distributes minor-unit remainder deterministically for 100 / 3 and 9000 / 3', () => {
-    expect(equalSplit(100, 3, 'INR')).toEqual([33.34, 33.33, 33.33]);
-    expect(equalSplit(9000, 3, 'INR')).toEqual([3000, 3000, 3000]);
-    expect(customSplit(100, [40, 35, 25], 'INR')).toEqual([40, 35, 25]);
-    expect(() => customSplit(100, [40, 35, 20], 'INR')).toThrow('shares do not equal total');
-  });
-
-  it('validates eligible posted expense and builds balanced user-paid & friend-paid splits', () => {
+  it('validates eligible posted expenses', () => {
     expect(
       isEligiblePostedExpense(
         [
@@ -215,53 +237,6 @@ describe('split planning', () => {
         'INR',
       ),
     ).toBe(false);
-
-    const userSplit = buildUserPaidSplit({
-      fundingAccountId: asAccountId('bank'),
-      expenseAccountId: asAccountId('travel'),
-      participantReceivableIds: [asAccountId('priya-recv'), asAccountId('arun-recv')],
-      shares: [3000, 3000, 3000],
-      currencyCode: 'INR',
-    });
-    expect(userSplit).toHaveLength(4);
-    expect(userSplit[3]).toMatchObject({
-      accountId: asAccountId('bank'),
-      amount: 9000,
-      transactionType: TransactionType.CREDIT,
-    });
-
-    const friendPaid = buildFriendPaidSplit({
-      expenseAccountId: asAccountId('travel'),
-      personAccountId: asAccountId('priya-payable'),
-      userShare: 3000,
-      personShare: 3000,
-      repayable: true,
-      currencyCode: 'INR',
-    });
-    expect(friendPaid).toEqual([
-      {
-        accountId: asAccountId('travel'),
-        amount: 3000,
-        transactionType: TransactionType.DEBIT,
-        currencyCode: 'INR',
-      },
-      {
-        accountId: asAccountId('priya-payable'),
-        amount: 3000,
-        transactionType: TransactionType.CREDIT,
-        currencyCode: 'INR',
-      },
-    ]);
-
-    const giftOut = buildDirectPersonMovement({
-      accountId: asAccountId('priya-exp'),
-      counterAccountId: asAccountId('bank'),
-      amount: 500,
-      flow: 'gift_paid',
-      currencyCode: 'INR',
-    });
-    expect(giftOut[0]?.transactionType).toBe(TransactionType.DEBIT);
-    expect(giftOut[1]?.transactionType).toBe(TransactionType.CREDIT);
   });
 });
 
@@ -316,7 +291,7 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
           hasNegativeUnassignedRemainder: false,
         },
       }),
-    ).toThrow('allocation exceeds open remainder');
+    ).toThrow('Allocation exceeds open item remainder');
   });
 
   it('plans cross-currency repayment using ADR 0007 rate direction', () => {

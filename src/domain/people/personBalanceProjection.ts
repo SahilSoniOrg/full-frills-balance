@@ -16,8 +16,9 @@ import type {
 export function openItemRemainder(
   item: OpenItem,
   allocations: readonly SettlementAllocation[],
+  precision = getCurrencyPrecision(item.currencyCode),
 ): number {
-  const p = getCurrencyPrecision(item.currencyCode);
+  const p = precision;
   const active = allocations
     .filter(a => a.active && a.openItemId === item.id)
     .reduce((s, a) => safeAdd(s, a.amount, p), 0);
@@ -29,11 +30,12 @@ export function projectLinkedAccount(input: {
   ledgerBalanceInNormalDirection: number;
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];
+  precision?: number;
 }): AccountUnassignedState {
-  const p = getCurrencyPrecision(input.currencyCode);
+  const p = input.precision ?? getCurrencyPrecision(input.currencyCode);
   const tracked = input.items
     .filter(i => i.accountId === input.accountId)
-    .reduce((s, i) => safeAdd(s, openItemRemainder(i, input.allocations), p), 0);
+    .reduce((s, i) => safeAdd(s, openItemRemainder(i, input.allocations, p), p), 0);
   const unassigned = safeSubtract(input.ledgerBalanceInNormalDirection, tracked, p);
   return {
     accountId: input.accountId,
@@ -52,13 +54,16 @@ export function summarizePerson(input: {
   accountLedgerBalances?: ReadonlyMap<OpenItem['accountId'], number>;
   convertedCurrency?: string;
   quotes?: Readonly<Record<string, number>>;
+  precisionByCurrency?: ReadonlyMap<string, number>;
 }): PersonBalanceSummary {
+  const precision = (currency: string) =>
+    input.precisionByCurrency?.get(currency) ?? getCurrencyPrecision(currency);
   const map = new Map<string, { owedToYou: number; youOwe: number }>();
   if (input.accountLedgerBalances) {
     for (const acc of input.accounts) {
       if (acc.role !== 'receivable' && acc.role !== 'payable') continue;
       const balance = input.accountLedgerBalances.get(acc.accountId) ?? 0;
-      const p = getCurrencyPrecision(acc.currencyCode);
+      const p = precision(acc.currencyCode);
       const b = map.get(acc.currencyCode) ?? { owedToYou: 0, youOwe: 0 };
       if (acc.role === 'receivable') {
         b.owedToYou = safeAdd(b.owedToYou, Math.max(0, balance), p);
@@ -71,8 +76,8 @@ export function summarizePerson(input: {
     for (const i of input.items) {
       const acc = input.accounts.find(a => a.accountId === i.accountId);
       if (!acc) continue;
-      const p = getCurrencyPrecision(i.currencyCode);
-      const v = openItemRemainder(i, input.allocations);
+      const p = precision(i.currencyCode);
+      const v = openItemRemainder(i, input.allocations, p);
       const b = map.get(i.currencyCode) ?? { owedToYou: 0, youOwe: 0 };
       if (acc.role === 'receivable') b.owedToYou = safeAdd(b.owedToYou, v, p);
       if (acc.role === 'payable') b.youOwe = safeAdd(b.youOwe, v, p);
@@ -82,11 +87,11 @@ export function summarizePerson(input: {
   const currencies = [...map].map(([currencyCode, b]) => ({
     currencyCode,
     ...b,
-    net: safeSubtract(b.owedToYou, b.youOwe, getCurrencyPrecision(currencyCode)),
+    net: safeSubtract(b.owedToYou, b.youOwe, precision(currencyCode)),
   }));
   if (!input.convertedCurrency) return { personId: input.personId, currencies };
   const missing: string[] = [];
-  const p = getCurrencyPrecision(input.convertedCurrency);
+  const p = precision(input.convertedCurrency);
   let netMinorUnits = 0;
   for (const c of currencies) {
     const q = input.quotes?.[c.currencyCode];

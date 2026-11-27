@@ -6,8 +6,16 @@ import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   getStagedPersonAccounts,
+  getSessionOpenItems,
+  getSessionDeletedOpenItemIds,
   stageModelWrite,
   stagePersonAccountCreation,
+  stageOpenItem,
+  stageOpenItemOverride,
+  stageOpenItemUpdate,
+  stageOpenItemDeletion,
+  stageSettlementAllocation,
+  stageAllocationDeactivation,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
@@ -269,19 +277,25 @@ export class PersonWriteRepository {
         Q.where('account_id', i.accountId),
       )
       .fetch();
-    let x = rows.find(r => !r.deletedAt);
+    const deleted = getSessionDeletedOpenItemIds(s);
+    let x =
+      getSessionOpenItems(s).find(
+        row =>
+          row.workplaceId === w &&
+          row.originatingJournalId === i.originatingJournalId &&
+          row.accountId === i.accountId,
+      ) ?? rows.find(row => !row.deletedAt && !deleted.has(row.id));
+
     if (x) {
-      stageModelWrite(s, () => [
-        x!.prepareUpdate(r => {
-          r.personId = i.personId;
-          r.originatingJournalId = i.originatingJournalId;
-          r.accountId = i.accountId;
-          r.direction = i.direction;
-          r.originalAmount = i.originalAmount;
-          r.currencyCode = i.currencyCode;
-          r.updatedAt = new Date();
-        }),
-      ]);
+      stageOpenItemOverride(s, x, {
+        personId: i.personId,
+        originatingJournalId: i.originatingJournalId,
+        accountId: i.accountId,
+        direction: i.direction,
+        originalAmount: i.originalAmount,
+        currencyCode: i.currencyCode,
+      });
+      stageOpenItemUpdate(s, x, { ...i, updatedAt: new Date() });
     } else {
       x = this.items().prepareCreate(r => {
         r.workplaceId = w;
@@ -295,6 +309,7 @@ export class PersonWriteRepository {
         r.updatedAt = new Date();
       });
       stageModelWrite(s, [x]);
+      stageOpenItem(s, x);
     }
     return x;
   }
@@ -305,6 +320,7 @@ export class PersonWriteRepository {
     deletedAt = new Date(),
   ) {
     if (ids.length === 0) return;
+    stageOpenItemDeletion(s, ids, deletedAt);
     const xs = await this.items()
       .query(
         Q.where('workplace_id', w),
@@ -312,14 +328,7 @@ export class PersonWriteRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-    stageModelWrite(s, () =>
-      xs.map(x =>
-        x.prepareUpdate(r => {
-          r.deletedAt = deletedAt;
-          r.updatedAt = deletedAt;
-        }),
-      ),
-    );
+    xs.forEach(x => stageOpenItemUpdate(s, x, { deletedAt, updatedAt: deletedAt }));
   }
   async createSettlementAllocationsInSession(
     s: AccountingWriteSession,
@@ -349,6 +358,7 @@ export class PersonWriteRepository {
       }),
     );
     stageModelWrite(s, xs);
+    xs.forEach(x => stageSettlementAllocation(s, x));
     return xs;
   }
   async deactivateSettlementAllocationsInSession(
@@ -358,6 +368,7 @@ export class PersonWriteRepository {
     deactivatedAt = new Date(),
   ) {
     if (ids.length === 0) return;
+    stageAllocationDeactivation(s, ids, deactivatedAt);
     const xs = await this.allocations()
       .query(
         Q.where('workplace_id', w),

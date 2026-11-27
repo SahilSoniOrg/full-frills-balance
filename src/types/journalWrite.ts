@@ -5,6 +5,7 @@ export interface JournalRepaymentAllocation {
   personId: PersonId;
   targetAccountId: AccountId;
   allocations: readonly { openItemId: OpenItemId; amount: number }[];
+  allocationMode?: 'fifo' | 'pick';
 }
 
 export interface JournalWriteLine {
@@ -33,6 +34,8 @@ export interface JournalWriteFields {
   originalJournalId?: JournalId;
   status?: JournalStatus;
   plannedPaymentId?: PlannedPaymentId;
+  /** Absent means automated FIFO; present empty means intentionally leave repayment unassigned. */
+  repaymentAllocation?: JournalRepaymentAllocation;
   transactions: JournalWriteLine[];
   metadata?: JournalWriteMetadata;
 }

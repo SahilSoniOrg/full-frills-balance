@@ -35,13 +35,12 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { SplitPeopleParticipantsBar, type SplitParticipant } from './SplitPeopleParticipantsBar';
+import { ensurePersonAccount } from '@/src/services/people';
 import { AccountType } from '@/src/types/enums';
-import { createPerson, ensurePersonAccount } from '@/src/services/people';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { StyleSheet, View } from 'react-native';
 
 type SplitFormProps = SplitJournalController & {
-  addSplitRowWithAccount: (accountId: AccountId) => void;
   people?: SplitParticipant[];
   peopleGroups?: readonly PersonPickerGroup[];
   initialPersonId?: PersonId;
@@ -102,6 +101,7 @@ export function SplitForm({
   canEqualize,
   addSplitRow,
   removeSplitRow,
+  removeSplitRowsForAccounts,
   updateSplitRow,
   updateSplitAmounts,
   updateAmount,
@@ -167,7 +167,9 @@ export function SplitForm({
 
   const handleEqualSplit = useCallback(() => {
     if (!canEqualize) return;
-    applyAmounts(equalizeSplitAmounts(totalAmount, splits, precision, currencyContext));
+    const allocatedRows = splits.filter(row => row.accountId && row.accountId !== EMPTY_ACCOUNT_ID);
+    if (allocatedRows.length === 0) return;
+    applyAmounts(equalizeSplitAmounts(totalAmount, allocatedRows, precision, currencyContext));
   }, [applyAmounts, canEqualize, currencyContext, precision, splits, totalAmount]);
 
   const personAccountIds = useMemo(
@@ -190,32 +192,26 @@ export function SplitForm({
       if (!group) return;
       const matchingRows = splits.filter(row => group.accountIds.includes(row.accountId));
       if (matchingRows.length) {
-        if (splits.length - matchingRows.length >= 1)
-          matchingRows.forEach(row => removeSplitRow(row.id));
-        else updateSplitRow(splits[0].id, { accountId: EMPTY_ACCOUNT_ID, amount: '' });
+        if (splitMode === 'equal') pendingEqualizeRef.current = true;
+        removeSplitRowsForAccounts(matchingRows.map(row => row.accountId));
         return;
       }
       if (!workplaceId) return;
-      const target = allAccounts.find(
-        account =>
-          group.accountIds.includes(account.id) &&
-          account.accountType === AccountType.ASSET &&
-          account.currencyCode.toUpperCase() === currencyCode,
-      );
-      const account =
-        target ?? (await ensurePersonAccount(workplaceId, personId, 'receivable', currencyCode));
+      const account = await ensurePersonAccount(workplaceId, personId, 'receivable', currencyCode);
       if (splitMode === 'equal') pendingEqualizeRef.current = true;
-      addSplitRowWithAccount(account.id);
+      addSplitRowWithAccount(account.id, {
+        name: account.name,
+        accountType: account.accountType,
+        currencyCode: account.currencyCode,
+      });
     },
     [
       addSplitRowWithAccount,
-      allAccounts,
       currencyCode,
       peopleGroups,
-      removeSplitRow,
+      removeSplitRowsForAccounts,
       splitMode,
       splits,
-      updateSplitRow,
       workplaceId,
     ],
   );
@@ -234,7 +230,7 @@ export function SplitForm({
     if (!pendingEqualizeRef.current || splitMode !== 'equal' || !canEqualize) return;
     pendingEqualizeRef.current = false;
     handleEqualSplit();
-  }, [canEqualize, handleEqualSplit, splitMode, splits.length]);
+  }, [canEqualize, handleEqualSplit, splitMode, splits]);
   const handleAmountChange = useCallback(
     (id: string, amount: string) => {
       updateAmount(id, amount);
@@ -263,32 +259,21 @@ export function SplitForm({
   );
   const handleQuickAddPerson = useCallback(
     async (name: string) => {
-      if (onQuickAddPerson) {
-        setIsQuickAdding(true);
-        try {
-          const accountId = await onQuickAddPerson(name, currencyCode);
-          if (accountId) addSplitRowWithAccount(accountId);
-        } finally {
-          setIsQuickAdding(false);
-        }
-        return;
-      }
-      if (!workplaceId) return;
+      if (!onQuickAddPerson) return;
       setIsQuickAdding(true);
       try {
-        const person = await createPerson(workplaceId, { name });
-        const account = await ensurePersonAccount(
-          workplaceId,
-          person.id,
-          'receivable',
+        const accountId = await onQuickAddPerson(name, currencyCode);
+        if (!accountId) return;
+        if (splitMode === 'equal') pendingEqualizeRef.current = true;
+        addSplitRowWithAccount(accountId, {
+          accountType: AccountType.ASSET,
           currencyCode,
-        );
-        addSplitRowWithAccount(account.id);
+        });
       } finally {
         setIsQuickAdding(false);
       }
     },
-    [addSplitRowWithAccount, currencyCode, onQuickAddPerson, workplaceId],
+    [addSplitRowWithAccount, currencyCode, onQuickAddPerson, splitMode],
   );
 
   const handleDistribute = useCallback(() => {
@@ -296,6 +281,14 @@ export function SplitForm({
       applyAmounts(distributeSplitRemainder(totalAmount, splits, precision, currencyContext));
     }
   }, [applyAmounts, canDistribute, currencyContext, precision, splits, totalAmount]);
+
+  const handleRemoveSplitRow = useCallback(
+    (id: string) => {
+      if (splitMode === 'equal') pendingEqualizeRef.current = true;
+      removeSplitRow(id);
+    },
+    [removeSplitRow, splitMode],
+  );
 
   const handleSourceAccountSelect = useCallback(
     (accountId: AccountId) => {
@@ -426,7 +419,7 @@ export function SplitForm({
           onCreateAccount={onCreateAccountRequestForRow}
           peopleGroups={peopleGroups}
           onCreatePersonRequest={onCreatePersonRequest}
-          onRemove={removeSplitRow}
+          onRemove={handleRemoveSplitRow}
           onSelectAccount={(id, accountId) => updateSplitRow(id, { accountId })}
           onChangeAmount={handleAmountChange}
           onConvertedAmountChange={updateConvertedAmount}

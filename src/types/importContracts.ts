@@ -66,6 +66,7 @@ export interface CanonicalImportMetadata {
 export interface CanonicalPerson {
   id: string;
   name: string;
+  icon?: string;
   notes?: string;
   color?: string;
   defaultCurrencyCode?: string;

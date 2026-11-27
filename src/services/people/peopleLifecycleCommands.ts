@@ -37,6 +37,26 @@ export function createPerson(
     return person;
   });
 }
+
+/** Create a person and their default receivable account in one accounting batch. */
+export function createPersonWithReceivable(
+  workplaceId: WorkplaceId,
+  input: PersonProfileInput & { currencyCode: string },
+): Promise<{ person: Person; account: Account }> {
+  return runAccountingWriteSession(async session => {
+    const { currencyCode, ...profile } = input;
+    const person = await personWriteRepository.createPersonInSession(session, workplaceId, profile);
+    const account = await ensurePersonAccountInSession(
+      session,
+      workplaceId,
+      person.id,
+      'receivable',
+      currencyCode,
+      { personName: person.name },
+    );
+    return { person, account };
+  });
+}
 export function updatePerson(
   workplaceId: WorkplaceId,
   personId: PersonId,
@@ -45,13 +65,6 @@ export function updatePerson(
   return runAccountingWriteSession(session =>
     personWriteRepository.updatePersonInSession(session, workplaceId, personId, patch),
   );
-}
-export function renamePerson(
-  workplaceId: WorkplaceId,
-  personId: PersonId,
-  name: string,
-): Promise<Person> {
-  return updatePerson(workplaceId, personId, { name });
 }
 export function setPersonArchived(
   workplaceId: WorkplaceId,
@@ -122,7 +135,10 @@ export async function ensurePersonAccountInSession(
   personId: PersonId,
   role: PersonAccountRole,
   currencyCode: string,
+  options?: { personName?: string },
 ): Promise<Account> {
+  const normalizedCurrencyCode = currencyCode.trim().toUpperCase();
+  if (!normalizedCurrencyCode) throw new Error('Currency is required for a person account');
   const [persistedLinks, persistedAccounts] = await Promise.all([
     personQueryRepository.listPersonAccounts(workplaceId, personId),
     accountQueryRepository.findAll(workplaceId),
@@ -132,18 +148,28 @@ export async function ensurePersonAccountInSession(
   );
   const links = [...persistedLinks, ...stagedLinks];
   const accounts = [...persistedAccounts, ...getStagedAccounts(session, workplaceId)];
-  const linked = links.find(link => {
-    const account = accounts.find(a => a.id === link.accountId);
-    return (
-      !link.deletedAt &&
-      account?.currencyCode === currencyCode &&
-      account.accountSubtype === subtypeForRole(role) &&
-      account.accountType === typeForRole(role)
-    );
-  });
-  if (linked) return accounts.find(a => a.id === linked.accountId)!;
-  const person = await personQueryRepository.findPerson(workplaceId, personId);
-  if (!person) throw new Error('Person not found');
+  const linkedAccounts = accounts.filter(
+    account =>
+      !account.deletedAt &&
+      !account.archivedAt &&
+      account.currencyCode?.toUpperCase() === normalizedCurrencyCode &&
+      account.accountType === typeForRole(role) &&
+      links.some(link => !link.deletedAt && link.accountId === account.id) &&
+      isCompatiblePersonAccount({
+        id: account.id,
+        type: account.accountType,
+        subtype: account.accountSubtype ?? AccountSubtype.OTHER,
+        currencyCode: account.currencyCode,
+      }),
+  );
+  const linked =
+    linkedAccounts.find(account => account.accountSubtype === subtypeForRole(role)) ??
+    linkedAccounts[0];
+  if (linked) return linked;
+  const person = options?.personName
+    ? undefined
+    : await personQueryRepository.findPerson(workplaceId, personId);
+  if (!options?.personName && !person) throw new Error('Person not found');
   const roleLabel =
     role === 'receivable'
       ? 'Receivable'
@@ -152,7 +178,7 @@ export async function ensurePersonAccountInSession(
         : role === 'expense'
           ? 'Expense'
           : 'Income';
-  const base = `${person.name} (${roleLabel} · ${currencyCode})`;
+  const base = `${options?.personName ?? person!.name} (${roleLabel} · ${normalizedCurrencyCode})`;
   let name = base;
   let suffix = 2;
   while (accounts.some(a => a.name === name)) name = `${base} ${suffix++}`;
@@ -162,14 +188,16 @@ export async function ensurePersonAccountInSession(
       name,
       accountType: typeForRole(role),
       accountSubtype: subtypeForRole(role),
-      currencyCode,
+      currencyCode: normalizedCurrencyCode,
       workplaceId,
       orderNum: 0,
       icon: Icon.User,
     },
     { appendWithinSiblingList: true },
   );
-  await personWriteRepository.linkAccountInSession(session, workplaceId, personId, account.id);
+  await personWriteRepository.linkAccountInSession(session, workplaceId, personId, account.id, {
+    skipPersonLookup: Boolean(options?.personName),
+  });
   return account;
 }
 

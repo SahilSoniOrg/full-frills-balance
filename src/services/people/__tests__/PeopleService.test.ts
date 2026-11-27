@@ -2,13 +2,15 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { JournalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { personQueryRepository, personWriteRepository } from '@/src/data/repositories/people';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { equalSplit } from '@/src/domain/people';
+import type { AccountId, JournalId, PersonId, WorkplaceId } from '@/src/types/ids';
+import { balanceRebuildIntentRepository } from '@/src/data/repositories/BalanceRebuildIntentRepository';
+import { settlePeopleForRebuildClaim } from '@/src/services/people/peopleSettlementCommands';
+import { readPersonLedgerBalance } from '@/src/services/people/peopleLedgerReads';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import * as PeopleService from '@/src/services/people';
 import { preferences } from '@/src/services/preferences';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
-import type { WorkplaceId } from '@/src/types/ids';
 
 const workplaceId = 'people-service-test' as WorkplaceId;
 const journalRepo = new JournalPersistenceRepository();
@@ -29,6 +31,58 @@ async function createAccount(input: {
   });
 }
 
+async function post(
+  workplace: WorkplaceId,
+  input: {
+    journalId?: JournalId;
+    currencyCode: string;
+    journalDate: number;
+    description?: string;
+    source: AccountId;
+    debits: readonly { accountId: AccountId; amount: number }[];
+  },
+) {
+  const { debits, source, ...draft } = input;
+  return (
+    await journalRepo.put(
+      {
+        ...draft,
+        status: JournalStatus.POSTED,
+        transactions: [
+          {
+            accountId: source,
+            amount: debits.reduce((sum, row) => sum + row.amount, 0),
+            transactionType: TransactionType.CREDIT,
+          },
+          ...debits.map(row => ({ ...row, transactionType: TransactionType.DEBIT })),
+        ],
+      },
+      workplace,
+    )
+  ).journal;
+}
+
+async function postReceivable(
+  personId: PersonId,
+  cashId: AccountId,
+  currencyCode: string,
+  amount: number,
+  journalDate: number,
+) {
+  const account = await PeopleService.ensurePersonAccount(
+    workplaceId,
+    personId,
+    'receivable',
+    currencyCode,
+  );
+  return post(workplaceId, {
+    source: cashId,
+    currencyCode,
+    journalDate,
+    debits: [{ accountId: account.id, amount }],
+  });
+}
+
 describe('PeopleService integration', () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -37,7 +91,7 @@ describe('PeopleService integration', () => {
 
   it('supports person lifecycle and account linking rules', async () => {
     const person = await PeopleService.createPerson(workplaceId, { name: 'Ari' });
-    const renamed = await PeopleService.renamePerson(workplaceId, person.id, 'Ariana');
+    const renamed = await PeopleService.updatePerson(workplaceId, person.id, { name: 'Ariana' });
     expect(renamed.name).toBe('Ariana');
 
     const archived = await PeopleService.setPersonArchived(workplaceId, person.id, true);
@@ -77,7 +131,7 @@ describe('PeopleService integration', () => {
     expect(await personQueryRepository.findPerson(workplaceId, orphan.id)).toBeNull();
   });
 
-  it('splits an existing 9,000 posted expense and distributes equalSplit(100, 3) remainder deterministically', async () => {
+  it('updates a posted expense through journal persistence and creates one open item per participant', async () => {
     const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
     const dinner = await createAccount({ name: 'Dinner', accountType: AccountType.EXPENSE });
     const alice = await PeopleService.createPerson(workplaceId, { name: 'Alice' });
@@ -97,18 +151,28 @@ describe('PeopleService integration', () => {
       workplaceId,
     );
 
-    const updated = await PeopleService.saveSplitExpense(workplaceId, {
-      existingJournalId: original.journal.id,
+    const receivableA = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      alice.id,
+      'receivable',
+      'INR',
+    );
+    const receivableB = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      bob.id,
+      'receivable',
+      'INR',
+    );
+    const updated = await post(workplaceId, {
+      journalId: original.journal.id,
       journalDate: original.journal.journalDate,
       description: 'Team dinner',
       currencyCode: 'INR',
-      fundingAccountId: bank.id,
-      expenseAccountId: dinner.id,
-      userShare: 3000,
-      participants: [
-        { personId: alice.id, amount: 3000 },
-        { personId: bob.id, amount: 3000 },
-      ],
+      source: bank.id,
+      debits: [dinner, receivableA, receivableB].map(account => ({
+        accountId: account.id,
+        amount: 3000,
+      })),
     });
     expect(updated.id).toBe(original.journal.id);
 
@@ -122,18 +186,15 @@ describe('PeopleService integration', () => {
     });
     expect(items).toHaveLength(2);
 
-    const [userShare, shareA, shareB] = equalSplit(100, 3, 'INR');
-    expect(userShare! + shareA! + shareB!).toBeCloseTo(100, 2);
-    await PeopleService.saveSplitExpense(workplaceId, {
+    await post(workplaceId, {
       journalDate: 1_700_000_100_000,
       description: 'Coffee',
       currencyCode: 'INR',
-      fundingAccountId: bank.id,
-      expenseAccountId: dinner.id,
-      userShare: userShare!,
-      participants: [
-        { personId: alice.id, amount: shareA! },
-        { personId: bob.id, amount: shareB! },
+      source: bank.id,
+      debits: [
+        { accountId: dinner.id, amount: 33.34 },
+        { accountId: receivableA.id, amount: 33.33 },
+        { accountId: receivableB.id, amount: 33.33 },
       ],
     });
     const detail = await PeopleService.peopleReadService.getPersonDetail(
@@ -141,7 +202,7 @@ describe('PeopleService integration', () => {
       alice.id,
       'INR',
     );
-    expect(detail?.balanceSummary.currencies[0]?.owedToYou).toBeCloseTo(3000 + shareA!, 2);
+    expect(detail?.balanceSummary.currencies[0]?.owedToYou).toBeCloseTo(3033.33, 2);
   });
 
   it('matches an existing captured journal on repayment without double-counting bank cash', async () => {
@@ -163,13 +224,20 @@ describe('PeopleService integration', () => {
       workplaceId,
     );
 
-    const split = await PeopleService.saveSplitExpense(workplaceId, {
+    const receivable = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      alice.id,
+      'receivable',
+      'INR',
+    );
+    const split = await post(workplaceId, {
       journalDate: 1_700_000_100_000,
       currencyCode: 'INR',
-      fundingAccountId: bank.id,
-      expenseAccountId: dinner.id,
-      userShare: 2000,
-      participants: [{ personId: alice.id, amount: 1000 }],
+      source: bank.id,
+      debits: [
+        { accountId: dinner.id, amount: 2000 },
+        { accountId: receivable.id, amount: 1000 },
+      ],
     });
     const [openItem] = await personQueryRepository.listOpenItems(workplaceId, {
       originatingJournalId: split.id,
@@ -217,57 +285,41 @@ describe('PeopleService integration', () => {
     const food = await createAccount({ name: 'Food', accountType: AccountType.EXPENSE });
     const ari = await PeopleService.createPerson(workplaceId, { name: 'Ari' });
 
-    await PeopleService.saveFriendPaidBill(workplaceId, {
-      journalDate: 1_700_000_000_000,
-      description: 'Friend paid repayable',
-      currencyCode: 'INR',
-      expenseAccountId: food.id,
-      payerPersonId: ari.id,
-      userShare: 400,
-      repayable: true,
-    });
-    await PeopleService.saveFriendPaidBill(workplaceId, {
-      journalDate: 1_700_000_050_000,
-      description: 'Friend paid treat',
-      currencyCode: 'INR',
-      expenseAccountId: food.id,
-      payerPersonId: ari.id,
-      userShare: 250,
-      repayable: false,
-    });
-
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_100_000,
-      currencyCode: 'INR',
-      personId: ari.id,
-      counterAccountId: bank.id,
-      amount: 150,
-      flow: 'lend',
-    });
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_200_000,
-      currencyCode: 'INR',
-      personId: ari.id,
-      counterAccountId: bank.id,
-      amount: 100,
-      flow: 'borrow',
-    });
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_300_000,
-      currencyCode: 'INR',
-      personId: ari.id,
-      counterAccountId: bank.id,
-      amount: 50,
-      flow: 'gift_paid',
-    });
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_400_000,
-      currencyCode: 'INR',
-      personId: ari.id,
-      counterAccountId: bank.id,
-      amount: 75,
-      flow: 'gift_received',
-    });
+    const receivable = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      ari.id,
+      'receivable',
+      'INR',
+    );
+    const payable = await PeopleService.ensurePersonAccount(workplaceId, ari.id, 'payable', 'INR');
+    const sharedCost = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      ari.id,
+      'expense',
+      'INR',
+    );
+    const sharedIncome = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      ari.id,
+      'income',
+      'INR',
+    );
+    const movements = [
+      { source: payable.id, accountId: food.id, amount: 400 },
+      { source: sharedIncome.id, accountId: food.id, amount: 250 },
+      { source: bank.id, accountId: receivable.id, amount: 150 },
+      { source: payable.id, accountId: bank.id, amount: 100 },
+      { source: bank.id, accountId: sharedCost.id, amount: 50 },
+      { source: sharedIncome.id, accountId: bank.id, amount: 75 },
+    ];
+    for (const [index, movement] of movements.entries()) {
+      await post(workplaceId, {
+        source: movement.source,
+        currencyCode: 'INR',
+        journalDate: 1_700_000_000_000 + index * 60_000,
+        debits: [{ accountId: movement.accountId, amount: movement.amount }],
+      });
+    }
 
     const detail = await PeopleService.peopleReadService.getPersonDetail(
       workplaceId,
@@ -328,80 +380,174 @@ describe('PeopleService integration', () => {
     expect(detail?.balanceSummary.currencies[0]?.owedToYou).toBe(700);
   });
 
-  it('auto-settles same-currency balances only when Workplace opt-in is enabled', async () => {
-    const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
-    const food = await createAccount({ name: 'Food', accountType: AccountType.EXPENSE });
+  it('values the native cash leg when matching an old foreign-currency repayment', async () => {
     const usdBank = await createAccount({
-      name: 'USD Bank',
+      name: 'USD bank',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
     });
-    const rhea = await PeopleService.createPerson(workplaceId, { name: 'Rhea' });
-
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_000_000,
-      currencyCode: 'INR',
-      personId: rhea.id,
-      counterAccountId: bank.id,
-      amount: 500,
-      flow: 'lend',
+    const euroBank = await createAccount({
+      name: 'EUR bank',
+      accountType: AccountType.ASSET,
+      currencyCode: 'EUR',
     });
-    await PeopleService.saveFriendPaidBill(workplaceId, {
-      journalDate: 1_700_000_100_000,
-      currencyCode: 'INR',
-      expenseAccountId: food.id,
-      payerPersonId: rhea.id,
-      userShare: 300,
-      repayable: true,
+    const equity = await createAccount({
+      name: 'USD opening balance',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
     });
-    const detailDisabled = await PeopleService.peopleReadService.getPersonDetail(
+    const person = await PeopleService.createPerson(workplaceId, { name: 'Adi' });
+    const origin = await postReceivable(person.id, usdBank.id, 'USD', 99, 1_700_000_000_000);
+    const [item] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: origin.id,
+    });
+    const movement = await journalRepo.put(
+      {
+        description: 'Adi repayment',
+        currencyCode: 'USD',
+        journalDate: 1_700_000_100_000,
+        transactions: [
+          {
+            accountId: euroBank.id,
+            amount: 90,
+            exchangeRate: 1.1,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: equity.id, amount: 99, transactionType: TransactionType.CREDIT },
+        ],
+      },
       workplaceId,
-      rhea.id,
+    );
+    const page = await PeopleService.peopleReadService.listCompatibleRepaymentJournals(
+      workplaceId,
+      person.id,
+      {
+        query: 'Adi repayment',
+      },
+    );
+    const candidate = page.matches.find(row => row.journalId === movement.journal.id);
+    expect(candidate).toMatchObject({
+      cashAmount: 90,
+      cashCurrencyCode: 'EUR',
+      journalAmount: 99,
+      currencyCode: 'USD',
+    });
+    if (!item || !candidate) throw new Error('Expected a valued repayment candidate');
+    const command = {
+      personId: person.id,
+      targetAccountId: item.accountId,
+      cashAccountId: candidate.cashAccountId,
+      cashAmount: candidate.cashAmount,
+      journalDate: candidate.journalDate,
+      journalCurrency: candidate.currencyCode,
+      existingJournalId: candidate.journalId,
+      expectedCurrent: candidate.expectedCurrent,
+      allocations: [{ openItemId: item.id, amount: 99 }],
+    };
+    await journalRepo.put(
+      { journalId: candidate.journalId, notes: 'Reconciled with bank' },
+      workplaceId,
+    );
+    await expect(PeopleService.recordRepayment(workplaceId, command)).rejects.toThrow();
+    const latest = await PeopleService.peopleReadService.listCompatibleRepaymentJournals(
+      workplaceId,
+      person.id,
+      {
+        query: 'Adi repayment',
+      },
+    );
+    const current = latest.matches.find(row => row.id === candidate.id);
+    expect(current).toBeDefined();
+    const result = await PeopleService.recordRepayment(workplaceId, {
+      ...command,
+      expectedCurrent: current?.expectedCurrent,
+    });
+    expect(result.id).toBe(movement.journal.id);
+    const detail = await PeopleService.peopleReadService.getPersonDetail(
+      workplaceId,
+      person.id,
+      'USD',
+    );
+    expect(detail?.openItems).toMatchObject([{ remainder: 0 }]);
+    expect(await readPersonLedgerBalance(workplaceId, euroBank, new Map([['EUR', 2]]))).toBe(90);
+  });
+
+  it('excludes a reversing posting from repayment reads and writes', async () => {
+    const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
+    const person = await PeopleService.createPerson(workplaceId, { name: 'Mika' });
+    const first = await postReceivable(person.id, bank.id, 'INR', 100, 1_700_000_000_000);
+    const second = await postReceivable(person.id, bank.id, 'INR', 100, 1_700_000_100_000);
+    const reversal = await journalRepo.reverse(first.id, 'Cancelled', workplaceId);
+    const [item] = await personQueryRepository.listOpenItems(workplaceId, {
+      originatingJournalId: second.id,
+    });
+    if (!item) throw new Error('Expected the remaining open item');
+    const detail = await PeopleService.peopleReadService.getPersonDetail(
+      workplaceId,
+      person.id,
       'INR',
     );
-    expect(detailDisabled?.balanceSummary.currencies[0]).toEqual({
-      currencyCode: 'INR',
-      owedToYou: 500,
-      youOwe: 300,
-      net: 200,
-    });
+    expect(detail?.unallocatedRepayments).toEqual([]);
+    await expect(
+      PeopleService.allocateUnassignedRepayment(workplaceId, {
+        personId: person.id,
+        targetAccountId: item.accountId,
+        settlementJournalId: reversal.journal.id,
+        allocations: [{ openItemId: item.id, amount: 100 }],
+      }),
+    ).rejects.toThrow('This journal cannot be applied as a repayment');
+  });
+
+  it('processes auto-settle from a durable planned-post intent while the running balance is pending', async () => {
+    const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
+    const food = await createAccount({ name: 'Food', accountType: AccountType.EXPENSE });
+    const person = await PeopleService.createPerson(workplaceId, { name: 'Leo' });
+    const receivable = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      person.id,
+      'receivable',
+      'INR',
+    );
+    const payable = await PeopleService.ensurePersonAccount(
+      workplaceId,
+      person.id,
+      'payable',
+      'INR',
+    );
+    await postReceivable(person.id, bank.id, 'INR', 500, 1_700_000_000_000);
+    const date = 1_700_000_100_000;
+    const planned = await journalRepo.put(
+      {
+        journalDate: date,
+        currencyCode: 'INR',
+        status: JournalStatus.PLANNED,
+        transactions: [
+          { accountId: payable.id, amount: 300, transactionType: TransactionType.CREDIT },
+          { accountId: food.id, amount: 300, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      workplaceId,
+    );
+    await journalRepo.post(planned.journal.id, workplaceId, date);
+    const claim = (await balanceRebuildIntentRepository.listPending()).find(
+      row => row.accountId === payable.id,
+    );
+    expect(claim?.peopleSettlementJournalDate).toBe(date);
+    if (!claim) throw new Error('Expected a settlement claim');
+    const precision = new Map([['INR', 2]]);
+    await settlePeopleForRebuildClaim(claim);
+    expect(await readPersonLedgerBalance(workplaceId, payable, precision)).toBe(300);
 
     preferences.workplace.update(workplaceId, { autoSettlePeopleBalances: true });
-    const leo = await PeopleService.createPerson(workplaceId, { name: 'Leo' });
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_000_000,
-      currencyCode: 'USD',
-      personId: leo.id,
-      counterAccountId: usdBank.id,
-      amount: 20,
-      flow: 'lend',
+    await settlePeopleForRebuildClaim(claim);
+    await settlePeopleForRebuildClaim(claim);
+    expect(await readPersonLedgerBalance(workplaceId, receivable, precision)).toBe(200);
+    expect(await readPersonLedgerBalance(workplaceId, payable, precision)).toBe(0);
+    const allocations = await personQueryRepository.listSettlementAllocations(workplaceId, {
+      personId: person.id,
+      activeOnly: true,
     });
-    await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_050_000,
-      currencyCode: 'INR',
-      personId: leo.id,
-      counterAccountId: bank.id,
-      amount: 500,
-      flow: 'lend',
-    });
-    await PeopleService.saveFriendPaidBill(workplaceId, {
-      journalDate: 1_700_000_100_000,
-      currencyCode: 'INR',
-      expenseAccountId: food.id,
-      payerPersonId: leo.id,
-      userShare: 300,
-      repayable: true,
-    });
-
-    const leoDetail = await PeopleService.peopleReadService.getPersonDetail(
-      workplaceId,
-      leo.id,
-      'INR',
-    );
-    const inr = leoDetail?.balanceSummary.currencies.find(c => c.currencyCode === 'INR');
-    const usd = leoDetail?.balanceSummary.currencies.find(c => c.currencyCode === 'USD');
-    expect(inr).toEqual({ currencyCode: 'INR', owedToYou: 200, youOwe: 0, net: 200 });
-    expect(usd).toEqual({ currencyCode: 'USD', owedToYou: 20, youOwe: 0, net: 20 });
+    expect(allocations.map(row => row.amount)).toEqual([300, 300]);
   });
 
   it('handles cross-currency repayment, unassigned allocation, We are settled, and negative blocking', async () => {
@@ -413,14 +559,7 @@ describe('PeopleService integration', () => {
     });
     const mia = await PeopleService.createPerson(workplaceId, { name: 'Mia' });
 
-    const lendJournal = await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_000_000,
-      currencyCode: 'USD',
-      personId: mia.id,
-      counterAccountId: usdBank.id,
-      amount: 100,
-      flow: 'lend',
-    });
+    const lendJournal = await postReceivable(mia.id, usdBank.id, 'USD', 100, 1_700_000_000_000);
     const [usdItem] = await personQueryRepository.listOpenItems(workplaceId, {
       originatingJournalId: lendJournal.id,
     });
@@ -457,14 +596,7 @@ describe('PeopleService integration', () => {
     expect(detailAfterSettle?.balanceSummary.currencies.every(c => c.net === 0)).toBe(true);
 
     const nina = await PeopleService.createPerson(workplaceId, { name: 'Nina' });
-    const j1 = await PeopleService.recordPersonMovement(workplaceId, {
-      journalDate: 1_700_000_000_000,
-      currencyCode: 'INR',
-      personId: nina.id,
-      counterAccountId: bankInr.id,
-      amount: 500,
-      flow: 'lend',
-    });
+    const j1 = await postReceivable(nina.id, bankInr.id, 'INR', 500, 1_700_000_000_000);
     const [item1] = await personQueryRepository.listOpenItems(workplaceId, {
       originatingJournalId: j1.id,
     });
@@ -472,11 +604,11 @@ describe('PeopleService integration', () => {
       personId: nina.id,
       targetAccountId: item1!.accountId,
       cashAccountId: bankInr.id,
-      cashAmount: 200,
+      cashAmount: 250,
       journalDate: 1_700_000_100_000,
       journalCurrency: 'INR',
       allocations: [],
-      unassignedAmount: 200,
+      unassignedAmount: 250,
     });
     await PeopleService.allocateUnassignedRepayment(workplaceId, {
       personId: nina.id,
@@ -484,6 +616,14 @@ describe('PeopleService integration', () => {
       settlementJournalId: repayJournal.id,
       allocations: [{ openItemId: item1!.id, amount: 200 }],
     });
+    const partial = await PeopleService.peopleReadService.getPersonDetail(
+      workplaceId,
+      nina.id,
+      'INR',
+    );
+    expect(partial?.unallocatedRepayments).toEqual([
+      { accountId: item1!.accountId, journalId: repayJournal.id, amount: 50, currencyCode: 'INR' },
+    ]);
 
     await runAccountingWriteSession(session =>
       personWriteRepository.upsertOpenItemInSession(session, workplaceId, {
@@ -501,6 +641,27 @@ describe('PeopleService integration', () => {
         workplaceCurrency: 'INR',
       }),
     ).rejects.toThrow();
+  });
+
+  it('creates and links a quick-added receivable in one session', async () => {
+    const { person, account } = await PeopleService.createPersonWithReceivable(workplaceId, {
+      name: 'Quick add',
+      currencyCode: 'usd',
+    });
+    expect(account).toMatchObject({
+      accountSubtype: AccountSubtype.RECEIVABLE,
+      currencyCode: 'USD',
+    });
+    expect(
+      await personQueryRepository.findPersonAccountByAccountId(workplaceId, account.id),
+    ).toMatchObject({ personId: person.id, accountId: account.id });
+
+    await expect(
+      PeopleService.createPerson(workplaceId, { name: 'Conflict', initialAccountId: account.id }),
+    ).rejects.toThrow('Account already linked');
+    expect(await PeopleService.createPerson(workplaceId, { name: 'Conflict' })).toMatchObject({
+      name: 'Conflict',
+    });
   });
 
   it('creates a person with initial linked account and updates rich profile attributes', async () => {

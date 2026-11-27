@@ -5,15 +5,21 @@ import { useTransferOpenItems } from '@/src/features/journal/entry/hooks/useTran
 import type { AccountId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { Size, Spacing } from '@/src/constants/design-tokens';
-import { expectedPersonAccount } from '@/src/domain/people';
-import { AccountType } from '@/src/types/enums';
+import { classifyPersonDebtPosting, expectedPersonAccount } from '@/src/domain/people';
+import { ensurePersonAccount } from '@/src/services/people';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
+import { formatRoundedAmount } from '@/src/domain/money/money';
+import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
+import { asPersonId } from '@/src/types/ids';
+import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
 import { PersonRepayableChoice } from './PersonRepayableChoice';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
 import type { AccountRole } from '@/src/types/domainJournal';
-import React, { type RefObject, useCallback, useEffect, useRef } from 'react';
+import React, { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, type TextInput } from 'react-native';
 
 export interface SimpleFormProps {
@@ -120,93 +126,105 @@ export const SimpleForm = React.memo(function SimpleForm({
       ? activePersonAccount.accountType === AccountType.ASSET
       : activePersonAccount.accountType === AccountType.LIABILITY),
   );
-  const transferPersonAccountId =
-    editor.type === 'transfer'
-      ? peopleGroups?.find(group => group.accountIds.includes(editor.destinationId))
-        ? editor.destinationId
-        : peopleGroups?.find(group => group.accountIds.includes(editor.sourceId))
-          ? editor.sourceId
-          : undefined
+  const reducingTarget =
+    editor.type === 'transfer' && editor.savedStatus !== JournalStatus.POSTED
+      ? [
+          { id: editor.destinationId, direction: TransactionType.DEBIT },
+          { id: editor.sourceId, direction: TransactionType.CREDIT },
+        ].flatMap(({ id, direction }) => {
+          const account = editor.allAccounts.find(row => row.id === id);
+          const group = peopleGroups?.find(row => row.accountIds.includes(id));
+          return account &&
+            group &&
+            classifyPersonDebtPosting({
+              accountType: account.accountType,
+              transactionType: direction,
+            }) === 'reducing'
+            ? [{ account, group, direction }]
+            : [];
+        })[0]
       : undefined;
-  const transferPersonGroup = transferPersonAccountId
-    ? peopleGroups?.find(group => group.accountIds.includes(transferPersonAccountId))
-    : undefined;
-  const transferPersonAccount = editor.allAccounts.find(
-    account => account.id === transferPersonAccountId,
+  const reducingAccountId = reducingTarget?.account.id;
+  const reducingPersonId = reducingTarget ? asPersonId(reducingTarget.group.personId) : undefined;
+  const reducingCurrency = reducingTarget?.account.currencyCode;
+  const { precision: repaymentPrecision } = useCurrencyPrecision(reducingCurrency);
+  const isConvertedDestination = Boolean(
+    reducingTarget?.direction === TransactionType.DEBIT && editor.isCrossCurrency,
   );
-  const isReducingPersonBalance = Boolean(
-    transferPersonAccount &&
-    ((transferPersonAccount.accountType === AccountType.ASSET &&
-      transferPersonAccountId === editor.sourceId) ||
-      (transferPersonAccount.accountType === AccountType.LIABILITY &&
-        transferPersonAccountId === editor.destinationId)),
-  );
-  const transferTargetAccountId = transferPersonAccountId;
+  const reductionAmount = isConvertedDestination
+    ? (editor.fxPair.convertedAmount ?? 0)
+    : parseSimpleAmountInput(editor.amount);
   const transferOpenItems = useTransferOpenItems({
-    workplaceId: workplaceId!,
-    workplaceCurrency: workplaceCurrency ?? editor.displayCurrency,
-    personId: workplaceId ? (transferPersonGroup?.personId as PersonId | undefined) : undefined,
-    accountId: transferPersonAccountId,
+    workplaceId,
+    personId: reducingPersonId,
+    accountId: reducingAccountId,
     initialOpenItemId,
-    transferAmountText: editor.amount,
-    precision,
-    currencyCode: editor.displayCurrency,
+    transferAmount: reductionAmount,
+    precision: repaymentPrecision,
   });
+  const { allocationMode, selectedAllocations, isLoading, error } = transferOpenItems;
   useEffect(() => {
-    if (
-      editor.type !== 'transfer' ||
-      !transferPersonGroup ||
-      !isReducingPersonBalance ||
-      !transferTargetAccountId ||
-      !workplaceId
-    ) {
+    if (!reducingAccountId || !reducingPersonId || !workplaceId || isLoading || error) {
       onTransferOpenItemPlanChange?.(null);
-      return;
+    } else {
+      onTransferOpenItemPlanChange?.({
+        personId: reducingPersonId,
+        targetAccountId: reducingAccountId,
+        allocationMode,
+        allocations: selectedAllocations,
+      });
     }
-    onTransferOpenItemPlanChange?.({
-      personId: transferPersonGroup.personId as PersonId,
-      targetAccountId: transferTargetAccountId,
-      allocationMode: transferOpenItems.allocationMode,
-      allocations: transferOpenItems.selectedAllocations,
-    });
+    return () => onTransferOpenItemPlanChange?.(null);
   }, [
-    editor.type,
-    isReducingPersonBalance,
+    allocationMode,
+    error,
+    isLoading,
     onTransferOpenItemPlanChange,
-    transferOpenItems.allocationMode,
-    transferOpenItems.selectedAllocations,
-    transferPersonGroup,
-    transferTargetAccountId,
+    reducingAccountId,
+    reducingPersonId,
+    selectedAllocations,
     workplaceId,
   ]);
 
+  const [isResolvingAccount, setIsResolvingAccount] = useState(false);
+  const latestPersonLeg = useRef(activePersonAccountId);
+  latestPersonLeg.current = activePersonAccountId;
   const handleTogglePersonRepayable = useCallback(
-    (nextRepayable: boolean) => {
-      if (!activePersonGroup || !activePersonLegRole) return;
-      const expected = expectedPersonAccount(personFlow, nextRepayable);
-      const matchingAccount = editor.allAccounts.find(
-        account =>
-          activePersonGroup.accountIds.includes(account.id) &&
-          account.accountType === expected.type,
-      );
-      if (matchingAccount) {
-        if (activePersonLegRole === 'destination') handleSelectDestination(matchingAccount.id);
-        else handleSelectSource(matchingAccount.id);
-        return;
+    async (nextRepayable: boolean) => {
+      if (!activePersonGroup || !activePersonLegRole || !workplaceId || isResolvingAccount) return;
+      const currency = activePersonAccount?.currencyCode ?? workplaceCurrency;
+      if (!currency) return;
+      setIsResolvingAccount(true);
+      try {
+        const role = expectedPersonAccount(personFlow, nextRepayable).role;
+        const account = await ensurePersonAccount(
+          workplaceId,
+          asPersonId(activePersonGroup.personId),
+          role,
+          currency,
+        );
+        if (latestPersonLeg.current !== activePersonAccountId) return;
+        if (activePersonLegRole === 'destination') editor.setDestinationId(account.id, account);
+        else editor.setSourceId(account.id, account);
+      } catch (error) {
+        showErrorAlert(
+          error instanceof Error ? error.message : 'Could not select a person account',
+        );
+      } finally {
+        setIsResolvingAccount(false);
       }
-      onCreateAccountRequest?.(activePersonLegRole, {
-        suggestedName: `${activePersonGroup.personName} (${expected.role})`,
-        type: expected.type,
-      });
     },
     [
+      activePersonAccount?.currencyCode,
+      activePersonAccountId,
       activePersonGroup,
       activePersonLegRole,
-      editor.allAccounts,
-      handleSelectDestination,
-      handleSelectSource,
-      onCreateAccountRequest,
+      editor.setDestinationId,
+      editor.setSourceId,
+      isResolvingAccount,
       personFlow,
+      workplaceCurrency,
+      workplaceId,
     ],
   );
 
@@ -250,25 +268,32 @@ export const SimpleForm = React.memo(function SimpleForm({
         onCreatePersonRequest={onCreatePersonRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
-      {editor.type === 'transfer' &&
-        transferPersonGroup &&
-        isReducingPersonBalance &&
-        transferOpenItems.openItems.length > 0 && (
-          <TransferOpenItemsCard
-            items={transferOpenItems.openItems}
-            totalOpenRemainder={transferOpenItems.totalOpenRemainder}
-            currencyCode={editor.displayCurrency}
-            quickFillChips={transferOpenItems.quickFillChips}
-            allocationMode={transferOpenItems.allocationMode}
-            onAllocationModeChange={transferOpenItems.setAllocationMode}
-            selectedItemIds={transferOpenItems.selectedItemIds}
-            onToggleItem={id =>
-              transferOpenItems.setSelectedItemIds(current => ({ ...current, [id]: !current[id] }))
+      {reducingCurrency && transferOpenItems.openItems.length > 0 && (
+        <TransferOpenItemsCard
+          items={transferOpenItems.openItems}
+          totalOpenRemainder={transferOpenItems.totalOpenRemainder}
+          currencyCode={reducingCurrency}
+          precision={repaymentPrecision}
+          quickFillChips={transferOpenItems.quickFillChips}
+          allocationMode={transferOpenItems.allocationMode}
+          onAllocationModeChange={transferOpenItems.setAllocationMode}
+          selectedItemIds={transferOpenItems.selectedItemIds}
+          onToggleItem={transferOpenItems.toggleItem}
+          onSelectOnlyItem={transferOpenItems.selectOnlyItem}
+          onQuickFillAmount={val => {
+            const amount = parseSimpleAmountInput(val);
+            if (isConvertedDestination) {
+              if (!editor.setRepaymentDestinationAmount(amount)) {
+                showErrorAlert('Enter the exchange rate before filling a repayment amount');
+                return;
+              }
+            } else {
+              editor.setAmount(formatRoundedAmount(amount, precision));
             }
-            onQuickFillAmount={val => editor.setAmount(Number(val).toFixed(precision))}
-            activeAmount={Number(editor.amount.replace(/,/g, ''))}
-          />
-        )}
+          }}
+          activeAmount={reductionAmount}
+        />
+      )}
       {activePersonGroup && activePersonAccount && (
         <PersonRepayableChoice
           flow={personFlow}

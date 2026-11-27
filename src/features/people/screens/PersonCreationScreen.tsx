@@ -14,16 +14,12 @@ import {
 } from '@/src/components/core';
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import {
-  SelectionPickerSheet,
-  type SelectionOption,
-  type SelectionSection,
-} from '@/src/components/filters/SelectionPickerSheet';
+import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormRow } from '@/src/components/forms/FormRow';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
-import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Inline, Stack } from '@/src/design-system';
 import { useCurrencies } from '@/src/hooks/use-currencies';
@@ -37,8 +33,6 @@ import type { AccountId, PersonId } from '@/src/types/ids';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-
-const POPULAR_CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD', 'AED'] as const;
 
 type LinkableAccount = Awaited<
   ReturnType<typeof peopleReadService.listLinkableAccountsForPeople>
@@ -211,39 +205,6 @@ export function PersonCreationScreen() {
       row => row.personId !== personId && row.personName.trim().toLocaleLowerCase() === normalized,
     );
   }, [existingPeople, name, personId]);
-
-  const currencySections = useMemo((): SelectionSection<string>[] => {
-    const popularSet = new Set<string>([workplaceCurrency, ...POPULAR_CURRENCY_CODES]);
-    if (defaultCurrencyCode) popularSet.add(defaultCurrencyCode);
-    const toOption = (currency: (typeof currencies)[number]): SelectionOption<string> => ({
-      id: currency.code,
-      label: currency.name,
-      meta: currency.code,
-      keywords: currency.symbol,
-      leading: (
-        <View style={[styles.currencyBadge, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppText
-            variant="caption"
-            weight="bold"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.65}
-          >
-            {currency.symbol}
-          </AppText>
-        </View>
-      ),
-    });
-    const sorted = [...currencies].sort(
-      (a, b) => a.name.localeCompare(b.name) || a.code.localeCompare(b.code),
-    );
-    const popular = sorted.filter(c => popularSet.has(c.code)).map(toOption);
-    const rest = sorted.filter(c => !popularSet.has(c.code)).map(toOption);
-    return [
-      ...(popular.length ? [{ title: 'Popular', data: popular }] : []),
-      ...(rest.length ? [{ title: 'All currencies', data: rest }] : []),
-    ];
-  }, [currencies, defaultCurrencyCode, theme.surfaceSecondary, workplaceCurrency]);
 
   const selectedAccount = useMemo(
     () => linkableAccounts.find(account => account.id === initialAccountId),
@@ -526,20 +487,16 @@ export function PersonCreationScreen() {
         </Stack>
       </View>
 
-      <SelectionPickerSheet
+      <CurrencyPickerSheet
         visible={currencyPickerOpen}
         title="Preferred currency"
-        sections={currencySections}
-        selectedValue={defaultCurrencyCode || workplaceCurrency}
-        searchPlaceholder={AppConfig.strings.common.currencySearchPlaceholder}
-        emptyMessage={AppConfig.strings.common.currencyEmptySearch}
-        showSearch
+        currencies={currencies}
+        selectedCurrency={defaultCurrencyCode || workplaceCurrency}
         onClose={() => setCurrencyPickerOpen(false)}
         onSelect={code => {
           setDefaultCurrencyCode(code);
           setCurrencyPickerOpen(false);
         }}
-        accessibilityCloseLabel={AppConfig.strings.common.closeCurrencyPicker}
       />
 
       <AccountPickerModal
@@ -617,14 +574,5 @@ const styles = StyleSheet.create({
     minHeight: 56,
     paddingTop: 0,
     textAlignVertical: 'top',
-  },
-  currencyBadge: {
-    width: Size.xl,
-    height: Size.xl,
-    borderRadius: Shape.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xs,
-    overflow: 'hidden',
   },
 });

@@ -520,40 +520,72 @@ export const nativePlugin: ImportPlugin = {
           deletedAt: parseTimestamp(x.deletedAt),
           archivedAt: parseTimestamp(x.archivedAt),
         })),
-        personAccounts: (data.personAccounts ?? []).map(x => ({
-          ...x,
-          id: personAccountMap.get(x.id)!,
-          personId: personMap.get(x.personId)!,
-          accountId: requireMappedAccountId(accountMap, x.accountId, `person account "${x.id}"`),
-          createdAt: parseTimestamp(x.createdAt),
-          updatedAt: parseTimestamp(x.updatedAt),
-          deletedAt: parseTimestamp(x.deletedAt),
-        })),
-        openItems: (data.openItems ?? []).map(x => ({
-          ...x,
-          id: openItemMap.get(x.id)!,
-          personId: personMap.get(x.personId)!,
-          originatingJournalId: journalMap.get(x.originatingJournalId)!,
-          accountId: requireMappedAccountId(accountMap, x.accountId, `open item "${x.id}"`),
-          createdAt: parseTimestamp(x.createdAt),
-          updatedAt: parseTimestamp(x.updatedAt),
-          deletedAt: parseTimestamp(x.deletedAt),
-        })),
-        settlementAllocations: (data.settlementAllocations ?? []).map(x => ({
-          ...x,
-          id: settlementAllocationMap.get(x.id)!,
-          personId: personMap.get(x.personId)!,
-          openItemId: openItemMap.get(x.openItemId)!,
-          settlementJournalId: journalMap.get(x.settlementJournalId)!,
-          accountId: requireMappedAccountId(
-            accountMap,
-            x.accountId,
-            `settlement allocation "${x.id}"`,
-          ),
-          createdAt: parseTimestamp(x.createdAt),
-          updatedAt: parseTimestamp(x.updatedAt),
-          deletedAt: parseTimestamp(x.deletedAt),
-        })),
+        personAccounts: (data.personAccounts ?? []).flatMap(x => {
+          const personId = personMap.get(x.personId);
+          const accountId = accountMap.get(x.accountId);
+          if (x.deletedAt != null && (!personId || !accountId)) return [];
+          return [
+            {
+              ...x,
+              id: personAccountMap.get(x.id)!,
+              personId: personId!,
+              accountId: requireMappedAccountId(
+                accountMap,
+                x.accountId,
+                `person account "${x.id}"`,
+              ),
+              createdAt: parseTimestamp(x.createdAt),
+              updatedAt: parseTimestamp(x.updatedAt),
+              deletedAt: parseTimestamp(x.deletedAt),
+            },
+          ];
+        }),
+        openItems: (data.openItems ?? []).flatMap(x => {
+          const personId = personMap.get(x.personId);
+          const originatingJournalId = journalMap.get(x.originatingJournalId);
+          const accountId = accountMap.get(x.accountId);
+          if (x.deletedAt != null && (!personId || !originatingJournalId || !accountId)) return [];
+          return [
+            {
+              ...x,
+              id: openItemMap.get(x.id)!,
+              personId: personId!,
+              originatingJournalId: originatingJournalId!,
+              accountId: requireMappedAccountId(accountMap, x.accountId, `open item "${x.id}"`),
+              createdAt: parseTimestamp(x.createdAt),
+              updatedAt: parseTimestamp(x.updatedAt),
+              deletedAt: parseTimestamp(x.deletedAt),
+            },
+          ];
+        }),
+        settlementAllocations: (data.settlementAllocations ?? []).flatMap(x => {
+          const personId = personMap.get(x.personId);
+          const openItemId = openItemMap.get(x.openItemId);
+          const settlementJournalId = journalMap.get(x.settlementJournalId);
+          const accountId = accountMap.get(x.accountId);
+          if (
+            (x.deletedAt != null || !x.isActive) &&
+            (!personId || !openItemId || !settlementJournalId || !accountId)
+          )
+            return [];
+          return [
+            {
+              ...x,
+              id: settlementAllocationMap.get(x.id)!,
+              personId: personId!,
+              openItemId: openItemId!,
+              settlementJournalId: settlementJournalId!,
+              accountId: requireMappedAccountId(
+                accountMap,
+                x.accountId,
+                `settlement allocation "${x.id}"`,
+              ),
+              createdAt: parseTimestamp(x.createdAt),
+              updatedAt: parseTimestamp(x.updatedAt),
+              deletedAt: parseTimestamp(x.deletedAt),
+            },
+          ];
+        }),
       };
 
       logger.info('[NativePlugin] Parsing successful.');

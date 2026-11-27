@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { asAccountId, asTransactionId, type AccountId } from '@/src/types/ids';
+import { asAccountId, asTransactionId, EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { type UseSplitJournalEditorProps, useSplitJournalEditor } from '../useSplitJournalEditor';
 import type { JournalEntryLine } from '@/src/types/domainJournal';
@@ -191,6 +191,66 @@ describe('useSplitJournalEditor', () => {
 
     expect(editor.lines).toHaveLength(2);
     expect(editor.lines.map(line => line.id)).toEqual(['source', 'split-2']);
+  });
+
+  it('removes a participant account group atomically and leaves one blank allocation row', () => {
+    const editor = createEditor();
+    const accounts = [
+      { id: 'cash', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      { id: 'groceries', name: 'Groceries', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+      { id: 'bills', name: 'Bills', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+    ];
+    const { result } = renderHook(() =>
+      useSplitJournalEditor({
+        accounts: accounts as AccountFields[],
+        workplaceCurrency: 'USD',
+        editor,
+      }),
+    );
+
+    act(() => {
+      result.current.removeSplitRowsForAccounts([asAccountId('groceries'), asAccountId('bills')]);
+    });
+
+    expect(editor.setLines).toHaveBeenCalledTimes(1);
+    expect(editor.lines).toHaveLength(2);
+    expect(editor.lines[1]).toMatchObject({
+      id: 'split-1',
+      accountId: EMPTY_ACCOUNT_ID,
+      amount: '',
+    });
+  });
+
+  it('seeds a quick-added participant row with its receivable currency before accounts refresh', () => {
+    const editor = createEditor();
+    const accounts = [
+      { id: 'cash', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      { id: 'groceries', name: 'Groceries', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+      { id: 'bills', name: 'Bills', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+    ];
+    const { result } = renderHook(() =>
+      useSplitJournalEditor({
+        accounts: accounts as AccountFields[],
+        workplaceCurrency: 'USD',
+        editor,
+      }),
+    );
+
+    act(() => {
+      result.current.addSplitRowWithAccount(asAccountId('new-person-account'), {
+        accountType: AccountType.ASSET,
+        currencyCode: 'EUR',
+      });
+    });
+
+    expect(editor.addLine).toHaveBeenCalledWith(
+      TransactionType.DEBIT,
+      expect.objectContaining({
+        accountId: asAccountId('new-person-account'),
+        accountType: AccountType.ASSET,
+        accountCurrency: 'EUR',
+      }),
+    );
   });
 
   it.each([

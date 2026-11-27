@@ -8,6 +8,7 @@ export interface IntegrityPosting {
   accountType: AccountType;
   transactionType: TransactionType;
   amount: number;
+  precision?: number;
 }
 
 export function evaluateJournalEditIntegrity(input: {
@@ -23,9 +24,22 @@ export function evaluateJournalEditIntegrity(input: {
   const active = input.allocations.filter(a => a.active);
   const owned = input.items.filter(i => i.originatingJournalId === input.journalId);
   for (const item of owned) {
+    const precision =
+      input.proposedLines.find(l => l.accountId === item.accountId)?.precision ??
+      input.beforeLines.find(l => l.accountId === item.accountId)?.precision ??
+      2;
+    const scale = 10 ** precision;
+    const imprecise = [...input.beforeLines, ...input.proposedLines]
+      .filter(line => line.accountId === item.accountId)
+      .some(line => Math.abs(line.amount * scale - Math.round(line.amount * scale)) > 1e-7);
+    const minor = (amount: number) => {
+      const scaled = amount * 10 ** precision;
+      return Number.isFinite(scaled) ? Math.round(scaled) : 0;
+    };
     const allocated = active
       .filter(a => a.openItemId === item.id)
-      .reduce((s, a) => s + a.amount, 0);
+      .reduce((s, a) => s + minor(a.amount), 0);
+    if (imprecise) conflicts.push({ code: 'invalid_minor_unit_precision', openItemIds: [item.id] });
     const before = input.beforeLines
       .filter(
         l =>
@@ -33,7 +47,7 @@ export function evaluateJournalEditIntegrity(input: {
           l.originatingJournalId === input.journalId &&
           classifyPersonDebtPosting(l) === 'increasing',
       )
-      .reduce((s, l) => s + l.amount, 0);
+      .reduce((s, l) => s + minor(l.amount), 0);
     const after = input.proposedLines
       .filter(
         l =>
@@ -41,7 +55,7 @@ export function evaluateJournalEditIntegrity(input: {
           l.originatingJournalId === input.journalId &&
           classifyPersonDebtPosting(l) === 'increasing',
       )
-      .reduce((s, l) => s + l.amount, 0);
+      .reduce((s, l) => s + minor(l.amount), 0);
     if (before > 0 && after === 0 && allocated > 0)
       conflicts.push({ code: 'origin_removed', openItemIds: [item.id] });
     else if (after < allocated)
@@ -49,18 +63,63 @@ export function evaluateJournalEditIntegrity(input: {
   }
   if (input.settlementJournalId) {
     const settlementAllocations = active.filter(a => a.journalId === input.settlementJournalId);
-    const reducing = input.proposedLines
-      .filter(
-        l =>
-          l.originatingJournalId === input.settlementJournalId &&
-          classifyPersonDebtPosting(l) === 'reducing',
-      )
-      .reduce((s, l) => s + l.amount, 0);
-    const allocated = settlementAllocations.reduce((s, a) => s + a.amount, 0);
-    if (allocated > reducing)
+    const precisionForAccount = (accountId: string) =>
+      input.proposedLines.find(l => l.accountId === accountId)?.precision ??
+      input.beforeLines.find(l => l.accountId === accountId)?.precision ??
+      2;
+    const reducingByAccount = new Map<string, number>();
+    for (const line of input.proposedLines.filter(
+      l =>
+        l.originatingJournalId === input.settlementJournalId &&
+        classifyPersonDebtPosting(l) === 'reducing',
+    )) {
+      const scale = 10 ** precisionForAccount(line.accountId);
+      reducingByAccount.set(
+        line.accountId,
+        (reducingByAccount.get(line.accountId) ?? 0) + Math.round(line.amount * scale),
+      );
+    }
+    const allocatedByAccount = new Map<string, number>();
+    for (const allocation of settlementAllocations) {
+      const accountId =
+        allocation.accountId ??
+        input.items.find(candidate => candidate.id === allocation.openItemId)?.accountId;
+      if (!accountId) continue;
+      const scale = 10 ** precisionForAccount(accountId);
+      allocatedByAccount.set(
+        accountId,
+        (allocatedByAccount.get(accountId) ?? 0) + Math.round(allocation.amount * scale),
+      );
+    }
+    const overallocated = [...allocatedByAccount].filter(
+      ([accountId, allocated]) => allocated > (reducingByAccount.get(accountId) ?? 0),
+    );
+    const imprecise = input.proposedLines
+      .filter(line => line.originatingJournalId === input.settlementJournalId)
+      .some(
+        line =>
+          Math.abs(
+            line.amount * 10 ** precisionForAccount(line.accountId) -
+              Math.round(line.amount * 10 ** precisionForAccount(line.accountId)),
+          ) > 1e-7,
+      );
+    if (imprecise)
+      conflicts.push({
+        code: 'invalid_minor_unit_precision',
+        openItemIds: settlementAllocations.map(a => a.openItemId),
+      });
+    if (overallocated.length)
       conflicts.push({
         code: 'settlement_overallocated',
-        openItemIds: settlementAllocations.map(a => a.openItemId),
+        openItemIds: settlementAllocations
+          .filter(a =>
+            overallocated.some(
+              ([accountId]) =>
+                (a.accountId ?? input.items.find(item => item.id === a.openItemId)?.accountId) ===
+                accountId,
+            ),
+          )
+          .map(a => a.openItemId),
       });
   }
   return { allowed: conflicts.length === 0, conflicts, allocationsToDeactivate };

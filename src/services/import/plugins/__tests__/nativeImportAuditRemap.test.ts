@@ -48,6 +48,22 @@ describe('remapNativeAuditLog funding account IDs', () => {
     });
   });
 
+  it('remaps created repayment allocations and drops references omitted from the restored graph', () => {
+    const remapped = remapNativeAuditLog(
+      budgetLog({ createdSettlementAllocationIds: ['old-a', 'pruned'] }),
+      {
+        entities: {
+          ...emptyEntityMaps(),
+          settlement_allocation: new Map([['old-a', 'new-a']]),
+        },
+        auditLogs: new Map(),
+      },
+    );
+    expect(JSON.parse(String(remapped.changes))).toEqual({
+      createdSettlementAllocationIds: ['new-a'],
+    });
+  });
+
   it('remaps assetAccountIds string collections through JSON persist form', () => {
     const account = new Map([
       ['old-a', 'new-a'],

@@ -10,6 +10,7 @@ export interface BalanceRebuildRequest {
   workplaceId: WorkplaceId;
   accountId: AccountId;
   fromDate: number;
+  peopleSettlementJournalDate?: number;
 }
 
 export interface BalanceRebuildClaim extends BalanceRebuildRequest {
@@ -28,10 +29,22 @@ function intents() {
 export const balanceRebuildIntentRepository = {
   /** Resolve upserts under the accounting writer, before any model factories run. */
   async prepareUpserts(requests: readonly BalanceRebuildRequest[]): Promise<() => Model[]> {
-    const byWorkplace = new Map<WorkplaceId, Map<AccountId, number>>();
-    for (const { workplaceId, accountId, fromDate } of requests) {
-      const accounts = byWorkplace.get(workplaceId) ?? new Map<AccountId, number>();
-      accounts.set(accountId, Math.min(accounts.get(accountId) ?? fromDate, fromDate));
+    const byWorkplace = new Map<WorkplaceId, Map<AccountId, BalanceRebuildRequest>>();
+    for (const request of requests) {
+      const { workplaceId, accountId, fromDate } = request;
+      const accounts = byWorkplace.get(workplaceId) ?? new Map<AccountId, BalanceRebuildRequest>();
+      const previous = accounts.get(accountId);
+      accounts.set(accountId, {
+        ...request,
+        fromDate: Math.min(previous?.fromDate ?? fromDate, fromDate),
+        peopleSettlementJournalDate:
+          request.peopleSettlementJournalDate === undefined
+            ? previous?.peopleSettlementJournalDate
+            : Math.max(
+                previous?.peopleSettlementJournalDate ?? request.peopleSettlementJournalDate,
+                request.peopleSettlementJournalDate,
+              ),
+      });
       byWorkplace.set(workplaceId, accounts);
     }
     const existing = new Map<string, BalanceRebuildIntent>();
@@ -47,13 +60,19 @@ export const balanceRebuildIntentRepository = {
     return () => {
       const operations: Model[] = [];
       for (const [workplaceId, accounts] of byWorkplace) {
-        for (const [accountId, fromDate] of accounts) {
+        for (const [accountId, request] of accounts) {
+          const { fromDate, peopleSettlementJournalDate } = request;
           const key = balanceRebuildKey(workplaceId, accountId);
           const row = existing.get(key);
           operations.push(
             row
               ? row.prepareUpdate(record => {
                   record.fromDate = Math.min(record.fromDate, fromDate);
+                  record.peopleSettlementJournalDate =
+                    Math.max(
+                      record.peopleSettlementJournalDate ?? peopleSettlementJournalDate ?? 0,
+                      peopleSettlementJournalDate ?? 0,
+                    ) || undefined;
                   record.revision = generator();
                 })
               : intents().prepareCreate(record => {
@@ -61,6 +80,7 @@ export const balanceRebuildIntentRepository = {
                   record.workplaceId = workplaceId;
                   record.accountId = accountId;
                   record.fromDate = fromDate;
+                  record.peopleSettlementJournalDate = peopleSettlementJournalDate;
                   record.revision = generator();
                 }),
           );
@@ -86,13 +106,16 @@ export const balanceRebuildIntentRepository = {
 
   async listPending(): Promise<BalanceRebuildClaim[]> {
     const rows = await intents().query(Q.sortBy('created_at', Q.asc)).fetch();
-    return rows.map(({ id, revision, workplaceId, accountId, fromDate }) => ({
-      id,
-      revision,
-      workplaceId,
-      accountId,
-      fromDate,
-    }));
+    return rows.map(
+      ({ id, revision, workplaceId, accountId, fromDate, peopleSettlementJournalDate }) => ({
+        id,
+        revision,
+        workplaceId,
+        accountId,
+        fromDate,
+        peopleSettlementJournalDate,
+      }),
+    );
   },
 
   /** Call under the same writer that will publish the calculated balances. */

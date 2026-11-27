@@ -1249,5 +1249,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_i
 `),
       ],
     },
+    {
+      toVersion: 41,
+      steps: [
+        addColumns({
+          table: 'balance_rebuild_intents',
+          columns: [{ name: 'people_settlement_journal_date', type: 'number', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

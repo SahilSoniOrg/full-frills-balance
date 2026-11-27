@@ -1,6 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { planWeAreSettled } from '@/src/domain/people';
-import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useShareable } from '@/src/hooks/useShareable';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -10,18 +9,17 @@ import {
   executeWeAreSettled,
   linkExistingAccount,
   peopleReadService,
-  renamePerson,
+  previewPersonSettlement,
   setPersonArchived,
   updatePerson,
 } from '@/src/services/people';
 import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
 import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
-import { AccountType } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { setStringAsync } from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 type PersonDetailData = Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>;
 type LinkableAccount = Awaited<
@@ -32,18 +30,30 @@ type HistoryRow = Awaited<ReturnType<typeof peopleReadService.listPersonJournalH
 export function usePersonDetailsViewModel() {
   const { personId } = useLocalSearchParams<{ personId: PersonId }>();
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { data: tick } = useObservable(
+  const { version: tick } = useObservable(
     () => peopleReadService.observePeopleTick(workplaceId),
     [workplaceId],
     null,
   );
 
-  const [detail, setDetail] = useState<PersonDetailData>(null);
-  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const scope = JSON.stringify([workplaceId, personId]);
+  const latestScope = useRef(scope);
+  useLayoutEffect(() => {
+    latestScope.current = scope;
+  }, [scope]);
+  const loadRequest = useRef(0);
+  const [snapshot, setSnapshot] = useState<{
+    scope: string;
+    detail: PersonDetailData;
+    history: HistoryRow[];
+  }>();
+  const detail = snapshot?.scope === scope ? snapshot.detail : null;
+  const history = useMemo(
+    () => (snapshot?.scope === scope ? snapshot.history : []),
+    [scope, snapshot],
+  );
   const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameDraft, setRenameDraft] = useState('');
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [allocateTarget, setAllocateTarget] = useState<{
     accountId: AccountId;
@@ -61,31 +71,60 @@ export function usePersonDetailsViewModel() {
     includePaymentHandle: true,
   });
 
-  const load = useCallback(async () => {
-    if (!personId) {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const [nextDetail, nextHistory, nextLinkable] = await Promise.all([
-        peopleReadService.getPersonDetail(workplaceId, personId, defaultCurrencyCode),
-        peopleReadService.listPersonJournalHistory(workplaceId, personId),
-        peopleReadService.listLinkableAccountsForPeople(workplaceId),
-      ]);
-      setDetail(nextDetail);
-      setHistory(nextHistory);
-      setLinkableAccounts(nextLinkable);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [defaultCurrencyCode, personId, workplaceId]);
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!personId) {
+        setIsLoading(false);
+        return;
+      }
+      const request = ++loadRequest.current;
+      try {
+        const [nextDetail, nextHistory] = await Promise.all([
+          peopleReadService.getPersonDetail(workplaceId, personId, defaultCurrencyCode),
+          peopleReadService.listPersonJournalHistory(workplaceId, personId, signal),
+        ]);
+        if (signal?.aborted || latestScope.current !== scope || request !== loadRequest.current)
+          return;
+        setSnapshot({ scope, detail: nextDetail, history: nextHistory });
+      } catch (error) {
+        if (!signal?.aborted)
+          showErrorAlert(error instanceof Error ? error.message : 'Could not load person');
+      } finally {
+        if (!signal?.aborted && latestScope.current === scope && request === loadRequest.current)
+          setIsLoading(false);
+      }
+    },
+    [defaultCurrencyCode, personId, scope, workplaceId],
+  );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, 0);
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => void load(controller.signal), 0);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [load, tick]);
+
+  useEffect(() => {
+    if (!linkModalOpen) return;
+    let active = true;
+    // Clear the prior request's accounts when reopening the picker.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLinkableAccounts([]);
+    void peopleReadService
+      .listLinkableAccountsForPeople(workplaceId)
+      .then(accounts => {
+        if (active) setLinkableAccounts(accounts);
+      })
+      .catch(error => {
+        if (active)
+          showErrorAlert(error instanceof Error ? error.message : 'Could not load accounts');
+      });
+    return () => {
+      active = false;
+    };
+  }, [linkModalOpen, workplaceId]);
 
   const shareInput = useMemo(() => {
     if (!detail) return null;
@@ -122,97 +161,62 @@ export function usePersonDetailsViewModel() {
   );
   const share = useShareable(shareable);
 
-  const foreignCurrencies = useMemo(() => {
-    if (!detail) return [];
-    const currencies = detail.balanceSummary.currencies
-      .filter(c => c.currencyCode !== defaultCurrencyCode && (c.owedToYou > 0 || c.youOwe > 0))
-      .map(c => c.currencyCode);
-    return [...new Set(currencies)];
-  }, [defaultCurrencyCode, detail]);
+  const rateMap = useMemo(() => {
+    const rates = new Map<string, number>();
+    for (const [currency, draft] of Object.entries(fxRatesDraft)) {
+      const rate = parsePositiveRate(draft);
+      if (rate !== null) rates.set(currency, rate);
+    }
+    return rates;
+  }, [fxRatesDraft]);
 
-  const settledPreview = useMemo(() => {
-    if (!detail) return null;
-    const negative = detail.linkedAccounts.find(
-      a => a.unassignedState.hasNegativeUnassignedRemainder,
-    );
-    if (negative) {
-      return {
-        closingResidual: 0,
-        forgivenAccountName: `Forgiven ${detail.person.name}`,
-        forgivenAccountType: 'Expense' as const,
-        blockedReason: `${negative.account.name} has a negative unassigned remainder`,
-      };
-    }
-    const roles = new Map<string, 'receivable' | 'payable'>();
-    const precisionByCurrency = new Map<string, number>([
-      [defaultCurrencyCode, getCurrencyPrecision(defaultCurrencyCode)],
-    ]);
-    for (const linked of detail.linkedAccounts) {
-      precisionByCurrency.set(
-        linked.account.currencyCode,
-        getCurrencyPrecision(linked.account.currencyCode),
-      );
-      if (linked.account.accountType === AccountType.ASSET)
-        roles.set(linked.account.id, 'receivable');
-      else if (linked.account.accountType === AccountType.LIABILITY)
-        roles.set(linked.account.id, 'payable');
-    }
-    const rateMap = new Map<string, number>();
-    for (const currency of foreignCurrencies) {
-      const parsed = Number(fxRatesDraft[currency] ?? '');
-      if (Number.isFinite(parsed) && parsed > 0) rateMap.set(currency, parsed);
-    }
-    try {
-      const plan = planWeAreSettled({
-        accounts: detail.linkedAccounts.map(a => a.unassignedState),
-        items: detail.openItems.map(o => o.item),
-        activeAllocations: detail.activeAllocations.map(a => ({
-          id: a.id,
-          openItemId: a.openItemId,
-          journalId: a.settlementJournalId,
-          amount: a.amount,
-          active: a.isActive,
-        })),
-        roles,
-        workplaceCurrency: defaultCurrencyCode,
-        expenseAccountId: '__pending_expense__' as AccountId,
-        incomeAccountId: '__pending_income__' as AccountId,
-        precisionByCurrency,
-        exchangeRateByCurrency: rateMap,
+  const [settlement, setSettlement] = useState<Awaited<
+    ReturnType<typeof previewPersonSettlement>
+  > | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isConfirmingSettlement, setIsConfirmingSettlement] = useState(false);
+  const detailPersonId = detail?.person.id;
+
+  useEffect(() => {
+    if (!detailPersonId || (!settledFxOpen && !settledPreviewOpen)) return;
+    let active = true;
+    // Disable confirmation while the refreshed settlement is being calculated.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsPreviewing(true);
+    void previewPersonSettlement(workplaceId, detailPersonId, defaultCurrencyCode, rateMap)
+      .then(next => {
+        if (active) setSettlement(next);
+      })
+      .catch(error => {
+        if (active) {
+          setSettlement(null);
+          showErrorAlert(error instanceof Error ? error.message : 'Could not preview settlement');
+        }
+      })
+      .finally(() => {
+        if (active) setIsPreviewing(false);
       });
-      const residualExpense = plan.lines.find(l => l.accountId === '__pending_expense__');
-      const residualIncome = plan.lines.find(l => l.accountId === '__pending_income__');
-      const closingResidual = residualExpense?.amount ?? residualIncome?.amount ?? 0;
-      return {
-        closingResidual,
-        plan,
-        forgivenAccountName: residualIncome
-          ? `${detail.person.name} (Income)`
-          : `${detail.person.name} (Expense)`,
-        forgivenAccountType: (residualIncome ? 'Income' : 'Expense') as 'Expense' | 'Income',
-        blockedReason: plan.lines.length < 2 ? 'Nothing open to close' : undefined,
-      };
-    } catch (error) {
-      return {
-        closingResidual: 0,
-        forgivenAccountName: `${detail.person.name} (Expense)`,
-        forgivenAccountType: 'Expense' as const,
-        blockedReason: error instanceof Error ? error.message : 'Cannot preview settlement',
-      };
-    }
-  }, [defaultCurrencyCode, detail, foreignCurrencies, fxRatesDraft]);
+    return () => {
+      active = false;
+    };
+  }, [
+    defaultCurrencyCode,
+    detailPersonId,
+    rateMap,
+    settledFxOpen,
+    settledPreviewOpen,
+    tick,
+    workplaceId,
+  ]);
 
-  const handleRename = useCallback(async () => {
-    if (!detail) return;
-    try {
-      await renamePerson(workplaceId, detail.person.id, renameDraft);
-      setRenameOpen(false);
-      toast.success('Updated person name.');
-      await load();
-    } catch (error) {
-      showErrorAlert(error instanceof Error ? error.message : 'Could not rename person');
-    }
-  }, [detail, load, renameDraft, workplaceId]);
+  const foreignCurrencies = settlement?.foreignCurrencies ?? [];
+  const settledPreview =
+    settlement && detail
+      ? {
+          ...settlement,
+          forgivenAccountName: detail.person.name + ' (' + settlement.forgivenAccountType + ')',
+        }
+      : null;
 
   const handleToggleArchive = useCallback(async () => {
     if (!detail) return;
@@ -283,26 +287,36 @@ export function usePersonDetailsViewModel() {
     [allocateTarget, detail, load, workplaceId],
   );
 
-  const handleStartWeAreSettled = useCallback(() => {
-    if (!detail) return;
-    if (foreignCurrencies.length > 0) {
-      setSettledFxOpen(true);
-    } else {
-      setSettledPreviewOpen(true);
+  const handleStartWeAreSettled = useCallback(async () => {
+    if (!detail || isPreviewing) return;
+    setIsPreviewing(true);
+    try {
+      const preview = await previewPersonSettlement(
+        workplaceId,
+        detail.person.id,
+        defaultCurrencyCode,
+        rateMap,
+      );
+      setSettlement(preview);
+      if (preview.foreignCurrencies.length) setSettledFxOpen(true);
+      else setSettledPreviewOpen(true);
+    } catch (error) {
+      showErrorAlert(error instanceof Error ? error.message : 'Could not preview settlement');
+    } finally {
+      setIsPreviewing(false);
     }
-  }, [detail, foreignCurrencies]);
+  }, [defaultCurrencyCode, detail, isPreviewing, rateMap, workplaceId]);
 
   const handleConfirmWeAreSettled = useCallback(async () => {
-    if (!detail || !settledPreview?.plan || settledPreview.blockedReason) return;
-    const rateMap = new Map<string, number>();
-    for (const currency of foreignCurrencies) {
-      const parsed = Number(fxRatesDraft[currency]);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        showErrorAlert(`Enter a valid exchange rate for ${currency}`);
-        return;
-      }
-      rateMap.set(currency, parsed);
-    }
+    if (
+      !detail ||
+      !settledPreview?.plan ||
+      settledPreview.blockedReason ||
+      isPreviewing ||
+      isConfirmingSettlement
+    )
+      return;
+    setIsConfirmingSettlement(true);
     try {
       await executeWeAreSettled(workplaceId, {
         personId: detail.person.id,
@@ -315,13 +329,18 @@ export function usePersonDetailsViewModel() {
       await load();
     } catch (error) {
       showErrorAlert(error instanceof Error ? error.message : 'Could not settle balances');
+      setSettledPreviewOpen(false);
+      setSettlement(null);
+    } finally {
+      setIsConfirmingSettlement(false);
     }
   }, [
     defaultCurrencyCode,
     detail,
-    foreignCurrencies,
-    fxRatesDraft,
+    isConfirmingSettlement,
+    isPreviewing,
     load,
+    rateMap,
     settledPreview,
     workplaceId,
   ]);
@@ -335,10 +354,8 @@ export function usePersonDetailsViewModel() {
     isLoading,
     foreignCurrencies,
     settledPreview,
-    renameOpen,
-    setRenameOpen,
-    renameDraft,
-    setRenameDraft,
+    isPreviewing,
+    isConfirmingSettlement,
     linkModalOpen,
     setLinkModalOpen,
     allocateTarget,
@@ -363,7 +380,6 @@ export function usePersonDetailsViewModel() {
       detail && AppNavigation.toSettleUp({ personId: detail.person.id, mode: 'match' }),
     onOpenJournal: (journalId: JournalId) => AppNavigation.toJournalDetails(journalId),
     onEditProfile: () => detail && AppNavigation.toPersonEdit(detail.person.id, workplaceId),
-    onRename: handleRename,
     onToggleArchive: handleToggleArchive,
     onTogglePin: handleTogglePin,
     onCopyPaymentHandle: handleCopyPaymentHandle,

@@ -113,40 +113,39 @@ export function useSplitJournalEditor({
     editor.addLine();
   }, [editor]);
   const addSplitRowWithAccount = useCallback(
-    (accountId: AccountId) => {
+    (
+      accountId: AccountId,
+      fallback?: Partial<Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>>,
+    ) => {
       const account = accounts.find(candidate => candidate.id === accountId);
       const patch = lineAccountPatch(
         accountId,
         account,
-        getInferredAccountType(transactionType, TransactionType.DEBIT),
+        fallback?.accountType ?? getInferredAccountType(transactionType, TransactionType.DEBIT),
       );
+      if (!account) {
+        patch.accountName = fallback?.name ?? '';
+        patch.accountType = fallback?.accountType ?? patch.accountType;
+        patch.accountCurrency = fallback?.currencyCode;
+      }
 
       if (
         destinationLines.length === 1 &&
         (!destinationLines[0].accountId || destinationLines[0].accountId === EMPTY_ACCOUNT_ID) &&
         destinationLines[0].amount === ''
       ) {
-        updateLine(destinationLines[0].id, patch);
+        updateLine(destinationLines[0].id, { ...patch, exchangeRate: '' });
         return;
       }
 
-      editor.setLines(previous => {
-        const numericIds = previous
-          .map(line => Number.parseInt(line.id, 10))
-          .filter(Number.isFinite);
-        const nextId = String((numericIds.length ? Math.max(...numericIds) : previous.length) + 1);
-        const line: JournalEntryLine = {
-          id: nextId as JournalEntryLine['id'],
-          ...patch,
-          amount: '',
-          transactionType: TransactionType.DEBIT,
-          notes: '',
-          exchangeRate: '',
-        };
-        return [...previous, line];
+      editor.addLine(TransactionType.DEBIT, {
+        ...patch,
+        amount: '',
+        notes: '',
+        exchangeRate: '',
       });
     },
-    [accounts, destinationLines, editor, transactionType, updateLine],
+    [accounts, destinationLines, editor.addLine, transactionType, updateLine],
   );
   const removeSplitRow = useCallback(
     (id: string) => {
@@ -162,6 +161,38 @@ export function useSplitJournalEditor({
       });
     },
     [editor],
+  );
+  const removeSplitRowsForAccounts = useCallback(
+    (accountIds: readonly AccountId[]) => {
+      const ids = new Set(accountIds);
+      if (ids.size === 0) return;
+      editor.setLines(previous => {
+        const splitRows = previous.filter(line => line.transactionType === TransactionType.DEBIT);
+        const remaining = splitRows.filter(line => !ids.has(line.accountId));
+        const isSelectedSplitRow = (line: JournalEntryLine) =>
+          line.transactionType === TransactionType.DEBIT && ids.has(line.accountId);
+        if (remaining.length > 0) return previous.filter(line => !isSelectedSplitRow(line));
+        const blank = splitRows.find(line => ids.has(line.accountId)) ?? splitRows[0];
+        if (!blank) return previous;
+        return previous.flatMap(line => {
+          if (line.id !== blank.id) return isSelectedSplitRow(line) ? [] : [line];
+          return [
+            {
+              ...blank,
+              ...lineAccountPatch(
+                EMPTY_ACCOUNT_ID,
+                undefined,
+                getInferredAccountType(transactionType, TransactionType.DEBIT),
+              ),
+              amount: '',
+              notes: '',
+              exchangeRate: '',
+            },
+          ];
+        });
+      });
+    },
+    [editor.setLines, transactionType],
   );
   const updateSplitAmounts = useCallback(
     (updates: Record<string, string>) => {
@@ -418,6 +449,7 @@ export function useSplitJournalEditor({
       addSplitRow,
       addSplitRowWithAccount,
       removeSplitRow,
+      removeSplitRowsForAccounts,
       updateSplitRow,
       updateSplitAmounts,
       updateAmount,
@@ -452,6 +484,7 @@ export function useSplitJournalEditor({
       addSplitRow,
       addSplitRowWithAccount,
       removeSplitRow,
+      removeSplitRowsForAccounts,
       updateSplitRow,
       updateSplitAmounts,
       updateAmount,

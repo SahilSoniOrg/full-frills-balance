@@ -208,6 +208,7 @@ export function prepareAuxiliaryImportRecords(
       r._raw.id = x.id;
       r.workplaceId = workplaceId;
       r.name = x.name;
+      r.icon = x.icon as Person['icon'];
       r.notes = x.notes;
       r.color = x.color;
       r.defaultCurrencyCode = x.defaultCurrencyCode;

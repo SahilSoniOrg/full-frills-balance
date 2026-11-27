@@ -1,8 +1,8 @@
 export { PeopleReadService, peopleReadService } from './peopleReadService';
 export {
   createPerson,
+  createPersonWithReceivable,
   updatePerson,
-  renamePerson,
   setPersonArchived,
   softDeletePerson,
   linkExistingAccount,
@@ -11,14 +11,11 @@ export {
   type PersonProfileInput,
   type PersonProfilePatch,
 } from './peopleLifecycleCommands';
-export { saveSplitExpense, saveFriendPaidBill, recordPersonMovement } from './peopleSplitCommands';
 export {
-  autoSettlePerson,
-  autoSettlePersonInSession,
-  autoSettleTouchedPeople,
   recordRepayment,
   allocateUnassignedRepayment,
   executeWeAreSettled,
+  previewPersonSettlement,
   type RepaymentAllocationInput,
   type RecordRepaymentInput,
   type AllocateUnassignedRepaymentInput,

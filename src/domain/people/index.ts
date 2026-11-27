@@ -5,3 +5,4 @@ export * from './personSplitPlanner';
 export * from './personSettlementPlanner';
 export * from './personJournalIntegrity';
 export * from './personShareSummary';
+export { allocatePersonRepaymentMinorUnits } from './personRepaymentAllocation';

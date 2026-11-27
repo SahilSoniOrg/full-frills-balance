@@ -304,9 +304,13 @@ export async function stageReassignAccounts(
       journalId: journal.id,
       status: journal.status,
       accountsById: balance.accountsById,
+      precisionByAccountId: balance.precisionByAccountId,
       beforeTransactions: beforeByJournal.get(journal.id) ?? [],
       newLines: balance.lines,
       isReversal: Boolean(journal.originalJournalId),
+      journalDate: journal.journalDate,
+      previousJournalDate: journal.journalDate,
+      previousStatus: journal.status,
     });
   }
 

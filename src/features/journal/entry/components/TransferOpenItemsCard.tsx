@@ -1,10 +1,11 @@
+import { OpenItemAmount } from '@/src/components/shared/OpenItemAmount';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
+import { toMinorUnits } from '@/src/domain/money/money';
 import {
   AppCard,
   AppSegmentedControl,
   AppText,
-  AppIcon,
   Badge,
-  Icon,
   PressScaleTouchable,
 } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
@@ -24,10 +25,12 @@ type Props = {
   items: Item[];
   totalOpenRemainder: number;
   currencyCode: string;
+  precision?: number;
   quickFillChips: { id: string; label: string; amount: number }[];
   allocationMode: 'fifo' | 'pick';
   onAllocationModeChange: (mode: 'fifo' | 'pick') => void;
   selectedItemIds: Record<string, boolean>;
+  onSelectOnlyItem?: (itemId: string) => void;
   onToggleItem: (id: OpenItemId) => void;
   onQuickFillAmount: (amount: string) => void;
   activeAmount?: number;
@@ -52,10 +55,15 @@ export function TransferOpenItemsCard(p: Props) {
               const isChipSelected =
                 typeof p.activeAmount === 'number' &&
                 Number.isFinite(p.activeAmount) &&
-                Math.abs(p.activeAmount - c.amount) < 0.005;
+                toMinorUnits(p.activeAmount, p.precision ?? 2) ===
+                  toMinorUnits(c.amount, p.precision ?? 2);
               const handleChipPress = () => {
                 p.onQuickFillAmount(String(c.amount));
                 if (c.id !== 'full' && c.id !== 'half') {
+                  if (p.onSelectOnlyItem) {
+                    p.onSelectOnlyItem(c.id);
+                    return;
+                  }
                   if (p.allocationMode !== 'pick') p.onAllocationModeChange('pick');
                   for (const item of p.items) {
                     if (Boolean(p.selectedItemIds[item.item.id]) !== (item.item.id === c.id)) {
@@ -122,14 +130,13 @@ export function TransferOpenItemsCard(p: Props) {
                 ]}
               >
                 <Inline justifyContent="space-between" alignItems="center" gap="sm">
-                  <AppText variant="body" style={styles.itemRowText}>
-                    {`Original ${formatMoneyAmount(x.item.originalAmount, x.item.currencyCode, isPrivacyMode)} · ${formatMoneyAmount(x.remainder, x.item.currencyCode, isPrivacyMode)} left`}
-                  </AppText>
-                  <AppIcon
-                    name={isSelected ? Icon.CheckCircle : Icon.Circle}
-                    size={Size.iconSm}
-                    color={isSelected ? theme.primary : theme.textTertiary}
+                  <OpenItemAmount
+                    originalAmount={x.item.originalAmount}
+                    remainder={x.remainder}
+                    currencyCode={x.item.currencyCode}
+                    isPrivacyMode={isPrivacyMode}
                   />
+                  <SelectionIndicator selected={isSelected} />
                 </Inline>
               </PressScaleTouchable>
             );
@@ -161,8 +168,5 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.lg,
     borderWidth: 1,
     justifyContent: 'center',
-  },
-  itemRowText: {
-    flex: 1,
   },
 });

@@ -11,6 +11,8 @@ interface UseJournalEditorLineStateProps {
   initialDestinationId?: AccountId;
 }
 
+type NewLineSeed = Partial<Omit<JournalEntryLine, 'id' | 'transactionType'>>;
+
 function createInitialLines({
   initialAmount,
   initialCurrencyCode,
@@ -88,21 +90,22 @@ export function useJournalEditorLineState({
   );
 
   const addLine = useCallback(
-    (transactionType: TransactionType = TransactionType.DEBIT) => {
+    (transactionType: TransactionType = TransactionType.DEBIT, seed?: NewLineSeed) => {
       setLines(previous => {
         const ids = previous.map(line => parseInt(line.id)).filter(id => !isNaN(id));
         const nextId = (ids.length > 0 ? Math.max(...ids) + 1 : previous.length + 1).toString();
         return [
           ...previous,
           {
+            ...seed,
             id: nextId as TransactionId,
-            accountId: EMPTY_ACCOUNT_ID,
-            accountName: '',
-            accountType: AccountType.ASSET,
-            amount: '',
+            accountId: seed?.accountId ?? EMPTY_ACCOUNT_ID,
+            accountName: seed?.accountName ?? '',
+            accountType: seed?.accountType ?? AccountType.ASSET,
+            amount: seed?.amount ?? '',
             transactionType,
-            notes: '',
-            exchangeRate: '',
+            notes: seed?.notes ?? '',
+            exchangeRate: seed?.exchangeRate ?? '',
           },
         ];
       });

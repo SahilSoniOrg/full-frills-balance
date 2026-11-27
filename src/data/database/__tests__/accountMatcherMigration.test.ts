@@ -21,8 +21,8 @@ function stepsTo(versions: number[]) {
 
 describe('account matcher schema (v36)', () => {
   it('registers a single v36 step and final matcher layout', () => {
-    expect(schema.version).toBe(40);
-    expect(migrations.maxVersion).toBe(40);
+    expect(schema.version).toBe(41);
+    expect(migrations.maxVersion).toBe(41);
     expect(
       migrations.sortedMigrations
         .filter(migration => migration.toVersion >= 36)

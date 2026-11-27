@@ -24,6 +24,7 @@ import {
 import { getInferredAccountType } from '@/src/domain/journal/journalAccountTypes';
 import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
+import { formatRoundedAmount } from '@/src/domain/money/money';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { useJournalEditor } from './useJournalEditor';
@@ -34,6 +35,7 @@ export interface UseSimpleJournalEditorProps {
   editor: Pick<
     ReturnType<typeof useJournalEditor>,
     | 'isEdit'
+    | 'savedStatus'
     | 'isGuidedMode'
     | 'transactionType'
     | 'valuationCurrency'
@@ -145,6 +147,7 @@ export function useSimpleJournalEditor({
 
   const sourceCurrency = sourceAccount?.currencyCode;
   const destCurrency = destAccount?.currencyCode;
+  const { precision: sourcePrecision } = useCurrencyPrecision(sourceCurrency);
   const { precision: destPrecision } = useCurrencyPrecision(destCurrency);
 
   const needsValuationRate = !!(
@@ -294,13 +297,17 @@ export function useSimpleJournalEditor({
   );
 
   const setAccount = useCallback(
-    (role: AccountRole, id: AccountId) => {
+    (
+      role: AccountRole,
+      id: AccountId,
+      selected?: Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>,
+    ) => {
       hasEditedSimpleDraft.current = true;
       resetFxOverride();
       const side = sideForRole(role);
       const line = editor.lines.find(item => item.transactionType === side);
       if (!line) return;
-      const nextAccount = accounts.find(account => account.id === id);
+      const nextAccount = selected ?? accounts.find(account => account.id === id);
       const currencyChanged =
         role === 'destination' &&
         Boolean(destCurrency) &&
@@ -313,9 +320,14 @@ export function useSimpleJournalEditor({
     },
     [accounts, destCurrency, editor, resetFxOverride, type],
   );
-  const setSourceId = useCallback((id: AccountId) => setAccount('source', id), [setAccount]);
+  const setSourceId = useCallback(
+    (id: AccountId, account?: Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>) =>
+      setAccount('source', id, account),
+    [setAccount],
+  );
   const setDestinationId = useCallback(
-    (id: AccountId) => setAccount('destination', id),
+    (id: AccountId, account?: Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>) =>
+      setAccount('destination', id, account),
     [setAccount],
   );
 
@@ -372,6 +384,20 @@ export function useSimpleJournalEditor({
     [fxKey, fxPair],
   );
 
+  const setRepaymentDestinationAmount = useCallback(
+    (destinationAmount: number) => {
+      if (!fxPair.pairRate || destinationAmount <= 0) return false;
+      const sourceText = formatRoundedAmount(destinationAmount / fxPair.pairRate, sourcePrecision);
+      const sourceAmount = parseSimpleAmountInput(sourceText);
+      const override = withConvertedAmount({ ...fxPair, sourceAmount }, destinationAmount);
+      if (!override) return false;
+      setAmount(sourceText);
+      setFxOverrideState({ key: fxKey, override });
+      return true;
+    },
+    [fxKey, fxPair, setAmount, sourcePrecision],
+  );
+
   const resetToApiRate = useCallback(() => {
     hasEditedSimpleDraft.current = true;
     resetFxOverride();
@@ -414,6 +440,7 @@ export function useSimpleJournalEditor({
       description: editor.description,
 
       isSubmitting: editor.isSubmitting,
+      savedStatus: editor.savedStatus,
       fxPair,
       exchangeRate,
       manualSourceBaseRate: fxPair.manualSourceBaseRate,
@@ -422,6 +449,7 @@ export function useSimpleJournalEditor({
       needsWorkplaceRate: needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
+      setRepaymentDestinationAmount,
       resetToApiRate,
       isLoadingRate: fxPair.isLoading,
       rateError: fxPair.rateError,
@@ -452,11 +480,13 @@ export function useSimpleJournalEditor({
       editor.journalTime,
       editor.description,
       editor.isSubmitting,
+      editor.savedStatus,
       fxPair,
       exchangeRate,
       needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
+      setRepaymentDestinationAmount,
       resetToApiRate,
       isCrossCurrency,
       convertedAmount,

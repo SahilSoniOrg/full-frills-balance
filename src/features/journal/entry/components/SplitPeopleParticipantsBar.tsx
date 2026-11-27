@@ -13,7 +13,7 @@ import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import type { PersonId } from '@/src/types/ids';
+import type { AccountId, PersonId } from '@/src/types/ids';
 import type { IconName } from '@/src/types/domainIcons';
 
 export type SplitParticipant = { id: PersonId; name: string; icon?: IconName; color?: string };
@@ -23,7 +23,7 @@ export type SplitPeopleParticipantsBarProps = {
   people: SplitParticipant[];
   selectedPersonIds: PersonId[];
   onTogglePerson: (personId: PersonId) => void;
-  onQuickAddPerson: (name: string) => Promise<void>;
+  onQuickAddPerson: (name: string) => Promise<AccountId | void>;
   hasParticipants: boolean;
   splitMode: SplitModeChoice;
   onChangeSplitMode: (mode: SplitModeChoice) => void;

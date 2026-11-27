@@ -8,6 +8,7 @@ export default class BalanceRebuildIntent extends BaseScopedModel {
 
   @field('account_id') accountId!: AccountId;
   @field('from_date') fromDate!: number;
+  @field('people_settlement_journal_date') peopleSettlementJournalDate?: number;
   @field('revision') revision!: string;
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

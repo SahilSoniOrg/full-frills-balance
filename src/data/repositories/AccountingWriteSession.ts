@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import type PersonAccount from '@/src/data/models/PersonAccount';
+import type OpenItem from '@/src/data/models/OpenItem';
+import type SettlementAllocation from '@/src/data/models/SettlementAllocation';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 import {
@@ -25,6 +27,13 @@ interface SessionState {
   operations: (Model | (() => readonly Model[]))[];
   createdAccounts: Account[];
   createdPersonAccounts: PersonAccount[];
+  stagedOpenItems: Map<string, OpenItem>;
+  peopleJournalDates: Map<JournalId, number>;
+  openItemOverrides: Map<string, { item: OpenItem; patch: Partial<OpenItem> }>;
+  openItemUpdates: Map<string, { item: OpenItem; patch: Record<string, unknown> }>;
+  stagedAllocations: Map<string, SettlementAllocation>;
+  inactiveAllocationIds: Set<string>;
+  deletedOpenItemIds: Set<string>;
   captureMetadata: Map<JournalId, CaptureMetadataMutation>;
   rebuildIntents: Map<string, BalanceRebuildRequest>;
   closed: boolean;
@@ -66,6 +75,13 @@ export async function runAccountingWriteSession<T>(
       operations: [],
       createdAccounts: [],
       createdPersonAccounts: [],
+      stagedOpenItems: new Map(),
+      peopleJournalDates: new Map(),
+      openItemOverrides: new Map(),
+      openItemUpdates: new Map(),
+      stagedAllocations: new Map(),
+      inactiveAllocationIds: new Set(),
+      deletedOpenItemIds: new Set(),
       captureMetadata: new Map(),
       rebuildIntents: new Map(),
       closed: false,
@@ -96,19 +112,145 @@ export async function runAccountingWriteSession<T>(
   });
 }
 
+export function stagePeopleJournalDate(
+  session: AccountingWriteSession,
+  journalId: JournalId,
+  date: number,
+) {
+  getOpenState(session).peopleJournalDates.set(journalId, date);
+}
+export function getStagedPeopleJournalDate(session: AccountingWriteSession, journalId: JournalId) {
+  return getOpenState(session).peopleJournalDates.get(journalId);
+}
+
+export function stageOpenItem(session: AccountingWriteSession, item: OpenItem): void {
+  getOpenState(session).stagedOpenItems.set(item.id, item);
+}
+export function stageOpenItemOverride(
+  session: AccountingWriteSession,
+  item: OpenItem,
+  patch: Partial<OpenItem>,
+): void {
+  const state = getOpenState(session);
+  const current = state.openItemOverrides.get(item.id);
+  state.openItemOverrides.set(item.id, {
+    item,
+    patch: { ...current?.patch, ...patch },
+  });
+}
+export function stageOpenItemUpdate(
+  session: AccountingWriteSession,
+  item: OpenItem,
+  patch: Record<string, unknown>,
+): void {
+  const state = getOpenState(session);
+  const staged = state.stagedOpenItems.get(item.id);
+  if (staged) {
+    Object.assign(staged, patch);
+    return;
+  }
+  const current = state.openItemUpdates.get(item.id);
+  state.openItemUpdates.set(item.id, { item, patch: { ...current?.patch, ...patch } });
+  if (!current) {
+    state.operations.push(() => {
+      const update = state.openItemUpdates.get(item.id);
+      return update
+        ? [update.item.prepareUpdate(record => Object.assign(record, update.patch))]
+        : [];
+    });
+  }
+}
+export function stageSettlementAllocation(
+  session: AccountingWriteSession,
+  row: SettlementAllocation,
+): void {
+  getOpenState(session).stagedAllocations.set(row.id, row);
+}
+export function stageOpenItemDeletion(
+  session: AccountingWriteSession,
+  ids: readonly string[],
+  deletedAt: Date,
+): void {
+  const state = getOpenState(session);
+  for (const id of ids) {
+    state.deletedOpenItemIds.add(id);
+    const staged = state.stagedOpenItems.get(id);
+    if (staged) {
+      staged.deletedAt = deletedAt;
+      staged.updatedAt = deletedAt;
+    }
+  }
+}
+export function stageAllocationDeactivation(
+  session: AccountingWriteSession,
+  ids: readonly string[],
+  updatedAt: Date,
+): void {
+  const state = getOpenState(session);
+  for (const id of ids) {
+    state.inactiveAllocationIds.add(id);
+    const staged = state.stagedAllocations.get(id);
+    if (staged) {
+      staged.isActive = false;
+      staged.updatedAt = updatedAt;
+    }
+  }
+}
+export function getSessionOpenItems(session: AccountingWriteSession): readonly OpenItem[] {
+  const s = getOpenState(session);
+  return [...s.stagedOpenItems.values()].filter(
+    row => !row.deletedAt && !s.deletedOpenItemIds.has(row.id),
+  );
+}
+export function getSessionOpenItemOverrides(
+  session: AccountingWriteSession,
+): ReadonlyMap<string, { item: OpenItem; patch: Partial<OpenItem> }> {
+  return getOpenState(session).openItemOverrides;
+}
+export function getSessionAllocations(
+  session: AccountingWriteSession,
+): readonly SettlementAllocation[] {
+  const s = getOpenState(session);
+  return [...s.stagedAllocations.values()].filter(
+    row => row.isActive && !s.inactiveAllocationIds.has(row.id),
+  );
+}
+export function getSessionInactiveAllocationIds(
+  session: AccountingWriteSession,
+): ReadonlySet<string> {
+  return getOpenState(session).inactiveAllocationIds;
+}
+export function getSessionDeletedOpenItemIds(session: AccountingWriteSession): ReadonlySet<string> {
+  return getOpenState(session).deletedOpenItemIds;
+}
+
 /** Stage durable projection work in the same batch as the accounting mutation. */
 export function stageBalanceRebuildIntents(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,
   accountIds: Iterable<AccountId>,
   fromDate: number,
+  peopleSettlementJournalDate?: number,
 ): void {
   const state = getOpenState(session);
   for (const accountId of accountIds) {
     const key = balanceRebuildKey(workplaceId, accountId);
     const current = state.rebuildIntents.get(key);
-    if (!current || fromDate < current.fromDate)
-      state.rebuildIntents.set(key, { workplaceId, accountId, fromDate });
+    if (!current)
+      state.rebuildIntents.set(key, {
+        workplaceId,
+        accountId,
+        fromDate,
+        peopleSettlementJournalDate,
+      });
+    else {
+      current.fromDate = Math.min(current.fromDate, fromDate);
+      if (peopleSettlementJournalDate !== undefined)
+        current.peopleSettlementJournalDate = Math.max(
+          current.peopleSettlementJournalDate ?? peopleSettlementJournalDate,
+          peopleSettlementJournalDate,
+        );
+    }
   }
 }
 

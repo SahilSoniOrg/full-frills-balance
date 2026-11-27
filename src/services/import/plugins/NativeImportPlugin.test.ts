@@ -263,7 +263,7 @@ describe('NativeImportPlugin', () => {
       await parseImport({
         json: {
           ...validNativeData,
-          people: [{ id: 'p1', name: 'Alex' }],
+          people: [{ id: 'p1', name: 'Alex', icon: 'person-heart' }],
           personAccounts: [{ id: 'pa1', personId: 'p1', accountId: 'a1' }],
           openItems: [
             {
@@ -291,6 +291,7 @@ describe('NativeImportPlugin', () => {
         },
       } as ImportFileContext);
       expect(lastBatch.people[0].id).not.toBe('p1');
+      expect(lastBatch.people[0].icon).toBe('person-heart');
       expect(lastBatch.personAccounts[0]).toMatchObject({
         personId: lastBatch.people[0].id,
         accountId: lastBatch.accounts[0].id,

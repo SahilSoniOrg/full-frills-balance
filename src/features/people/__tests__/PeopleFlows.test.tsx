@@ -10,6 +10,7 @@ import { PersonDetailsScreen } from '../screens/PersonDetailsScreen';
 const mockWorkplaceId = 'wp-1' as WorkplaceId;
 const mockBack = jest.fn();
 const mockToPersonDetails = jest.fn();
+const mockToPersonCreation = jest.fn();
 const mockToPersonEdit = jest.fn();
 const mockToSplitJournalEntry = jest.fn();
 const mockToTransferRepayment = jest.fn();
@@ -95,6 +96,7 @@ jest.mock('@/src/navigation/AppNavigation', () => ({
   AppNavigation: {
     back: () => mockBack(),
     toPersonDetails: (id: string) => mockToPersonDetails(id),
+    toPersonCreation: (...args: unknown[]) => mockToPersonCreation(...args),
     toPersonEdit: (id: string, workplaceId?: string) => mockToPersonEdit(id, workplaceId),
     toSplitJournalEntry: (params?: Record<string, string>) => mockToSplitJournalEntry(params),
     toTransferRepayment: (params?: Record<string, string>) => mockToTransferRepayment(params),
@@ -123,11 +125,9 @@ jest.mock('@/src/services/people', () => {
       (mockCreatePerson as (...a: unknown[]) => unknown)(...args),
     updatePerson: (...args: unknown[]) =>
       (mockUpdatePerson as (...a: unknown[]) => unknown)(...args),
-    renamePerson: jest.fn(),
     setPersonArchived: jest.fn(),
     softDeletePerson: jest.fn(),
     linkExistingAccount: jest.fn(),
-    saveFriendPaidBill: jest.fn(),
     allocateUnassignedRepayment: jest.fn(),
     executeWeAreSettled: jest.fn(),
     peopleReadService: {
@@ -230,6 +230,14 @@ describe('People screens', () => {
     await waitFor(() => expect(getByText('Ari')).toBeTruthy());
     fireEvent.press(getByText('Ari'));
     expect(mockToPersonDetails).toHaveBeenCalledWith(mockPersonAri.id);
+  });
+
+  it('keeps New person available alongside account linking in the directory', async () => {
+    const { getByText } = render(<PeopleListScreen />);
+    await waitFor(() => expect(getByText('Ari')).toBeTruthy());
+    expect(getByText('New person')).toBeTruthy();
+    fireEvent.press(getByText('New person'));
+    expect(mockToPersonCreation).toHaveBeenCalled();
   });
 
   it('renders PersonDetailsScreen profile attributes and copies payment handle', async () => {

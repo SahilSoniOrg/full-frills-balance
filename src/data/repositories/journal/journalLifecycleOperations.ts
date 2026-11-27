@@ -378,6 +378,9 @@ export async function stageRevertToPlanned(
     accountsById: new Map(),
     beforeTransactions: transactions,
     newLines: [],
+    journalDate: revertTime,
+    previousJournalDate: currentJournalDate,
+    previousStatus: journal.status,
   });
   const now = new Date();
 

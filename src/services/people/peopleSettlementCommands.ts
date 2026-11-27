@@ -2,6 +2,10 @@ import {
   runAccountingWriteSession,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
+import {
+  balanceRebuildIntentRepository,
+  type BalanceRebuildClaim,
+} from '@/src/data/repositories/BalanceRebuildIntentRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
@@ -15,21 +19,25 @@ import {
   planSameCurrencyRepayment,
   planWeAreSettled,
   projectLinkedAccount,
-  type AccountUnassignedState,
-  type OpenItem as DomainOpenItem,
-  type SettlementAllocation as DomainSettlementAllocation,
 } from '@/src/domain/people';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { fromMinorUnits, toMinorUnits } from '@/src/domain/money/money';
 import type Journal from '@/src/data/models/Journal';
-import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { preferences } from '@/src/services/preferences';
-import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
+import { JournalStatus } from '@/src/types/enums';
 import type { AccountId, JournalId, OpenItemId, PersonId, WorkplaceId } from '@/src/types/ids';
 import { asAccountId } from '@/src/types/ids';
-import type { JournalRepaymentAllocation, JournalWriteLine } from '@/src/types/journalWrite';
+import type { JournalWriteLine } from '@/src/types/journalWrite';
 import { ensurePersonAccountInSession } from './peopleLifecycleCommands';
+import { asDomainItems, asDomainAllocations, repaymentCandidates } from './peopleReadService';
+import { debtAccountRole, readPersonLedgerBalance } from './peopleLedgerReads';
+import {
+  availableRepaymentMinorUnits,
+  isRepaymentJournal,
+} from '@/src/domain/people/personRepaymentPolicy';
+import { allocatePersonRepaymentMinorUnits } from '@/src/domain/people/personRepaymentAllocation';
+import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
 
 export interface RepaymentAllocationInput {
   openItemId: OpenItemId;
@@ -47,6 +55,7 @@ export interface RecordRepaymentInput {
   notes?: string;
   existingJournalId?: JournalId;
   expectedJournalUpdatedAt?: number;
+  expectedCurrent?: Record<string, unknown>;
   allocations: readonly RepaymentAllocationInput[];
   unassignedAmount?: number;
   exchangeRate?: number;
@@ -66,13 +75,13 @@ export interface ExecuteWeAreSettledInput {
   journalDate?: number;
   exchangeRateByCurrency?: ReadonlyMap<string, number>;
   expectedPlan?: {
-    lines: readonly import('@/src/types/journalWrite').JournalWriteLine[];
+    lines: readonly JournalWriteLine[];
     allocations: readonly { openItemId: string; amount: number }[];
   };
 }
 
 function settlementPlanKey(plan: {
-  lines: readonly import('@/src/types/journalWrite').JournalWriteLine[];
+  lines: readonly JournalWriteLine[];
   allocations: readonly { openItemId: string; amount: number }[];
 }): string {
   return JSON.stringify({
@@ -89,220 +98,156 @@ function settlementPlanKey(plan: {
   });
 }
 
-export async function stageJournalRepaymentAllocations(
-  session: AccountingWriteSession,
-  workplaceId: WorkplaceId,
-  journalId: JournalId,
-  lines: readonly JournalWriteLine[],
-  input: JournalRepaymentAllocation,
-): Promise<void> {
-  const [account, link, items, allocations, journalAllocations] = await Promise.all([
-    accountQueryRepository.find(workplaceId, input.targetAccountId),
-    personQueryRepository.findPersonAccountByAccountId(workplaceId, input.targetAccountId),
-    personQueryRepository.listOpenItems(workplaceId, {
-      personId: input.personId,
-      accountId: input.targetAccountId,
-    }),
-    personQueryRepository.listSettlementAllocations(workplaceId, {
-      personId: input.personId,
-      activeOnly: true,
-    }),
-    personQueryRepository.listSettlementAllocations(workplaceId, {
-      settlementJournalId: journalId,
-      activeOnly: true,
-    }),
-  ]);
-  if (!account || link?.personId !== input.personId)
-    throw new Error('Person account is no longer available');
-  const precision = getCurrencyPrecision(account.currencyCode);
-  if (journalAllocations.length) {
-    const unchanged =
-      journalAllocations.length === input.allocations.length &&
-      journalAllocations.every(
-        existing =>
-          existing.personId === input.personId &&
-          existing.accountId === input.targetAccountId &&
-          input.allocations.some(
-            requested =>
-              requested.openItemId === existing.openItemId &&
-              toMinorUnits(requested.amount, precision) ===
-                toMinorUnits(existing.amount, precision),
-          ),
-      );
-    if (unchanged) return;
-    throw new Error(
-      'This journal already has allocations. Resolve them before changing the repayment.',
-    );
-  }
-  const reducing = lines
-    .filter(
-      line =>
-        line.accountId === account.id &&
-        classifyPersonDebtPosting({
-          accountType: account.accountType,
-          transactionType: line.transactionType,
-        }) === 'reducing',
-    )
-    .reduce((sum, line) => sum + toMinorUnits(line.amount, precision), 0);
-  const seen = new Set<string>();
-  let total = 0;
-  for (const allocation of input.allocations) {
-    const item = items.find(candidate => candidate.id === allocation.openItemId);
-    if (!item || seen.has(allocation.openItemId)) throw new Error('Invalid open item selection');
-    seen.add(allocation.openItemId);
-    const units = toMinorUnits(allocation.amount, precision);
-    const remainder = toMinorUnits(
-      openItemRemainder(toDomainItems([item])[0], toDomainAllocations(allocations)),
-      precision,
-    );
-    if (units <= 0 || units > remainder) throw new Error('Allocation exceeds open item remainder');
-    total += units;
-  }
-  if (total > reducing) throw new Error('Allocation exceeds the repayment amount');
-  await personWriteRepository.createSettlementAllocationsInSession(
-    session,
-    workplaceId,
-    input.allocations.map(allocation => ({
-      personId: input.personId,
-      openItemId: allocation.openItemId,
-      settlementJournalId: journalId,
-      accountId: input.targetAccountId,
-      allocationKind: 'repayment' as const,
-      amount: fromMinorUnits(toMinorUnits(allocation.amount, precision), precision),
-    })),
-  );
-}
+const pendingExpenseId = asAccountId('__pending_expense__');
+const pendingIncomeId = asAccountId('__pending_income__');
 
-function toDomainItems(
-  items: Awaited<ReturnType<typeof personQueryRepository.listOpenItems>>,
-): DomainOpenItem[] {
-  return items.map(item => ({
-    id: item.id,
-    personId: item.personId,
-    accountId: item.accountId,
-    originatingJournalId: item.originatingJournalId,
-    currencyCode: item.currencyCode,
-    originalAmount: item.originalAmount,
-    createdAt: item.createdAt?.getTime(),
-  }));
-}
-
-function toDomainAllocations(
-  allocations: Awaited<ReturnType<typeof personQueryRepository.listSettlementAllocations>>,
-): DomainSettlementAllocation[] {
-  return allocations.map(allocation => ({
-    id: allocation.id,
-    openItemId: allocation.openItemId,
-    journalId: allocation.settlementJournalId,
-    amount: allocation.amount,
-    active: allocation.isActive,
-  }));
-}
-
-function roleForLinkedAccount(account: {
-  accountType: AccountType;
-  accountSubtype?: AccountSubtype;
-}): 'receivable' | 'payable' | null {
-  if (account.accountType === AccountType.ASSET) return 'receivable';
-  if (account.accountType === AccountType.LIABILITY) return 'payable';
-  return null;
-}
-
-async function buildPrecisionMap(): Promise<Map<string, number>> {
-  return currencyReadService.getAllPrecisions();
-}
-
-/** Runs same-currency auto-settle in a new write session when Workplace opt-in is enabled. */
-export async function autoSettlePerson(
-  workplaceId: WorkplaceId,
-  personId: PersonId,
-  journalDate = Date.now(),
-): Promise<Journal | null> {
-  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
-    return null;
-  }
-  return runAccountingWriteSession(session =>
-    autoSettlePersonInSession(session, workplaceId, personId, journalDate),
-  );
-}
-
-/** Auto-settles any People linked to `accountIds` after an originating write commits. */
-export async function autoSettleTouchedPeople(
-  workplaceId: WorkplaceId,
-  accountIds: Iterable<AccountId>,
-  journalDate = Date.now(),
-): Promise<void> {
-  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
-    return;
-  }
-  const links = await personQueryRepository.listPersonAccounts(workplaceId);
-  const linkByAccount = new Map(links.map(link => [link.accountId, link.personId]));
-  const personIds = new Set(
-    Array.from(accountIds)
-      .map(id => linkByAccount.get(id))
-      .filter((personId): personId is PersonId => Boolean(personId)),
-  );
-  for (const personId of personIds) {
-    await autoSettlePerson(workplaceId, personId, journalDate);
-  }
-}
-
-/** Runs same-currency auto-settle inside an open write session when Workplace opt-in is enabled. */
-export async function autoSettlePersonInSession(
-  session: AccountingWriteSession,
-  workplaceId: WorkplaceId,
-  personId: PersonId,
-  journalDate = Date.now(),
-): Promise<Journal | null> {
-  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
-    return null;
-  }
-
-  const [links, items, allocations, allAccounts] = await Promise.all([
+async function readSettlementFacts(workplaceId: WorkplaceId, personId: PersonId) {
+  const [links, items, allocations, precisionByCurrency] = await Promise.all([
     personQueryRepository.listPersonAccounts(workplaceId, personId),
     personQueryRepository.listOpenItems(workplaceId, { personId }),
     personQueryRepository.listSettlementAllocations(workplaceId, { personId, activeOnly: true }),
-    accountQueryRepository.findAll(workplaceId),
+    currencyReadService.getAllPrecisions(),
   ]);
-
-  const accountById = new Map(allAccounts.map(account => [account.id, account]));
-  const originJournals = await journalQueryRepository.findByIds(workplaceId, [
-    ...new Set(items.map(item => item.originatingJournalId)),
+  const [accounts, origins] = await Promise.all([
+    accountQueryRepository.findAllByIds(
+      workplaceId,
+      links.map(link => link.accountId),
+    ),
+    journalQueryRepository.findByIds(workplaceId, [
+      ...new Set(items.map(item => item.originatingJournalId)),
+    ]),
   ]);
-  const originDates = new Map(originJournals.map(journal => [journal.id, journal.journalDate]));
-  const domainItems = toDomainItems(items).map(item => ({
+  const dates = new Map(origins.map(journal => [journal.id, journal.journalDate]));
+  const domainItems = asDomainItems(items).map(item => ({
     ...item,
-    journalDate: originDates.get(item.originatingJournalId),
+    journalDate: dates.get(item.originatingJournalId),
   }));
-  const domainAllocations = toDomainAllocations(allocations);
+  const activeAllocations = asDomainAllocations(allocations);
   const roles = new Map<string, 'receivable' | 'payable'>();
-  const states: AccountUnassignedState[] = [];
+  const states = await Promise.all(
+    accounts
+      .filter(account => {
+        const role = debtAccountRole(account.accountType);
+        if (role) roles.set(account.id, role);
+        return role !== undefined;
+      })
+      .map(async account =>
+        projectLinkedAccount({
+          accountId: account.id,
+          currencyCode: account.currencyCode,
+          ledgerBalanceInNormalDirection: await readPersonLedgerBalance(
+            workplaceId,
+            account,
+            precisionByCurrency,
+          ),
+          items: domainItems,
+          allocations: activeAllocations,
+          precision: precisionByCurrency.get(account.currencyCode),
+        }),
+      ),
+  );
+  return { accounts, items: domainItems, activeAllocations, states, roles, precisionByCurrency };
+}
 
-  for (const link of links) {
-    const account = accountById.get(link.accountId);
-    if (!account) continue;
-    const role = roleForLinkedAccount(account);
-    if (!role) continue;
-    roles.set(account.id, role);
-    const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
-    const state = projectLinkedAccount({
-      accountId: account.id,
-      currencyCode: account.currencyCode,
-      ledgerBalanceInNormalDirection: balance.balance,
-      items: domainItems,
-      allocations: domainAllocations,
-    });
-    if (state.hasNegativeUnassignedRemainder) {
-      return null;
-    }
-    states.push(state);
+function buildClosingPlan(
+  facts: Awaited<ReturnType<typeof readSettlementFacts>>,
+  workplaceCurrency: string,
+  exchangeRateByCurrency: ReadonlyMap<string, number>,
+) {
+  return planWeAreSettled({
+    accounts: facts.states,
+    items: facts.items,
+    activeAllocations: facts.activeAllocations,
+    roles: facts.roles,
+    precisionByCurrency: facts.precisionByCurrency,
+    workplaceCurrency,
+    expenseAccountId: pendingExpenseId,
+    incomeAccountId: pendingIncomeId,
+    exchangeRateByCurrency,
+  });
+}
+
+export async function previewPersonSettlement(
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  workplaceCurrency: string,
+  exchangeRateByCurrency: ReadonlyMap<string, number>,
+) {
+  const facts = await readSettlementFacts(workplaceId, personId);
+  const foreignCurrencies = [
+    ...new Set(
+      facts.states
+        .filter(
+          state =>
+            state.currencyCode !== workplaceCurrency && state.ledgerBalanceInNormalDirection > 0,
+        )
+        .map(state => state.currencyCode),
+    ),
+  ];
+  try {
+    const plan = buildClosingPlan(facts, workplaceCurrency, exchangeRateByCurrency);
+    const residual = plan.lines.find(
+      line => line.accountId === pendingIncomeId || line.accountId === pendingExpenseId,
+    );
+    return {
+      foreignCurrencies,
+      plan,
+      closingResidual: residual?.amount ?? 0,
+      forgivenAccountType:
+        residual?.accountId === pendingIncomeId ? ('Income' as const) : ('Expense' as const),
+      blockedReason: plan.lines.length < 2 ? 'Nothing open to close' : undefined,
+    };
+  } catch (error) {
+    return {
+      foreignCurrencies,
+      plan: undefined,
+      closingResidual: 0,
+      forgivenAccountType: 'Expense' as const,
+      blockedReason: error instanceof Error ? error.message : 'Cannot preview settlement',
+    };
+  }
+}
+
+/** Run the opt-in follow-up while its persisted rebuild request is still current. */
+export async function settlePeopleForRebuildClaim(claim: BalanceRebuildClaim) {
+  const { workplaceId, accountId, peopleSettlementJournalDate } = claim;
+  if (
+    peopleSettlementJournalDate == null ||
+    !preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances
+  )
+    return;
+  await runAccountingWriteSession(async session => {
+    if (!(await balanceRebuildIntentRepository.findCurrent(claim))) return;
+    const link = await personQueryRepository.findPersonAccountByAccountId(workplaceId, accountId);
+    if (!link) return;
+    await autoSettlePersonInSession(
+      session,
+      workplaceId,
+      link.personId,
+      peopleSettlementJournalDate,
+    );
+  });
+}
+
+/** Runs same-currency auto-settle inside an open write session when Workplace opt-in is enabled. */
+async function autoSettlePersonInSession(
+  session: AccountingWriteSession,
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  journalDate = Date.now(),
+): Promise<Journal | null> {
+  if (!preferences.workplace.getSnapshot(workplaceId).autoSettlePeopleBalances) {
+    return null;
   }
 
+  const facts = await readSettlementFacts(workplaceId, personId);
+  if (facts.states.some(state => state.hasNegativeUnassignedRemainder)) return null;
   const plan = planAutoSettle({
-    items: domainItems,
-    accounts: states,
-    roles,
-    activeAllocations: domainAllocations,
+    items: facts.items,
+    accounts: facts.states,
+    roles: facts.roles,
+    activeAllocations: facts.activeAllocations,
+    precisionByCurrency: facts.precisionByCurrency,
   });
   if (plan.lines.length < 2) {
     return null;
@@ -319,14 +264,15 @@ export async function autoSettlePersonInSession(
   let lastJournal: Journal | null = null;
   for (const [currencyCode, lines] of byCurrency) {
     if (lines.length < 2) continue;
-    const itemIdsInCurrency = new Set(
-      domainItems.filter(item => item.currencyCode === currencyCode).map(item => item.id),
+    const itemIdsInCurrency = new Set<string>(
+      facts.items.filter(item => item.currencyCode === currencyCode).map(item => item.id),
     );
     const result = await journalPersistenceRepository.putInSession(
       session,
       {
         journalDate,
         description: 'Auto-settle People balances',
+        skipPeopleAutoSettlement: true,
         currencyCode,
         status: JournalStatus.POSTED,
         transactions: lines,
@@ -335,7 +281,7 @@ export async function autoSettlePersonInSession(
     );
     lastJournal = result.journal;
     const currencyAllocations = plan.allocations.filter(a => itemIdsInCurrency.has(a.openItemId));
-    const itemById = new Map(items.map(item => [item.id as string, item]));
+    const itemById = new Map(facts.items.map(item => [String(item.id), item]));
     await personWriteRepository.createSettlementAllocationsInSession(
       session,
       workplaceId,
@@ -365,7 +311,7 @@ export async function recordRepayment(
   input: RecordRepaymentInput,
 ): Promise<Journal> {
   return runAccountingWriteSession(async session => {
-    const [targetAccount, existingLink, items, allocations, targetBalance, existingJournal] =
+    const [targetAccount, existingLink, items, allocations, precisionByCurrency, existingJournal] =
       await Promise.all([
         accountQueryRepository.find(workplaceId, input.targetAccountId),
         personQueryRepository.findPersonAccountByAccountId(workplaceId, input.targetAccountId),
@@ -377,7 +323,7 @@ export async function recordRepayment(
           personId: input.personId,
           activeOnly: true,
         }),
-        balanceReadService.getAccountBalance(input.targetAccountId, workplaceId),
+        currencyReadService.getAllPrecisions(),
         input.existingJournalId
           ? journalQueryRepository.find(workplaceId, input.existingJournalId)
           : Promise.resolve(null),
@@ -391,16 +337,19 @@ export async function recordRepayment(
       throw new Error('Existing journal not found');
     }
 
-    const role = roleForLinkedAccount(targetAccount);
+    const role = debtAccountRole(targetAccount.accountType);
     if (!role) throw new Error('Target account must be a receivable or payable account');
     const existingTransactions = existingJournal
       ? await transactionQueryRepository.findByJournal(workplaceId, existingJournal.id)
       : [];
+    const journalCurrency = existingJournal?.currencyCode ?? input.journalCurrency;
+    const precision =
+      precisionByCurrency.get(targetAccount.currencyCode) ??
+      getCurrencyPrecision(targetAccount.currencyCode);
+    let cashAmount = input.cashAmount;
     let existingCashLine: (typeof existingTransactions)[number] | undefined;
     if (existingJournal) {
-      if (existingJournal.status !== JournalStatus.POSTED || existingTransactions.length !== 2) {
-        throw new Error('This movement is no longer eligible for matching');
-      }
+      assertExpectedJournalSnapshot(input.expectedCurrent, existingJournal, existingTransactions);
       if (
         (input.expectedJournalUpdatedAt !== undefined &&
           existingJournal.updatedAt?.getTime() !== input.expectedJournalUpdatedAt) ||
@@ -409,112 +358,110 @@ export async function recordRepayment(
       ) {
         throw new Error('This movement changed. Review it again before matching.');
       }
-      existingCashLine = existingTransactions.find(tx => tx.accountId === input.cashAccountId);
-      const expectedType = role === 'receivable' ? TransactionType.DEBIT : TransactionType.CREDIT;
-      const cashPrecision = getCurrencyPrecision(
-        existingCashLine?.currencyCode ?? input.journalCurrency,
-      );
+      const [accounts, links, priorAllocations] = await Promise.all([
+        accountQueryRepository.findAllByIds(
+          workplaceId,
+          existingTransactions.map(tx => tx.accountId),
+        ),
+        personQueryRepository.listPersonAccountsForAccounts(
+          workplaceId,
+          existingTransactions.map(tx => tx.accountId),
+        ),
+        personQueryRepository.listSettlementAllocations(workplaceId, {
+          settlementJournalId: existingJournal.id,
+          activeOnly: true,
+        }),
+      ]);
+      const match = repaymentCandidates(
+        existingJournal,
+        existingTransactions,
+        new Map(accounts.map(account => [account.id, account])),
+        new Map(links.map(link => [link.accountId, link.personId])),
+        [targetAccount],
+        input.personId,
+        precisionByCurrency,
+      ).find(candidate => candidate.cashAccountId === input.cashAccountId);
+      const cashPrecision =
+        precisionByCurrency.get(match?.cashCurrencyCode ?? journalCurrency) ??
+        getCurrencyPrecision(match?.cashCurrencyCode ?? journalCurrency);
       if (
-        !existingCashLine ||
-        existingCashLine.transactionType !== expectedType ||
-        toMinorUnits(existingCashLine.amount, cashPrecision) !==
+        !match ||
+        priorAllocations.length ||
+        toMinorUnits(match.cashAmount, cashPrecision) !==
           toMinorUnits(input.cashAmount, cashPrecision)
       ) {
-        throw new Error(
-          'The selected movement has a different amount or direction. Review it again.',
-        );
+        throw new Error('This movement is no longer eligible for matching');
       }
-      const otherLine = existingTransactions.find(tx => tx.id !== existingCashLine!.id);
-      if (!otherLine) throw new Error('The selected movement is incomplete');
-      const otherLink = await personQueryRepository.findPersonAccountByAccountId(
-        workplaceId,
-        otherLine.accountId,
-      );
-      if (otherLink && otherLink.personId !== input.personId)
-        throw new Error('The movement belongs to another person');
-      const priorAllocations = await personQueryRepository.listSettlementAllocations(workplaceId, {
-        settlementJournalId: existingJournal.id,
-        activeOnly: true,
-      });
-      if (priorAllocations.length)
-        throw new Error('This movement already has repayment allocations');
+      existingCashLine = existingTransactions.find(tx => tx.id === match.id);
+      cashAmount = match.journalAmount;
     }
 
-    const domainItems = toDomainItems(items);
-    const domainAllocations = toDomainAllocations(allocations);
+    const domainItems = asDomainItems(items);
+    const domainAllocations = asDomainAllocations(allocations);
     const targetState = projectLinkedAccount({
       accountId: targetAccount.id,
       currencyCode: targetAccount.currencyCode,
-      ledgerBalanceInNormalDirection: targetBalance.balance,
+      ledgerBalanceInNormalDirection: await readPersonLedgerBalance(
+        workplaceId,
+        targetAccount,
+        precisionByCurrency,
+      ),
       items: domainItems,
       allocations: domainAllocations,
+      precision,
     });
-
-    const journalCurrency = existingJournal?.currencyCode ?? input.journalCurrency;
     const isSameCurrency =
       targetAccount.currencyCode.trim().toUpperCase() === journalCurrency.trim().toUpperCase();
 
-    const plan = isSameCurrency
-      ? planSameCurrencyRepayment({
-          cashAccountId: input.cashAccountId,
-          targetAccountId: targetAccount.id,
-          items: domainItems,
-          activeAllocations: domainAllocations,
-          assigned: input.allocations,
-          unassignedAmount: input.unassignedAmount ?? 0,
-          repaymentLegAmount: input.cashAmount,
-          currencyCode: targetAccount.currencyCode,
-          target: existingTransactions.some(
-            tx =>
-              tx.accountId === targetAccount.id &&
-              classifyPersonDebtPosting({
-                accountType: targetAccount.accountType,
-                transactionType: tx.transactionType,
-              }) === 'reducing',
-          )
-            ? { ...targetState, hasNegativeUnassignedRemainder: false }
-            : targetState,
-          role,
-        })
-      : await (async () => {
-          if (!input.allocations.length) {
-            throw new Error(
-              'Cross-currency repayment requires explicitly assigning target open items',
-            );
-          }
-          const allocation = input.allocations[0]!;
-          const openItem = domainItems.find(item => item.id === allocation.openItemId);
-          if (!openItem) throw new Error('Target open item not found');
-          if (!input.exchangeRate || input.exchangeRate <= 0) {
-            throw new Error(
-              'Explicit positive exchange rate is required for cross-currency repayment',
-            );
-          }
-          const precisionByCurrency = await buildPrecisionMap();
-          if (!precisionByCurrency.has(journalCurrency)) {
-            precisionByCurrency.set(journalCurrency, getCurrencyPrecision(journalCurrency));
-          }
-          if (!precisionByCurrency.has(targetAccount.currencyCode)) {
-            precisionByCurrency.set(
-              targetAccount.currencyCode,
-              getCurrencyPrecision(targetAccount.currencyCode),
-            );
-          }
-          return planCrossCurrencyRepayment({
-            cashAccountId: input.cashAccountId,
-            openItem,
-            cashAmount: input.cashAmount,
-            exchangeRate: input.exchangeRate,
-            journalCurrency,
-            precisionByCurrency,
-            targetAmount:
-              input.targetAmount ?? input.allocations.reduce((sum, item) => sum + item.amount, 0),
-            role,
-            activeAllocations: domainAllocations,
-            items: domainItems,
-            assigned: input.allocations,
-          });
-        })();
+    let plan;
+    if (isSameCurrency) {
+      const alreadyReduced = existingTransactions.some(
+        tx =>
+          tx.accountId === targetAccount.id &&
+          classifyPersonDebtPosting({
+            accountType: targetAccount.accountType,
+            transactionType: tx.transactionType,
+          }) === 'reducing',
+      );
+      plan = planSameCurrencyRepayment({
+        cashAccountId: input.cashAccountId,
+        targetAccountId: targetAccount.id,
+        items: domainItems,
+        activeAllocations: domainAllocations,
+        assigned: input.allocations,
+        unassignedAmount: input.unassignedAmount ?? 0,
+        repaymentLegAmount: cashAmount,
+        currencyCode: targetAccount.currencyCode,
+        target: alreadyReduced
+          ? { ...targetState, hasNegativeUnassignedRemainder: false }
+          : targetState,
+        role,
+        precision,
+      });
+    } else {
+      const openItem = domainItems.find(item => item.id === input.allocations[0]?.openItemId);
+      if (!openItem) throw new Error('Cross-currency repayment requires an open item');
+      if (!input.exchangeRate || !Number.isFinite(input.exchangeRate) || input.exchangeRate <= 0) {
+        throw new Error('Explicit positive exchange rate is required for cross-currency repayment');
+      }
+      for (const code of [journalCurrency, targetAccount.currencyCode]) {
+        if (!precisionByCurrency.has(code))
+          precisionByCurrency.set(code, getCurrencyPrecision(code));
+      }
+      plan = planCrossCurrencyRepayment({
+        cashAccountId: input.cashAccountId,
+        openItem,
+        cashAmount,
+        exchangeRate: input.exchangeRate,
+        journalCurrency,
+        precisionByCurrency,
+        targetAmount: input.targetAmount,
+        role,
+        activeAllocations: domainAllocations,
+        items: domainItems,
+        assigned: input.allocations,
+      });
+    }
 
     const result = await journalPersistenceRepository.putInSession(
       session,
@@ -525,6 +472,11 @@ export async function recordRepayment(
         notes: input.notes ?? existingJournal?.notes,
         currencyCode: journalCurrency,
         status: JournalStatus.POSTED,
+        repaymentAllocation: {
+          personId: input.personId,
+          targetAccountId: targetAccount.id,
+          allocations: input.allocations,
+        },
         transactions: existingCashLine
           ? plan.lines.map(line =>
               line.accountId === input.cashAccountId
@@ -543,26 +495,6 @@ export async function recordRepayment(
       workplaceId,
     );
 
-    const itemById = new Map(items.map(item => [item.id as string, item]));
-    await personWriteRepository.createSettlementAllocationsInSession(
-      session,
-      workplaceId,
-      plan.allocations.map(allocation => {
-        const item = itemById.get(allocation.openItemId);
-        if (!item) {
-          throw new Error('Allocation open item mismatch');
-        }
-        return {
-          personId: input.personId,
-          openItemId: item.id,
-          settlementJournalId: result.journal.id,
-          accountId: targetAccount.id,
-          allocationKind: 'repayment' as const,
-          amount: allocation.amount,
-        };
-      }),
-    );
-
     return result.journal;
   });
 }
@@ -575,63 +507,65 @@ export async function allocateUnassignedRepayment(
   if (input.allocations.length === 0) return;
 
   await runAccountingWriteSession(async session => {
-    const [targetAccount, journal, txs, items, existingAllocations] = await Promise.all([
-      accountQueryRepository.find(workplaceId, input.targetAccountId),
-      journalQueryRepository.find(workplaceId, input.settlementJournalId),
-      transactionQueryRepository.findByJournal(workplaceId, input.settlementJournalId),
-      personQueryRepository.listOpenItems(workplaceId, {
-        personId: input.personId,
-        accountId: input.targetAccountId,
-      }),
-      personQueryRepository.listSettlementAllocations(workplaceId, {
-        personId: input.personId,
-        activeOnly: true,
-      }),
-    ]);
+    const [targetAccount, link, journal, txs, items, existingAllocations, precisionByCurrency] =
+      await Promise.all([
+        accountQueryRepository.find(workplaceId, input.targetAccountId),
+        personQueryRepository.findPersonAccountByAccountId(workplaceId, input.targetAccountId),
+        journalQueryRepository.find(workplaceId, input.settlementJournalId),
+        transactionQueryRepository.findByJournal(workplaceId, input.settlementJournalId),
+        personQueryRepository.listOpenItems(workplaceId, {
+          personId: input.personId,
+          accountId: input.targetAccountId,
+        }),
+        personQueryRepository.listSettlementAllocations(workplaceId, {
+          personId: input.personId,
+          activeOnly: true,
+        }),
+        currencyReadService.getAllPrecisions(),
+      ]);
+    if (!targetAccount || link?.personId !== input.personId)
+      throw new Error('Person account is no longer available');
+    if (!journal || !isRepaymentJournal(journal))
+      throw new Error('This journal cannot be applied as a repayment');
 
-    if (!targetAccount) throw new Error('Target account not found');
-    if (!journal || journal.status !== JournalStatus.POSTED) {
-      throw new Error('Settlement journal must be posted');
-    }
-
-    const precision = getCurrencyPrecision(targetAccount.currencyCode);
+    const precision =
+      precisionByCurrency.get(targetAccount.currencyCode) ??
+      getCurrencyPrecision(targetAccount.currencyCode);
     const reducingLegUnits = txs
       .filter(
         tx =>
-          tx.accountId === input.targetAccountId &&
+          tx.accountId === targetAccount.id &&
           classifyPersonDebtPosting({
             accountType: targetAccount.accountType,
             transactionType: tx.transactionType,
           }) === 'reducing',
       )
-      .reduce((sum, tx) => sum + toMinorUnits(tx.amount, precision), 0);
-
-    const alreadyAllocatedUnits = existingAllocations
-      .filter(
-        allocation =>
-          allocation.settlementJournalId === input.settlementJournalId &&
-          allocation.accountId === input.targetAccountId,
-      )
-      .reduce((sum, allocation) => sum + toMinorUnits(allocation.amount, precision), 0);
-
-    const domainItems = toDomainItems(items);
-    const domainAllocations = toDomainAllocations(existingAllocations);
-    let requestedUnits = 0;
-
-    for (const allocation of input.allocations) {
-      const item = domainItems.find(candidate => candidate.id === allocation.openItemId);
-      if (!item) throw new Error('Open item not found on target account');
-      const remainderUnits = toMinorUnits(openItemRemainder(item, domainAllocations), precision);
-      const amountUnits = toMinorUnits(allocation.amount, precision);
-      if (amountUnits <= 0 || amountUnits > remainderUnits) {
-        throw new Error('Allocation exceeds open item remainder');
-      }
-      requestedUnits += amountUnits;
-    }
-
-    if (alreadyAllocatedUnits + requestedUnits > reducingLegUnits) {
-      throw new Error('Allocation exceeds unallocated repayment amount');
-    }
+      .reduce((total, tx) => total + toMinorUnits(tx.amount, precision), 0);
+    const available = availableRepaymentMinorUnits(
+      reducingLegUnits,
+      existingAllocations.filter(
+        row => row.settlementJournalId === journal.id && row.accountId === targetAccount.id,
+      ),
+      precision,
+    );
+    const domainAllocations = asDomainAllocations(existingAllocations);
+    allocatePersonRepaymentMinorUnits({
+      amountMinor: available,
+      items: asDomainItems(items).map(item => ({
+        openItemId: item.id,
+        availableMinor: Math.max(
+          0,
+          toMinorUnits(openItemRemainder(item, domainAllocations, precision), precision),
+        ),
+        journalDate: item.createdAt ?? 0,
+        createdAt: item.createdAt ?? 0,
+        id: item.id,
+      })),
+      requestedAllocations: input.allocations.map(row => ({
+        openItemId: row.openItemId,
+        amountMinor: toMinorUnits(row.amount, precision),
+      })),
+    });
 
     await personWriteRepository.createSettlementAllocationsInSession(
       session,
@@ -654,65 +588,12 @@ export async function executeWeAreSettled(
   input: ExecuteWeAreSettledInput,
 ): Promise<Journal> {
   return runAccountingWriteSession(async session => {
-    const [links, items, allocations, allAccounts, precisionByCurrency] = await Promise.all([
-      personQueryRepository.listPersonAccounts(workplaceId, input.personId),
-      personQueryRepository.listOpenItems(workplaceId, { personId: input.personId }),
-      personQueryRepository.listSettlementAllocations(workplaceId, {
-        personId: input.personId,
-        activeOnly: true,
-      }),
-      accountQueryRepository.findAll(workplaceId),
-      buildPrecisionMap(),
-    ]);
-
-    if (!precisionByCurrency.has(input.workplaceCurrency)) {
-      precisionByCurrency.set(
-        input.workplaceCurrency,
-        getCurrencyPrecision(input.workplaceCurrency),
-      );
-    }
-
-    const accountById = new Map(allAccounts.map(account => [account.id, account]));
-    const domainItems = toDomainItems(items);
-    const domainAllocations = toDomainAllocations(allocations);
-    const roles = new Map<string, 'receivable' | 'payable'>();
-    const states: AccountUnassignedState[] = [];
-
-    for (const link of links) {
-      const account = accountById.get(link.accountId);
-      if (!account) continue;
-      const role = roleForLinkedAccount(account);
-      if (!role) continue;
-      roles.set(account.id, role);
-      if (!precisionByCurrency.has(account.currencyCode)) {
-        precisionByCurrency.set(account.currencyCode, getCurrencyPrecision(account.currencyCode));
-      }
-      const balance = await balanceReadService.getAccountBalance(account.id, workplaceId);
-      states.push(
-        projectLinkedAccount({
-          accountId: account.id,
-          currencyCode: account.currencyCode,
-          ledgerBalanceInNormalDirection: balance.balance,
-          items: domainItems,
-          allocations: domainAllocations,
-        }),
-      );
-    }
-
-    const placeholderExpenseId = asAccountId('__pending_expense__');
-    const placeholderIncomeId = asAccountId('__pending_income__');
-
-    const plan = planWeAreSettled({
-      accounts: states,
-      items: domainItems,
-      activeAllocations: domainAllocations,
-      roles,
-      workplaceCurrency: input.workplaceCurrency,
-      expenseAccountId: placeholderExpenseId,
-      incomeAccountId: placeholderIncomeId,
-      precisionByCurrency,
-      exchangeRateByCurrency: input.exchangeRateByCurrency ?? new Map(),
-    });
+    const facts = await readSettlementFacts(workplaceId, input.personId);
+    const plan = buildClosingPlan(
+      facts,
+      input.workplaceCurrency,
+      input.exchangeRateByCurrency ?? new Map(),
+    );
 
     if (input.expectedPlan && settlementPlanKey(input.expectedPlan) !== settlementPlanKey(plan)) {
       throw new Error(
@@ -728,7 +609,7 @@ export async function executeWeAreSettled(
     let resolvedIncomeId: AccountId | undefined;
     const resolvedLines = await Promise.all(
       plan.lines.map(async line => {
-        if (line.accountId === placeholderExpenseId) {
+        if (line.accountId === pendingExpenseId) {
           resolvedExpenseId ??= (
             await ensurePersonAccountInSession(
               session,
@@ -740,7 +621,7 @@ export async function executeWeAreSettled(
           ).id;
           return { ...line, accountId: resolvedExpenseId };
         }
-        if (line.accountId === placeholderIncomeId) {
+        if (line.accountId === pendingIncomeId) {
           resolvedIncomeId ??= (
             await ensurePersonAccountInSession(
               session,
@@ -761,6 +642,7 @@ export async function executeWeAreSettled(
       {
         journalDate: input.journalDate ?? Date.now(),
         description: "We're settled",
+        skipPeopleAutoSettlement: true,
         currencyCode: input.workplaceCurrency,
         status: JournalStatus.POSTED,
         transactions: resolvedLines,
@@ -768,7 +650,7 @@ export async function executeWeAreSettled(
       workplaceId,
     );
 
-    const itemById = new Map(items.map(item => [item.id as string, item]));
+    const itemById = new Map(facts.items.map(item => [String(item.id), item]));
     await personWriteRepository.createSettlementAllocationsInSession(
       session,
       workplaceId,

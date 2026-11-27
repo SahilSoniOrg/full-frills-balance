@@ -8,9 +8,7 @@ import {
   accountWriteRepository,
 } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { personQueryRepository } from '@/src/data/repositories/people';
-import { assertParentHasNoTransactions } from '@/src/services/accounts/accountRules';
+import { assertEligibleAccountParents } from '@/src/services/accounts/accountParentEligibility';
 import {
   createAccountTreeSnapshot,
   getAccountTreeSiblingListKey,
@@ -158,23 +156,14 @@ async function moveAccountsCore(
 
   const receipt = await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const snapshot = createAccountTreeSnapshot(accounts);
-    if (destination.parentId) {
-      if (
-        await personQueryRepository.findPersonAccountByAccountId(workplaceId, destination.parentId)
-      ) {
-        throw new Error('A People account cannot have child accounts');
-      }
-      const hasTransactions = await transactionQueryRepository.hasTransactions(
-        workplaceId,
-        destination.parentId,
-      );
-      if (hasTransactions) {
-        const parent = accounts.find(account => account.id === destination.parentId);
-        if (parent) assertParentHasNoTransactions(parent.name);
-      }
-    }
-
     const changes = planAccountTreeBulkMove(accounts, accountIds, destination, snapshot);
+    const changedParentIds = [...changes.keys()].map(id =>
+      destination.parentId &&
+      destination.parentId !== snapshot.accountsById.get(id)?.parentAccountId
+        ? destination.parentId
+        : undefined,
+    );
+    await assertEligibleAccountParents(workplaceId, accounts, changedParentIds);
     if (changes.size === 0) {
       return {
         prepareOps: () => [],
@@ -313,6 +302,7 @@ async function saveAccountTreeDraftCore(
       };
     });
     const touchedSiblingListKeys = new Set<string>();
+    const changedParents: AccountId[] = [];
     for (const [accountId, placement] of placements) {
       const account = accountsById.get(accountId);
       if (!account) throw new Error('Account not found');
@@ -341,15 +331,9 @@ async function saveAccountTreeDraftCore(
       }
       if (parent.archivedAt) throw new Error('Archived accounts cannot have new children');
       if ((account.parentAccountId || undefined) === parentId) continue;
-      if (await personQueryRepository.findPersonAccountByAccountId(workplaceId, parentId)) {
-        throw new Error('A People account cannot have child accounts');
-      }
-      const hasTransactions = await transactionQueryRepository.hasTransactions(
-        workplaceId,
-        parentId,
-      );
-      if (hasTransactions) assertParentHasNoTransactions(parent.name);
+      changedParents.push(parentId);
     }
+    await assertEligibleAccountParents(workplaceId, accounts, changedParents);
 
     for (const [accountId, placement] of placements) {
       const account = accountsById.get(accountId);
