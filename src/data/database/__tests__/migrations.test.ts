@@ -19,7 +19,7 @@ import { resetDatabase } from '@/src/testing/resetDatabase';
 import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 41;
+const EXPECTED_SCHEMA_VERSION = 40;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);
@@ -33,39 +33,70 @@ function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): v
 }
 
 describe('database migrations (LokiJS)', () => {
-  it('creates the People tables and full person profile in one v40 migration', () => {
-    expect(schema.version).toBe(41);
+  it('upgrades v39 with People tables and the settlement intent date in one v40 migration', () => {
+    expect(schema.version).toBe(40);
     for (const table of ['people', 'person_accounts', 'open_items', 'settlement_allocations']) {
       expect(schema.tables[table]).toBeDefined();
     }
     const v40Migration = migrations.sortedMigrations.find(step => step.toVersion === 40);
     expect(v40Migration).toBeDefined();
     expect(v40Migration?.steps.filter(step => step.type === 'create_table')).toHaveLength(4);
+    expect(v40Migration?.steps).toContainEqual(
+      expect.objectContaining({
+        type: 'add_columns',
+        table: 'balance_rebuild_intents',
+        columns: [
+          expect.objectContaining({
+            name: 'people_settlement_journal_date',
+            type: 'number',
+            isOptional: true,
+          }),
+        ],
+      }),
+    );
 
     const result = runMigrationSqlFixture(
       `
+create_table('balance_rebuild_intents', payload['balance_rebuild_intent_columns'])
 apply_steps(payload['steps'])
 db.execute("INSERT INTO people (id, name, notes, color, created_at, updated_at, workplace_id) VALUES ('p1', 'Pri', 'Roommate', '#2563EB', 1, 2, 'wp1')")
 db.row_factory = sqlite3.Row
-print(json.dumps(dict(db.execute('SELECT * FROM people').fetchone())))
+print(json.dumps(dict(
+  person=dict(db.execute('SELECT * FROM people').fetchone()),
+  intent_columns=[row[1] for row in db.execute('PRAGMA table_info(balance_rebuild_intents)')],
+)))
 `,
       {
         steps: v40Migration?.steps,
+        balance_rebuild_intent_columns: schema.tables.balance_rebuild_intents.columnArray.filter(
+          column => column.name !== 'people_settlement_journal_date',
+        ),
       },
     );
     expect(result.status).toBe(0);
     expect(result.stderr).toBe('');
     expect(JSON.parse(result.stdout)).toMatchObject({
-      id: 'p1',
-      name: 'Pri',
-      notes: 'Roommate',
-      icon: null,
-      color: '#2563EB',
-      default_currency_code: null,
-      payment_handle: null,
-      phone: null,
-      email: null,
-      is_pinned: null,
+      person: {
+        id: 'p1',
+        name: 'Pri',
+        notes: 'Roommate',
+        icon: null,
+        color: '#2563EB',
+        default_currency_code: null,
+        payment_handle: null,
+        phone: null,
+        email: null,
+        is_pinned: null,
+      },
+      intent_columns: expect.arrayContaining([
+        'account_id',
+        'from_date',
+        'revision',
+        'created_at',
+        'updated_at',
+        'workplace_id',
+        'people_settlement_journal_date',
+      ]),
     });
   });
 

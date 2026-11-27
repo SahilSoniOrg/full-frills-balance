@@ -1239,6 +1239,10 @@ BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_rebuild_inten
             { name: 'workplace_id', type: 'string', isIndexed: true },
           ],
         }),
+        addColumns({
+          table: 'balance_rebuild_intents',
+          columns: [{ name: 'people_settlement_journal_date', type: 'number', isOptional: true }],
+        }),
         unsafeExecuteSql(`
 CREATE TRIGGER IF NOT EXISTS trg_people_workplace_id_check BEFORE INSERT ON people FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on people'); END;
 CREATE TRIGGER IF NOT EXISTS trg_person_accounts_workplace_id_check BEFORE INSERT ON person_accounts FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on person_accounts'); END;
@@ -1247,15 +1251,6 @@ CREATE TRIGGER IF NOT EXISTS trg_settlement_allocations_workplace_id_check BEFOR
 CREATE UNIQUE INDEX IF NOT EXISTS person_accounts_active_wp_account ON person_accounts (workplace_id, account_id) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS open_items_active_wp_journal_account ON open_items (workplace_id, originating_journal_id, account_id) WHERE deleted_at IS NULL;
 `),
-      ],
-    },
-    {
-      toVersion: 41,
-      steps: [
-        addColumns({
-          table: 'balance_rebuild_intents',
-          columns: [{ name: 'people_settlement_journal_date', type: 'number', isOptional: true }],
-        }),
       ],
     },
   ],
