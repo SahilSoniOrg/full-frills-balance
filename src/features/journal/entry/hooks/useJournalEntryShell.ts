@@ -33,7 +33,7 @@ import {
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
+import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -252,7 +252,6 @@ export function useJournalEntryShell(): JournalEntryShell {
       .getPersonDetail(workplaceId, seed.personId, workplaceCurrency)
       .then(detail => {
         if (!detail) return;
-        const personAccountIds = new Set(peopleGroups.flatMap(group => group.accountIds));
         const linked = detail.linkedAccounts;
         const item = seed.openItemId
           ? detail.openItems.find(row => row.item.id === seed.openItemId)
@@ -261,36 +260,20 @@ export function useJournalEntryShell(): JournalEntryShell {
           (item && accounts.find(account => account.id === item.item.accountId)) ||
           linked.find(entry => entry.account.accountType === AccountType.ASSET)?.account ||
           linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
-        const cashAccount = accounts.find(
-          account =>
-            account.accountType === AccountType.ASSET &&
-            !personAccountIds.has(account.id) &&
-            [AccountSubtype.CASH, AccountSubtype.BANK_CHECKING].includes(
-              account.accountSubtype as AccountSubtype,
-            ),
-        );
-        if (!personAccount || !cashAccount) return;
+        if (!personAccount) return;
+        // Seed only the person leg; leave the cash/bank counterparty empty for the user.
         const personAsSource = personAccount.accountType === AccountType.ASSET;
-        const source = personAsSource ? personAccount : cashAccount;
-        const destination = personAsSource ? cashAccount : personAccount;
-        updateLines(
-          Object.fromEntries(
-            lines.map(line => [
-              line.id,
-              line.transactionType === TransactionType.CREDIT
-                ? {
-                    ...lineAccountPatch(source.id, source, source.accountType),
-                    ...(item &&
-                    !seed.amount &&
-                    item.remainder > 0 &&
-                    (personAsSource || source.currencyCode === destination.currencyCode)
-                      ? { amount: String(item.remainder) }
-                      : {}),
-                  }
-                : lineAccountPatch(destination.id, destination, destination.accountType),
-            ]),
-          ),
-        );
+        const personLineType = personAsSource ? TransactionType.CREDIT : TransactionType.DEBIT;
+        const personLine = lines.find(line => line.transactionType === personLineType);
+        if (!personLine) return;
+        updateLines({
+          [personLine.id]: {
+            ...lineAccountPatch(personAccount.id, personAccount, personAccount.accountType),
+            ...(item && !seed.amount && item.remainder > 0
+              ? { amount: String(item.remainder) }
+              : {}),
+          },
+        });
       })
       .catch(error => logger.warn('Could not load People transfer details', { error }));
   }, [
