@@ -170,6 +170,7 @@ export function PeopleListScreen() {
                   label="Owed to you"
                   amount={primaryOwedToYou}
                   currencyCode={vm.defaultCurrencyCode}
+                  formatStyle="default"
                   moneyColor={primaryOwedToYou > 0 ? 'income' : 'secondary'}
                 />
                 <Separator vertical background="divider" style={styles.verticalDivider} />
@@ -178,6 +179,7 @@ export function PeopleListScreen() {
                   label="You owe"
                   amount={primaryYouOwe}
                   currencyCode={vm.defaultCurrencyCode}
+                  formatStyle="default"
                   moneyColor={primaryYouOwe > 0 ? 'expense' : 'secondary'}
                 />
               </View>
