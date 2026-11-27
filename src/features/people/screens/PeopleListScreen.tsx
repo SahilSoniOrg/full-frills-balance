@@ -55,12 +55,12 @@ export function PeopleListScreen() {
     const entries: string[] = [];
     for (const [currency, amount] of vm.balanceTotals.owedToYou) {
       if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(`+${formatMoneyAmount(amount, currency, isPrivacyMode)} owed`);
+        entries.push(`Owed ${formatMoneyAmount(amount, currency, isPrivacyMode)}`);
       }
     }
     for (const [currency, amount] of vm.balanceTotals.youOwe) {
       if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(`-${formatMoneyAmount(amount, currency, isPrivacyMode)} owing`);
+        entries.push(`Owe ${formatMoneyAmount(amount, currency, isPrivacyMode)}`);
       }
     }
     return entries;
@@ -102,8 +102,8 @@ export function PeopleListScreen() {
 
   const handleAddPerson = async () => {
     try {
-      await vm.addPerson();
-      toast.success('Person added.');
+      const saved = await vm.addPerson();
+      if (saved) toast.success('Person added.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not add person.');
     }
@@ -111,8 +111,8 @@ export function PeopleListScreen() {
 
   const handleLinkAccount = async () => {
     try {
-      await vm.linkAccount();
-      toast.success('Account linked.');
+      const saved = await vm.linkAccount();
+      if (saved) toast.success('Account linked.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not link account.');
     }
@@ -120,6 +120,12 @@ export function PeopleListScreen() {
 
   const netColor = netBalance > 0 ? 'income' : netBalance < 0 ? 'expense' : 'primary';
   const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
+  const archivedOnlyHidden = !hasFilters && vm.people.length === 0 && vm.hasArchivedPeople;
+  const canSavePerson = !vm.busy && Boolean(vm.personName.trim());
+  const canSaveLink =
+    !vm.busy &&
+    Boolean(vm.selectedAccountId) &&
+    Boolean(vm.selectedPersonId || vm.personName.trim());
 
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
@@ -128,7 +134,7 @@ export function PeopleListScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
-        <Stack gap="lg">
+        <Stack gap="lg" style={styles.contentColumn}>
           <AppCard
             elevation="md"
             padding="xl"
@@ -143,31 +149,36 @@ export function PeopleListScreen() {
                 <Badge size="sm">{`${vm.activePeopleCount} active`}</Badge>
               </Inline>
 
-              <MoneyText
-                amount={netBalance}
-                currencyCode={vm.defaultCurrencyCode}
-                formatStyle="compact"
-                variant="title"
-                prefix={netBalance > 0 ? '+' : undefined}
-                color={netColor}
-                style={styles.heroAmount}
-              />
+              <Stack gap="xs">
+                <AppText variant="caption" color="secondary">
+                  Net balance
+                </AppText>
+                <MoneyText
+                  amount={netBalance}
+                  currencyCode={vm.defaultCurrencyCode}
+                  formatStyle="default"
+                  variant="title"
+                  prefix={netBalance > 0 ? '+' : undefined}
+                  color={netColor}
+                  style={styles.heroAmount}
+                />
+              </Stack>
 
               <View style={styles.breakdownContainer}>
                 <MetricBreakdownRow
-                  dotColor={theme.income}
+                  dotColor={primaryOwedToYou > 0 ? theme.income : theme.textTertiary}
                   label="Owed to you"
                   amount={primaryOwedToYou}
                   currencyCode={vm.defaultCurrencyCode}
-                  moneyColor="income"
+                  moneyColor={primaryOwedToYou > 0 ? 'income' : 'secondary'}
                 />
                 <Separator vertical background="divider" style={styles.verticalDivider} />
                 <MetricBreakdownRow
-                  dotColor={theme.expense}
+                  dotColor={primaryYouOwe > 0 ? theme.expense : theme.textTertiary}
                   label="You owe"
                   amount={primaryYouOwe}
                   currencyCode={vm.defaultCurrencyCode}
-                  moneyColor="expense"
+                  moneyColor={primaryYouOwe > 0 ? 'expense' : 'secondary'}
                 />
               </View>
 
@@ -194,7 +205,7 @@ export function PeopleListScreen() {
             </Stack>
           </AppCard>
 
-          {hasFilters ? (
+          {hasFilters && vm.people.length > 0 ? (
             <Inline justifyContent="space-between" alignItems="center" paddingHorizontal="xs">
               <AppText variant="caption" color="secondary">
                 {[
@@ -219,15 +230,34 @@ export function PeopleListScreen() {
 
           {vm.people.length === 0 ? (
             <EmptyStateView
-              title={vm.query.trim() ? 'No matching people' : 'No people yet'}
-              subtitle={
-                vm.query.trim()
-                  ? 'Try a different name or reset filters.'
-                  : 'Add a person to track shared balances.'
+              title={
+                hasFilters
+                  ? 'No matching people'
+                  : archivedOnlyHidden
+                    ? 'All people are archived'
+                    : 'No people yet'
               }
-              icon={Icon.User}
-              primaryActionLabel={vm.query.trim() ? 'Clear search' : 'Add person'}
-              onPrimaryAction={vm.query.trim() ? () => vm.setQuery('') : vm.openCreate}
+              subtitle={
+                hasFilters
+                  ? 'Try a different name or reset active filters.'
+                  : archivedOnlyHidden
+                    ? 'Turn on archived people to view or restore past ledgers.'
+                    : 'Use Add person above to start tracking shared balances.'
+              }
+              icon={archivedOnlyHidden ? Icon.Archive : Icon.User}
+              primaryActionLabel={
+                hasFilters ? 'Reset filters' : archivedOnlyHidden ? 'Show archived' : undefined
+              }
+              onPrimaryAction={
+                hasFilters
+                  ? () => {
+                      vm.setQuery('');
+                      vm.setIncludeArchived(false);
+                    }
+                  : archivedOnlyHidden
+                    ? () => vm.setIncludeArchived(true)
+                    : undefined
+              }
             />
           ) : (
             <ListGroup header={`PEOPLE (${vm.people.length})`}>
@@ -294,7 +324,7 @@ export function PeopleListScreen() {
             <Box flex={1}>
               <AppButton
                 loading={vm.busy}
-                disabled={vm.busy}
+                disabled={!canSavePerson}
                 onPress={() => void handleAddPerson()}
               >
                 Save
@@ -333,7 +363,7 @@ export function PeopleListScreen() {
             <Box flex={1}>
               <AppButton
                 loading={vm.busy}
-                disabled={vm.busy}
+                disabled={!canSaveLink}
                 onPress={() => void handleLinkAccount()}
               >
                 Save
@@ -375,15 +405,20 @@ export function PeopleListScreen() {
                     <AppIcon name={Icon.CheckCircle} size={20} color="primary" />
                   ) : undefined
                 }
-                onPress={() => vm.setSelectedPersonId(entry.person.id)}
+                onPress={() => vm.selectPersonForLink(entry.person.id)}
               />
             ))}
           </ListGroup>
 
           <AppInputField
-            placeholder="Or create new person name"
+            placeholder={
+              vm.selectedPersonId
+                ? 'Selected person above (tap again to enter a new name)'
+                : 'Or create new person name'
+            }
             value={vm.personName}
             onChangeText={vm.setPersonName}
+            editable={!vm.selectedPersonId}
           />
         </Stack>
       </ModalSurface>
@@ -402,8 +437,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   heroAmount: {
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.xs,
+    marginTop: Spacing.none,
+    marginBottom: Spacing.none,
   },
   breakdownContainer: {
     flexDirection: 'row',
@@ -413,6 +448,11 @@ const styles = StyleSheet.create({
   verticalDivider: {
     alignSelf: 'stretch',
     borderRadius: Shape.radius.full,
+  },
+  contentColumn: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   scrollContent: {
     padding: Spacing.lg,

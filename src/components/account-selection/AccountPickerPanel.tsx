@@ -61,7 +61,6 @@ export interface AccountPickerPanelProps {
   lazyDropdown?: boolean;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   peopleGroups?: readonly PersonPickerGroup[];
-  onCreatePersonAccountRequest?: (personId?: string) => void;
   onCreatePersonRequest?: () => void;
   renderNodes: (layout: AccountPickerPanelLayout) => ReactNode;
 }
@@ -80,7 +79,6 @@ export function AccountPickerPanel({
   lazyDropdown = false,
   onCreateAccountRequest,
   peopleGroups,
-  onCreatePersonAccountRequest,
   onCreatePersonRequest,
   renderNodes,
 }: AccountPickerPanelProps) {
@@ -162,7 +160,7 @@ export function AccountPickerPanel({
         isExpanded={isExpanded}
         onClear={handleClear}
         onCreateAccountRequest={onCreateAccountRequest}
-        onCreatePersonAccountRequest={onCreatePersonAccountRequest}
+        peopleGroups={peopleGroups}
         onCreatePersonRequest={onCreatePersonRequest}
         onSelect={handleSelect}
         sections={sections}

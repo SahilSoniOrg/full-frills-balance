@@ -38,7 +38,11 @@ export function PersonBalanceBadge({
                     color="income"
                     tabular
                   >
-                    {personName} owes you {formatAmount(balance.owedToYou, balance.currencyCode)}
+                    {compact
+                      ? activeCurrencies.length > 1
+                        ? `Owes you (${balance.currencyCode})`
+                        : 'Owes you'
+                      : `${personName} owes you ${formatAmount(balance.owedToYou, balance.currencyCode)}`}
                   </AppText>
                 ) : null}
                 {balance.youOwe !== 0 ? (
@@ -48,7 +52,11 @@ export function PersonBalanceBadge({
                     color="expense"
                     tabular
                   >
-                    You owe {personName} {formatAmount(balance.youOwe, balance.currencyCode)}
+                    {compact
+                      ? activeCurrencies.length > 1
+                        ? `You owe (${balance.currencyCode})`
+                        : 'You owe'
+                      : `You owe ${personName} ${formatAmount(balance.youOwe, balance.currencyCode)}`}
                   </AppText>
                 ) : null}
                 {!compact ? (

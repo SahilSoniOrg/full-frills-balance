@@ -1,4 +1,6 @@
 import { AccountPickerPill } from './AccountPickerList';
+import { NewPersonActionPill } from './NewPersonActionPill';
+import { formatPersonPickerLabel, type PersonPickerGroup } from './personAccountGrouping';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -16,31 +18,7 @@ import {
   type AccountPickerSections,
 } from './accountPickerRows';
 
-const MAX_LIST_HEIGHT = 400;
-
-export function NewPersonActionPill({ onPress }: { onPress: () => void }) {
-  const { theme } = useTheme();
-  return (
-    <PressScaleTouchable
-      testID="account-picker-new-person-button"
-      accessibilityRole="button"
-      accessibilityLabel="New person"
-      onPress={onPress}
-      surfaceStyle={[
-        styles.newPersonPill,
-        {
-          borderColor: withOpacity(theme.primary, Opacity.heavy),
-          backgroundColor: withOpacity(theme.primary, Opacity.hover),
-        },
-      ]}
-    >
-      <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.primary} />
-      <AppText variant="caption" weight="semibold" color="primary">
-        New person
-      </AppText>
-    </PressScaleTouchable>
-  );
-}
+export const MAX_LIST_HEIGHT = 400;
 
 export function AccountPickerSection({
   section,
@@ -58,7 +36,7 @@ export function AccountPickerSection({
   const { theme } = useTheme();
   const dotColor =
     section.key === 'people'
-      ? theme.primary
+      ? theme.transfer
       : getSectionColor(section.type ?? section.title, theme);
   return (
     <View
@@ -113,24 +91,32 @@ export function AccountPickerPillGrid({
   accounts,
   selectedAccountId,
   onSelect,
+  peopleGroups,
   trailingItem,
 }: {
   accounts: AccountFields[];
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
   trailingItem?: ReactNode;
 }) {
+  const { theme } = useTheme();
   const hasSelection = Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID);
   return (
     <View style={styles.compactPillGrid}>
-      {accounts.map(account => (
-        <AccountPickerPill
-          key={account.id}
-          item={account}
-          isSelected={hasSelection && selectedAccountId === account.id}
-          onSelectId={onSelect}
-        />
-      ))}
+      {accounts.map(account => {
+        const personLabel = formatPersonPickerLabel(account, peopleGroups);
+        return (
+          <AccountPickerPill
+            key={account.id}
+            item={account}
+            displayLabel={personLabel}
+            toneColor={personLabel ? theme.transfer : undefined}
+            isSelected={hasSelection && selectedAccountId === account.id}
+            onSelectId={onSelect}
+          />
+        );
+      })}
       {trailingItem}
     </View>
   );
@@ -142,6 +128,7 @@ export function AccountPickerRecycledList({
   selectedAccountId,
   onSelect,
   toggleSection,
+  peopleGroups,
   onCreatePersonRequest,
 }: {
   sections: AccountPickerSections;
@@ -149,6 +136,7 @@ export function AccountPickerRecycledList({
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
   toggleSection: (key: string) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
   onCreatePersonRequest?: () => void;
 }) {
   const rows = useMemo(
@@ -162,6 +150,7 @@ export function AccountPickerRecycledList({
           accounts={item.accounts}
           selectedAccountId={selectedAccountId}
           onSelect={onSelect}
+          peopleGroups={peopleGroups}
           trailingItem={
             item.sectionKey === 'people' && item.isLastInSection && onCreatePersonRequest ? (
               <NewPersonActionPill onPress={onCreatePersonRequest} />
@@ -176,7 +165,7 @@ export function AccountPickerRecycledList({
           toggleSection={toggleSection}
         />
       ),
-    [onSelect, selectedAccountId, toggleSection, onCreatePersonRequest],
+    [onSelect, selectedAccountId, toggleSection, peopleGroups, onCreatePersonRequest],
   );
 
   return (

@@ -253,6 +253,7 @@ export const SimpleForm = React.memo(function SimpleForm({
               transferOpenItems.setSelectedItemIds(current => ({ ...current, [id]: !current[id] }))
             }
             onQuickFillAmount={val => editor.setAmount(Number(val).toFixed(precision))}
+            activeAmount={Number(editor.amount.replace(/,/g, ''))}
           />
         )}
       {activePersonGroup && activePersonAccount && (

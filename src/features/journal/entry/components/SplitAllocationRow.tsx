@@ -146,6 +146,22 @@ export function SplitAllocationRow({
               >
                 <AppIcon name={moveIcon} size={Size.iconXs} color={theme.textSecondary} />
               </PressScaleTouchable>
+            ) : canRemove ? (
+              <PressScaleTouchable
+                onPress={onRemove}
+                accessibilityRole="button"
+                accessibilityLabel={removeLabel}
+                style={styles.moveButton}
+                testID={`${testIDPrefix}-remove-${row.id}`}
+                hitSlop={{
+                  top: Spacing.sm,
+                  bottom: Spacing.sm,
+                  left: Spacing.sm,
+                  right: Spacing.sm,
+                }}
+              >
+                <AppIcon name={Icon.Close} size={Size.iconXs} color={theme.textTertiary} />
+              </PressScaleTouchable>
             ) : null}
           </View>
         }

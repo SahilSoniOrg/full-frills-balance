@@ -24,15 +24,19 @@ export function buildTransferOpenItemAllocations(
 }
 export function buildTransferOpenItemQuickFillChips(
   items: readonly TransferOpenItem[],
-  precision: number,
+  _precision: number,
 ) {
   const total = items.reduce((sum, item) => sum + item.remainder, 0);
-  return [
+  const baseChips = [
     { id: 'full', label: 'Full balance', amount: total },
     { id: 'half', label: 'Half', amount: total / 2 },
-    ...items.slice(0, 2).map(x => ({
+  ];
+  if (items.length <= 1) return baseChips;
+  return [
+    ...baseChips,
+    ...items.slice(0, 2).map((x, index) => ({
       id: x.item.id,
-      label: x.item.currencyCode + ' ' + x.item.originalAmount.toFixed(precision),
+      label: `Item ${index + 1}`,
       amount: x.remainder,
     })),
   ];

@@ -154,17 +154,6 @@ export const accountPickerStyles = StyleSheet.create({
     paddingTop: Spacing.none,
     paddingBottom: Spacing.xs,
   },
-  newPersonPill: {
-    minHeight: Size.touchTarget,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
   emptyContainer: {
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,

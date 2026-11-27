@@ -377,11 +377,8 @@ export function SplitForm({
           hasParticipants={selectedPersonIds.length > 0}
           splitMode={splitMode}
           onChangeSplitMode={changeSplitMode}
-          remainingAmountText={
-            totals.remaining === 0
-              ? '0'
-              : `${currencySymbol} ${formatRoundedAmount(Math.abs(totals.remaining), precision)}`
-          }
+          remainingAmountText={`${currencySymbol} ${formatRoundedAmount(Math.abs(totals.remaining), precision)}`}
+          isMatched={totals.remaining === 0}
           canAddRemainingToYours={canAddRemainingToYours}
           onAddRemainingToYours={onAddRemainingToYours}
           isQuickAdding={isQuickAdding}

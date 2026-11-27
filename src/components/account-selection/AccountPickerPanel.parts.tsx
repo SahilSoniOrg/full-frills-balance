@@ -13,12 +13,14 @@ import { resolveAccountAppearance } from '@/src/design-system/accountPresentatio
 import { withOpacity } from '@/src/design-system/colorMath';
 import { MotiView } from 'moti';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { Platform, type LayoutChangeEvent, View } from 'react-native';
+import { Platform, ScrollView, type LayoutChangeEvent, View } from 'react-native';
+import { NewPersonActionPill } from './NewPersonActionPill';
+import type { PersonPickerGroup } from './personAccountGrouping';
 import {
   AccountPickerPillGrid,
   AccountPickerRecycledList,
   AccountPickerSection,
-  NewPersonActionPill,
+  MAX_LIST_HEIGHT,
 } from './AccountPickerRecycledList';
 import type { AccountPickerSections } from './accountPickerRows';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
@@ -141,7 +143,7 @@ export interface AccountPickerDropdownProps {
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
-  onCreatePersonAccountRequest?: (personId?: string) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
   onCreatePersonRequest?: () => void;
   onSelect: (id: AccountId) => void;
   sections: AccountPickerSections;
@@ -162,7 +164,7 @@ export function AccountPickerDropdown({
   isExpanded,
   onClear,
   onCreateAccountRequest,
-  onCreatePersonAccountRequest,
+  peopleGroups,
   onCreatePersonRequest,
   onSelect,
   sections,
@@ -287,26 +289,6 @@ export function AccountPickerDropdown({
               <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
             </PressScaleTouchable>
           )}
-          {onCreatePersonAccountRequest && (
-            <PressScaleTouchable
-              onPress={() => onCreatePersonAccountRequest()}
-              accessibilityRole="button"
-              accessibilityLabel="Add person or account"
-              testID="add-person-or-account-button"
-              surfaceStyle={[
-                styles.archivePillButton,
-                {
-                  borderColor: withOpacity(theme.primary, Opacity.heavy),
-                  backgroundColor: withOpacity(theme.primary, Opacity.hover),
-                },
-              ]}
-            >
-              <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
-              <AppText variant="caption" weight="semibold" color="primary">
-                Add person or account
-              </AppText>
-            </PressScaleTouchable>
-          )}
         </View>
       </View>
 
@@ -323,34 +305,42 @@ export function AccountPickerDropdown({
           selectedAccountId={selectedAccountId}
           onSelect={handleAccountPress}
           toggleSection={toggleSection}
+          peopleGroups={peopleGroups}
           onCreatePersonRequest={onCreatePersonRequest}
         />
       ) : (
-        sections.map((section, index) => {
-          const isSectionCollapsed = collapsedSections.has(section.key);
-          return (
-            <AccountPickerSection
-              key={section.key}
-              section={section}
-              index={index}
-              collapsed={isSectionCollapsed}
-              toggleSection={toggleSection}
-            >
-              {!isSectionCollapsed && (
-                <AccountPickerPillGrid
-                  accounts={section.data}
-                  selectedAccountId={selectedAccountId}
-                  onSelect={handleAccountPress}
-                  trailingItem={
-                    section.key === 'people' && onCreatePersonRequest ? (
-                      <NewPersonActionPill onPress={onCreatePersonRequest} />
-                    ) : undefined
-                  }
-                />
-              )}
-            </AccountPickerSection>
-          );
-        })
+        <ScrollView
+          style={{ maxHeight: MAX_LIST_HEIGHT }}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="always"
+        >
+          {sections.map((section, index) => {
+            const isSectionCollapsed = collapsedSections.has(section.key);
+            return (
+              <AccountPickerSection
+                key={section.key}
+                section={section}
+                index={index}
+                collapsed={isSectionCollapsed}
+                toggleSection={toggleSection}
+              >
+                {!isSectionCollapsed && (
+                  <AccountPickerPillGrid
+                    accounts={section.data}
+                    selectedAccountId={selectedAccountId}
+                    onSelect={handleAccountPress}
+                    peopleGroups={peopleGroups}
+                    trailingItem={
+                      section.key === 'people' && onCreatePersonRequest ? (
+                        <NewPersonActionPill onPress={onCreatePersonRequest} />
+                      ) : undefined
+                    }
+                  />
+                )}
+              </AccountPickerSection>
+            );
+          })}
+        </ScrollView>
       )}
     </View>
   );

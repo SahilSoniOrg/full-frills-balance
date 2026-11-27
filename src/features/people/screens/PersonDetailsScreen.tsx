@@ -17,13 +17,14 @@ import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Spacing } from '@/src/constants/design-tokens';
+import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
+import { Shape, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { AccountType } from '@/src/types/enums';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PersonBalanceBadge } from '../components/PersonBalanceBadge';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
@@ -122,11 +123,13 @@ function PersonDetailsScreenContent() {
             </Inline>
 
             {negativeAccounts.length > 0 ? (
-              <Badge variant="warning" size="md">
-                Unassigned remainder is negative on{' '}
-                {negativeAccounts.map(a => a.account.name).join(', ')}. Review entries before
-                closing.
-              </Badge>
+              <NoticeBanner
+                tone="warning"
+                icon={Icon.Info}
+                message={`Unassigned remainder is negative on ${negativeAccounts
+                  .map(a => a.account.name)
+                  .join(', ')}. Review entries before closing.`}
+              />
             ) : null}
 
             <ActionButtonPair
@@ -150,7 +153,8 @@ function PersonDetailsScreenContent() {
             </AppButton>
 
             <AppButton
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onPress={vm.onStartWeAreSettled}
               testID="person-we-are-settled-button"
             >
@@ -166,64 +170,68 @@ function PersonDetailsScreenContent() {
                 subtitle="All tracked IOUs are settled."
               />
             ) : (
-              openItems.map(entry => (
-                <ListRow
-                  key={entry.item.id}
-                  leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                  title={
-                    <Stack gap="xs">
-                      <Inline gap="sm" alignItems="center">
-                        <AppText variant="body">
-                          {formatMoneyAmount(
-                            entry.remainder,
-                            entry.item.currencyCode,
-                            isPrivacyMode,
-                          )}{' '}
-                          left of{' '}
-                          {formatMoneyAmount(
-                            entry.item.originalAmount,
-                            entry.item.currencyCode,
-                            isPrivacyMode,
-                          )}
-                        </AppText>
-                        <Badge
-                          size="sm"
-                          variant={
-                            entry.remainder < entry.item.originalAmount ? 'warning' : 'default'
-                          }
-                        >
-                          {entry.remainder < entry.item.originalAmount ? 'Partial' : 'Open'}
-                        </Badge>
-                      </Inline>
-                      <View
-                        style={{
-                          height: 4,
-                          backgroundColor: theme.border,
-                          borderRadius: 2,
-                          overflow: 'hidden',
-                        }}
+              openItems.map(entry => {
+                const settledRatio =
+                  entry.item.originalAmount > 0
+                    ? Math.max(
+                        0,
+                        Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100),
+                      )
+                    : 0;
+                return (
+                  <ListRow
+                    key={entry.item.id}
+                    leading={<IconTile icon={Icon.Receipt} tint="warning" />}
+                    title={
+                      <Stack gap="xs">
+                        <Inline gap="sm" alignItems="center">
+                          <AppText variant="body">
+                            {formatMoneyAmount(
+                              entry.remainder,
+                              entry.item.currencyCode,
+                              isPrivacyMode,
+                            )}{' '}
+                            left of{' '}
+                            {formatMoneyAmount(
+                              entry.item.originalAmount,
+                              entry.item.currencyCode,
+                              isPrivacyMode,
+                            )}
+                          </AppText>
+                          <Badge
+                            size="sm"
+                            variant={
+                              entry.remainder < entry.item.originalAmount ? 'warning' : 'default'
+                            }
+                          >
+                            {entry.remainder < entry.item.originalAmount ? 'Partial' : 'Open'}
+                          </Badge>
+                        </Inline>
+                        <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${settledRatio}%`,
+                                backgroundColor: theme.income,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </Stack>
+                    }
+                    trailing={
+                      <AppButton
+                        size="sm"
+                        variant="outline"
+                        onPress={() => vm.onSettleUp(entry.item.id)}
                       >
-                        <View
-                          style={{
-                            height: 4,
-                            width: `${Math.max(0, Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100))}%`,
-                            backgroundColor: theme.income,
-                          }}
-                        />
-                      </View>
-                    </Stack>
-                  }
-                  trailing={
-                    <AppButton
-                      size="sm"
-                      variant="outline"
-                      onPress={() => vm.onSettleUp(entry.item.id)}
-                    >
-                      Settle
-                    </AppButton>
-                  }
-                />
-              ))
+                        Settle
+                      </AppButton>
+                    }
+                  />
+                );
+              })
             )}
           </ListGroup>
 
@@ -363,7 +371,7 @@ function PersonDetailsScreenContent() {
 
       <ModalSurface
         visible={vm.linkModalOpen}
-        title="Link Existing Account"
+        title="Link existing account"
         onClose={() => vm.setLinkModalOpen(false)}
         position="bottomSheet"
         fixedHeight={false}
@@ -474,3 +482,14 @@ function PersonDetailsScreenContent() {
 }
 
 export const PersonDetailsScreen = withPrivacyScope(PersonDetailsScreenContent);
+
+const styles = StyleSheet.create({
+  progressTrack: {
+    height: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: Spacing.xs,
+  },
+});

@@ -30,7 +30,8 @@ import { withOpacity } from '@/src/design-system/colorMath';
 import React, { useCallback, useMemo } from 'react';
 import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useAccountPickerList } from './useAccountPickerList';
-import type { PersonPickerGroup } from './personAccountGrouping';
+import { NewPersonActionPill } from './NewPersonActionPill';
+import { formatPersonPickerLabel, type PersonPickerGroup } from './personAccountGrouping';
 
 export type CreateAccountIntent = {
   suggestedName: string;
@@ -102,6 +103,8 @@ AccountPickerRow.displayName = 'AccountPickerRow';
 
 export interface AccountPickerPillProps {
   item: AccountFields | PlainAccount;
+  displayLabel?: string;
+  toneColor?: string;
   isSelected: boolean;
   isMultiple?: boolean;
   isPinnedArchived?: boolean;
@@ -114,6 +117,8 @@ export interface AccountPickerPillProps {
 export const AccountPickerPill = React.memo(
   ({
     item,
+    displayLabel,
+    toneColor,
     isSelected,
     isMultiple = false,
     isPinnedArchived = false,
@@ -124,13 +129,15 @@ export const AccountPickerPill = React.memo(
   }: AccountPickerPillProps) => {
     const { theme } = useTheme();
     const archived = isAccountArchived(item);
-    const { accentColor } = resolveAccountAppearance(item, theme);
+    const { accentColor: resolvedColor } = resolveAccountAppearance(item, theme);
+    const accentColor = toneColor ?? resolvedColor;
     const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
       archived,
       isPinnedArchived,
     );
 
-    const nameLength = item.name.length;
+    const visibleName = displayLabel ?? item.name;
+    const nameLength = visibleName.length;
     const isLongName = nameLength > 14;
     const contentColor = isSelected ? theme.onPrimary : accentColor;
     const handlePress = useCallback(() => {
@@ -180,7 +187,7 @@ export const AccountPickerPill = React.memo(
             },
           ]}
         >
-          {item.name}
+          {visibleName}
         </AppText>
         {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
         {isMultiple ? (
@@ -202,7 +209,6 @@ type AccountPickerListProps = {
   onClose: () => void;
   excludeParentAccounts?: boolean;
   peopleGroups?: readonly PersonPickerGroup[];
-  onCreatePersonAccountRequest?: (personId?: string) => void;
   onCreatePersonRequest?: () => void;
 } & (
   | {
@@ -234,7 +240,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
     isMultiple,
     excludeParentAccounts = false,
     peopleGroups,
-    onCreatePersonAccountRequest,
     onCreatePersonRequest,
   } = props;
   const { theme } = useTheme();
@@ -331,7 +336,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   styles.sectionDot,
                   {
                     backgroundColor:
-                      key === 'people' ? theme.primary : getSectionColor(title, theme),
+                      key === 'people' ? theme.transfer : getSectionColor(title, theme),
                   },
                 ]}
               />
@@ -345,53 +350,28 @@ export function AccountPickerList(props: AccountPickerListProps) {
               </View>
             </View>
             <View style={styles.sectionActions}>
-              {(onCreateRequest || onCreatePersonAccountRequest) && !isSearchMode && (
+              {onCreateRequest && !isSearchMode && (
                 <PressScaleTouchable
                   pressScale="subtle"
                   onPress={event => {
                     event.stopPropagation();
                     onClose();
                     requestAnimationFrame(() => {
-                      if (key.startsWith('person:') && onCreatePersonAccountRequest) {
-                        onCreatePersonAccountRequest(key.slice('person:'.length));
-                      } else {
-                        onCreateRequest?.({ suggestedName: '', type });
-                      }
+                      onCreateRequest({ suggestedName: '', type });
                     });
                   }}
                   style={styles.actionButton}
-                  accessibilityLabel={
-                    key.startsWith('person:')
-                      ? `Add account for ${title.replace('People · ', '')}`
-                      : `Create ${title} account`
-                  }
+                  accessibilityLabel={`Create ${title} account`}
                 >
                   <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
                 </PressScaleTouchable>
               )}
               {key === 'people' && onCreatePersonRequest && !isSearchMode && (
-                <PressScaleTouchable
-                  testID="account-picker-new-person-button"
-                  accessibilityRole="button"
-                  accessibilityLabel="New person"
-                  onPress={() => onCreatePersonRequest()}
-                  surfaceStyle={[
-                    styles.newPersonHeaderPill,
-                    {
-                      borderColor: withOpacity(theme.primary, Opacity.heavy),
-                      backgroundColor: withOpacity(theme.primary, Opacity.hover),
-                    },
-                  ]}
-                >
-                  <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.primary} />
-                  <AppText variant="caption" weight="semibold" color="primary">
-                    New person
-                  </AppText>
-                </PressScaleTouchable>
+                <NewPersonActionPill onPress={() => onCreatePersonRequest()} />
               )}
               {!isSearchMode && (
                 <AppIcon
-                  name={isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
+                  name={isCollapsed ? Icon.ChevronDown : Icon.ChevronUp}
                   size={Size.iconSm}
                   color={theme.textSecondary}
                 />
@@ -407,7 +387,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
       theme,
       toggleSection,
       onCreateRequest,
-      onCreatePersonAccountRequest,
       onCreatePersonRequest,
       onClose,
     ],
@@ -420,16 +399,21 @@ export function AccountPickerList(props: AccountPickerListProps) {
         const accountsInRow = item as PickerAccount[];
         return (
           <View pointerEvents="box-none" style={styles.pillGrid}>
-            {accountsInRow.map(account => (
-              <AccountPickerPill
-                key={account.id}
-                item={account}
-                isSelected={selectedIds.has(account.id)}
-                isMultiple={isMultiple}
-                isPinnedArchived={pinnedAccountIds.has(account.id)}
-                onPress={() => handleToggleSelection(account.id)}
-              />
-            ))}
+            {accountsInRow.map(account => {
+              const personLabel = formatPersonPickerLabel(account, peopleGroups);
+              return (
+                <AccountPickerPill
+                  key={account.id}
+                  item={account}
+                  displayLabel={personLabel}
+                  toneColor={personLabel ? theme.transfer : undefined}
+                  isSelected={selectedIds.has(account.id)}
+                  isMultiple={isMultiple}
+                  isPinnedArchived={pinnedAccountIds.has(account.id)}
+                  onPress={() => handleToggleSelection(account.id)}
+                />
+              );
+            })}
           </View>
         );
       }
@@ -452,6 +436,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
       pinnedAccountIds,
       handleToggleSelection,
       useCompactAccountPicker,
+      peopleGroups,
+      theme.transfer,
     ],
   );
   return (
@@ -540,26 +526,16 @@ const styles = StyleSheet.create({
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
   sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  sectionDot: { width: 8, height: 8, borderRadius: 4 },
+  sectionDot: { width: Spacing.sm, height: Spacing.sm, borderRadius: Shape.radius.xs },
   countBadge: {
     paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
+    paddingVertical: Spacing.none,
     borderRadius: Shape.radius.full,
-    minWidth: 20,
+    minWidth: Size.sm,
     alignItems: 'center',
   },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   actionButton: { padding: Spacing.xs, marginRight: Spacing.xs },
-  newPersonHeaderPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,

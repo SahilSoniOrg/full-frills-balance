@@ -7,7 +7,7 @@ import {
   PersonAvatar,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { Opacity, Shape, Spacing } from '@/src/constants/design-tokens';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -27,13 +27,14 @@ export type SplitPeopleParticipantsBarProps = {
   splitMode: SplitModeChoice;
   onChangeSplitMode: (mode: SplitModeChoice) => void;
   remainingAmountText: string;
+  isMatched?: boolean;
   canAddRemainingToYours: boolean;
   onAddRemainingToYours: () => void;
   isQuickAdding: boolean;
 };
 
 const SPLIT_MODE_OPTIONS: readonly { id: SplitModeChoice; label: string }[] = [
-  { label: 'Equal split', id: 'equal' },
+  { label: 'Auto split', id: 'equal' },
   { label: 'Custom', id: 'custom' },
 ];
 
@@ -47,7 +48,7 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
     setName('');
     setQuickAdd(false);
   };
-  const isMatched = props.remainingAmountText === '0';
+  const isMatched = props.isMatched ?? props.remainingAmountText === '0';
 
   return (
     <Stack gap="sm" style={styles.container}>
@@ -132,7 +133,7 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
                   <AppText variant="caption" weight={selected ? 'semibold' : 'medium'}>
                     {person.name}
                   </AppText>
-                  {selected ? <AppIcon name={Icon.Check} size={14} color="primary" /> : null}
+                  {selected ? <AppIcon name={Icon.Check} size={Size.xxs} color="primary" /> : null}
                 </Inline>
               </PressScaleTouchable>
             );
@@ -180,7 +181,7 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
       {props.hasParticipants && !isMatched ? (
         <Inline justifyContent="space-between" alignItems="center" gap="sm" flexWrap="wrap">
           <Inline gap="xs" alignItems="center">
-            <AppIcon name={Icon.Info} size={14} color={theme.warning} />
+            <AppIcon name={Icon.Info} size={Size.xs} color={theme.warning} />
             <AppText variant="caption" weight="medium" color="secondary">
               {`Remaining to assign: ${props.remainingAmountText}`}
             </AppText>
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Shape.radius.full,
     borderWidth: 1,
-    minHeight: 36,
+    minHeight: Size.touchTarget,
     justifyContent: 'center',
   },
   quickAddChip: {

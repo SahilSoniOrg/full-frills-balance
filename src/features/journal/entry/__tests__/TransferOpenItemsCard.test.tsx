@@ -9,11 +9,15 @@ import {
   useTransferOpenItems,
 } from '../hooks/useTransferOpenItems';
 
+jest.mock('@/src/hooks/use-reduced-motion', () => ({
+  useReducedMotion: () => true,
+}));
+
 describe('TransferOpenItemsCard', () => {
   it('forwards quick fill and mode changes', () => {
     const quick = jest.fn(),
       mode = jest.fn();
-    const { getByText } = render(
+    const { getByTestId, getByText } = render(
       <TransferOpenItemsCard
         items={[]}
         totalOpenRemainder={10}
@@ -26,6 +30,9 @@ describe('TransferOpenItemsCard', () => {
         onQuickFillAmount={quick}
       />,
     );
+    fireEvent(getByTestId('transfer-allocation-mode'), 'layout', {
+      nativeEvent: { layout: { width: 320, height: 40 } },
+    });
     fireEvent.press(getByText(/Full balance/));
     fireEvent.press(getByText('Pick items'));
     expect(quick).toHaveBeenCalledWith('10');
@@ -66,6 +73,10 @@ describe('TransferOpenItemsCard', () => {
     ]);
     expect(buildTransferOpenItemQuickFillChips(items, 2).map(chip => chip.amount)).toEqual([
       6, 3, 2, 4,
+    ]);
+    expect(buildTransferOpenItemQuickFillChips([items[0]], 2).map(chip => chip.id)).toEqual([
+      'full',
+      'half',
     ]);
   });
   it('loads open items through peopleReadService and computes pick allocations', async () => {

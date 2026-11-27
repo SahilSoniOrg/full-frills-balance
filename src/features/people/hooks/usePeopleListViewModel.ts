@@ -36,30 +36,36 @@ export function usePeopleListViewModel() {
   const reload = useCallback(async () => {
     const [rows, linkable] = await Promise.all([
       peopleReadService.listPeopleWithBalances(workplaceId, defaultCurrencyCode, {
-        includeArchived,
+        includeArchived: true,
       }),
       peopleReadService.listLinkableAccountsForPeople(workplaceId),
     ]);
     setPeople(rows);
     setAccounts(linkable);
-  }, [workplaceId, defaultCurrencyCode, includeArchived]);
+  }, [workplaceId, defaultCurrencyCode]);
   useEffect(() => {
     const timer = setTimeout(() => void reload(), 0);
     return () => clearTimeout(timer);
   }, [reload, tick, observation.version]);
 
-  const filteredPeople = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    return people.filter(row => row.person.name.toLocaleLowerCase().includes(normalized));
-  }, [people, query]);
-  const activePeopleCount = useMemo(
-    () => people.filter(row => !row.person.archivedAt).length,
+  const activePeople = useMemo(() => people.filter(row => !row.person.archivedAt), [people]);
+  const hasArchivedPeople = useMemo(
+    () => people.some(row => Boolean(row.person.archivedAt)),
     [people],
   );
+  const visiblePeople = useMemo(
+    () => (includeArchived ? people : activePeople),
+    [activePeople, includeArchived, people],
+  );
+  const filteredPeople = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    return visiblePeople.filter(row => row.person.name.toLocaleLowerCase().includes(normalized));
+  }, [visiblePeople, query]);
+  const activePeopleCount = activePeople.length;
   const balanceTotals = useMemo(() => {
     const owedToYou = new Map<string, number>();
     const youOwe = new Map<string, number>();
-    for (const row of people.filter(entry => !entry.person.archivedAt)) {
+    for (const row of activePeople) {
       for (const currency of row.currencies) {
         if (currency.owedToYou > 0)
           owedToYou.set(
@@ -74,7 +80,7 @@ export function usePeopleListViewModel() {
       }
     }
     return { owedToYou: [...owedToYou], youOwe: [...youOwe] };
-  }, [people]);
+  }, [activePeople]);
   const closeModal = () => setModal(null);
   const openCreate = () => {
     setPersonName('');
@@ -86,28 +92,37 @@ export function usePeopleListViewModel() {
     setSelectedAccountId('');
     setModal('link');
   };
-  const addPerson = async () => {
-    if (!personName.trim()) return;
+  const selectPersonForLink = (personId: PersonId) => {
+    setSelectedPersonId(current => {
+      const next = current === personId ? '' : personId;
+      if (next) setPersonName('');
+      return next;
+    });
+  };
+  const addPerson = async (): Promise<boolean> => {
+    if (!personName.trim()) return false;
     setBusy(true);
     try {
       await createPerson(workplaceId, { name: personName.trim() });
       closeModal();
       setTick(value => value + 1);
+      return true;
     } finally {
       setBusy(false);
     }
   };
-  const linkAccount = async (personId?: PersonId) => {
-    if (!selectedAccountId) return;
+  const linkAccount = async (personId?: PersonId): Promise<boolean> => {
+    if (!selectedAccountId) return false;
     setBusy(true);
     try {
       let targetId = personId ?? (selectedPersonId || undefined);
       if (!targetId && personName.trim())
         targetId = (await createPerson(workplaceId, { name: personName.trim() })).id;
-      if (!targetId) return;
+      if (!targetId) return false;
       await linkExistingAccount(workplaceId, targetId, selectedAccountId);
       closeModal();
       setTick(value => value + 1);
+      return true;
     } finally {
       setBusy(false);
     }
@@ -116,6 +131,7 @@ export function usePeopleListViewModel() {
     defaultCurrencyCode,
     people: filteredPeople,
     activePeopleCount,
+    hasArchivedPeople,
     balanceTotals,
     accounts,
     query,
@@ -131,6 +147,7 @@ export function usePeopleListViewModel() {
     setPersonName,
     selectedPersonId,
     setSelectedPersonId,
+    selectPersonForLink,
     selectedAccountId,
     setSelectedAccountId,
     busy,

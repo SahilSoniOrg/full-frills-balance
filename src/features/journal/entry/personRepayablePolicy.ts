@@ -17,7 +17,11 @@ export function getPersonRepayablePrompt({
     targetRole: expectedPersonAccount(flow, repayable).role,
     createsOpenItem: repayable,
     hint: repayable
-      ? `Tracks an open ${flow === 'outflow' ? 'receivable' : 'payable'} for ${personName}`
-      : `Records as ${personName} ${flow === 'outflow' ? 'expense' : 'income'} without an open item`,
+      ? flow === 'outflow'
+        ? `Tracks an IOU so ${personName} can pay you back later`
+        : `Tracks an IOU for what you owe ${personName}`
+      : flow === 'outflow'
+        ? `Records a shared cost or gift for ${personName} without tracking debt`
+        : `Records money received from ${personName} without creating a debt`,
   };
 }

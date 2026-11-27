@@ -24,16 +24,14 @@ export function PersonRepayableChoice({ flow, personName, repayable, onChange }:
     >
       <Stack gap="sm">
         <Inline gap="sm" alignItems="center">
-          <IconTile
-            icon={repayable ? Icon.SwapHorizontal : Icon.Heart}
-            tint={repayable ? 'primary' : 'income'}
-            size="sm"
-          />
+          <IconTile icon={Icon.SwapHorizontal} tint={repayable ? 'primary' : 'income'} size="sm" />
           <AppText variant="body" weight="semibold" style={{ flex: 1 }}>
             {prompt.question}
           </AppText>
         </Inline>
         <AppSegmentedControl
+          flex
+          testID="person-repayable-toggle"
           options={[
             { id: 'yes', label: 'Yes' },
             { id: 'no', label: 'No' },
