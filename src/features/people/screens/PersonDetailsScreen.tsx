@@ -12,6 +12,7 @@ import {
   LoadingView,
   PersonAvatar,
 } from '@/src/components/core';
+import { AccountListRow } from '@/src/components/accounts/AccountListRow';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
@@ -22,7 +23,6 @@ import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { Shape, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Stack } from '@/src/design-system';
-import { AccountType } from '@/src/types/enums';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
 import { StyleSheet, View } from 'react-native';
@@ -287,21 +287,11 @@ function PersonDetailsScreenContent() {
               />
             ) : (
               detail.linkedAccounts.map(linked => (
-                <ListRow
+                <AccountListRow
                   key={linked.account.id}
-                  leading={
-                    <IconTile
-                      icon={Icon.Bank}
-                      tint={
-                        linked.account.accountType === AccountType.ASSET
-                          ? 'income'
-                          : 'textSecondary'
-                      }
-                    />
-                  }
-                  title={linked.account.name}
-                  subtitle={`${linked.account.accountType} · ${linked.account.currencyCode}`}
-                  trailing={
+                  item={linked.account}
+                  testID={`person-linked-account-${linked.account.id}`}
+                  trailingAccessory={
                     <MoneyText
                       amount={linked.unassignedState.ledgerBalanceInNormalDirection}
                       currencyCode={linked.account.currencyCode}

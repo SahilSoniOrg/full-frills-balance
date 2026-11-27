@@ -1,5 +1,6 @@
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
+import { AccountListRow } from '@/src/components/accounts/AccountListRow';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
 import {
   AppButton,
@@ -7,7 +8,6 @@ import {
   AppInput,
   AppText,
   Icon,
-  ListRow,
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
@@ -16,7 +16,6 @@ import { useTheme } from '@/src/hooks/use-theme';
 import {
   resolveAccountAppearance,
   AccountSection,
-  getAccountTypeVariant,
   getSectionColor,
 } from '@/src/design-system/accountPresentation';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
@@ -37,69 +36,6 @@ export type CreateAccountIntent = {
   suggestedName: string;
   type?: AccountType;
 };
-
-const AccountPickerRow = React.memo(
-  ({
-    item,
-    isSelected,
-    isMultiple,
-    isPinnedArchived,
-    onPress,
-  }: {
-    item: AccountFields | PlainAccount;
-    isSelected: boolean;
-    isMultiple: boolean;
-    isPinnedArchived: boolean;
-    onPress: () => void;
-  }) => {
-    const { theme } = useTheme();
-    const archived = isAccountArchived(item);
-    const subtitle = [item.accountType, item.currencyCode].filter(Boolean).join(' • ');
-    const { accentColor } = resolveAccountAppearance(item, theme);
-    const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
-      archived,
-      isPinnedArchived,
-    );
-
-    return (
-      <ListRow
-        title={
-          <AppText variant="body" color={getAccountTypeVariant(item.accountType)} numberOfLines={1}>
-            {item.name}
-          </AppText>
-        }
-        accessibilityLabel={item.name}
-        accessibilityRole={isMultiple ? 'checkbox' : 'button'}
-        accessibilityState={isMultiple ? { checked: isSelected } : { selected: isSelected }}
-        testID={`account-picker-option-${item.id}`}
-        subtitle={subtitle}
-        onPress={onPress}
-        background={isSelected ? 'surfaceSecondary' : 'transparent'}
-        style={{ opacity }}
-        leading={
-          <AppIcon
-            name={getAccountIcon(item)}
-            size={Size.iconMd}
-            color={accentColor}
-            fallbackIcon={Icon.Wallet}
-          />
-        }
-        trailing={
-          <View style={styles.trailing}>
-            {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
-            {isMultiple ? (
-              <SelectionIndicator selected={isSelected} />
-            ) : (
-              <SelectionCheckmark selected={isSelected} size={Size.iconMd} />
-            )}
-          </View>
-        }
-      />
-    );
-  },
-);
-
-AccountPickerRow.displayName = 'AccountPickerRow';
 
 export interface AccountPickerPillProps {
   item: AccountFields | PlainAccount;
@@ -419,7 +355,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
       }
       const account = item as PickerAccount;
       return (
-        <AccountPickerRow
+        <AccountListRow
           item={account}
           isSelected={selectedIds.has(account.id)}
           isMultiple={isMultiple}
@@ -568,5 +504,4 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   pillLabel: { flexShrink: 1 },
-  trailing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 });
