@@ -14,7 +14,7 @@ const journal = 'journal-1' as JournalId;
 describe('PersonRepository', () => {
   beforeEach(async () => resetDatabase());
 
-  it('creates, updates, archives, unarchives, and soft deletes people in accounting sessions', async () => {
+  it('creates, updates, archives, and unarchives people in accounting sessions', async () => {
     const person = await runAccountingWriteSession(session =>
       personWriteRepository.createPersonInSession(session, wp, { name: 'Ada' }),
     );
@@ -29,11 +29,7 @@ describe('PersonRepository', () => {
       personWriteRepository.setPersonArchivedInSession(session, wp, person.id, false),
     );
     expect(await personQueryRepository.listPeople(wp)).toHaveLength(1);
-    await runAccountingWriteSession(session =>
-      personWriteRepository.softDeletePersonInSession(session, wp, person.id),
-    );
-    expect(await personQueryRepository.findPerson(wp, person.id)).toBeNull();
-    expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(5);
+    expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(4);
   });
 
   it('enforces one active person per account and upserts open items by journal and account', async () => {

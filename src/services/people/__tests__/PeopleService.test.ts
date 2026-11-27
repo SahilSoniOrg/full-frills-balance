@@ -124,11 +124,6 @@ describe('PeopleService integration', () => {
       accountSubtype: AccountSubtype.LOAN,
     });
     await PeopleService.linkExistingAccount(workplaceId, person.id, loan.id);
-    await expect(PeopleService.softDeletePerson(workplaceId, person.id)).rejects.toThrow();
-
-    const orphan = await PeopleService.createPerson(workplaceId, { name: 'Temp' });
-    await PeopleService.softDeletePerson(workplaceId, orphan.id);
-    expect(await personQueryRepository.findPerson(workplaceId, orphan.id)).toBeNull();
   });
 
   it('updates a posted expense through journal persistence and creates one open item per participant', async () => {

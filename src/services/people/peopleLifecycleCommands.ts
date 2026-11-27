@@ -75,20 +75,6 @@ export function setPersonArchived(
     personWriteRepository.setPersonArchivedInSession(session, workplaceId, personId, archived),
   );
 }
-export async function softDeletePerson(
-  workplaceId: WorkplaceId,
-  personId: PersonId,
-): Promise<void> {
-  const [links, items] = await Promise.all([
-    personQueryRepository.listPersonAccounts(workplaceId, personId),
-    personQueryRepository.listOpenItems(workplaceId, { personId }),
-  ]);
-  if (links.length || items.length)
-    throw new Error('Cannot delete a person with linked accounts or open items');
-  await runAccountingWriteSession(session =>
-    personWriteRepository.softDeletePersonInSession(session, workplaceId, personId),
-  );
-}
 async function linkValidatedAccountInSession(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,

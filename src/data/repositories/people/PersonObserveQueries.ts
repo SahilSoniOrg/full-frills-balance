@@ -35,25 +35,6 @@ export class PersonObserveQueries {
         'updated_at',
       ]);
   }
-  observePerson(workplaceId: WorkplaceId, personId: PersonId) {
-    return database.collections
-      .get<Person>('people')
-      .query(...base(workplaceId), Q.where('id', personId))
-      .observeWithColumns([
-        'name',
-        'notes',
-        'icon',
-        'color',
-        'default_currency_code',
-        'payment_handle',
-        'phone',
-        'email',
-        'is_pinned',
-        'archived_at',
-        'deleted_at',
-        'updated_at',
-      ]);
-  }
   observePersonAccounts(workplaceId: WorkplaceId, personId?: PersonId) {
     return database.collections
       .get<PersonAccount>('person_accounts')

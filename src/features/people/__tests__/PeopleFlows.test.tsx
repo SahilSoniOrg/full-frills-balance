@@ -151,7 +151,6 @@ jest.mock('@/src/services/people', () => {
     updatePerson: (...args: unknown[]) =>
       (mockUpdatePerson as (...a: unknown[]) => unknown)(...args),
     setPersonArchived: jest.fn(),
-    softDeletePerson: jest.fn(),
     linkExistingAccount: (...args: unknown[]) =>
       (mockLinkExistingAccount as (...a: unknown[]) => unknown)(...args),
     allocateUnassignedRepayment: jest.fn(),
@@ -225,7 +224,6 @@ jest.mock('@/src/services/people', () => {
         },
         unallocatedRepayments: [],
       }),
-      listPersonJournalHistory: async () => [],
       listSelectableAccounts: async () => [mockBankAccount, mockFoodAccount],
       getJournalForSplit: async () => null,
       listCompatibleRepaymentJournals: async () => [

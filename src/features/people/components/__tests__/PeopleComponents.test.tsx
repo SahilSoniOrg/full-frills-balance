@@ -1,6 +1,5 @@
 import { fireEvent, render } from '@/src/testing/render';
 import { PersonBalanceBadge } from '../PersonBalanceBadge';
-import { SplitBreakdownPreview } from '../SplitBreakdownPreview';
 import { WeAreSettledPreviewModal } from '../WeAreSettledPreviewModal';
 
 describe('people previews', () => {
@@ -45,18 +44,6 @@ describe('people previews', () => {
     expect(getByText('Dad owes you INR 200.00')).toBeTruthy();
     expect(queryByText('Net: INR 200.00')).toBeNull();
     expect(queryByText('Est. net ~INR 200.00')).toBeNull();
-  });
-  it('shows the exact split preview amounts', () => {
-    const { getByTestId } = render(
-      <SplitBreakdownPreview
-        total="$10.00"
-        userShare="$4.00"
-        participants={[{ id: 'ari', name: 'Ari', owedAmount: '$6.00' }]}
-      />,
-    );
-    expect(getByTestId('split-total')).toBeTruthy();
-    expect(getByTestId('split-user-share')).toBeTruthy();
-    expect(getByTestId('split-participant-ari')).toBeTruthy();
   });
   it('blocks confirmation when unassigned remainder is negative', () => {
     const onConfirm = jest.fn();

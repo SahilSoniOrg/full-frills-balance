@@ -192,24 +192,6 @@ export class PersonWriteRepository {
     ]);
     return x;
   }
-  async softDeletePersonInSession(s: AccountingWriteSession, w: WorkplaceId, id: PersonId) {
-    const x = await this.person(w, id);
-    stageModelWrite(s, () => [
-      x.prepareUpdate(r => {
-        r.deletedAt = new Date();
-        r.updatedAt = new Date();
-      }),
-      auditRepository.prepareLog(
-        {
-          entityType: 'person',
-          entityId: id,
-          action: AuditAction.DELETE,
-          changes: { deletedAt: true },
-        },
-        w,
-      ),
-    ]);
-  }
   async linkAccountInSession(
     s: AccountingWriteSession,
     w: WorkplaceId,
@@ -239,24 +221,6 @@ export class PersonWriteRepository {
     });
     stagePersonAccountCreation(s, x, [x]);
     return x;
-  }
-  async unlinkAccountInSession(s: AccountingWriteSession, w: WorkplaceId, a: AccountId) {
-    const xs = await this.links()
-      .query(
-        Q.where('workplace_id', w),
-        Q.where('account_id', a),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-    stageModelWrite(
-      s,
-      xs.map(x =>
-        x.prepareUpdate(r => {
-          r.deletedAt = new Date();
-          r.updatedAt = new Date();
-        }),
-      ),
-    );
   }
   async upsertOpenItemInSession(
     s: AccountingWriteSession,

@@ -4,7 +4,6 @@ export {
   createPersonWithReceivable,
   updatePerson,
   setPersonArchived,
-  softDeletePerson,
   linkExistingAccount,
   ensurePersonAccountInSession,
   ensurePersonAccount,

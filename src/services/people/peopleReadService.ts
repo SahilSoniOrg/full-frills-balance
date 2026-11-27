@@ -39,7 +39,6 @@ import {
   journalObserveQueries,
   type JournalTimelineCursor,
 } from '@/src/data/repositories/journal/JournalObserveQueries';
-import { iterateEnrichedJournalTimeline } from '@/src/services/journal/journalTimelineReadModel';
 import { debtAccountRole, personAccountRole } from './peopleLedgerReads';
 
 export const asDomainItems = (
@@ -527,44 +526,6 @@ export class PeopleReadService {
       );
     });
     return { matches, nextCursor: page.nextCursor, createdBefore };
-  }
-
-  async listPersonJournalHistory(
-    workplaceId: WorkplaceId,
-    personId: PersonId,
-    signal?: AbortSignal,
-  ) {
-    const links = await personQueryRepository.listPersonAccounts(workplaceId, personId);
-    const accountIds = [...new Set(links.map(link => link.accountId))];
-    if (accountIds.length === 0) return [];
-    const scoped = new Set(accountIds);
-    const rows = [];
-    for await (const journals of iterateEnrichedJournalTimeline(
-      {
-        workplaceId,
-        dateRange: { accountIds },
-        status: [JournalStatus.POSTED, JournalStatus.REVERSED],
-      },
-      signal ?? new AbortController().signal,
-    )) {
-      rows.push(
-        ...journals.flatMap(journal =>
-          journal.accounts
-            .filter(leg => scoped.has(leg.id) && leg.amount != null)
-            .map(leg => ({
-              id: leg.transactionId ?? journal.id + '-' + leg.id,
-              journalId: journal.id,
-              journalDate: journal.journalDate,
-              description: journal.description,
-              currencyCode: leg.currencyCode ?? leg.transactionCurrencyCode ?? journal.currencyCode,
-              amount: leg.amount ?? 0,
-              accountName: leg.name,
-              status: journal.status,
-            })),
-        ),
-      );
-    }
-    return rows;
   }
 }
 

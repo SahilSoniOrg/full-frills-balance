@@ -13,15 +13,3 @@ export default class OpenItem extends BaseScopedModel<OpenItemId> {
   @date('updated_at') updatedAt!: Date;
   @date('deleted_at') deletedAt?: Date;
 }
-export const toPlainOpenItem = (x: OpenItem) => ({
-  id: x.id,
-  personId: x.personId,
-  originatingJournalId: x.originatingJournalId,
-  accountId: x.accountId,
-  direction: x.direction,
-  originalAmount: x.originalAmount,
-  currencyCode: x.currencyCode,
-  createdAt: x.createdAt?.getTime(),
-  updatedAt: x.updatedAt?.getTime(),
-  deletedAt: x.deletedAt?.getTime(),
-});

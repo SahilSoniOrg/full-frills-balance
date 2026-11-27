@@ -20,16 +20,3 @@ export default class SettlementAllocation extends BaseScopedModel<SettlementAllo
   @date('updated_at') updatedAt!: Date;
   @date('deleted_at') deletedAt?: Date;
 }
-export const toPlainSettlementAllocation = (x: SettlementAllocation) => ({
-  id: x.id,
-  personId: x.personId,
-  openItemId: x.openItemId,
-  settlementJournalId: x.settlementJournalId,
-  accountId: x.accountId,
-  allocationKind: x.allocationKind,
-  amount: x.amount,
-  isActive: x.isActive,
-  createdAt: x.createdAt?.getTime(),
-  updatedAt: x.updatedAt?.getTime(),
-  deletedAt: x.deletedAt?.getTime(),
-});
