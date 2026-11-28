@@ -36,6 +36,8 @@ export type PersonProfileInput = {
 
 export type PersonProfilePatch = Partial<PersonProfileInput>;
 
+export type PersonNameOptions = { allowDuplicateName?: boolean };
+
 const trimOptionalText = (value?: string): string | undefined => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
@@ -61,9 +63,16 @@ export class PersonWriteRepository {
     if (!x[0]) throw new Error('Person not found in workplace');
     return x[0];
   }
-  private async assertUniqueName(w: WorkplaceId, name: string, excludeId?: PersonId) {
+  private async validateName(
+    w: WorkplaceId,
+    name: string,
+    options?: PersonNameOptions,
+    excludeId?: PersonId,
+  ) {
     const trimmed = name.trim();
     if (!trimmed) throw new Error('Name cannot be empty');
+    if (options?.allowDuplicateName === true) return trimmed;
+
     const normalized = trimmed.toLocaleLowerCase();
     const existing = await this.people()
       .query(Q.where('workplace_id', w), Q.where('deleted_at', Q.eq(null)))
@@ -80,8 +89,9 @@ export class PersonWriteRepository {
     s: AccountingWriteSession,
     w: WorkplaceId,
     input: PersonProfileInput,
+    options?: PersonNameOptions,
   ) {
-    const name = await this.assertUniqueName(w, input.name);
+    const name = await this.validateName(w, input.name, options);
     const notes = trimOptionalText(input.notes);
     const icon = input.icon;
     const color = trimOptionalText(input.color);
@@ -134,11 +144,12 @@ export class PersonWriteRepository {
     w: WorkplaceId,
     id: PersonId,
     patch: PersonProfilePatch,
+    options?: PersonNameOptions,
   ) {
     const x = await this.person(w, id);
     const normalizedPatch: PersonProfilePatch = {};
     if ('name' in patch) {
-      normalizedPatch.name = await this.assertUniqueName(w, patch.name ?? '', id);
+      normalizedPatch.name = await this.validateName(w, patch.name ?? '', options, id);
     }
     if ('notes' in patch) normalizedPatch.notes = trimOptionalText(patch.notes);
     if ('icon' in patch) normalizedPatch.icon = patch.icon;

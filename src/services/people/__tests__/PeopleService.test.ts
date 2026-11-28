@@ -684,6 +684,47 @@ describe('PeopleService integration', () => {
     });
   });
 
+  it('requires explicit permission for duplicate names on create and rename', async () => {
+    const original = await PeopleService.createPersonWithReceivable(workplaceId, {
+      name: 'Ada',
+      currencyCode: 'USD',
+    });
+    await expect(PeopleService.createPerson(workplaceId, { name: 'Ada' })).rejects.toThrow(
+      /already exists/,
+    );
+    const duplicate = await PeopleService.createPerson(
+      workplaceId,
+      { name: '  Ada  ' },
+      { allowDuplicateName: true },
+    );
+    expect(duplicate.name).toBe('Ada');
+    expect(duplicate.id).not.toBe(original.person.id);
+
+    const quickAdd = { name: 'ada', currencyCode: 'USD' };
+    await expect(PeopleService.createPersonWithReceivable(workplaceId, quickAdd)).rejects.toThrow(
+      /already exists/,
+    );
+    const second = await PeopleService.createPersonWithReceivable(workplaceId, quickAdd, {
+      allowDuplicateName: true,
+    });
+    expect(second.account.name).toBe('ada (Receivable · USD) 2');
+
+    await expect(
+      PeopleService.updatePerson(workplaceId, second.person.id, { name: 'Ada' }),
+    ).rejects.toThrow(/already exists/);
+    const renamed = await PeopleService.updatePerson(
+      workplaceId,
+      second.person.id,
+      { name: 'Ada' },
+      { allowDuplicateName: true },
+    );
+    expect(renamed).toMatchObject({ id: second.person.id, name: 'Ada' });
+
+    await expect(
+      PeopleService.createPerson(workplaceId, { name: '   ' }, { allowDuplicateName: true }),
+    ).rejects.toThrow('Name cannot be empty');
+  });
+
   it('creates a person with initial linked account and updates rich profile attributes', async () => {
     const cashReceivable = await createAccount({
       name: 'Pri Receivable',
