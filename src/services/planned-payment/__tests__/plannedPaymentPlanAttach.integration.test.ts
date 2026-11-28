@@ -313,7 +313,7 @@ describe('planned payment plan attach', () => {
     expect(parsed[MetadataKeys.ORIGINAL_PLANNED_DATE]).toBeUndefined();
   });
 
-  it('undo deactivates only repayment allocations created by attach', async () => {
+  it('keeps repayment allocations from an undone attach inactive through delete and restore', async () => {
     const receivableId = (
       await accountWriteRepository.create({
         name: 'Receivable',
@@ -387,5 +387,18 @@ describe('planned payment plan attach', () => {
       (await personQueryRepository.listSettlementAllocations(WP, { openItemId: item.id }))[0]
         .isActive,
     ).toBe(false);
+
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000);
+    const { undoToken } = await journalPersistenceRepository
+      .bulkDelete(WP, [capture.journal.id])
+      .finally(() => clock.mockRestore());
+    await journalPersistenceRepository.bulkRestore(WP, undoToken);
+    expect(await journalQueryRepository.find(WP, capture.journal.id)).toBeTruthy();
+    expect(
+      await personQueryRepository.listSettlementAllocations(WP, {
+        settlementJournalId: capture.journal.id,
+        activeOnly: true,
+      }),
+    ).toHaveLength(0);
   });
 });

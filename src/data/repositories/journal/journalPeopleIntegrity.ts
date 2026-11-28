@@ -467,14 +467,14 @@ export async function restoreJournalPeopleInSession(
       )
       .fetch(),
   );
-  const [historicalItems, historicalAllocations] = await Promise.all([
+  const [laterDeletedItems, laterDeactivatedAllocations] = await Promise.all([
     fetchSequentiallyInChunks(journalIds, ids =>
       database.collections
         .get<OpenItem>('open_items')
         .query(
           Q.where('workplace_id', workplaceId),
           Q.where('originating_journal_id', Q.oneOf([...ids])),
-          Q.where('deleted_at', Q.notEq(null)),
+          Q.where('deleted_at', Q.gt(deletedAt)),
         )
         .fetch(),
     ),
@@ -485,6 +485,7 @@ export async function restoreJournalPeopleInSession(
           Q.where('workplace_id', workplaceId),
           Q.where('settlement_journal_id', Q.oneOf([...ids])),
           Q.where('is_active', false),
+          Q.where('updated_at', Q.gt(deletedAt)),
           Q.where('deleted_at', Q.eq(null)),
         )
         .fetch(),
@@ -492,9 +493,11 @@ export async function restoreJournalPeopleInSession(
   ]);
   for (const journalId of journalIds) {
     if (
-      (historicalItems.some(item => item.originatingJournalId === journalId) &&
+      (laterDeletedItems.some(item => item.originatingJournalId === journalId) &&
         !items.some(item => item.originatingJournalId === journalId)) ||
-      (historicalAllocations.some(allocation => allocation.settlementJournalId === journalId) &&
+      (laterDeactivatedAllocations.some(
+        allocation => allocation.settlementJournalId === journalId,
+      ) &&
         !allocations.some(allocation => allocation.settlementJournalId === journalId))
     ) {
       throw new Error(
