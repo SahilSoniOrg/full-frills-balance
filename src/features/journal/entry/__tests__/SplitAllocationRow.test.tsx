@@ -202,4 +202,15 @@ describe('SplitAllocationRow', () => {
 
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
+
+  it('triggers removal when the visible remove button is pressed', () => {
+    const onRemove = jest.fn();
+    renderRow({ onRemove });
+
+    act(() => {
+      fireEvent.press(screen.getByTestId('split-remove-row-1'));
+    });
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
 });

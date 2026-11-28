@@ -1,6 +1,6 @@
 import { parseTransactionIntentSeed, toTransactionIntentSeed } from '../journalEntryPresentation';
 import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
-import { asAccountId, asJournalId } from '@/src/types/ids';
+import { asAccountId, asJournalId, asOpenItemId, asPersonId } from '@/src/types/ids';
 
 describe('journalEntryRouteParams', () => {
   it('preserves the currency of a prefilled amount across navigation and rejects malformed codes', () => {
@@ -13,6 +13,20 @@ describe('journalEntryRouteParams', () => {
   });
   it('maps a blank legacy route to an empty seed', () => {
     expect(parseTransactionIntentSeed({})).toEqual({});
+  });
+
+  it('round-trips person and open-item intent through legacy routes', () => {
+    const seed = {
+      editorMode: 'simple' as const,
+      type: 'transfer' as const,
+      personId: asPersonId('person-1'),
+      openItemId: asOpenItemId('item-1'),
+    };
+    expect(parseTransactionIntentSeed(toLegacyJournalEntryQueryParams(seed))).toEqual(seed);
+    expect(parseTransactionIntentSeed({ personId: 'person-1', openItemId: 'item-1' })).toEqual({
+      personId: 'person-1',
+      openItemId: 'item-1',
+    });
   });
 
   it('serializes a typed seed into the current legacy route contract', () => {

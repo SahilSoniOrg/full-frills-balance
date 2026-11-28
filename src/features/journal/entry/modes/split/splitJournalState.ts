@@ -41,7 +41,12 @@ export interface SplitJournalActions {
   setSourceAccountId: (id: AccountId) => void;
   setTotalAmount: (amount: string) => void;
   addSplitRow: () => void;
+  addSplitRowWithAccount: (
+    accountId: AccountId,
+    fallback?: Partial<Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>>,
+  ) => void;
   removeSplitRow: (id: string) => void;
+  removeSplitRowsForAccounts: (accountIds: readonly AccountId[]) => void;
   updateSplitRow: (
     id: string,
     patch: Partial<Pick<SplitRowState, 'accountId' | 'amount' | 'exchangeRate'>>,

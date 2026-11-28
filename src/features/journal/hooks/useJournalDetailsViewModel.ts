@@ -17,12 +17,13 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
 import { ORPHANED_PLANNED_JOURNAL_NOTICE } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { peopleReadService } from '@/src/services/people';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
-import type { JournalId } from '@/src/types/ids';
+import type { JournalId, PersonId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { of } from 'rxjs';
 import {
   buildJournalEntries,
@@ -45,12 +46,20 @@ import {
   useJournalSource,
 } from './useJournalDetailsEnrichment';
 
+export interface JournalDetailsPeopleActions {
+  splitLabel?: string;
+  onSplitWithPeople?: () => void;
+  settlePersonName?: string;
+  onSettleWithPerson?: () => void;
+}
+
 export interface JournalDetailsSections {
   journalId: JournalId;
   summary: JournalSummaryModel;
   note?: string;
   planned?: JournalPlannedModel;
   entries: JournalEntriesPresentation;
+  peopleActions?: JournalDetailsPeopleActions;
   balanceEvaluation?: JournalBalanceEvaluation;
   budget: JournalBudgetModel;
   schedule?: JournalScheduleModel;
@@ -107,6 +116,44 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     [],
     [],
   );
+  const [peopleMeta, setPeopleMeta] = useState<{
+    splitEligible: boolean;
+    alreadyShared: boolean;
+    linkedPerson?: { personId: PersonId; personName: string };
+  }>({ splitEligible: false, alreadyShared: false });
+
+  useEffect(() => {
+    let active = true;
+    async function loadPeopleMeta() {
+      if (
+        !journalId ||
+        typeof peopleReadService?.getJournalForSplit !== 'function' ||
+        typeof peopleReadService?.listPersonPickerGroups !== 'function'
+      ) {
+        return;
+      }
+      const [splitInfo, groups] = await Promise.all([
+        peopleReadService.getJournalForSplit(workplaceId, journalId),
+        peopleReadService.listPersonPickerGroups(workplaceId),
+      ]);
+      if (!active) return;
+      const matchedGroup = groups.find(
+        group =>
+          !group.archived && transactions.some(tx => group.accountIds.includes(tx.accountId)),
+      );
+      setPeopleMeta({
+        splitEligible: Boolean(splitInfo?.isEligible),
+        alreadyShared: Boolean(splitInfo?.isAlreadyShared),
+        linkedPerson: matchedGroup
+          ? { personId: matchedGroup.personId as PersonId, personName: matchedGroup.personName }
+          : undefined,
+      });
+    }
+    void loadPeopleMeta();
+    return () => {
+      active = false;
+    };
+  }, [journalId, transactions, version, workplaceId]);
 
   const status = journal?.status;
   // keepPreviousData can still hold the previous journal's obligation while the
@@ -261,6 +308,31 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
             }
           : undefined,
       entries,
+      peopleActions:
+        status === JournalStatus.POSTED &&
+        !journal.originalJournalId &&
+        !journal.reversingJournalId &&
+        (peopleMeta.splitEligible || peopleMeta.linkedPerson)
+          ? {
+              ...(peopleMeta.splitEligible
+                ? {
+                    splitLabel: peopleMeta.alreadyShared
+                      ? 'Edit split with people'
+                      : 'Split with people',
+                    onSplitWithPeople: () => AppNavigation.toSplitJournalEntry({ journalId }),
+                  }
+                : {}),
+              ...(peopleMeta.linkedPerson
+                ? {
+                    settlePersonName: peopleMeta.linkedPerson.personName,
+                    onSettleWithPerson: () =>
+                      AppNavigation.toTransferRepayment({
+                        personId: peopleMeta.linkedPerson!.personId,
+                      }),
+                  }
+                : {}),
+            }
+          : undefined,
       balanceEvaluation,
       budget,
       schedule: linkedPayment
@@ -297,6 +369,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     plannedPaymentPending,
     linkedPayment,
     entries,
+    peopleMeta,
     budget,
     source,
     history,

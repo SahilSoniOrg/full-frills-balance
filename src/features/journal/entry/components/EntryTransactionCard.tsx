@@ -16,6 +16,7 @@ import type { ExpansionPosition } from '@/src/components/account-selection/Accou
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { TransactionTypeSegmentedControl } from './TransactionTypeSegmentedControl';
 
 export type EntryTransactionSection = {
@@ -47,6 +48,7 @@ export interface EntryTransactionCardProps {
   fxTestIDPrefix?: string;
   accountSections: EntryTransactionSection[];
   accounts: AccountFields[];
+  peopleGroups?: readonly PersonPickerGroup[];
   sourceId: AccountId;
   destinationId: AccountId;
   expansionPosition: ExpansionPosition;
@@ -55,6 +57,7 @@ export interface EntryTransactionCardProps {
   onSelectDestination: (id: AccountId) => void;
   onSwapAccounts?: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  onCreatePersonRequest?: () => void;
   accountTestIDPrefix?: string;
   metaContainerStyle?: StyleProp<ViewStyle>;
   exchangeRateContainerStyle?: StyleProp<ViewStyle>;
@@ -82,6 +85,7 @@ export function EntryTransactionCard({
   fxTestIDPrefix,
   accountSections,
   accounts,
+  peopleGroups,
   sourceId,
   destinationId,
   expansionPosition,
@@ -90,6 +94,7 @@ export function EntryTransactionCard({
   onSelectDestination,
   onSwapAccounts,
   onCreateAccountRequest,
+  onCreatePersonRequest,
   accountTestIDPrefix,
   metaContainerStyle,
   exchangeRateContainerStyle,
@@ -185,7 +190,9 @@ export function EntryTransactionCard({
         type={type}
         onSwapAccounts={onSwapAccounts}
         allAccounts={accounts}
+        peopleGroups={peopleGroups}
         onCreateAccountRequest={onCreateAccountRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         displayMode={density === 'compact' ? 'compact' : 'standard'}
         containerStyle={accountSectionsContainerStyle}
         lazyDropdown

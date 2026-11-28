@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { asAccountId, asTransactionId, type AccountId } from '@/src/types/ids';
+import { asAccountId, asTransactionId, EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { type UseSplitJournalEditorProps, useSplitJournalEditor } from '../useSplitJournalEditor';
 import type { JournalEntryLine } from '@/src/types/domainJournal';
@@ -193,6 +193,66 @@ describe('useSplitJournalEditor', () => {
     expect(editor.lines.map(line => line.id)).toEqual(['source', 'split-2']);
   });
 
+  it('removes a participant account group atomically and leaves one blank allocation row', () => {
+    const editor = createEditor();
+    const accounts = [
+      { id: 'cash', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      { id: 'groceries', name: 'Groceries', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+      { id: 'bills', name: 'Bills', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+    ];
+    const { result } = renderHook(() =>
+      useSplitJournalEditor({
+        accounts: accounts as AccountFields[],
+        workplaceCurrency: 'USD',
+        editor,
+      }),
+    );
+
+    act(() => {
+      result.current.removeSplitRowsForAccounts([asAccountId('groceries'), asAccountId('bills')]);
+    });
+
+    expect(editor.setLines).toHaveBeenCalledTimes(1);
+    expect(editor.lines).toHaveLength(2);
+    expect(editor.lines[1]).toMatchObject({
+      id: 'split-1',
+      accountId: EMPTY_ACCOUNT_ID,
+      amount: '',
+    });
+  });
+
+  it('seeds a quick-added participant row with its receivable currency before accounts refresh', () => {
+    const editor = createEditor();
+    const accounts = [
+      { id: 'cash', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      { id: 'groceries', name: 'Groceries', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+      { id: 'bills', name: 'Bills', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+    ];
+    const { result } = renderHook(() =>
+      useSplitJournalEditor({
+        accounts: accounts as AccountFields[],
+        workplaceCurrency: 'USD',
+        editor,
+      }),
+    );
+
+    act(() => {
+      result.current.addSplitRowWithAccount(asAccountId('new-person-account'), {
+        accountType: AccountType.ASSET,
+        currencyCode: 'EUR',
+      });
+    });
+
+    expect(editor.addLine).toHaveBeenCalledWith(
+      TransactionType.DEBIT,
+      expect.objectContaining({
+        accountId: asAccountId('new-person-account'),
+        accountType: AccountType.ASSET,
+        accountCurrency: 'EUR',
+      }),
+    );
+  });
+
   it.each([
     ['expense', ['cash'], ['groceries', 'bills']],
     ['income', ['salary'], ['cash']],
@@ -318,7 +378,22 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
         updateLine,
         updateLines,
         setLines,
-        addLine: jest.fn(),
+        addLine: (transactionType = TransactionType.DEBIT, seed) => {
+          setLines(previous => [
+            ...previous,
+            {
+              id: asTransactionId(`added-${previous.length}`),
+              accountId: seed?.accountId ?? EMPTY_ACCOUNT_ID,
+              accountName: seed?.accountName ?? '',
+              accountType: seed?.accountType ?? AccountType.ASSET,
+              accountCurrency: seed?.accountCurrency,
+              amount: seed?.amount ?? '',
+              transactionType,
+              notes: seed?.notes ?? '',
+              exchangeRate: seed?.exchangeRate ?? '',
+            },
+          ]);
+        },
         fetchRatesForLines,
         setIsGuidedMode: jest.fn(),
       }),
@@ -332,6 +407,42 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
 }
 
 describe('useSplitJournalEditor FX rows', () => {
+  it('fills the unused blank allocation, then appends another selected account', () => {
+    const { result } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-usd', '10'),
+      {
+        id: asTransactionId('blank'),
+        accountId: asAccountId(''),
+        accountName: '',
+        accountType: AccountType.ASSET,
+        amount: '',
+        transactionType: TransactionType.DEBIT,
+        notes: '',
+        exchangeRate: '',
+      },
+    ]);
+
+    act(() => result.current.split.addSplitRowWithAccount(asAccountId('food-inr')));
+    expect(result.current.lines).toHaveLength(2);
+    expect(result.current.lines.find(line => line.id === 'blank')).toMatchObject({
+      accountId: 'food-inr',
+      accountName: 'Food',
+      accountType: AccountType.EXPENSE,
+      accountCurrency: 'INR',
+    });
+
+    act(() => result.current.split.addSplitRowWithAccount(asAccountId('rent-inr')));
+    expect(result.current.lines).toHaveLength(3);
+    expect(result.current.lines[2]).toMatchObject({
+      accountId: 'rent-inr',
+      accountName: 'Rent',
+      accountType: AccountType.EXPENSE,
+      accountCurrency: 'INR',
+      amount: '',
+      transactionType: TransactionType.DEBIT,
+    });
+  });
+
   it('shows the workplace rate on a foreign allocation and keeps that row in its own currency', () => {
     const { result } = renderStatefulSplit([
       fxLine('source', TransactionType.CREDIT, 'cash-usd', '8'),

@@ -33,11 +33,18 @@ import {
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { TransactionType } from '@/src/types/enums';
+import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
+import { createPersonWithReceivable, peopleReadService } from '@/src/services/people';
+import { logger } from '@/src/services/observability/logger';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
+import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
+import type { OpenItemId, PersonId } from '@/src/types/ids';
+import { useObservable } from '@/src/hooks/useObservable';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -88,6 +95,19 @@ export interface JournalEntryShell {
   /** True briefly after a successful save so the CTA can pulse before leave. */
   saveSuccessPulse: boolean;
   inboxItems: PlainInboxRecord[];
+  people: SplitParticipant[];
+  peopleGroups: PersonPickerGroup[];
+  initialPersonId?: PersonId;
+  initialOpenItemId?: OpenItemId;
+  onQuickAddPerson: (name: string, currencyCode?: string) => Promise<AccountId>;
+  onTransferOpenItemPlanChange: (
+    plan: {
+      personId: PersonId;
+      targetAccountId: AccountId;
+      allocationMode: 'fifo' | 'pick';
+      allocations: readonly { openItemId: OpenItemId; amount: number }[];
+    } | null,
+  ) => void;
 }
 
 export function useJournalEntryShell(): JournalEntryShell {
@@ -97,9 +117,53 @@ export function useJournalEntryShell(): JournalEntryShell {
   const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
 
   const { accounts } = useAccounts(workplaceId);
+  const { data: peopleGroups } = useObservable(
+    () => peopleReadService.observePersonPickerGroups(workplaceId),
+    [workplaceId],
+    [],
+    { resetKey: workplaceId },
+  );
+  const people = useMemo(
+    () =>
+      peopleGroups
+        .filter(group => !group.archived)
+        .map(group => ({
+          id: group.personId,
+          name: group.personName,
+          icon: group.icon,
+          color: group.color,
+        })),
+    [peopleGroups],
+  );
+  const transferOpenItemPlanRef = useRef<{
+    personId: PersonId;
+    targetAccountId: AccountId;
+    allocationMode: 'fifo' | 'pick';
+    allocations: readonly { openItemId: OpenItemId; amount: number }[];
+  } | null>(null);
+  const onTransferOpenItemPlanChange = useCallback(
+    (plan: typeof transferOpenItemPlanRef.current) => {
+      transferOpenItemPlanRef.current = plan;
+    },
+    [],
+  );
+  const onQuickAddPerson = useCallback(
+    async (name: string, currencyCode?: string) => {
+      const { account } = await createPersonWithReceivable(workplaceId, {
+        name,
+        currencyCode: currencyCode ?? workplaceCurrency,
+      });
+      return account.id;
+    },
+    [workplaceId, workplaceCurrency],
+  );
 
   const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
   const saveLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transferSeededRef = useRef(false);
+  const getRepaymentAllocationRef = useRef<
+    () => import('@/src/types/journalWrite').JournalRepaymentAllocation | undefined
+  >(() => undefined);
   const reduceMotion = useReducedMotion();
   const [saveSuccessPulse, setSaveSuccessPulse] = useState(false);
   const onSuccess = useCallback(() => {
@@ -144,9 +208,11 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialDate: seed.date,
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,
+    getRepaymentAllocation: () => getRepaymentAllocationRef.current(),
     onSuccess,
   });
   const { editor, splitState } = session;
+  const { lines, updateLines } = editor;
 
   const inboxItems = useInboxSourceRecords({
     workplaceId,
@@ -157,6 +223,72 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
     useJournalEntryModeState(editor, seed.editorMode);
+
+  useEffect(() => {
+    getRepaymentAllocationRef.current = () => {
+      const plan = transferOpenItemPlanRef.current;
+      return activeMode === 'basic' &&
+        editor.savedStatus !== JournalStatus.POSTED &&
+        editor.transactionType === 'transfer' &&
+        plan &&
+        (plan.allocations.length > 0 || plan.allocationMode === 'pick')
+        ? plan
+        : undefined;
+    };
+  }, [activeMode, editor.savedStatus, editor.transactionType]);
+
+  useEffect(() => {
+    if (
+      transferSeededRef.current ||
+      seed.journalId ||
+      seed.type !== 'transfer' ||
+      !seed.personId ||
+      !accounts.length ||
+      !peopleGroups.length
+    )
+      return;
+    transferSeededRef.current = true;
+    void peopleReadService
+      .getPersonDetail(workplaceId, seed.personId, workplaceCurrency)
+      .then(detail => {
+        if (!detail) return;
+        const linked = detail.linkedAccounts;
+        const item = seed.openItemId
+          ? detail.openItems.find(row => row.item.id === seed.openItemId)
+          : undefined;
+        const personAccount =
+          (item && accounts.find(account => account.id === item.item.accountId)) ||
+          linked.find(entry => entry.account.accountType === AccountType.ASSET)?.account ||
+          linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
+        if (!personAccount) return;
+        // Seed only the person leg; leave the cash/bank counterparty empty for the user.
+        const personAsSource = personAccount.accountType === AccountType.ASSET;
+        const personLineType = personAsSource ? TransactionType.CREDIT : TransactionType.DEBIT;
+        const personLine = lines.find(line => line.transactionType === personLineType);
+        if (!personLine) return;
+        updateLines({
+          [personLine.id]: {
+            ...lineAccountPatch(personAccount.id, personAccount, personAccount.accountType),
+            ...(item && !seed.amount && item.remainder > 0
+              ? { amount: String(item.remainder) }
+              : {}),
+          },
+        });
+      })
+      .catch(error => logger.warn('Could not load People transfer details', { error }));
+  }, [
+    accounts,
+    lines,
+    updateLines,
+    peopleGroups,
+    seed.amount,
+    seed.journalId,
+    seed.openItemId,
+    seed.personId,
+    seed.type,
+    workplaceCurrency,
+    workplaceId,
+  ]);
 
   const {
     batchEditor,
@@ -264,6 +396,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   return {
     editor,
     inboxItems,
+    people,
+    peopleGroups,
+    initialPersonId: seed.personId,
+    initialOpenItemId: seed.openItemId,
+    onQuickAddPerson,
+    onTransferOpenItemPlanChange,
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     validationIssues: session.validationIssues,

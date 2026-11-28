@@ -98,6 +98,7 @@ function createEditor(options?: {
     setTransactionType: jest.fn(),
     isGuidedMode: true,
     isEdit: options?.isEdit ?? false,
+    savedStatus: undefined,
     valuationCurrency: options?.valuationCurrency ?? mockWorkplaceCurrency,
     lines,
     setLines: jest.fn(),

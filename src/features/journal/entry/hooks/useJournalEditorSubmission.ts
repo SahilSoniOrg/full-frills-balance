@@ -1,5 +1,6 @@
 import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { PostingPlan } from '@/src/types/domainTransaction';
+import type { JournalRepaymentAllocation } from '@/src/types/journalWrite';
 import type { JournalId } from '@/src/types/ids';
 import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { triggerSaveOutcomeHaptic } from '@/src/design-system/haptics';
@@ -17,6 +18,7 @@ export function useJournalEditorSubmission(options: {
   smsRecordId?: string;
   launchSource?: string;
   planned?: PlannedJournalMode;
+  getRepaymentAllocation?: () => JournalRepaymentAllocation | undefined;
   onAfterSave?: (result: {
     journalId?: JournalId;
     action?: 'created' | 'updated';
@@ -31,6 +33,7 @@ export function useJournalEditorSubmission(options: {
     smsRecordId,
     launchSource,
     planned,
+    getRepaymentAllocation,
     onAfterSave,
     onSuccess,
   } = options;
@@ -54,6 +57,7 @@ export function useJournalEditorSubmission(options: {
           smsRecordId,
           launchSource,
           planned,
+          repaymentAllocation: getRepaymentAllocation?.(),
         });
 
         if (!result.success) {
@@ -80,6 +84,7 @@ export function useJournalEditorSubmission(options: {
     },
     [
       journalId,
+      getRepaymentAllocation,
       launchSource,
       newJournalCurrencyCode,
       onAfterSave,

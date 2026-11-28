@@ -17,6 +17,7 @@ import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
+import type { JournalEntryLine } from '@/src/types/domainJournal';
 import { TransactionType } from '@/src/types/enums';
 import { pinnedArchivedAccountIds } from '@/src/domain/accounts/accountArchive';
 import {
@@ -111,6 +112,41 @@ export function useSplitJournalEditor({
   const addSplitRow = useCallback(() => {
     editor.addLine();
   }, [editor]);
+  const addSplitRowWithAccount = useCallback(
+    (
+      accountId: AccountId,
+      fallback?: Partial<Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'>>,
+    ) => {
+      const account = accounts.find(candidate => candidate.id === accountId);
+      const patch = lineAccountPatch(
+        accountId,
+        account,
+        fallback?.accountType ?? getInferredAccountType(transactionType, TransactionType.DEBIT),
+      );
+      if (!account) {
+        patch.accountName = fallback?.name ?? '';
+        patch.accountType = fallback?.accountType ?? patch.accountType;
+        patch.accountCurrency = fallback?.currencyCode;
+      }
+
+      if (
+        destinationLines.length === 1 &&
+        (!destinationLines[0].accountId || destinationLines[0].accountId === EMPTY_ACCOUNT_ID) &&
+        destinationLines[0].amount === ''
+      ) {
+        updateLine(destinationLines[0].id, { ...patch, exchangeRate: '' });
+        return;
+      }
+
+      editor.addLine(TransactionType.DEBIT, {
+        ...patch,
+        amount: '',
+        notes: '',
+        exchangeRate: '',
+      });
+    },
+    [accounts, destinationLines, editor.addLine, transactionType, updateLine],
+  );
   const removeSplitRow = useCallback(
     (id: string) => {
       editor.setLines(previous => {
@@ -125,6 +161,38 @@ export function useSplitJournalEditor({
       });
     },
     [editor],
+  );
+  const removeSplitRowsForAccounts = useCallback(
+    (accountIds: readonly AccountId[]) => {
+      const ids = new Set(accountIds);
+      if (ids.size === 0) return;
+      editor.setLines(previous => {
+        const splitRows = previous.filter(line => line.transactionType === TransactionType.DEBIT);
+        const remaining = splitRows.filter(line => !ids.has(line.accountId));
+        const isSelectedSplitRow = (line: JournalEntryLine) =>
+          line.transactionType === TransactionType.DEBIT && ids.has(line.accountId);
+        if (remaining.length > 0) return previous.filter(line => !isSelectedSplitRow(line));
+        const blank = splitRows.find(line => ids.has(line.accountId)) ?? splitRows[0];
+        if (!blank) return previous;
+        return previous.flatMap(line => {
+          if (line.id !== blank.id) return isSelectedSplitRow(line) ? [] : [line];
+          return [
+            {
+              ...blank,
+              ...lineAccountPatch(
+                EMPTY_ACCOUNT_ID,
+                undefined,
+                getInferredAccountType(transactionType, TransactionType.DEBIT),
+              ),
+              amount: '',
+              notes: '',
+              exchangeRate: '',
+            },
+          ];
+        });
+      });
+    },
+    [editor.setLines, transactionType],
   );
   const updateSplitAmounts = useCallback(
     (updates: Record<string, string>) => {
@@ -379,7 +447,9 @@ export function useSplitJournalEditor({
       sourceFx,
       canEqualize,
       addSplitRow,
+      addSplitRowWithAccount,
       removeSplitRow,
+      removeSplitRowsForAccounts,
       updateSplitRow,
       updateSplitAmounts,
       updateAmount,
@@ -412,7 +482,9 @@ export function useSplitJournalEditor({
       sourceFx,
       canEqualize,
       addSplitRow,
+      addSplitRowWithAccount,
       removeSplitRow,
+      removeSplitRowsForAccounts,
       updateSplitRow,
       updateSplitAmounts,
       updateAmount,
