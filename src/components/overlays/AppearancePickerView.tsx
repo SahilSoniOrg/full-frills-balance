@@ -20,7 +20,7 @@ import {
 import { AccountType } from '@/src/types/enums';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountAppearance } from '@/src/design-system/accountPresentation';
-import { withOpacity } from '@/src/design-system/colorMath';
+import { isValidHexColor, withOpacity } from '@/src/design-system/colorMath';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { AppearancePickerMode } from '@/src/components/overlays/appearancePickerSession';
@@ -35,6 +35,9 @@ export interface AppearancePickerViewProps {
   selectedIcon?: IconName;
   selectedColor?: string;
   accountType?: AccountType;
+  defaultAccentColor?: string;
+  previewLabel?: string;
+  defaultColorLabel?: string;
   mode?: AppearancePickerMode;
   title?: string;
   /** When false, omit the in-content title (screen chrome owns it). */
@@ -49,6 +52,9 @@ export function AppearancePickerView({
   selectedIcon = Icon.Wallet,
   selectedColor = '',
   accountType = AccountType.ASSET,
+  defaultAccentColor,
+  previewLabel = 'Selected account icon',
+  defaultColorLabel,
   mode = 'both',
   title,
   showTitle = false,
@@ -62,10 +68,13 @@ export function AppearancePickerView({
   const effectiveIcon = mode === 'both' ? draftIcon : selectedIcon;
   const effectiveColor = mode === 'both' ? draftColor : selectedColor;
 
-  const { accentColor: accountColor, categoryColor } = resolveAccountAppearance(
-    { accountType, color: effectiveColor },
-    theme,
-  );
+  const { accentColor: accountColor, categoryColor } = defaultAccentColor
+    ? {
+        accentColor:
+          effectiveColor && isValidHexColor(effectiveColor) ? effectiveColor : defaultAccentColor,
+        categoryColor: defaultAccentColor,
+      }
+    : resolveAccountAppearance({ accountType, color: effectiveColor }, theme);
 
   const handleIconPress = async (icon: IconName) => {
     if (mode === 'both') {
@@ -150,7 +159,7 @@ export function AppearancePickerView({
           <View style={[styles.previewHalo, { borderColor: categoryColor }]}>
             <IvyIcon
               name={effectiveIcon}
-              label="Selected account icon"
+              label={previewLabel}
               color={accountColor}
               size={Size.avatarSm}
             />
@@ -222,7 +231,7 @@ export function AppearancePickerView({
             <PressScaleTouchable
               onPress={() => void handleColorPress('')}
               style={styles.autoColorRow}
-              accessibilityLabel="Auto color (from account type)"
+              accessibilityLabel={defaultColorLabel ?? 'Auto color (from account type)'}
               accessibilityRole="button"
             >
               <View
@@ -234,7 +243,7 @@ export function AppearancePickerView({
                 ]}
               />
               <AppText variant="body" color={!effectiveColor ? 'primary' : 'secondary'}>
-                {AppConfig.strings.accounts.form.colorAuto}
+                {defaultColorLabel ?? AppConfig.strings.accounts.form.colorAuto}
               </AppText>
             </PressScaleTouchable>
             <View style={styles.colorGrid}>

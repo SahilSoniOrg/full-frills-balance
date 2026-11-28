@@ -10,6 +10,8 @@ type SubmitAction = {
   onPress: () => void;
   disabled: boolean;
   requirementHint?: string | null;
+  loading?: boolean;
+  testID?: string;
 };
 
 type EntityFormScreenProps = {
@@ -41,6 +43,8 @@ export function EntityFormScreen({
             label={submitAction.label}
             disabled={submitAction.disabled}
             requirementHint={submitAction.requirementHint}
+            loading={submitAction.loading}
+            testID={submitAction.testID}
           />
         </View>
       }

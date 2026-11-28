@@ -1,7 +1,7 @@
-export { CurrencyPickerSheet } from './components/CurrencyPickerSheet';
+export { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
 export { CurrencySelector } from './components/CurrencySelector';
 export { CurrencySideControl } from './components/CurrencySideControl';
-export { resolveCurrencySymbol } from './helpers/currencyPickerOptions';
+export { resolveCurrencySymbol } from '@/src/components/shared/currencyPickerOptions';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
 export { default as AccountManagementScreen } from './screens/AccountManagementScreen';

@@ -21,7 +21,7 @@ import {
   getAccountTypeDescription,
   getAccountTypeIcon,
 } from '@/src/features/accounts/helpers/accountKinds';
-import { resolveCurrencySymbol } from '@/src/features/accounts/helpers/currencyPickerOptions';
+import { resolveCurrencySymbol } from '@/src/components/shared/currencyPickerOptions';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';

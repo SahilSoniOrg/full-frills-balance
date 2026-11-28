@@ -1,4 +1,4 @@
-import { CurrencyPickerSheet } from '@/src/features/accounts/components/CurrencyPickerSheet';
+import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
