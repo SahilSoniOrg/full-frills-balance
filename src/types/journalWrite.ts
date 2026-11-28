@@ -1,5 +1,12 @@
 import { JournalStatus, TransactionType } from './enums';
-import { AccountId, JournalId, PlannedPaymentId } from './ids';
+import { AccountId, JournalId, OpenItemId, PersonId, PlannedPaymentId } from './ids';
+
+export interface JournalRepaymentAllocation {
+  personId: PersonId;
+  targetAccountId: AccountId;
+  allocations: readonly { openItemId: OpenItemId; amount: number }[];
+  allocationMode?: 'fifo' | 'pick';
+}
 
 export interface JournalWriteLine {
   accountId: AccountId;
@@ -27,6 +34,8 @@ export interface JournalWriteFields {
   originalJournalId?: JournalId;
   status?: JournalStatus;
   plannedPaymentId?: PlannedPaymentId;
+  /** Absent means automated FIFO; present empty means intentionally leave repayment unassigned. */
+  repaymentAllocation?: JournalRepaymentAllocation;
   transactions: JournalWriteLine[];
   metadata?: JournalWriteMetadata;
 }
