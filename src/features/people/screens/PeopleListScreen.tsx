@@ -10,8 +10,8 @@ import {
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { ListSectionHeader } from '@/src/components/shared/ListSectionHeader';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { Inline, Stack } from '@/src/design-system';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -158,10 +158,10 @@ export function PeopleListScreen() {
             />
           ) : (
             <Stack gap="none">
-              <SectionLabel
-                label={`People (${vm.people.length})`}
-                marginTop="none"
-                style={styles.sectionLabel}
+              <ListSectionHeader
+                title="People"
+                count={vm.people.length}
+                style={styles.sectionHeader}
               />
               {vm.people.map(row => (
                 <PersonCard
@@ -198,7 +198,8 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xxxxl,
   },
-  sectionLabel: {
+  sectionHeader: {
+    marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.xs,
   },
 });

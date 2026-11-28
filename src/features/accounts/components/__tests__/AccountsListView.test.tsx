@@ -157,8 +157,8 @@ describe('AccountsListView', () => {
         onToggleSectionSelect={onToggleSectionSelect}
       />
     );
-    const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
-    fireEvent.press(getByLabelText('Asset section, 1 accounts'));
+    const { getByTestId, queryByTestId, rerender } = render(view(false));
+    fireEvent.press(getByTestId('section-control-asset'));
     expect(onToggleSection).toHaveBeenCalledWith('Asset');
     expect(queryByTestId('section-select-asset')).toBeNull();
 
@@ -166,7 +166,7 @@ describe('AccountsListView', () => {
     const sectionControl = getByTestId('section-control-asset');
     const sectionSelectButton = getByTestId('section-select-asset');
     expect(sectionSelectButton).toBeTruthy();
-    // Checkbox must be a sibling of DisclosureToggle, not nested inside it.
+    // Checkbox must be a sibling of the section control, not nested inside it.
     let ancestor = sectionSelectButton.parent;
     while (ancestor) {
       expect(ancestor).not.toBe(sectionControl);

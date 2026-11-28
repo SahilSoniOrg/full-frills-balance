@@ -2,15 +2,11 @@ import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants'
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
 import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
-import {
-  EmptyStateView,
-  ErrorStateView,
-  DisclosureToggle,
-  PressScaleTouchable,
-} from '@/src/components/core';
+import { EmptyStateView, ErrorStateView, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
+import { ListSectionHeader } from '@/src/components/shared/ListSectionHeader';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import type { AccountsListViewProps } from '@/src/features/accounts/hooks/accountsListTypes';
 import {
@@ -22,7 +18,6 @@ import {
   buildAccountListRows,
   type AccountListRow,
 } from '@/src/features/accounts/helpers/accountListRows';
-import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native';
@@ -113,7 +108,7 @@ export function AccountsListView({
         sectionAccountIds.length > 0 && sectionAccountIds.every(id => selectedAccountIds.has(id));
       const isSomeSectionSelected =
         !isAllSectionSelected && sectionAccountIds.some(id => selectedAccountIds.has(id));
-      const selectionCheckbox =
+      const selectionTrailing =
         isSelectionModeActive && sectionAccountIds.length > 0 ? (
           <PressScaleTouchable
             onPress={() => onToggleSectionSelect(sectionAccountIds)}
@@ -130,39 +125,34 @@ export function AccountsListView({
               selected={isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false}
             />
           </PressScaleTouchable>
-        ) : null;
+        ) : undefined;
 
       return (
-        <Inline
-          align="center"
-          gap="sm"
+        <ListSectionHeader
+          title={section.title}
+          count={section.count}
+          expanded={!section.isCollapsed}
+          onToggle={() => handleToggleSection(section.title)}
+          onLongPress={() => {
+            Keyboard.dismiss();
+            onToggleSectionSelect(sectionAccountIds);
+          }}
+          delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
+          accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
           style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
-        >
-          <DisclosureToggle
-            label={section.title}
-            meta={section.count}
-            expanded={!section.isCollapsed}
-            onToggle={() => handleToggleSection(section.title)}
-            onLongPress={() => {
-              Keyboard.dismiss();
-              onToggleSectionSelect(sectionAccountIds);
-            }}
-            delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
-            accessibilityLabel={`${section.title} section, ${section.count} accounts`}
-            accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
-            style={styles.sectionHeaderPressable}
-            testID={`section-control-${section.title.toLowerCase()}`}
-          />
-          {selectionCheckbox}
-          <MoneyText
-            amount={section.total}
-            currencyCode={currencyCode}
-            formatStyle="short"
-            variant="body"
-            weight="bold"
-            style={{ color: section.totalColor }}
-          />
-        </Inline>
+          testID={`section-control-${section.title.toLowerCase()}`}
+          trailing={selectionTrailing}
+          amount={
+            <MoneyText
+              amount={section.total}
+              currencyCode={currencyCode}
+              formatStyle="short"
+              variant="body"
+              weight="bold"
+              style={{ color: section.totalColor }}
+            />
+          }
+        />
       );
     },
     [
@@ -295,10 +285,6 @@ const styles = StyleSheet.create({
   sectionHeaderContainer: {
     marginTop: Spacing.xl,
     marginBottom: Spacing.sm,
-  },
-  sectionHeaderPressable: {
-    flex: 1,
-    minWidth: 0,
   },
   sectionSelectButton: {
     minWidth: Size.touchTarget,
