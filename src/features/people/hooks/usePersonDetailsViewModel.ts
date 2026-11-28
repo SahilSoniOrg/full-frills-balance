@@ -84,7 +84,7 @@ export function usePersonDetailsViewModel() {
 
   const journalList = useJournalEntryList({
     workplaceId,
-    enabled: Boolean(detail && linkedAccountIds.length > 0),
+    enabled: Boolean(detail),
     statuses: [...ACTIVE_JOURNAL_STATUSES],
     // One card per journal (not per linked leg). Expanding scoped legs duplicates
     // transfers that touch two accounts for the same person.
