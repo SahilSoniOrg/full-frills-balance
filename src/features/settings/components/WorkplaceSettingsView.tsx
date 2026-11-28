@@ -42,6 +42,19 @@ export function WorkplaceSettingsView({ vm }: WorkplaceSettingsViewProps) {
         </ListGroup>
         <ListGroup variant="plain" header="Active workplace defaults">
           <ListRow
+            focusId="auto-settle-people"
+            icon={Icon.Handshake}
+            title="Auto-settle People balances"
+            subtitle="Automatically post non-cash journals to offset same-currency receivables and payables for a Person"
+            testID="auto-settle-people-toggle"
+            trailing={
+              <ListRow.Toggle
+                value={vm.autoSettlePeopleBalances}
+                onValueChange={vm.setAutoSettlePeopleBalances}
+              />
+            }
+          />
+          <ListRow
             focusId="currency"
             icon={Icon.Bank}
             title={AppConfig.strings.settings.currency.title}

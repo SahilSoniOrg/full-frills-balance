@@ -17,7 +17,14 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View, type ViewStyle } from 'react-native';
 
 export type ContextualAddAction =
-  'expense' | 'income' | 'transfer' | 'account' | 'category' | 'budget' | 'planned-payment';
+  | 'expense'
+  | 'income'
+  | 'transfer'
+  | 'account'
+  | 'category'
+  | 'person'
+  | 'budget'
+  | 'planned-payment';
 
 export interface ContextualAddMenuProps {
   primaryTab: PrimaryTab;
@@ -68,6 +75,12 @@ const MENU_ACTIONS: Record<PrimaryTab, readonly MenuAction[]> = {
       label: entities.account,
       icon: Icon.Wallet,
       testID: 'contextual-add-account',
+    },
+    {
+      action: 'person',
+      label: 'Person',
+      icon: Icon.User,
+      testID: 'contextual-add-person',
     },
     {
       action: 'category',

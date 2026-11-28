@@ -282,7 +282,11 @@ export function createPrimaryPagerContent(
       >
         <RemountOnWorkplace>
           <AccountsGroupProvider
-            active={preparedRoutes.has('accounts') || preparedRoutes.has('categories')}
+            active={
+              preparedRoutes.has('accounts') ||
+              preparedRoutes.has('categories') ||
+              preparedRoutes.has('people')
+            }
           >
             <PrimaryPrivacyScopeStoreProvider>
               <PersistentTabChromeProvider>

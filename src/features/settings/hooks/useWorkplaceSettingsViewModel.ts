@@ -7,7 +7,8 @@ import { AppConfig } from '@/src/constants/app-config';
 import type { IconName } from '@/src/types/domainIcons';
 import type { PlainCurrency, PlainWorkplace } from '@/src/types/plainDtos';
 import { confirm, toast } from '@/src/services/feedback/alerts';
-import { useCallback, useState } from 'react';
+import { preferences } from '@/src/services/preferences';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 export interface WorkplaceSettingsViewModel {
   activeWorkplace: PlainWorkplace;
@@ -16,6 +17,8 @@ export interface WorkplaceSettingsViewModel {
   onUpdateCurrency: (code: string) => Promise<void>;
   safeToSpendDays: number;
   setSafeToSpendDays: (days: number) => void;
+  autoSettlePeopleBalances: boolean;
+  setAutoSettlePeopleBalances: (enabled: boolean) => void;
   updateWorkplaceDetails: (name: string, icon: IconName) => Promise<boolean>;
   deleteWorkplace: () => void;
   deletingWorkplaceId: string | null;
@@ -30,6 +33,15 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   } = useWorkplace();
   const { currencies } = useCurrencies();
   const { safeToSpendDays, setSafeToSpendDays: setStsSafeToSpendDays } = useStsPreferences();
+  const autoSettlePeopleBalances = useSyncExternalStore(
+    onChange => {
+      const subscription = preferences.workplace
+        .observe(activeWorkplaceId, 'autoSettlePeopleBalances')
+        .subscribe(onChange);
+      return () => subscription.unsubscribe();
+    },
+    () => preferences.workplace.getSnapshot(activeWorkplaceId).autoSettlePeopleBalances ?? false,
+  );
   const [deletingWorkplaceId, setDeletingWorkplaceId] = useState<string | null>(null);
 
   const onUpdateCurrency = useCallback(
@@ -46,6 +58,12 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
       analytics.trackFeatureUsage('settings', 'change_safe_to_spend_days', { days: value });
     },
     [setStsSafeToSpendDays],
+  );
+  const setAutoSettlePeopleBalances = useCallback(
+    (enabled: boolean) => {
+      preferences.workplace.update(activeWorkplaceId, { autoSettlePeopleBalances: enabled });
+    },
+    [activeWorkplaceId],
   );
 
   const updateWorkplaceDetails = useCallback(
@@ -109,6 +127,8 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     onUpdateCurrency,
     safeToSpendDays,
     setSafeToSpendDays,
+    autoSettlePeopleBalances,
+    setAutoSettlePeopleBalances,
     updateWorkplaceDetails,
     deleteWorkplace,
     deletingWorkplaceId,

@@ -10,6 +10,20 @@ describe('route manifest', () => {
     );
   });
 
+  it('registers People and people management routes', () => {
+    expect(ROUTE_MANIFEST.find(route => route.name === 'people')).toMatchObject({
+      screenType: 'people',
+      flowContext: 'people_management',
+      presentation: 'tab',
+    });
+    expect(workplaceSwitchFallback('person-details')?.name).toBe('people');
+    expect(ROUTE_MANIFEST.find(route => route.name === 'split-expense')).toBeUndefined();
+    expect(ROUTE_MANIFEST.find(route => route.name === 'settle-up')).toMatchObject({
+      presentation: 'composer',
+      isModal: true,
+    });
+  });
+
   it('marks composer flows as modal routes', () => {
     expect(ROUTE_MANIFEST.find(route => route.name === 'journal-entry')).toMatchObject({
       presentation: 'composer',

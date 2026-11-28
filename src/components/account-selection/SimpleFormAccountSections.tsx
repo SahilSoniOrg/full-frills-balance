@@ -16,6 +16,7 @@ import {
   type ExpansionPosition,
 } from './AccountPickerPanel';
 import { AccountPickerNode } from './AccountPickerPanel.parts';
+import type { PersonPickerGroup } from './personAccountGrouping';
 
 export interface SimpleFormAccountSectionsProps {
   /**
@@ -47,7 +48,9 @@ export interface SimpleFormAccountSectionsProps {
 
   // Archive & Creation
   allAccounts?: AccountFields[];
+  peopleGroups?: readonly PersonPickerGroup[];
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  onCreatePersonRequest?: () => void;
 
   // Embedding
   displayMode?: 'standard' | 'compact';
@@ -72,7 +75,9 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   type = 'expense',
   onSwapAccounts,
   allAccounts,
+  peopleGroups,
   onCreateAccountRequest,
+  onCreatePersonRequest,
   displayMode = 'standard',
   containerStyle,
   lazyDropdown = false,
@@ -126,11 +131,13 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
       activeLeg={activeLeg}
       activeSide={activeSide}
       allAccounts={allAccounts}
+      peopleGroups={peopleGroups}
       containerStyle={containerStyle}
       dropdownTestID={`${testIDPrefix}-${activeSide === 'left' ? 'source' : 'destination'}-dropdown`}
       expansionPosition={expansionPosition}
       lazyDropdown={lazyDropdown}
       onCreateAccountRequest={onCreateAccountRequest}
+      onCreatePersonRequest={onCreatePersonRequest}
       renderNodes={({ visualSide, onLeftTabWrapperLayout }) => (
         <>
           <AccountPickerNode

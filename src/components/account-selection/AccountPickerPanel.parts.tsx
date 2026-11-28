@@ -13,11 +13,14 @@ import { resolveAccountAppearance } from '@/src/design-system/accountPresentatio
 import { withOpacity } from '@/src/design-system/colorMath';
 import { MotiView } from 'moti';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { Platform, type LayoutChangeEvent, View } from 'react-native';
+import { Platform, ScrollView, type LayoutChangeEvent, View } from 'react-native';
+import { NewPersonActionPill } from './NewPersonActionPill';
+import type { PersonPickerGroup } from './personAccountGrouping';
 import {
   AccountPickerPillGrid,
   AccountPickerRecycledList,
   AccountPickerSection,
+  MAX_LIST_HEIGHT,
 } from './AccountPickerRecycledList';
 import type { AccountPickerSections } from './accountPickerRows';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
@@ -140,6 +143,8 @@ export interface AccountPickerDropdownProps {
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   onSelect: (id: AccountId) => void;
   sections: AccountPickerSections;
   setShowArchived: (show: boolean) => void;
@@ -159,6 +164,8 @@ export function AccountPickerDropdown({
   isExpanded,
   onClear,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonRequest,
   onSelect,
   sections,
   setShowArchived,
@@ -285,6 +292,13 @@ export function AccountPickerDropdown({
         </View>
       </View>
 
+      {onCreatePersonRequest &&
+      (sections.length === 0 || Platform.OS === 'web' || visibleAccountCount <= 32) ? (
+        <View style={{ paddingVertical: Spacing.xs, alignItems: 'flex-start' }}>
+          <NewPersonActionPill onPress={onCreatePersonRequest} />
+        </View>
+      ) : null}
+
       {sections.length === 0 ? (
         <View style={[styles.emptyContainer, { borderColor: theme.border }]}>
           <AppText variant="body" color="secondary">
@@ -298,28 +312,37 @@ export function AccountPickerDropdown({
           selectedAccountId={selectedAccountId}
           onSelect={handleAccountPress}
           toggleSection={toggleSection}
+          peopleGroups={peopleGroups}
+          onCreatePersonRequest={onCreatePersonRequest}
         />
       ) : (
-        sections.map((section, index) => {
-          const isSectionCollapsed = collapsedSections.has(section.key);
-          return (
-            <AccountPickerSection
-              key={section.key}
-              section={section}
-              index={index}
-              collapsed={isSectionCollapsed}
-              toggleSection={toggleSection}
-            >
-              {!isSectionCollapsed && (
-                <AccountPickerPillGrid
-                  accounts={section.data}
-                  selectedAccountId={selectedAccountId}
-                  onSelect={handleAccountPress}
-                />
-              )}
-            </AccountPickerSection>
-          );
-        })
+        <ScrollView
+          style={{ maxHeight: MAX_LIST_HEIGHT }}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="always"
+        >
+          {sections.map((section, index) => {
+            const isSectionCollapsed = collapsedSections.has(section.key);
+            return (
+              <AccountPickerSection
+                key={section.key}
+                section={section}
+                index={index}
+                collapsed={isSectionCollapsed}
+                toggleSection={toggleSection}
+              >
+                {!isSectionCollapsed && (
+                  <AccountPickerPillGrid
+                    accounts={section.data}
+                    selectedAccountId={selectedAccountId}
+                    onSelect={handleAccountPress}
+                    peopleGroups={peopleGroups}
+                  />
+                )}
+              </AccountPickerSection>
+            );
+          })}
+        </ScrollView>
       )}
     </View>
   );

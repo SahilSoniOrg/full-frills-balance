@@ -46,3 +46,13 @@ describe('ContextualAddMenu', () => {
     expect(screen.queryByTestId('contextual-add-account')).toBeNull();
   });
 });
+
+describe('People add action', () => {
+  it('dispatches the person action from the Accounts menu', async () => {
+    const onAction = jest.fn();
+    render(<ContextualAddMenu primaryTab="accounts" onAction={onAction} />);
+    fireEvent.press(screen.getByTestId('contextual-add-trigger'));
+    fireEvent.press(screen.getByTestId('contextual-add-person'));
+    await waitFor(() => expect(onAction).toHaveBeenCalledWith('person'));
+  });
+});

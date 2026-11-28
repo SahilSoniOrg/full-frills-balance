@@ -22,6 +22,7 @@ const primaryRouteMetadata: Record<PrimaryPageId, { screenType: string; flowCont
   dashboard: { screenType: 'dashboard', flowContext: 'dashboard_overview' },
   accounts: { screenType: 'account', flowContext: 'account_management' },
   categories: { screenType: 'account', flowContext: 'account_management' },
+  people: { screenType: 'people', flowContext: 'people_management' },
   budgets: { screenType: 'commitments', flowContext: 'cash_flow_planning' },
   'planned-payments': { screenType: 'commitments', flowContext: 'cash_flow_planning' },
   activity: { screenType: 'journal', flowContext: 'transaction_history' },
@@ -51,10 +52,12 @@ const tabRoutes = [
 
 const composerRoutes = [
   ['journal-entry', 'journal', 'transaction_creation'],
+  ['settle-up', 'people', 'settlement'],
   ['onboarding', 'onboarding', 'cash_clarity_setup'],
   ['account-creation', 'account', 'account_setup'],
   ['account-matcher-editor', 'account', 'account_matcher_configuration'],
   ['category-creation', 'account', 'category_setup'],
+  ['person-creation', 'people', 'person_creation'],
   ['planned-payment-form', 'commitments', 'commitment_configuration'],
   ['budget-edit', 'budget', 'budget_configuration'],
 ] as const;
@@ -81,6 +84,7 @@ const detailRoutes = [
           : 'accounts',
     },
   ],
+  ['person-details', 'people', 'person_review', false, { name: 'people' }],
   ['settings', 'settings', 'preferences_hub', false],
   ['account-details', 'account', 'account_drilldown', false, { name: 'accounts' }],
   ['account-matchers', 'account', 'account_matcher_management', false, { name: 'accounts' }],

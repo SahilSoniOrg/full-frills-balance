@@ -27,6 +27,9 @@ import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { AccountPickerDropdown } from './AccountPickerPanel.parts';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
+import { PersonAccountChooserModal } from './PersonAccountChooserModal';
+import type { PersonPickerGroup } from './personAccountGrouping';
+import { usePersonLinkedAccountSelect } from './usePersonLinkedAccountSelect';
 import { FOLDER_STROKE_WIDTH, useFolderLayoutAnimation } from './useFolderLayoutAnimation';
 
 export type ExpansionPosition = 'left' | 'right' | null;
@@ -59,6 +62,8 @@ export interface AccountPickerPanelProps {
   expansionPosition: ExpansionPosition;
   lazyDropdown?: boolean;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   renderNodes: (layout: AccountPickerPanelLayout) => ReactNode;
 }
 
@@ -75,6 +80,8 @@ export function AccountPickerPanel({
   expansionPosition,
   lazyDropdown = false,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonRequest,
   renderNodes,
 }: AccountPickerPanelProps) {
   const { theme } = useTheme();
@@ -101,6 +108,7 @@ export function AccountPickerPanel({
     excludeParentAccounts: true,
     pinnedAccountIds,
     enabled: listEnabled,
+    peopleGroups,
   });
   const hasSelectedAccount = Boolean(account && account.id !== EMPTY_ACCOUNT_ID);
   const hasArchivedAccounts = useMemo(
@@ -128,13 +136,18 @@ export function AccountPickerPanel({
 
   if (isRevealVisible && !hasOpenedDropdown) setHasOpenedDropdown(true);
 
-  const handleSelect = useCallback(
+  const commitSelect = useCallback(
     (id: AccountId) => {
       Keyboard.dismiss();
       onSelect(id);
     },
     [onSelect],
   );
+  const personSelect = usePersonLinkedAccountSelect({
+    accounts,
+    peopleGroups,
+    onSelect: commitSelect,
+  });
 
   const handleClear = useCallback(() => {
     Keyboard.dismiss();
@@ -154,12 +167,23 @@ export function AccountPickerPanel({
         isExpanded={isExpanded}
         onClear={handleClear}
         onCreateAccountRequest={onCreateAccountRequest}
-        onSelect={handleSelect}
+        peopleGroups={peopleGroups}
+        onCreatePersonRequest={onCreatePersonRequest}
+        onSelect={personSelect.selectAccount}
         sections={sections}
         setShowArchived={setShowArchived}
         showArchived={showArchived}
         testID={dropdownTestID}
         toggleSection={toggleSection}
+      />
+      <PersonAccountChooserModal
+        visible={personSelect.chooserVisible}
+        personName={personSelect.chooserPersonName}
+        accounts={personSelect.chooserAccounts}
+        peopleGroups={peopleGroups}
+        selectedId={activeAccountId}
+        onClose={personSelect.closeChooser}
+        onSelect={personSelect.confirmChooserAccount}
       />
     </View>
   );
