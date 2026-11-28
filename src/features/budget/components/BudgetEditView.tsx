@@ -11,12 +11,10 @@ import {
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
+import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
+import { resolveCurrencySymbol } from '@/src/components/shared/currencyPickerOptions';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
-import {
-  CurrencyPickerSheet,
-  CurrencySideControl,
-  resolveCurrencySymbol,
-} from '@/src/features/accounts';
+import { CurrencySideControl } from '@/src/features/accounts';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
