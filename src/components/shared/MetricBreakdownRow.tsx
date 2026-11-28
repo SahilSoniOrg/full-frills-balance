@@ -2,7 +2,6 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import type { ComponentVariant } from '@/src/design-system/variants';
-import type { MoneyFormatStyle } from '@/src/utils/currencyFormatter';
 import { StyleSheet, View } from 'react-native';
 
 type MetricBreakdownRowProps = {
@@ -10,7 +9,6 @@ type MetricBreakdownRowProps = {
   label: string;
   amount: number;
   currencyCode: string;
-  formatStyle?: MoneyFormatStyle;
   isLoading?: boolean;
   moneyColor: ComponentVariant;
 };
@@ -20,7 +18,6 @@ export function MetricBreakdownRow({
   label,
   amount,
   currencyCode,
-  formatStyle = 'compact',
   isLoading,
   moneyColor,
 }: MetricBreakdownRowProps) {
@@ -34,7 +31,7 @@ export function MetricBreakdownRow({
         <MoneyText
           amount={amount}
           currencyCode={currencyCode}
-          formatStyle={formatStyle}
+          formatStyle="compact"
           loading={isLoading}
           variant="heading"
           color={moneyColor}
