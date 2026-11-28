@@ -21,8 +21,6 @@ const ALLOWED = new Set([
   'features/hub/components/HubWidget.tsx',
   'features/reports-v2/screen/components/ReportsV2QualityBanner.tsx',
   'features/settings/components/CaptureSuggestionHistoricalPattern.tsx',
-  // Compact account-type summary tiles form a four-column card grid, not list navigation rows.
-  'features/people/screens/PersonDetailsScreen.tsx',
 ]);
 
 const SRC = path.resolve(__dirname, '../../..');

@@ -7,7 +7,7 @@ export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 
 export type ScreenFabChrome = Pick<
   FloatingActionButtonProps,
-  'onPress' | 'label' | 'icon' | 'placement' | 'accessibilityLabel' | 'testID'
+  'onPress' | 'label' | 'icon' | 'placement' | 'accessibilityLabel'
 >;
 
 type ScreenChromeBase = {
