@@ -5,6 +5,7 @@ import {
 } from '@/src/data/repositories/BalanceRebuildIntentRepository';
 import { storage } from '@/src/data/storage/storage';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
+import { settlePeopleForRebuildClaim } from '@/src/services/people/peopleSettlementCommands';
 import { logger } from '@/src/services/observability/logger';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -134,6 +135,7 @@ export class RebuildQueueService {
       for (const claim of pending) {
         if (signal.aborted) return false;
         try {
+          if (claim.peopleSettlementJournalDate != null) await settlePeopleForRebuildClaim(claim);
           const result = await accountingRebuildService.rebuildIntent(claim, () => !signal.aborted);
           if (result === 'superseded') this.changed = true;
           if (result === 'deferred') needsRetry = true;

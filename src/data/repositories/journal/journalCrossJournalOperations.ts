@@ -41,6 +41,8 @@ import { transitionCapture } from '@/src/domain/transaction-intelligence/capture
 import { applyJournalMetadataProjections } from '@/src/data/repositories/journal/journalMetadataProjections';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { Q } from '@nozbe/watermelondb';
+import { personQueryRepository } from '@/src/data/repositories/people';
+import { syncPutJournalPeopleInSession } from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
 /** Validates each journal as it would read after moving lines to other accounts. */
 async function validateRetargetedJournals(
@@ -127,6 +129,13 @@ export async function stageMerge(
       )
       .fetch(),
   ]);
+  const personLinks = await personQueryRepository.listPersonAccounts(workplaceId);
+  const personAccountIds = new Set(personLinks.map(link => link.accountId));
+  if (sourceTransactions.some(transaction => personAccountIds.has(transaction.accountId))) {
+    throw new Error(
+      'Cannot merge journals involving People accounts. Edit the journals individually.',
+    );
+  }
   const descriptions = [
     ...new Set(
       orderedJournals
@@ -286,6 +295,24 @@ export async function stageReassignAccounts(
     journalTransactions,
     transaction => replacements.get(transaction.id) ?? transaction.accountId,
   );
+  const beforeByJournal = groupTransactionsByJournal(journalTransactions);
+  for (const journal of journals) {
+    const balance = validated.get(journal.id)!;
+    await syncPutJournalPeopleInSession({
+      session,
+      workplaceId,
+      journalId: journal.id,
+      status: journal.status,
+      accountsById: balance.accountsById,
+      precisionByAccountId: balance.precisionByAccountId,
+      beforeTransactions: beforeByJournal.get(journal.id) ?? [],
+      newLines: balance.lines,
+      isReversal: Boolean(journal.originalJournalId),
+      journalDate: journal.journalDate,
+      previousJournalDate: journal.journalDate,
+      previousStatus: journal.status,
+    });
+  }
 
   const now = new Date();
   const metadataRows = await journalTables.metadata

@@ -73,4 +73,17 @@ describe('native backup exporter', () => {
       },
     ]);
   });
+
+  it('round trips People icons through the native backup JSON boundary', async () => {
+    mockFetchAndTransformTable.mockImplementation(async (_workplaceId: string, table: string) =>
+      table === 'people' ? [{ id: 'person-1', name: 'Alex', icon: 'person-heart' }] : [],
+    );
+
+    await exportWorkplacesToJSON([workplaceId], 'selected');
+
+    const backup = JSON.parse(mockCreateZipArchive.mock.calls[0][1]['backup.json']);
+    expect(backup.workplaces[0].data.people).toEqual([
+      { id: 'person-1', name: 'Alex', icon: 'person-heart' },
+    ]);
+  });
 });

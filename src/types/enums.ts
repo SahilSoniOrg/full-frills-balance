@@ -93,6 +93,9 @@ export const AUDIT_ENTITY_TYPES = [
   'account_matcher',
   'transaction_inbox_record',
   'workplace',
+  'person',
+  'open_item',
+  'settlement_allocation',
 ] as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];

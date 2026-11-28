@@ -135,6 +135,7 @@ export function registerJournalAuditHandler(): void {
             {
               before: asRecord(changes.before) as AuditJsonObject | undefined,
               after: asRecord(changes.after) as AuditJsonObject | undefined,
+              details: asRecord(changes.details) as AuditJsonObject | undefined,
             },
             { source: 'app', revertsLogId: context?.auditLogId },
           ),

@@ -1,12 +1,12 @@
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { TransactionType } from '@/src/types/enums';
+import { JournalStatus, TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
 import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import type { CreateJournalData } from '@/src/types/journalWrite';
+import type { CreateJournalData, JournalRepaymentAllocation } from '@/src/types/journalWrite';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { analytics } from '@/src/services/analytics';
@@ -54,6 +54,7 @@ export type JournalSaveHost = {
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   }) => Promise<SubmitJournalResult>;
 };
@@ -69,6 +70,7 @@ export async function postPostingPlan(
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   },
 ): Promise<SubmitJournalResult> {
@@ -119,6 +121,7 @@ export async function postPostingPlan(
     mode: params.mode,
     launchSource: params.launchSource,
     planned: params.planned,
+    repaymentAllocation: params.repaymentAllocation,
     workplaceId: params.workplaceId,
   });
 }
@@ -140,6 +143,7 @@ export async function saveJournalEntry(
     launchSource?: string;
     /** Ignored unless the date is still in the future. */
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   },
 ): Promise<SubmitJournalResult> {
@@ -150,6 +154,7 @@ export async function saveJournalEntry(
     newJournalCurrencyCode,
     launchSource,
     planned,
+    repaymentAllocation,
     ...entryParams
   } = params;
 
@@ -178,12 +183,28 @@ export async function saveJournalEntry(
     const { journalData } = assembled;
     const currencyCode = journalData.currencyCode;
 
+    const plannedData = withPlannedStatus(journalData, planned);
+    if (
+      plannedData.status === JournalStatus.PLANNED &&
+      repaymentAllocation &&
+      (repaymentAllocation.allocationMode === 'pick' ||
+        (repaymentAllocation.allocationMode == null && repaymentAllocation.allocations.length > 0))
+    ) {
+      return {
+        success: false,
+        error:
+          'Select specific repayment items after posting this planned entry. Planned repayments use FIFO.',
+      };
+    }
+    const writeData = {
+      ...plannedData,
+      ...(plannedData.status !== JournalStatus.PLANNED && repaymentAllocation !== undefined
+        ? { repaymentAllocation }
+        : {}),
+    };
+
     if (journalId) {
-      const updatedJournal = await host.updateJournal(
-        journalId,
-        withPlannedStatus(journalData, planned),
-        workplaceId,
-      );
+      const updatedJournal = await host.updateJournal(journalId, writeData, workplaceId);
       analytics.trackFeatureUsage('journal', 'update', {
         mode,
         currency: currencyCode,
@@ -195,11 +216,7 @@ export async function saveJournalEntry(
     const smsRecord = params.smsRecordId
       ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
       : null;
-    const createdJournal = await host.createJournal(
-      withPlannedStatus(journalData, planned),
-      workplaceId,
-      smsRecord,
-    );
+    const createdJournal = await host.createJournal(writeData, workplaceId, smsRecord);
     analytics.trackFeatureUsage('journal', 'create', {
       mode,
       currency: currencyCode,
@@ -213,7 +230,10 @@ export async function saveJournalEntry(
     if (error instanceof JournalBalanceError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: 'Failed to save transaction' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save transaction',
+    };
   }
 }
 

@@ -12,6 +12,7 @@ import { accountMatcherRepository } from '@/src/data/repositories/AccountMatcher
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { personQueryRepository } from '@/src/data/repositories/people';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import {
   formatFundingAccountIds,
@@ -51,7 +52,10 @@ export type AccountReferenceSiteKey =
   | 'plannedPayment.fromAccountId'
   | 'plannedPayment.toAccountId'
   | 'balanceSnapshot.accountId'
-  | 'accountMatcher.accountId';
+  | 'accountMatcher.accountId'
+  | 'personAccount.accountId'
+  | 'openItem.accountId'
+  | 'settlementAllocation.accountId';
 
 export type AccountImportRef = {
   siteKey: AccountReferenceSiteKey;
@@ -88,6 +92,9 @@ export type AccountImportSourceBag = {
   }[];
   balanceSnapshots?: readonly { id: string; accountId: string }[];
   accountMatchers?: readonly { id: string; accountId: string }[];
+  personAccounts?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
+  openItems?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
+  settlementAllocations?: readonly { id: string; accountId: string; deletedAt?: number | null }[];
 };
 
 export type AccountReferenceSite = {
@@ -157,7 +164,8 @@ export type DeleteBlockerCode =
   | 'budget_scopes'
   | 'budget_funding_accounts'
   | 'planned_payments'
-  | 'pay_from_metadata';
+  | 'pay_from_metadata'
+  | 'people';
 
 /** Structured delete gate; commands format the user-facing Error. */
 export type DeleteBlocker = {
@@ -345,6 +353,34 @@ const ACCOUNT_REFERENCE_SITES: readonly AccountReferenceSite[] = [
     formatMissingImportError: missing =>
       `Import validation failed: missing account "${missing.accountId}"`,
   },
+  ...(
+    [
+      ['personAccount.accountId', 'person_accounts', 'personAccounts', 'Person account'],
+      ['openItem.accountId', 'open_items', 'openItems', 'Open item'],
+      [
+        'settlementAllocation.accountId',
+        'settlement_allocations',
+        'settlementAllocations',
+        'Settlement allocation',
+      ],
+    ] as const
+  ).map(([key, table, source, label]): AccountReferenceSite => ({
+    key,
+    table,
+    field: 'accountId',
+    column: 'account_id',
+    cardinality: 'scalar',
+    mergeBehavior: 'none',
+    deletePolicy: 'block',
+    importPolicy: 'reject',
+    extractImportRefs: data =>
+      collectScalarRefs(
+        key,
+        (data[source] || []).filter(row => row.deletedAt == null),
+        row => row.accountId,
+      ),
+    formatMissingImportError: missing => missingImportError(label, missing),
+  })),
 ];
 
 const SITES_BY_KEY: ReadonlyMap<AccountReferenceSiteKey, AccountReferenceSite> = new Map(
@@ -457,6 +493,9 @@ export async function deleteBlockers(
     fromPayments,
     toPayments,
     payFromMetadata,
+    personLink,
+    openItems,
+    peopleAllocations,
   ] = await Promise.all([
     transactionQueryRepository.findAllByAccountIds(workplaceId, [accountId]),
     accountQueryRepository.queryByParentId(workplaceId, accountId).fetch(),
@@ -465,6 +504,9 @@ export async function deleteBlockers(
     plannedPaymentRepository.findAllByFromAccountIds(workplaceId, [accountId]),
     plannedPaymentRepository.findAllByToAccountIds(workplaceId, [accountId]),
     accountQueryRepository.findMetadataByPayFromAccountIds(workplaceId, [accountId]),
+    personQueryRepository.findPersonAccountByAccountId(workplaceId, accountId),
+    personQueryRepository.listOpenItems(workplaceId, { accountId }),
+    personQueryRepository.listAllocationsForAccount(workplaceId, accountId),
   ]);
 
   const assetBudgetHits = assetBudgetCandidates.filter(budget =>
@@ -474,6 +516,13 @@ export async function deleteBlockers(
   const plannedPaymentIds = new Set([...fromPayments, ...toPayments].map(payment => payment.id));
 
   const blockers: DeleteBlocker[] = [];
+  if (personLink || openItems.length || peopleAllocations.length) {
+    blockers.push({
+      code: 'people',
+      count: Number(Boolean(personLink)) + openItems.length + peopleAllocations.length,
+      label: 'People reference(s)',
+    });
+  }
   if (transactions.length > 0) {
     blockers.push({
       code: 'transactions',

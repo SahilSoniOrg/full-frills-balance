@@ -46,6 +46,10 @@ export interface CanonicalImportV1 {
   accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
+  people?: CanonicalPerson[];
+  personAccounts?: CanonicalPersonAccount[];
+  openItems?: CanonicalOpenItem[];
+  settlementAllocations?: CanonicalSettlementAllocation[];
   importMetadata?: CanonicalImportMetadata;
 }
 
@@ -57,6 +61,56 @@ export interface CanonicalImportMetadata {
     icon?: string;
   };
   pluginId?: string;
+}
+
+export interface CanonicalPerson {
+  id: string;
+  name: string;
+  icon?: string;
+  notes?: string;
+  color?: string;
+  defaultCurrencyCode?: string;
+  paymentHandle?: string;
+  phone?: string;
+  email?: string;
+  isPinned?: boolean;
+  archivedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number;
+}
+export interface CanonicalPersonAccount {
+  id: string;
+  personId: string;
+  accountId: AccountId;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number;
+}
+export interface CanonicalOpenItem {
+  id: string;
+  personId: string;
+  originatingJournalId: string;
+  accountId: AccountId;
+  direction: 'receivable' | 'payable';
+  originalAmount: number;
+  currencyCode: string;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number;
+}
+export interface CanonicalSettlementAllocation {
+  id: string;
+  personId: string;
+  openItemId: string;
+  settlementJournalId: string;
+  accountId: AccountId;
+  allocationKind: 'repayment' | 'write_off' | 'auto_settle';
+  amount: number;
+  isActive: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number;
 }
 
 export type CanonicalAccount = Omit<
@@ -271,4 +325,8 @@ export interface BatchImportData {
   accountMatchers?: CanonicalAccountMatcher[];
   transactionInboxRecords?: CanonicalTransactionInboxRecord[];
   balanceSnapshots?: CanonicalBalanceSnapshot[];
+  people?: CanonicalPerson[];
+  personAccounts?: CanonicalPersonAccount[];
+  openItems?: CanonicalOpenItem[];
+  settlementAllocations?: CanonicalSettlementAllocation[];
 }

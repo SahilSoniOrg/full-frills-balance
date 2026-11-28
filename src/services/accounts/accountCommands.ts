@@ -8,11 +8,10 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import { assertEligibleAccountParents } from '@/src/services/accounts/accountParentEligibility';
 import {
-  assertParentHasNoTransactions,
   assertParentMatchesChildType,
   journalLegTypesForSignedAmount,
   resolveAccountSubtype,
@@ -53,13 +52,7 @@ async function createAccountCore(
   if (input.parentAccountId) {
     const [parent] = await assertWritable(workplaceId, [input.parentAccountId], 'Parent account');
     assertParentMatchesChildType(input.accountType, parent);
-    const hasTransactions = await transactionQueryRepository.hasTransactions(
-      workplaceId,
-      input.parentAccountId,
-    );
-    if (hasTransactions) {
-      assertParentHasNoTransactions(parent.name);
-    }
+    await assertEligibleAccountParents(workplaceId, [parent], [input.parentAccountId]);
   }
 
   if (input.metadata?.payFromAccountId) {

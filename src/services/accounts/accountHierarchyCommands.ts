@@ -13,15 +13,14 @@ import {
 } from '@/src/data/repositories/account';
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
 import type { CreateAccountCommandInput } from '@/src/services/accounts/accountCommands';
 import {
   assertNotSelfParent,
-  assertParentHasNoTransactions,
   assertParentMatchesChildType,
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import { assertEligibleAccountParents } from '@/src/services/accounts/accountParentEligibility';
 import type { PlainAccountMetadata } from '@/src/types/plainDtos';
 import { accountMetadataAuditState } from '@/src/domain/audit/accountMetadataAuditState';
 import { isValidHexColor } from '@/src/design-system/colorMath';
@@ -302,13 +301,7 @@ async function saveAccountCore(
         throw new Error('Circular parent relationship detected');
       }
       assertParentMatchesChildType(nextType, parent);
-      if (parentChanged) {
-        const hasTransactions = await transactionQueryRepository.hasTransactions(
-          workplaceId,
-          nextParentId,
-        );
-        if (hasTransactions) assertParentHasNoTransactions(parent.name);
-      }
+      if (parentChanged) await assertEligibleAccountParents(workplaceId, accounts, [nextParentId]);
     }
 
     const payFromAccountId = updates.metadata?.payFromAccountId;
