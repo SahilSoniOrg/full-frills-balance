@@ -1,12 +1,9 @@
 import { FilterChipButton, Icon, type IconName } from '@/src/components/core';
-import { Spacing } from '@/src/constants/design-tokens';
-import { Inline } from '@/src/design-system';
+import { Box, Inline } from '@/src/design-system';
 import type { ComponentVariant } from '@/src/design-system/variants';
-import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { personAccountRole } from '@/src/services/people/peopleLedgerReads';
 import type { AccountType } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
-import { StyleSheet, View } from 'react-native';
 
 type LinkedAccount = {
   account: {
@@ -28,6 +25,7 @@ type Props = {
   personName: string;
   linkedAccounts: readonly LinkedAccount[];
   onLink: () => void;
+  onOpenAccount: (accountId: AccountId) => void;
   formatAmount: (amount: number, currencyCode: string) => string;
 };
 
@@ -53,29 +51,16 @@ function bookPresentation(role: PersonBookRole): {
   }
 }
 
-function openAccount(linked: LinkedAccount) {
-  const account = linked.account;
-  AppNavigation.toAccountDetails(account.id, {
-    preview: {
-      name: account.name,
-      balance: linked.unassignedState.ledgerBalanceInNormalDirection,
-      currency: account.currencyCode,
-      icon: account.icon ?? undefined,
-      type: account.accountType,
-      colorKey: account.color ?? undefined,
-    },
-  });
-}
-
 export function PersonLinkedAccountsSection({
   personName,
   linkedAccounts,
   onLink,
+  onOpenAccount,
   formatAmount,
 }: Props) {
   if (linkedAccounts.length === 0) {
     return (
-      <View style={styles.strip} testID="person-linked-accounts-strip">
+      <Box paddingHorizontal="xs" testID="person-linked-accounts-strip">
         <FilterChipButton
           icon={Icon.Plus}
           label="Link account"
@@ -83,12 +68,12 @@ export function PersonLinkedAccountsSection({
           onPress={onLink}
           testID="person-hero-empty-linked-accounts"
         />
-      </View>
+      </Box>
     );
   }
 
   return (
-    <View style={styles.strip} testID="person-linked-accounts-strip">
+    <Box paddingHorizontal="xs" testID="person-linked-accounts-strip">
       <Inline gap="sm" flexWrap="wrap" alignItems="center">
         {linkedAccounts.map(linked => {
           const role = personAccountRole(linked.account.accountType);
@@ -105,7 +90,7 @@ export function PersonLinkedAccountsSection({
               label={amount}
               tone={tone}
               accessibilityLabel={`${meaning}: ${amount}. Open account for ${personName}`}
-              onPress={() => openAccount(linked)}
+              onPress={() => onOpenAccount(linked.account.id)}
               testID={`person-linked-account-${linked.account.id}`}
             />
           );
@@ -118,16 +103,6 @@ export function PersonLinkedAccountsSection({
           testID="person-hero-link-account-button"
         />
       </Inline>
-    </View>
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  strip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-  },
-});

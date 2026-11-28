@@ -17,17 +17,16 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
-import { OpenItemAmount } from '@/src/components/shared/OpenItemAmount';
 import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
-import { Layout, Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { Layout, Size, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from '@/src/hooks/use-theme';
 import { PersonLinkedAccountsSection } from '../components/PersonLinkedAccountsSection';
+import { PersonOpenItemRow } from '../components/PersonOpenItemRow';
 import { PersonSettleSheet } from '../components/PersonSettleSheet';
 import { PersonSummaryHeader } from '../components/PersonSummaryHeader';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
@@ -35,9 +34,7 @@ import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
 
 function PersonDetailsScreenContent() {
   const vm = usePersonDetailsViewModel();
-  const [settleSheetOpen, setSettleSheetOpen] = useState(false);
   const isPrivacyMode = useEffectivePrivacyMode();
-  const { theme } = useTheme();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
   const detail = vm.detail;
 
@@ -160,7 +157,7 @@ function PersonDetailsScreenContent() {
         formatAmount={(amount, currencyCode) =>
           formatMoneyAmount(amount, currencyCode, isPrivacyMode)
         }
-        onSettle={() => setSettleSheetOpen(true)}
+        onSettle={() => vm.setSettleSheetOpen(true)}
       />
 
       {negativeAccounts.length > 0 ? (
@@ -175,43 +172,16 @@ function PersonDetailsScreenContent() {
 
       {showOpenItems ? (
         <ListGroup header="OPEN ITEMS">
-          {openItems.map(entry => {
-            const settledRatio =
-              entry.item.originalAmount > 0
-                ? Math.max(
-                    0,
-                    Math.min(100, (1 - entry.remainder / entry.item.originalAmount) * 100),
-                  )
-                : 0;
-            return (
-              <ListRow
-                key={entry.item.id}
-                leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                title={
-                  <OpenItemAmount
-                    remainder={entry.remainder}
-                    originalAmount={entry.item.originalAmount}
-                    currencyCode={entry.item.currencyCode}
-                    isPrivacyMode={isPrivacyMode}
-                  />
-                }
-              >
-                {settledRatio > 0 ? (
-                  <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${settledRatio}%`,
-                          backgroundColor: theme.income,
-                        },
-                      ]}
-                    />
-                  </View>
-                ) : null}
-              </ListRow>
-            );
-          })}
+          {openItems.map(entry => (
+            <PersonOpenItemRow
+              key={entry.item.id}
+              remainder={entry.remainder}
+              originalAmount={entry.item.originalAmount}
+              currencyCode={entry.item.currencyCode}
+              isPrivacyMode={isPrivacyMode}
+              showProgress
+            />
+          ))}
         </ListGroup>
       ) : null}
 
@@ -249,6 +219,7 @@ function PersonDetailsScreenContent() {
         personName={detail.person.name}
         linkedAccounts={detail.linkedAccounts}
         onLink={() => vm.setLinkModalOpen(true)}
+        onOpenAccount={vm.onOpenAccount}
         formatAmount={(amount, currencyCode) =>
           formatMoneyAmount(amount, currencyCode, isPrivacyMode)
         }
@@ -371,11 +342,11 @@ function PersonDetailsScreenContent() {
       />
 
       <PersonSettleSheet
-        visible={settleSheetOpen}
+        visible={vm.settleSheetOpen}
         personName={detail.person.name}
         hasReceivable={detail.balanceSummary.currencies.some(balance => balance.owedToYou > 0)}
         hasPayable={detail.balanceSummary.currencies.some(balance => balance.youOwe > 0)}
-        onClose={() => setSettleSheetOpen(false)}
+        onClose={() => vm.setSettleSheetOpen(false)}
         onMoneyReceived={() =>
           vm.onSettleUp(openItems.length === 1 ? openItems[0]!.item.id : undefined)
         }
@@ -396,17 +367,12 @@ function PersonDetailsScreenContent() {
           {openItems
             .filter(entry => entry.item.accountId === vm.allocateTarget?.accountId)
             .map(entry => (
-              <ListRow
+              <PersonOpenItemRow
                 key={entry.item.id}
-                leading={<IconTile icon={Icon.Receipt} tint="warning" />}
-                title={
-                  <OpenItemAmount
-                    remainder={entry.remainder}
-                    originalAmount={entry.item.originalAmount}
-                    currencyCode={entry.item.currencyCode}
-                    isPrivacyMode={isPrivacyMode}
-                  />
-                }
+                remainder={entry.remainder}
+                originalAmount={entry.item.originalAmount}
+                currencyCode={entry.item.currencyCode}
+                isPrivacyMode={isPrivacyMode}
                 chevron
                 onPress={() => void vm.onApplyUnassigned(entry.item.id)}
               />
@@ -500,13 +466,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Layout.listBottomInset.fab,
-  },
-  progressTrack: {
-    height: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: Spacing.xs,
   },
 });

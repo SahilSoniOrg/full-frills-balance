@@ -3,25 +3,15 @@ import { AccountType } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import { PersonLinkedAccountsSection } from '../PersonLinkedAccountsSection';
 
-const mockToAccountDetails = jest.fn();
-
-jest.mock('@/src/navigation/AppNavigation', () => ({
-  AppNavigation: {
-    toAccountDetails: (...args: unknown[]) => mockToAccountDetails(...args),
-  },
-}));
-
 describe('PersonLinkedAccountsSection', () => {
-  beforeEach(() => {
-    mockToAccountDetails.mockClear();
-  });
-
   it('shows receivable and expense chips with amounts even when receivable matches the hero', () => {
     const onLink = jest.fn();
+    const onOpenAccount = jest.fn();
     const { queryByText, getByLabelText, getByTestId } = render(
       <PersonLinkedAccountsSection
         personName="Dad"
         onLink={onLink}
+        onOpenAccount={onOpenAccount}
         formatAmount={(amount, currency) => `${currency} ${amount.toFixed(2)}`}
         linkedAccounts={[
           {
@@ -56,11 +46,6 @@ describe('PersonLinkedAccountsSection', () => {
     ).toBeTruthy();
 
     fireEvent.press(getByTestId('person-linked-account-recv'));
-    expect(mockToAccountDetails).toHaveBeenCalledWith(
-      'recv',
-      expect.objectContaining({
-        preview: expect.objectContaining({ name: 'Dad (Receivable · INR)' }),
-      }),
-    );
+    expect(onOpenAccount).toHaveBeenCalledWith('recv');
   });
 });

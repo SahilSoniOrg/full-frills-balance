@@ -1,22 +1,16 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
-import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
-import { buildPersonShareSummary } from '@/src/domain/people/personShareSummary';
 import { useJournalEntryList } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
-import { useShareable } from '@/src/hooks/useShareable';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import {
   allocateUnassignedRepayment,
-  executeWeAreSettled,
   linkExistingAccount,
   peopleReadService,
-  previewPersonSettlement,
   setPersonArchived,
   updatePerson,
 } from '@/src/services/people';
-import { createPeopleShareable } from '@/src/services/sharing/peopleShareAdapter';
 import {
   asAccountId,
   type AccountId,
@@ -24,10 +18,10 @@ import {
   type OpenItemId,
   type PersonId,
 } from '@/src/types/ids';
-import { formatShortDate } from '@/src/utils/dateFormatting';
 import { setStringAsync } from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { usePersonSettlementFlow } from './usePersonSettlementFlow';
 
 type PersonDetailData = Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>;
 type LinkableAccount = Awaited<
@@ -62,16 +56,6 @@ export function usePersonDetailsViewModel() {
     settlementJournalId: JournalId;
     amount: number;
   } | null>(null);
-  const [settledFxOpen, setSettledFxOpen] = useState(false);
-  const [settledPreviewOpen, setSettledPreviewOpen] = useState(false);
-  const [fxRatesDraft, setFxRatesDraft] = useState<Record<string, string>>({});
-  const [sharePreviewOpen, setSharePreviewOpen] = useState(false);
-  const [shareFields, setShareFields] = useState({
-    includeOpenItems: true,
-    includeRepayments: true,
-    includeBalances: true,
-    includePaymentHandle: true,
-  });
 
   const linkedAccountIdsKey = useMemo(
     () => (detail?.linkedAccounts.map(linked => linked.account.id) ?? []).slice().sort().join('|'),
@@ -149,102 +133,14 @@ export function usePersonDetailsViewModel() {
     };
   }, [linkModalOpen, workplaceId]);
 
-  const shareInput = useMemo(() => {
-    if (!detail) return null;
-    const dates = new Map(
-      journalList.journals.map(journal => [journal.id, journal.journalDate] as const),
-    );
-    return {
-      workplaceId,
-      recipientName: detail.person.name,
-      paymentHandle: detail.person.paymentHandle,
-      date: formatShortDate(new Date()),
-      items: detail.openItems.map(entry => ({
-        ...entry.item,
-        journalDate: dates.get(entry.item.originatingJournalId),
-      })),
-      allocations: detail.activeAllocations.map(a => ({
-        id: a.id,
-        openItemId: a.openItemId,
-        journalId: a.settlementJournalId,
-        amount: a.amount,
-        active: a.isActive,
-        kind: a.allocationKind,
-        journalDate: dates.get(a.settlementJournalId),
-      })),
-      balances: detail.balanceSummary.currencies,
-      ...shareFields,
-    };
-  }, [detail, journalList.journals, shareFields, workplaceId]);
-  const shareable = useMemo(
-    () => (shareInput ? createPeopleShareable(shareInput) : null),
-    [shareInput],
-  );
-  const sharePreview = useMemo(
-    () => (shareInput ? buildPersonShareSummary(shareInput) : ''),
-    [shareInput],
-  );
-  const share = useShareable(shareable);
-
-  const rateMap = useMemo(() => {
-    const rates = new Map<string, number>();
-    for (const [currency, draft] of Object.entries(fxRatesDraft)) {
-      const rate = parsePositiveRate(draft);
-      if (rate !== null) rates.set(currency, rate);
-    }
-    return rates;
-  }, [fxRatesDraft]);
-
-  const [settlement, setSettlement] = useState<Awaited<
-    ReturnType<typeof previewPersonSettlement>
-  > | null>(null);
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  const [isConfirmingSettlement, setIsConfirmingSettlement] = useState(false);
-  const detailPersonId = detail?.person.id;
-
-  useEffect(() => {
-    if (!detailPersonId || (!settledFxOpen && !settledPreviewOpen)) return;
-    let active = true;
-    // Disable confirmation while the refreshed settlement is being calculated.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsPreviewing(true);
-    void previewPersonSettlement(workplaceId, detailPersonId, defaultCurrencyCode, rateMap)
-      .then(next => {
-        if (active) setSettlement(next);
-      })
-      .catch(error => {
-        if (active) {
-          setSettlement(null);
-          showErrorAlert(error instanceof Error ? error.message : 'Could not preview settlement');
-        }
-      })
-      .finally(() => {
-        if (active) setIsPreviewing(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    defaultCurrencyCode,
-    detailPersonId,
-    rateMap,
-    settledFxOpen,
-    settledPreviewOpen,
-    tick,
+  const settlement = usePersonSettlementFlow({
     workplaceId,
-  ]);
-
-  const foreignCurrencies = settlement?.foreignCurrencies ?? [];
-  const settledPreview = useMemo(
-    () =>
-      settlement && detail
-        ? {
-            ...settlement,
-            forgivenAccountName: detail.person.name + ' (' + settlement.forgivenAccountType + ')',
-          }
-        : null,
-    [detail, settlement],
-  );
+    workplaceCurrency: defaultCurrencyCode,
+    detail,
+    journals: journalList.journals,
+    tick,
+    reload: load,
+  });
 
   const handleToggleArchive = useCallback(async () => {
     if (!detail) return;
@@ -315,63 +211,24 @@ export function usePersonDetailsViewModel() {
     [allocateTarget, detail, load, workplaceId],
   );
 
-  const handleStartWeAreSettled = useCallback(async () => {
-    if (!detail || isPreviewing) return;
-    setIsPreviewing(true);
-    try {
-      const preview = await previewPersonSettlement(
-        workplaceId,
-        detail.person.id,
-        defaultCurrencyCode,
-        rateMap,
-      );
-      setSettlement(preview);
-      if (preview.foreignCurrencies.length) setSettledFxOpen(true);
-      else setSettledPreviewOpen(true);
-    } catch (error) {
-      showErrorAlert(error instanceof Error ? error.message : 'Could not preview settlement');
-    } finally {
-      setIsPreviewing(false);
-    }
-  }, [defaultCurrencyCode, detail, isPreviewing, rateMap, workplaceId]);
-
-  const handleConfirmWeAreSettled = useCallback(async () => {
-    if (
-      !detail ||
-      !settledPreview?.plan ||
-      settledPreview.blockedReason ||
-      isPreviewing ||
-      isConfirmingSettlement
-    )
-      return;
-    setIsConfirmingSettlement(true);
-    try {
-      await executeWeAreSettled(workplaceId, {
-        personId: detail.person.id,
-        workplaceCurrency: defaultCurrencyCode,
-        exchangeRateByCurrency: rateMap,
-        expectedPlan: settledPreview.plan,
+  const handleOpenAccount = useCallback(
+    (accountId: AccountId) => {
+      const linked = detail?.linkedAccounts.find(entry => entry.account.id === accountId);
+      if (!linked) return;
+      const account = linked.account;
+      AppNavigation.toAccountDetails(account.id, {
+        preview: {
+          name: account.name,
+          balance: linked.unassignedState.ledgerBalanceInNormalDirection,
+          currency: account.currencyCode,
+          icon: account.icon ?? undefined,
+          type: account.accountType,
+          colorKey: account.color ?? undefined,
+        },
       });
-      setSettledPreviewOpen(false);
-      toast.success('Balances closed.');
-      await load();
-    } catch (error) {
-      showErrorAlert(error instanceof Error ? error.message : 'Could not settle balances');
-      setSettledPreviewOpen(false);
-      setSettlement(null);
-    } finally {
-      setIsConfirmingSettlement(false);
-    }
-  }, [
-    defaultCurrencyCode,
-    detail,
-    isConfirmingSettlement,
-    isPreviewing,
-    load,
-    rateMap,
-    settledPreview,
-    workplaceId,
-  ]);
+    },
+    [detail],
+  );
 
   return {
     personId,
@@ -385,25 +242,11 @@ export function usePersonDetailsViewModel() {
     onEndReachedActivity: journalList.onEndReached,
     linkableAccounts,
     isLoading,
-    foreignCurrencies,
-    settledPreview,
-    isPreviewing,
-    isConfirmingSettlement,
     linkModalOpen,
     setLinkModalOpen,
     allocateTarget,
     setAllocateTarget,
-    settledFxOpen,
-    setSettledFxOpen,
-    settledPreviewOpen,
-    setSettledPreviewOpen,
-    fxRatesDraft,
-    setFxRatesDraft,
-    sharePreviewOpen,
-    setSharePreviewOpen,
-    shareFields,
-    setShareFields,
-    sharePreview,
+    ...settlement,
     onBack: AppNavigation.back,
     onSplitExpense: () =>
       detail && AppNavigation.toSplitJournalEntry({ personId: detail.person.id }),
@@ -417,9 +260,6 @@ export function usePersonDetailsViewModel() {
     onCopyPaymentHandle: handleCopyPaymentHandle,
     onLinkAccount: handleLinkAccount,
     onApplyUnassigned: handleApplyUnassigned,
-    onStartWeAreSettled: handleStartWeAreSettled,
-    onConfirmWeAreSettled: handleConfirmWeAreSettled,
-    onShare: () => setSharePreviewOpen(true),
-    onConfirmShare: share.share,
+    onOpenAccount: handleOpenAccount,
   };
 }

@@ -14,12 +14,12 @@ import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { OpenItemAmount } from '@/src/components/shared/OpenItemAmount';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { formatShortDate } from '@/src/utils/dateFormatting';
+import { PersonOpenItemRow } from '../components/PersonOpenItemRow';
 import { useSettleUpViewModel } from '../hooks/useSettleUpViewModel';
 
 function SettleUpScreenContent() {
@@ -208,18 +208,12 @@ function SettleUpScreenContent() {
                 const selected = Boolean(vm.selectedItemIds[entry.item.id]);
                 return (
                   <Stack key={entry.item.id} gap="xs">
-                    <ListRow
-                      leading={
-                        <IconTile icon={Icon.Receipt} tint={selected ? 'income' : 'warning'} />
-                      }
-                      title={
-                        <OpenItemAmount
-                          remainder={entry.remainder}
-                          originalAmount={entry.item.originalAmount}
-                          currencyCode={entry.item.currencyCode}
-                          isPrivacyMode={isPrivacyMode}
-                        />
-                      }
+                    <PersonOpenItemRow
+                      remainder={entry.remainder}
+                      originalAmount={entry.item.originalAmount}
+                      currencyCode={entry.item.currencyCode}
+                      isPrivacyMode={isPrivacyMode}
+                      selected={selected}
                       trailing={<SelectionIndicator selected={selected} />}
                       onPress={() => vm.toggleOpenItem(entry.item.id)}
                       accessibilityRole="checkbox"
