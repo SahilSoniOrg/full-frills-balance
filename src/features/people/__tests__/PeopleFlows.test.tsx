@@ -12,6 +12,8 @@ const mockBack = jest.fn();
 const mockToPersonDetails = jest.fn();
 const mockToPersonCreation = jest.fn();
 const mockToPersonEdit = jest.fn();
+const mockToSplitJournalEntry = jest.fn();
+const mockToTransferRepayment = jest.fn();
 const mockToSettleUp = jest.fn();
 const mockCreatePerson = jest.fn(async () => ({ id: 'p-new', name: 'New Person' }));
 const mockUpdatePerson = jest.fn(async () => ({ id: 'p-ari', name: 'Ari Updated' }));
@@ -97,6 +99,8 @@ jest.mock('@/src/navigation/AppNavigation', () => ({
     toPersonDetails: (id: string) => mockToPersonDetails(id),
     toPersonCreation: (...args: unknown[]) => mockToPersonCreation(...args),
     toPersonEdit: (id: string, workplaceId?: string) => mockToPersonEdit(id, workplaceId),
+    toSplitJournalEntry: (params?: Record<string, string>) => mockToSplitJournalEntry(params),
+    toTransferRepayment: (params?: Record<string, string>) => mockToTransferRepayment(params),
     toSettleUp: (params?: Record<string, string>) => mockToSettleUp(params),
     toJournalDetails: jest.fn(),
   },
@@ -270,6 +274,15 @@ describe('People screens', () => {
 
     fireEvent.press(getByTestId('person-copy-payment-handle-button'));
     await waitFor(() => expect(mockSetClipboard).toHaveBeenCalledWith('ari@upi'));
+
+    fireEvent.press(getByTestId('person-split-expense-button'));
+    expect(mockToSplitJournalEntry).toHaveBeenCalledWith({ personId: mockPersonAri.id });
+    fireEvent.press(getByTestId('person-settle-up-button'));
+    fireEvent.press(getByTestId('person-settle-money-received'));
+    expect(mockToTransferRepayment).toHaveBeenCalledWith({
+      personId: mockPersonAri.id,
+      openItemId: mockOpenItem.id,
+    });
   });
 
   it('validates duplicate person names and creates enriched profiles in PersonCreationScreen', async () => {

@@ -1,4 +1,4 @@
-import type { AccountId, JournalId } from '@/src/types/ids';
+import type { AccountId, JournalId, OpenItemId, PersonId } from '@/src/types/ids';
 
 export type JournalEntryRouteEditorMode = 'simple' | 'advanced' | 'bulk' | 'split';
 export type JournalEntrySimpleType = 'expense' | 'income' | 'transfer';
@@ -17,6 +17,8 @@ export type TransactionIntentSeed = {
   copyFromJournalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
+  personId?: PersonId;
+  openItemId?: OpenItemId;
   amount?: string;
   currencyCode?: string;
   description?: string;
@@ -33,6 +35,8 @@ export type LegacyJournalEntryQueryParams = {
   copyJournalId?: string;
   sourceAccountId?: string;
   destinationAccountId?: string;
+  personId?: string;
+  openItemId?: string;
   amount?: string;
   currencyCode?: string;
   description?: string;
@@ -60,6 +64,8 @@ export function toLegacyJournalEntryQueryParams(
     copyJournalId: seed.copyFromJournalId,
     sourceAccountId: seed.sourceAccountId,
     destinationAccountId: seed.destinationAccountId,
+    personId: seed.personId,
+    openItemId: seed.openItemId,
     amount: seed.amount,
     currencyCode: seed.currencyCode,
     description: seed.description,

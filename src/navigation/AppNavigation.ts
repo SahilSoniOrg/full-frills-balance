@@ -194,6 +194,34 @@ export const AppNavigation = {
     router.push(buildRoute('/person-details', { personId }));
   },
 
+  toSplitJournalEntry: (params?: {
+    journalId?: string;
+    personId?: string;
+    workplaceId?: string;
+  }) => {
+    AppNavigation.toJournalEntry({
+      journalId: params?.journalId,
+      workplaceId: params?.workplaceId,
+      params: { mode: 'split', ...(params?.personId ? { personId: params.personId } : {}) },
+    });
+  },
+
+  toTransferRepayment: (params?: {
+    personId?: string;
+    openItemId?: string;
+    workplaceId?: string;
+  }) => {
+    AppNavigation.toJournalEntry({
+      workplaceId: params?.workplaceId,
+      params: {
+        mode: 'simple',
+        type: 'transfer',
+        ...(params?.personId ? { personId: params.personId } : {}),
+        ...(params?.openItemId ? { openItemId: params.openItemId } : {}),
+      },
+    });
+  },
+
   toSettleUp: (params?: Record<string, string | number | boolean | undefined>) => {
     router.push(buildRoute('/settle-up', params));
   },
