@@ -120,6 +120,16 @@ function validateStructuralRules(data: BatchImportData): void {
   );
   const openItems = new Set((data.openItems ?? []).map(row => row.id));
   const liveItems = new Map<string, CanonicalOpenItem>();
+  const journalById = new Map(data.journals.map(journal => [journal.id, journal]));
+  const trackedPostings = new Set<string>();
+  const transactionsByPosting = new Map<string, typeof data.transactions>();
+  for (const transaction of data.transactions) {
+    if (transaction.deletedAt != null) continue;
+    const key = JSON.stringify([transaction.journalId, transaction.accountId]);
+    const rows = transactionsByPosting.get(key) ?? [];
+    rows.push(transaction);
+    transactionsByPosting.set(key, rows);
+  }
   for (const row of data.openItems ?? []) {
     if (row.deletedAt != null) continue;
     if (
@@ -160,11 +170,34 @@ function validateStructuralRules(data: BatchImportData): void {
     ) {
       throw new Error(`Import validation failed: open item "${row.id}" has an invalid amount`);
     }
+    const origin = journalById.get(row.originatingJournalId);
+    const postingKey = JSON.stringify([row.originatingJournalId, row.accountId]);
+    const postings = (transactionsByPosting.get(postingKey) ?? []).filter(
+      transaction =>
+        (transaction.transactionType === TransactionType.DEBIT ||
+          transaction.transactionType === TransactionType.CREDIT) &&
+        classifyPersonDebtPosting({
+          accountType: account.accountType as AccountType,
+          transactionType: transaction.transactionType,
+        }) === 'increasing',
+    );
+    if (
+      !origin ||
+      origin.deletedAt != null ||
+      origin.status !== JournalStatus.POSTED ||
+      trackedPostings.has(postingKey) ||
+      postings.length !== 1 ||
+      toMinorUnits(postings[0].amount, precision) !== toMinorUnits(row.originalAmount, precision)
+    ) {
+      throw new Error(
+        `Import validation failed: open item "${row.id}" has no matching posted debt`,
+      );
+    }
+    trackedPostings.add(postingKey);
     liveItems.set(row.id, row);
   }
   const allocatedByItem = new Map<string, number>();
   const allocatedByPosting = new Map<string, number>();
-  const journalById = new Map(data.journals.map(journal => [journal.id, journal]));
   const reducingByPosting = new Map<string, number>();
   for (const transaction of data.transactions) {
     if (transaction.deletedAt != null) continue;
