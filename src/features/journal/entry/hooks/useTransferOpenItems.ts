@@ -101,7 +101,9 @@ export function useTransferOpenItems({
     EMPTY,
     { resetKey: scope },
   );
-  const initialItemInScope = items.find(row => row.item.id === initialOpenItemId)?.item.id;
+  const initialItemInScope = items.find(
+    row => row.item.id === initialOpenItemId && row.remainder > 0,
+  )?.item.id;
   const scoped = selection?.scope === scope ? selection : undefined;
   const allocationMode = scoped?.allocationMode ?? (initialItemInScope ? 'pick' : 'fifo');
   const selectedItemIds = useMemo(
@@ -125,6 +127,7 @@ export function useTransferOpenItems({
     isLoading,
     error,
     allocationMode,
+    unresolvedInitialSelection: Boolean(initialOpenItemId && !initialItemInScope && !scoped),
     setAllocationMode: (mode: 'fifo' | 'pick') =>
       setSelection({ scope, allocationMode: mode, selectedItemIds }),
     selectedItemIds,

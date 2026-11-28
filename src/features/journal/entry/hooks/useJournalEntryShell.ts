@@ -39,6 +39,7 @@ import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
 import { createPersonWithReceivable, peopleReadService } from '@/src/services/people';
+import { classifyPersonDebtPosting } from '@/src/domain/people';
 import { logger } from '@/src/services/observability/logger';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
@@ -226,16 +227,38 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   useEffect(() => {
     getRepaymentAllocationRef.current = () => {
+      if (
+        activeMode !== 'basic' ||
+        editor.savedStatus === JournalStatus.POSTED ||
+        editor.transactionType !== 'transfer'
+      )
+        return undefined;
+      const isReducingPersonLine = (line: (typeof lines)[number]) => {
+        const account = accounts.find(row => row.id === line.accountId);
+        return (
+          account &&
+          peopleGroups.some(group => group.accountIds.includes(account.id)) &&
+          classifyPersonDebtPosting({
+            accountType: account.accountType,
+            transactionType: line.transactionType,
+          }) === 'reducing'
+        );
+      };
+      const target =
+        lines.find(
+          line => line.transactionType === TransactionType.DEBIT && isReducingPersonLine(line),
+        ) ??
+        lines.find(
+          line => line.transactionType === TransactionType.CREDIT && isReducingPersonLine(line),
+        );
       const plan = transferOpenItemPlanRef.current;
-      return activeMode === 'basic' &&
-        editor.savedStatus !== JournalStatus.POSTED &&
-        editor.transactionType === 'transfer' &&
-        plan &&
-        (plan.allocations.length > 0 || plan.allocationMode === 'pick')
-        ? plan
-        : undefined;
+      if (!target) return undefined;
+      if (!plan || plan.targetAccountId !== target.accountId) {
+        throw new Error('Review the repayment items before saving, or wait for them to load.');
+      }
+      return plan;
     };
-  }, [activeMode, editor.savedStatus, editor.transactionType]);
+  }, [activeMode, editor.savedStatus, editor.transactionType, lines, accounts, peopleGroups]);
 
   useEffect(() => {
     if (

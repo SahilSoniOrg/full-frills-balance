@@ -73,10 +73,11 @@ export function useJournalEditorSubmission(options: {
         triggerSaveOutcomeHaptic(true);
         onSuccess?.();
         return result;
-      } catch {
+      } catch (error) {
         triggerSaveOutcomeHaptic(false);
-        showErrorAlert('Unexpected error occurred');
-        return { success: false, error: 'Unexpected error occurred' } as const;
+        const message = error instanceof Error ? error.message : 'Unexpected error occurred';
+        showErrorAlert(message);
+        return { success: false, error: message } as const;
       } finally {
         submissionInFlightRef.current = false;
         setIsSubmitting(false);

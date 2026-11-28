@@ -162,9 +162,17 @@ export const SimpleForm = React.memo(function SimpleForm({
     transferAmount: reductionAmount,
     precision: repaymentPrecision,
   });
-  const { allocationMode, selectedAllocations, isLoading, error } = transferOpenItems;
+  const { allocationMode, selectedAllocations, isLoading, error, unresolvedInitialSelection } =
+    transferOpenItems;
   useEffect(() => {
-    if (!reducingAccountId || !reducingPersonId || !workplaceId || isLoading || error) {
+    if (
+      !reducingAccountId ||
+      !reducingPersonId ||
+      !workplaceId ||
+      isLoading ||
+      error ||
+      unresolvedInitialSelection
+    ) {
       onTransferOpenItemPlanChange?.(null);
     } else {
       onTransferOpenItemPlanChange?.({
@@ -183,6 +191,7 @@ export const SimpleForm = React.memo(function SimpleForm({
     reducingAccountId,
     reducingPersonId,
     selectedAllocations,
+    unresolvedInitialSelection,
     workplaceId,
   ]);
 

@@ -423,10 +423,13 @@ async function allocateJournalRepayments(
           item.createdAt.getTime(),
         createdAt: item.createdAt.getTime(),
       })),
-      requestedAllocations: repaymentAllocation?.allocations.map(row => ({
-        openItemId: row.openItemId,
-        amountMinor: toMinorUnits(row.amount, precision),
-      })),
+      requestedAllocations:
+        repaymentAllocation?.allocationMode === 'fifo'
+          ? undefined
+          : repaymentAllocation?.allocations.map(row => ({
+              openItemId: row.openItemId,
+              amountMinor: toMinorUnits(row.amount, precision),
+            })),
     });
     await personWriteRepository.createSettlementAllocationsInSession(
       session,
