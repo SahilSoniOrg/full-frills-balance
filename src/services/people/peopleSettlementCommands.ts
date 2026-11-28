@@ -508,6 +508,7 @@ export async function recordRepayment(
           : plan.lines,
       },
       workplaceId,
+      input.existingJournalId ? { source: 'app', undoable: false } : undefined,
     );
 
     return result.journal;
