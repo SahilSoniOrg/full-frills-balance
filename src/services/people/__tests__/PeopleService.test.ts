@@ -200,6 +200,31 @@ describe('PeopleService integration', () => {
     expect(detail?.balanceSummary.currencies[0]?.owedToYou).toBeCloseTo(3033.33, 2);
   });
 
+  it('restores a deleted journal after an edit removed its People open item', async () => {
+    const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
+    const groceries = await createAccount({ name: 'Groceries', accountType: AccountType.EXPENSE });
+    const person = await PeopleService.createPerson(workplaceId, { name: 'Ada' });
+    const original = await postReceivable(person.id, bank.id, 'INR', 100, 1);
+    const itemFilter = { originatingJournalId: original.id };
+    expect(await personQueryRepository.listOpenItems(workplaceId, itemFilter)).toHaveLength(1);
+
+    await post(workplaceId, {
+      journalId: original.id,
+      currencyCode: 'INR',
+      journalDate: original.journalDate,
+      source: bank.id,
+      debits: [{ accountId: groceries.id, amount: 100 }],
+    });
+    expect(await personQueryRepository.listOpenItems(workplaceId, itemFilter)).toHaveLength(0);
+
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000);
+    await journalRepo.delete(original.id, workplaceId).finally(() => clock.mockRestore());
+
+    const restored = await journalRepo.recover(original.id, workplaceId);
+    expect(restored.journal.deletedAt).toBeFalsy();
+    expect(await personQueryRepository.listOpenItems(workplaceId, itemFilter)).toHaveLength(0);
+  });
+
   it('matches an existing captured journal on repayment without double-counting bank cash', async () => {
     const bank = await createAccount({ name: 'Bank', accountType: AccountType.ASSET });
     const equity = await createAccount({ name: 'Opening', accountType: AccountType.EQUITY });
