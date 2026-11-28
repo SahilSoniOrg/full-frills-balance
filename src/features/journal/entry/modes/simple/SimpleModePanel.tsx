@@ -9,7 +9,8 @@ import type { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJo
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { RefObject } from 'react';
-import type { AccountId, OpenItemId, PersonId } from '@/src/types/ids';
+import type { OpenItemId } from '@/src/types/ids';
+import type { TransferOpenItemPlan } from '@/src/features/journal/entry/transferOpenItemPlan';
 import { StyleSheet, View } from 'react-native';
 
 export type SimpleModePanelProps = Pick<
@@ -32,14 +33,8 @@ export type SimpleModePanelProps = Pick<
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
   initialOpenItemId?: OpenItemId;
   onCreatePersonRequest?: () => void;
-  onTransferOpenItemPlanChange?: (
-    plan: {
-      personId: PersonId;
-      targetAccountId: AccountId;
-      allocationMode: 'fifo' | 'pick';
-      allocations: readonly { openItemId: OpenItemId; amount: number }[];
-    } | null,
-  ) => void;
+  onTransferOpenItemPlanChange?: (plan: TransferOpenItemPlan | null) => void;
+  disableLastUsedDefaults?: boolean;
 };
 
 export function SimpleModePanel({
@@ -60,6 +55,7 @@ export function SimpleModePanel({
   initialOpenItemId,
   onCreatePersonRequest,
   onTransferOpenItemPlanChange,
+  disableLastUsedDefaults = false,
 }: SimpleModePanelProps) {
   const { theme } = useTheme();
   const { simpleEditor, precision, handleApplyVoiceInput, autopilotActive, firstAutopilotRole } =
@@ -68,6 +64,7 @@ export function SimpleModePanel({
       editor,
       guidedAutopilot,
       onSelectAccountRequest,
+      disableLastUsedDefaults,
     });
   const activeColor = resolveSimpleTypeAccentColor(simpleEditor.type, theme);
 

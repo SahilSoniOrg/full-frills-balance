@@ -2,7 +2,9 @@ import {
   AppButton,
   AppIcon,
   AppInputField,
+  AppSegmentedControl,
   AppText,
+  FilterChipButton,
   Icon,
   PersonAvatar,
   PressScaleTouchable,
@@ -12,18 +14,20 @@ import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import type { AccountId, PersonId } from '@/src/types/ids';
 import type { IconName } from '@/src/types/domainIcons';
 
 export type SplitParticipant = { id: PersonId; name: string; icon?: IconName; color?: string };
 export type SplitModeChoice = 'equal' | 'custom';
 
+export type SplitQuickAddResult = AccountId | { id: AccountId; name: string } | void;
+
 export type SplitPeopleParticipantsBarProps = {
   people: SplitParticipant[];
   selectedPersonIds: PersonId[];
   onTogglePerson: (personId: PersonId) => void;
-  onQuickAddPerson: (name: string) => Promise<AccountId | void>;
+  onQuickAddPerson: (name: string) => Promise<SplitQuickAddResult>;
   hasParticipants: boolean;
   splitMode: SplitModeChoice;
   onChangeSplitMode: (mode: SplitModeChoice) => void;
@@ -58,42 +62,13 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
           Participants
         </AppText>
         {props.hasParticipants ? (
-          <View
+          <AppSegmentedControl
             testID="split-participant-split-mode"
-            style={[
-              styles.modeCapsule,
-              {
-                backgroundColor: theme.surfaceSecondary,
-                borderColor: withOpacity(theme.border, Opacity.active),
-              },
-            ]}
-          >
-            {SPLIT_MODE_OPTIONS.map(option => {
-              const active = props.splitMode === option.id;
-              return (
-                <PressScaleTouchable
-                  key={option.id}
-                  onPress={() => props.onChangeSplitMode(option.id)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  surfaceStyle={[
-                    styles.modeOption,
-                    active && {
-                      backgroundColor: theme.primary,
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={{ color: active ? theme.onPrimary : theme.textSecondary }}
-                  >
-                    {option.label}
-                  </AppText>
-                </PressScaleTouchable>
-              );
-            })}
-          </View>
+            size="sm"
+            options={SPLIT_MODE_OPTIONS}
+            value={props.splitMode}
+            onChange={props.onChangeSplitMode}
+          />
         ) : null}
       </Inline>
 
@@ -141,24 +116,12 @@ export function SplitPeopleParticipantsBar(props: SplitPeopleParticipantsBarProp
               </PressScaleTouchable>
             );
           })}
-          <PressScaleTouchable
-            onPress={() => setQuickAdd(v => !v)}
-            accessibilityRole="button"
-            surfaceStyle={[
-              styles.chip,
-              styles.quickAddChip,
-              {
-                backgroundColor: quickAdd
-                  ? withOpacity(theme.primary, Opacity.soft)
-                  : withOpacity(theme.primary, Opacity.hover),
-                borderColor: withOpacity(theme.primary, Opacity.heavy),
-              },
-            ]}
-          >
-            <AppText variant="caption" weight="semibold" color="primary">
-              + Quick add
-            </AppText>
-          </PressScaleTouchable>
+          <FilterChipButton
+            label="+ Quick add"
+            isActive={quickAdd}
+            onPress={() => setQuickAdd(value => !value)}
+            style={styles.quickAddChip}
+          />
         </Inline>
       </ScrollView>
 
@@ -218,19 +181,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
   },
-  modeCapsule: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 2,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    gap: 2,
-  },
-  modeOption: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-  },
+
   chip: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,

@@ -50,6 +50,7 @@ export interface UseSimpleJournalEditorProps {
     | 'isSubmitting'
   >;
   onSelectAccountRequest: (role: AccountRole) => void;
+  disableLastUsedDefaults?: boolean;
 }
 
 export interface SimpleFormSection {
@@ -74,6 +75,7 @@ export function useSimpleJournalEditor({
   accounts,
   editor,
   onSelectAccountRequest,
+  disableLastUsedDefaults = false,
 }: UseSimpleJournalEditorProps) {
   const { defaultCurrencyCode: defaultWorkplaceCurrency } = useWorkplace();
   const valuationCurrency = editor.valuationCurrency || defaultWorkplaceCurrency;
@@ -137,6 +139,7 @@ export function useSimpleJournalEditor({
     sourceId,
     destinationId,
     transactionAccounts,
+    disableLastUsedDefaults,
   });
 
   const sourceAccount = useMemo(() => accounts.find(a => a.id === sourceId), [accounts, sourceId]);

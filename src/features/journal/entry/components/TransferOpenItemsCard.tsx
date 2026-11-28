@@ -6,6 +6,7 @@ import {
   AppSegmentedControl,
   AppText,
   Badge,
+  FilterChipButton,
   PressScaleTouchable,
 } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
@@ -15,29 +16,42 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { Inline, Stack } from '@/src/design-system';
 import type { OpenItemId } from '@/src/types/ids';
+import type { TransferOpenItem } from '@/src/features/journal/entry/hooks/useTransferOpenItems';
+import type { RepaymentAllocationMode } from '@/src/features/journal/entry/transferOpenItemPlan';
 import { StyleSheet } from 'react-native';
 
-type Item = {
-  item: { id: OpenItemId; originalAmount: number; currencyCode: string };
-  remainder: number;
-};
 type Props = {
-  items: Item[];
+  items: readonly TransferOpenItem[];
   totalOpenRemainder: number;
   currencyCode: string;
   precision?: number;
-  quickFillChips: { id: string; label: string; amount: number }[];
-  allocationMode: 'fifo' | 'pick';
-  onAllocationModeChange: (mode: 'fifo' | 'pick') => void;
+  quickFillChips: readonly { id: string; label: string; amount: number }[];
+  allocationMode: RepaymentAllocationMode;
+  onAllocationModeChange: (mode: RepaymentAllocationMode) => void;
   selectedItemIds: Record<string, boolean>;
   onSelectOnlyItem?: (itemId: string) => void;
   onToggleItem: (id: OpenItemId) => void;
   onQuickFillAmount: (amount: string) => void;
   activeAmount?: number;
 };
-export function TransferOpenItemsCard(p: Props) {
+export function TransferOpenItemsCard({
+  items,
+  totalOpenRemainder,
+  currencyCode,
+  precision = 2,
+  quickFillChips,
+  allocationMode,
+  onAllocationModeChange,
+  selectedItemIds,
+  onSelectOnlyItem,
+  onToggleItem,
+  onQuickFillAmount,
+  activeAmount,
+}: Props) {
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
+  const pickSelected = allocationMode === 'pick' && Object.values(selectedItemIds).some(Boolean);
+
   return (
     <AppCard variant="outline" padding="md" radius="xl" style={styles.card}>
       <Stack gap="sm">
@@ -46,54 +60,38 @@ export function TransferOpenItemsCard(p: Props) {
             OPEN ITEMS TO SETTLE
           </AppText>
           <Badge size="sm" variant="primary">
-            {formatMoneyAmount(p.totalOpenRemainder, p.currencyCode, isPrivacyMode)}
+            {formatMoneyAmount(totalOpenRemainder, currencyCode, isPrivacyMode)}
           </Badge>
         </Inline>
-        {p.quickFillChips.length > 0 ? (
+        {quickFillChips.length > 0 ? (
           <Inline gap="xs" flexWrap="wrap">
-            {p.quickFillChips.map(c => {
+            {quickFillChips.map(chip => {
               const isChipSelected =
-                typeof p.activeAmount === 'number' &&
-                Number.isFinite(p.activeAmount) &&
-                toMinorUnits(p.activeAmount, p.precision ?? 2) ===
-                  toMinorUnits(c.amount, p.precision ?? 2);
+                typeof activeAmount === 'number' &&
+                Number.isFinite(activeAmount) &&
+                toMinorUnits(activeAmount, precision) === toMinorUnits(chip.amount, precision);
               const handleChipPress = () => {
-                p.onQuickFillAmount(String(c.amount));
-                if (c.id !== 'full' && c.id !== 'half') {
-                  if (p.onSelectOnlyItem) {
-                    p.onSelectOnlyItem(c.id);
-                    return;
-                  }
-                  if (p.allocationMode !== 'pick') p.onAllocationModeChange('pick');
-                  for (const item of p.items) {
-                    if (Boolean(p.selectedItemIds[item.item.id]) !== (item.item.id === c.id)) {
-                      p.onToggleItem(item.item.id);
-                    }
+                onQuickFillAmount(String(chip.amount));
+                if (chip.id === 'full' || chip.id === 'half') return;
+                if (onSelectOnlyItem) {
+                  onSelectOnlyItem(chip.id);
+                  return;
+                }
+                if (allocationMode !== 'pick') onAllocationModeChange('pick');
+                for (const item of items) {
+                  if (Boolean(selectedItemIds[item.item.id]) !== (item.item.id === chip.id)) {
+                    onToggleItem(item.item.id);
                   }
                 }
               };
               return (
-                <PressScaleTouchable
-                  key={c.id}
+                <FilterChipButton
+                  key={chip.id}
+                  label={`${chip.label}: ${formatMoneyAmount(chip.amount, currencyCode, isPrivacyMode)}`}
+                  isActive={isChipSelected}
                   onPress={handleChipPress}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isChipSelected }}
-                  surfaceStyle={[
-                    styles.quickChip,
-                    {
-                      backgroundColor: isChipSelected
-                        ? withOpacity(theme.primary, Opacity.soft)
-                        : withOpacity(theme.primary, Opacity.hover),
-                      borderColor: isChipSelected
-                        ? theme.primary
-                        : withOpacity(theme.primary, Opacity.medium),
-                    },
-                  ]}
-                >
-                  <AppText variant="caption" weight="semibold" color="primary">
-                    {c.label}: {formatMoneyAmount(c.amount, p.currencyCode, isPrivacyMode)}
-                  </AppText>
-                </PressScaleTouchable>
+                  testID={`transfer-quick-fill-${chip.id}`}
+                />
               );
             })}
           </Inline>
@@ -105,16 +103,21 @@ export function TransferOpenItemsCard(p: Props) {
             { id: 'fifo', label: 'Auto FIFO' },
             { id: 'pick', label: 'Pick items' },
           ]}
-          value={p.allocationMode}
-          onChange={p.onAllocationModeChange}
+          value={allocationMode}
+          onChange={onAllocationModeChange}
         />
+        {allocationMode === 'pick' && !pickSelected ? (
+          <AppText variant="caption" color="secondary">
+            Pick at least one open item to allocate this payment, or switch to Auto FIFO.
+          </AppText>
+        ) : null}
         <Stack gap="xs">
-          {p.items.map(x => {
-            const isSelected = Boolean(p.selectedItemIds[x.item.id]);
+          {items.map(openItem => {
+            const isSelected = Boolean(selectedItemIds[openItem.item.id]);
             return (
               <PressScaleTouchable
-                key={x.item.id}
-                onPress={() => p.onToggleItem(x.item.id)}
+                key={openItem.item.id}
+                onPress={() => onToggleItem(openItem.item.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
                 surfaceStyle={[
@@ -131,9 +134,9 @@ export function TransferOpenItemsCard(p: Props) {
               >
                 <Inline justifyContent="space-between" alignItems="center" gap="sm">
                   <OpenItemAmount
-                    originalAmount={x.item.originalAmount}
-                    remainder={x.remainder}
-                    currencyCode={x.item.currencyCode}
+                    originalAmount={openItem.item.originalAmount}
+                    remainder={openItem.remainder}
+                    currencyCode={openItem.item.currencyCode}
                     isPrivacyMode={isPrivacyMode}
                   />
                   <SelectionIndicator selected={isSelected} />
@@ -155,12 +158,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     letterSpacing: Typography.letterSpacing.wide,
   },
-  quickChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-  },
+
   itemRowSurface: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,

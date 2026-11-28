@@ -382,7 +382,6 @@ function PersonDetailsScreenContent() {
         onClearOpenBalances={() => {
           void vm.onStartWeAreSettled();
         }}
-        onPartialForgive={() => vm.onSettleUp()}
       />
 
       <ModalSurface

@@ -15,6 +15,7 @@ type GuidedModeControllerOptions = {
     lineId: string,
     options?: JournalEntryAccountPickerRequestOptions,
   ) => void;
+  disableLastUsedDefaults?: boolean;
 };
 
 /** Canonical controller shared by every visual treatment of simple journal entry. */
@@ -23,6 +24,7 @@ export function useGuidedModeController({
   editor,
   guidedAutopilot,
   onSelectAccountRequest,
+  disableLastUsedDefaults = false,
 }: GuidedModeControllerOptions) {
   const { getLineIdByRole } = editor;
   const requestAccountForRole = useCallback(
@@ -37,6 +39,7 @@ export function useGuidedModeController({
     accounts,
     editor,
     onSelectAccountRequest: requestAccountForRole,
+    disableLastUsedDefaults,
   });
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
   const handleApplyVoiceInput = useGuidedVoiceApplication(editor, simpleEditor);

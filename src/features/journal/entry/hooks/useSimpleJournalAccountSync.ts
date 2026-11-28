@@ -20,6 +20,8 @@ interface UseSimpleJournalAccountSyncProps {
   sourceId: AccountId;
   destinationId: AccountId;
   transactionAccounts: AccountFields[];
+  /** Skip remembered last-used defaults (e.g. People repayment seeds the person leg only). */
+  disableLastUsedDefaults?: boolean;
 }
 
 /** Keeps guided account defaults and line metadata aligned with the account list. */
@@ -30,6 +32,7 @@ export function useSimpleJournalAccountSync({
   sourceId,
   destinationId,
   transactionAccounts,
+  disableLastUsedDefaults = false,
 }: UseSimpleJournalAccountSyncProps): void {
   const journalNav = preferences.journalNav;
   const initializedTabTypesRef = useRef<Set<TabType>>(new Set());
@@ -40,6 +43,7 @@ export function useSimpleJournalAccountSync({
     if (initializedTabTypesRef.current.has(type)) return;
 
     initializedTabTypesRef.current.add(type);
+    if (disableLastUsedDefaults) return;
 
     const lastSourceId = journalNav.lastUsedSourceAccountId;
     const lastDestId = journalNav.lastUsedDestinationAccountId;

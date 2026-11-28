@@ -40,10 +40,13 @@ import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { useInboxSourceRecords } from '@/src/features/journal/entry/hooks/useInboxSourceRecords';
 import { createPersonWithReceivable, peopleReadService } from '@/src/services/people';
 import { logger } from '@/src/services/observability/logger';
+import { formatRoundedAmount } from '@/src/domain/money/money';
+import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import type { SplitParticipant } from '@/src/features/journal/entry/components/SplitPeopleParticipantsBar';
 import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import type { OpenItemId, PersonId } from '@/src/types/ids';
+import type { TransferOpenItemPlan } from '@/src/features/journal/entry/transferOpenItemPlan';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,15 +102,11 @@ export interface JournalEntryShell {
   peopleGroups: PersonPickerGroup[];
   initialPersonId?: PersonId;
   initialOpenItemId?: OpenItemId;
-  onQuickAddPerson: (name: string, currencyCode?: string) => Promise<AccountId>;
-  onTransferOpenItemPlanChange: (
-    plan: {
-      personId: PersonId;
-      targetAccountId: AccountId;
-      allocationMode: 'fifo' | 'pick';
-      allocations: readonly { openItemId: OpenItemId; amount: number }[];
-    } | null,
-  ) => void;
+  onQuickAddPerson: (
+    name: string,
+    currencyCode?: string,
+  ) => Promise<{ id: AccountId; name: string }>;
+  onTransferOpenItemPlanChange: (plan: TransferOpenItemPlan | null) => void;
 }
 
 export function useJournalEntryShell(): JournalEntryShell {
@@ -135,25 +134,17 @@ export function useJournalEntryShell(): JournalEntryShell {
         })),
     [peopleGroups],
   );
-  const transferOpenItemPlanRef = useRef<{
-    personId: PersonId;
-    targetAccountId: AccountId;
-    allocationMode: 'fifo' | 'pick';
-    allocations: readonly { openItemId: OpenItemId; amount: number }[];
-  } | null>(null);
-  const onTransferOpenItemPlanChange = useCallback(
-    (plan: typeof transferOpenItemPlanRef.current) => {
-      transferOpenItemPlanRef.current = plan;
-    },
-    [],
-  );
+  const transferOpenItemPlanRef = useRef<TransferOpenItemPlan | null>(null);
+  const onTransferOpenItemPlanChange = useCallback((plan: TransferOpenItemPlan | null) => {
+    transferOpenItemPlanRef.current = plan;
+  }, []);
   const onQuickAddPerson = useCallback(
     async (name: string, currencyCode?: string) => {
       const { account } = await createPersonWithReceivable(workplaceId, {
         name,
         currencyCode: currencyCode ?? workplaceCurrency,
       });
-      return account.id;
+      return { id: account.id, name: account.name };
     },
     [workplaceId, workplaceCurrency],
   );
@@ -231,7 +222,7 @@ export function useJournalEntryShell(): JournalEntryShell {
         editor.savedStatus !== JournalStatus.POSTED &&
         editor.transactionType === 'transfer' &&
         plan &&
-        (plan.allocations.length > 0 || plan.allocationMode === 'pick')
+        plan.allocations.length > 0
         ? plan
         : undefined;
     };
@@ -256,23 +247,42 @@ export function useJournalEntryShell(): JournalEntryShell {
         const item = seed.openItemId
           ? detail.openItems.find(row => row.item.id === seed.openItemId)
           : undefined;
+        const matchCurrency = item?.item.currencyCode ?? seed.currencyCode?.trim().toUpperCase();
+        const byType = (type: AccountType) =>
+          linked
+            .map(entry => entry.account)
+            .find(
+              account =>
+                account.accountType === type &&
+                (!matchCurrency || account.currencyCode === matchCurrency),
+            ) ?? linked.map(entry => entry.account).find(account => account.accountType === type);
         const personAccount =
           (item && accounts.find(account => account.id === item.item.accountId)) ||
-          linked.find(entry => entry.account.accountType === AccountType.ASSET)?.account ||
-          linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
+          byType(AccountType.ASSET) ||
+          byType(AccountType.LIABILITY);
         if (!personAccount) return;
         // Seed only the person leg; leave the cash/bank counterparty empty for the user.
         const personAsSource = personAccount.accountType === AccountType.ASSET;
         const personLineType = personAsSource ? TransactionType.CREDIT : TransactionType.DEBIT;
         const personLine = lines.find(line => line.transactionType === personLineType);
         if (!personLine) return;
+        const precision = getCurrencyPrecision(personAccount.currencyCode);
+        const seededAmount =
+          item && !seed.amount && item.remainder > 0
+            ? formatRoundedAmount(item.remainder, precision)
+            : undefined;
+        const counterpartyLine = lines.find(line => line.transactionType !== personLineType);
         updateLines({
           [personLine.id]: {
             ...lineAccountPatch(personAccount.id, personAccount, personAccount.accountType),
-            ...(item && !seed.amount && item.remainder > 0
-              ? { amount: String(item.remainder) }
-              : {}),
+            ...(seededAmount ? { amount: seededAmount } : {}),
           },
+          ...(seededAmount &&
+          counterpartyLine &&
+          !counterpartyLine.amount &&
+          counterpartyLine.accountCurrency === personAccount.currencyCode
+            ? { [counterpartyLine.id]: { amount: seededAmount } }
+            : {}),
         });
       })
       .catch(error => logger.warn('Could not load People transfer details', { error }));
@@ -282,6 +292,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     updateLines,
     peopleGroups,
     seed.amount,
+    seed.currencyCode,
     seed.journalId,
     seed.openItemId,
     seed.personId,

@@ -18,7 +18,7 @@ import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEdi
 import { ORPHANED_PLANNED_JOURNAL_NOTICE } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { peopleReadService } from '@/src/services/people';
-import { JournalStatus, TransactionType } from '@/src/types/enums';
+import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { JournalId, PersonId } from '@/src/types/ids';
 import { formatDate } from '@/src/utils/dateFormatting';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
@@ -125,28 +125,29 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   useEffect(() => {
     let active = true;
     async function loadPeopleMeta() {
-      if (
-        !journalId ||
-        typeof peopleReadService?.getJournalForSplit !== 'function' ||
-        typeof peopleReadService?.listPersonPickerGroups !== 'function'
-      ) {
-        return;
-      }
+      if (!journalId) return;
       const [splitInfo, groups] = await Promise.all([
         peopleReadService.getJournalForSplit(workplaceId, journalId),
         peopleReadService.listPersonPickerGroups(workplaceId),
       ]);
       if (!active) return;
+      const transactionAccountIds = new Set(transactions.map(tx => tx.accountId));
       const matchedGroup = groups.find(
-        group =>
-          !group.archived && transactions.some(tx => group.accountIds.includes(tx.accountId)),
+        group => !group.archived && group.accountIds.some(id => transactionAccountIds.has(id)),
       );
+      const matchedAccountType = matchedGroup
+        ? transactions.find(tx => matchedGroup.accountIds.includes(tx.accountId))?.accountType
+        : undefined;
+      const canSettleWithPerson =
+        matchedGroup &&
+        (matchedAccountType === AccountType.ASSET || matchedAccountType === AccountType.LIABILITY);
       setPeopleMeta({
         splitEligible: Boolean(splitInfo?.isEligible),
         alreadyShared: Boolean(splitInfo?.isAlreadyShared),
-        linkedPerson: matchedGroup
-          ? { personId: matchedGroup.personId as PersonId, personName: matchedGroup.personName }
-          : undefined,
+        linkedPerson:
+          matchedGroup && canSettleWithPerson
+            ? { personId: matchedGroup.personId as PersonId, personName: matchedGroup.personName }
+            : undefined,
       });
     }
     void loadPeopleMeta();
@@ -323,13 +324,16 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
                   }
                 : {}),
               ...(peopleMeta.linkedPerson
-                ? {
-                    settlePersonName: peopleMeta.linkedPerson.personName,
-                    onSettleWithPerson: () =>
-                      AppNavigation.toTransferRepayment({
-                        personId: peopleMeta.linkedPerson!.personId,
-                      }),
-                  }
+                ? (() => {
+                    const linkedPerson = peopleMeta.linkedPerson;
+                    return {
+                      settlePersonName: linkedPerson.personName,
+                      onSettleWithPerson: () =>
+                        AppNavigation.toTransferRepayment({
+                          personId: linkedPerson.personId,
+                        }),
+                    };
+                  })()
                 : {}),
             }
           : undefined,

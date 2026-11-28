@@ -23,7 +23,10 @@ export type SplitModePanelProps = {
   peopleGroups?: readonly PersonPickerGroup[];
   initialPersonId?: PersonId;
   workplaceId?: WorkplaceId;
-  onQuickAddPerson?: (name: string, currencyCode?: string) => Promise<AccountId | void>;
+  onQuickAddPerson?: (
+    name: string,
+    currencyCode?: string,
+  ) => Promise<AccountId | { id: AccountId; name: string } | void>;
   onCreatePersonRequest?: () => void;
 };
 

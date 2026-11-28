@@ -38,6 +38,7 @@ import { SplitPeopleParticipantsBar, type SplitParticipant } from './SplitPeople
 import { ensurePersonAccount } from '@/src/services/people';
 import { AccountType } from '@/src/types/enums';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
+import { showErrorAlert } from '@/src/services/feedback/alerts';
 import { StyleSheet, View } from 'react-native';
 
 type SplitFormProps = SplitJournalController & {
@@ -45,7 +46,10 @@ type SplitFormProps = SplitJournalController & {
   peopleGroups?: readonly PersonPickerGroup[];
   initialPersonId?: PersonId;
   workplaceId?: WorkplaceId;
-  onQuickAddPerson?: (name: string, currencyCode?: string) => Promise<AccountId | void>;
+  onQuickAddPerson?: (
+    name: string,
+    currencyCode?: string,
+  ) => Promise<AccountId | { id: AccountId; name: string } | void>;
   onCreatePersonRequest?: () => void;
   onCreateAccountRequestForRow: (
     rowId: string,
@@ -220,12 +224,18 @@ export function SplitForm({
       initialPersonSelected.current ||
       !initialPersonId ||
       !workplaceId ||
-      selectedPersonIds.length
+      selectedPersonIds.length ||
+      !peopleGroups.some(group => group.personId === initialPersonId)
     )
       return;
     initialPersonSelected.current = true;
-    void onTogglePerson(initialPersonId);
-  }, [initialPersonId, onTogglePerson, selectedPersonIds.length, workplaceId]);
+    void onTogglePerson(initialPersonId).catch(error => {
+      initialPersonSelected.current = false;
+      showErrorAlert(
+        error instanceof Error ? error.message : 'Could not add the selected person to this split',
+      );
+    });
+  }, [initialPersonId, onTogglePerson, peopleGroups, selectedPersonIds.length, workplaceId]);
   useEffect(() => {
     if (!pendingEqualizeRef.current || splitMode !== 'equal' || !canEqualize) return;
     pendingEqualizeRef.current = false;
@@ -262,13 +272,18 @@ export function SplitForm({
       if (!onQuickAddPerson) return;
       setIsQuickAdding(true);
       try {
-        const accountId = await onQuickAddPerson(name, currencyCode);
-        if (!accountId) return;
+        const result = await onQuickAddPerson(name, currencyCode);
+        if (!result) return;
+        const accountId: AccountId = typeof result === 'string' ? result : result.id;
+        const accountName = typeof result === 'string' ? undefined : result.name;
         if (splitMode === 'equal') pendingEqualizeRef.current = true;
         addSplitRowWithAccount(accountId, {
+          name: accountName,
           accountType: AccountType.ASSET,
           currencyCode,
         });
+      } catch (error) {
+        showErrorAlert(error instanceof Error ? error.message : 'Could not add person');
       } finally {
         setIsQuickAdding(false);
       }

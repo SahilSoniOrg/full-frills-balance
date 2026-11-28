@@ -1,6 +1,12 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
-import { AppIcon, AppInput, PressScaleTouchable, SwipeToRemove } from '@/src/components/core';
+import {
+  AppIcon,
+  AppInput,
+  IconButton,
+  PressScaleTouchable,
+  SwipeToRemove,
+} from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Size, Spacing, Typography } from '@/src/constants/design-tokens';
@@ -147,10 +153,13 @@ export function SplitAllocationRow({
                 <AppIcon name={moveIcon} size={Size.iconXs} color={theme.textSecondary} />
               </PressScaleTouchable>
             ) : canRemove ? (
-              <PressScaleTouchable
-                onPress={onRemove}
-                accessibilityRole="button"
+              <IconButton
+                name={Icon.Close}
+                size={Size.iconXs}
+                variant="clear"
+                iconColor={theme.textTertiary}
                 accessibilityLabel={removeLabel}
+                onPress={onRemove}
                 style={styles.moveButton}
                 testID={`${testIDPrefix}-remove-${row.id}`}
                 hitSlop={{
@@ -159,9 +168,7 @@ export function SplitAllocationRow({
                   left: Spacing.sm,
                   right: Spacing.sm,
                 }}
-              >
-                <AppIcon name={Icon.Close} size={Size.iconXs} color={theme.textTertiary} />
-              </PressScaleTouchable>
+              />
             ) : null}
           </View>
         }

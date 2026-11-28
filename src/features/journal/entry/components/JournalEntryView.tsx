@@ -387,6 +387,9 @@ export function JournalEntryView(props: JournalEntryShell) {
             initialOpenItemId={initialOpenItemId}
             onCreatePersonRequest={openPersonCreation}
             onTransferOpenItemPlanChange={onTransferOpenItemPlanChange}
+            disableLastUsedDefaults={
+              !!props.initialPersonId && !editor.isEdit && editor.transactionType === 'transfer'
+            }
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
