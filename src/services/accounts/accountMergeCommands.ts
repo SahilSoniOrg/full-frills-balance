@@ -13,6 +13,7 @@ import { analytics } from '@/src/services/analytics';
 import {
   AccountReferenceSiteKey,
   assertNoLiveAccountReferences,
+  deleteBlockers,
   referenceSites,
 } from '@/src/services/accounts/accountReferenceGraph';
 import {
@@ -115,6 +116,14 @@ async function mergeAccountsCore(
       currentTarget,
       sourceAccounts,
     );
+    for (const accountId of [...filteredSourceIds, targetAccountId]) {
+      const blockers = await deleteBlockers(workplaceId, accountId);
+      if (blockers.some(blocker => blocker.code === 'people')) {
+        throw new Error(
+          'Cannot merge accounts linked to People. Unlink the account and resolve its open items first.',
+        );
+      }
+    }
     assertMergeAccountsHaveSameHierarchyRole(targetAccountId, filteredSourceIds, allAccounts);
     assertMergeDoesNotCreateHierarchyCycle(targetAccountId, filteredSourceIds, allAccounts);
 

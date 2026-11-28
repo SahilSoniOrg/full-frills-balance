@@ -6,7 +6,7 @@ import type { JournalSuggestion, JournalSuggestionPage } from '@/src/types/journ
 import type { TabType } from '@/src/types/domainJournal';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
-import type { CreateJournalData } from '@/src/types/journalWrite';
+import type { CreateJournalData, JournalRepaymentAllocation } from '@/src/types/journalWrite';
 import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
 
 import { type PlannedJournalMode, type SubmitJournalResult } from './domain/journalDomainTypes';
@@ -47,6 +47,7 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     return save.postPostingPlan(this, params);
@@ -147,6 +148,7 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
     planned?: PlannedJournalMode;
+    repaymentAllocation?: JournalRepaymentAllocation;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     return save.saveJournalEntry(this, params);

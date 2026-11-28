@@ -33,6 +33,11 @@ import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { parseJSONRecord } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
+import {
+  guardAndSyncJournalDeleteOrReverseInSession,
+  restoreJournalPeopleInSession,
+  syncPutJournalPeopleInSession,
+} from '@/src/data/repositories/journal/journalPeopleIntegrity';
 
 export interface BulkDeleteResult extends JournalRebuildImpact {
   undoToken: BulkDeleteUndoToken;
@@ -95,7 +100,19 @@ export async function stageDelete(
     const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
     assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
   }
-  const { transactions } = await stageSoftDelete(session, workplaceId, [journal], auditMetadata);
+  const { deletedAt, transactions } = await stageSoftDelete(
+    session,
+    workplaceId,
+    [journal],
+    auditMetadata,
+  );
+  await guardAndSyncJournalDeleteOrReverseInSession({
+    session,
+    workplaceId,
+    journalIds: [journalId],
+    action: 'delete',
+    deletedAt,
+  });
   return rebuildImpactFor([journal], transactions);
 }
 
@@ -109,6 +126,13 @@ export async function stageBulkDelete(
     return { ...emptyRebuildImpact(), undoToken: { journals: [], transactions: [] } };
   }
   const { deletedAt, transactions } = await stageSoftDelete(session, workplaceId, journals);
+  await guardAndSyncJournalDeleteOrReverseInSession({
+    session,
+    workplaceId,
+    journalIds: journals.map(journal => journal.id),
+    action: 'delete',
+    deletedAt,
+  });
   return {
     ...rebuildImpactFor(journals, transactions),
     undoToken: {
@@ -193,6 +217,14 @@ export async function stageRecover(
     session,
     transactions: resultingTransactions.map(toPersistenceLine),
   });
+  if (previousDeletedAt) {
+    await restoreJournalPeopleInSession(
+      session,
+      workplaceId,
+      [journalId],
+      previousDeletedAt.getTime(),
+    );
+  }
 
   const now = new Date();
   stageModelWrite(session, () => [
@@ -278,6 +310,7 @@ export async function stageBulkRestore(
     });
   }
 
+  await restoreJournalPeopleInSession(session, workplaceId, journalIds, deletedAt!);
   const previousDeletedAtById = new Map(journals.map(journal => [journal.id, journal.deletedAt]));
   const now = new Date();
   stageModelWrite(session, () => [
@@ -337,6 +370,18 @@ export async function stageRevertToPlanned(
       ? storedDate
       : localStartOfDay(currentJournalDate);
   const transactions = await fetchJournalTransactions(workplaceId, [journalId]);
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId,
+    status: JournalStatus.PLANNED,
+    accountsById: new Map(),
+    beforeTransactions: transactions,
+    newLines: [],
+    journalDate: revertTime,
+    previousJournalDate: currentJournalDate,
+    previousStatus: journal.status,
+  });
   const now = new Date();
 
   stageModelWrite(session, () => [

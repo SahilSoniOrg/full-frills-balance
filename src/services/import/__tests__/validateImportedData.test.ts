@@ -70,6 +70,115 @@ function minimalImport(overrides?: {
 }
 
 describe('validateImportedData', () => {
+  it('validates People links and active account uniqueness', () => {
+    const data = minimalImport();
+    data.accounts[0] = { ...data.accounts[0], accountSubtype: 'RECEIVABLE' };
+    data.people = [{ id: 'person-1', name: 'Alex' }];
+    data.personAccounts = [{ id: 'pa-1', personId: 'person-1', accountId: 'acc-1' as AccountId }];
+    data.openItems = [
+      {
+        id: 'oi-1',
+        personId: 'person-1',
+        originatingJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        direction: 'receivable',
+        originalAmount: 10,
+        currencyCode: 'USD',
+      },
+    ];
+    data.settlementAllocations = [
+      {
+        id: 'sa-1',
+        personId: 'person-1',
+        openItemId: 'oi-1',
+        settlementJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        allocationKind: 'repayment',
+        amount: 2,
+        isActive: true,
+      },
+    ];
+    expect(() => validateImportedData(data)).not.toThrow();
+    data.accounts[0].parentAccountId = 'acc-2' as AccountId;
+    expect(() => validateImportedData(data)).not.toThrow();
+    data.transactions[1].amount = 1;
+    expect(() => validateImportedData(data)).toThrow(/allocations exceed journal posting/);
+    data.transactions[1].amount = 10;
+    data.personAccounts.push({ id: 'pa-2', personId: 'person-1', accountId: 'acc-1' as AccountId });
+    expect(() => validateImportedData(data)).toThrow(/multiple active people/);
+  });
+
+  it('rejects active repayment allocations beyond an open item in minor units', () => {
+    const data = minimalImport();
+    data.accounts[0] = { ...data.accounts[0], accountSubtype: 'RECEIVABLE' };
+    data.people = [{ id: 'person-1', name: 'Alex' }];
+    data.personAccounts = [{ id: 'pa-1', personId: 'person-1', accountId: 'acc-1' as AccountId }];
+    data.openItems = [
+      {
+        id: 'oi-1',
+        personId: 'person-1',
+        originatingJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        direction: 'receivable',
+        originalAmount: 10,
+        currencyCode: 'USD',
+      },
+    ];
+    data.settlementAllocations = [
+      {
+        id: 'sa-1',
+        personId: 'person-1',
+        openItemId: 'oi-1',
+        settlementJournalId: 'j-1',
+        accountId: 'acc-1' as AccountId,
+        allocationKind: 'repayment',
+        amount: 10.01,
+        isActive: true,
+      },
+    ];
+
+    expect(() => validateImportedData(data)).toThrow(/allocations exceed open item/);
+  });
+
+  it('ignores references on deleted People history pruned from an older backup', () => {
+    const data = minimalImport();
+    data.personAccounts = [
+      {
+        id: 'deleted-link',
+        personId: 'old-person',
+        accountId: 'old-account' as AccountId,
+        deletedAt: 1,
+      },
+    ];
+    data.openItems = [
+      {
+        id: 'deleted-item',
+        personId: 'old-person',
+        originatingJournalId: 'old-journal',
+        accountId: 'old-account' as AccountId,
+        direction: 'receivable',
+        originalAmount: 10,
+        currencyCode: 'USD',
+        deletedAt: 1,
+      },
+    ];
+    data.settlementAllocations = [
+      {
+        id: 'deleted-allocation',
+        personId: 'old-person',
+        openItemId: 'deleted-item',
+        settlementJournalId: 'old-journal',
+        accountId: 'old-account' as AccountId,
+        allocationKind: 'repayment',
+        amount: 10,
+        isActive: false,
+        deletedAt: 1,
+      },
+    ];
+
+    expect(() => validateImportedData(data)).not.toThrow();
+  });
+
   it('accepts structurally valid, balanced imports', () => {
     expect(() => validateImportedData(minimalImport())).not.toThrow();
   });

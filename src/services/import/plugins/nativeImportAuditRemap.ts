@@ -30,6 +30,8 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   assetAccountIds: 'account',
   scopedAccountIds: 'account',
   journalId: 'journal',
+  originatingJournalId: 'journal',
+  settlementJournalId: 'journal',
   journalIds: 'journal',
   originalJournalId: 'journal',
   reversingJournalId: 'journal',
@@ -49,6 +51,10 @@ const ID_MAP_BY_FIELD: Readonly<Record<string, keyof AuditImportEntityIdMaps | '
   matcherIds: 'account_matcher',
   inboxRecordId: 'transaction_inbox_record',
   transactionInboxRecordId: 'transaction_inbox_record',
+  personId: 'person',
+  openItemId: 'open_item',
+  settlementAllocationId: 'settlement_allocation',
+  createdSettlementAllocationIds: 'settlement_allocation',
   revertsLogId: 'auditLogs',
 };
 
@@ -93,6 +99,21 @@ function remapValue(
   }
 
   if (Array.isArray(value)) {
+    if (key === 'createdSettlementAllocationIds') {
+      const map = maps.entities.settlement_allocation;
+      let changed = false;
+      const remapped = value.flatMap(item => {
+        if (typeof item !== 'string') return [];
+        const mapped = map.get(item);
+        if (mapped === undefined) {
+          changed = true;
+          return [];
+        }
+        changed ||= mapped !== item;
+        return [mapped];
+      });
+      return { value: remapped, changed };
+    }
     // Funding collections in audit snapshots are string[] of account IDs.
     // Remap each element as an ID — do not run the string serializer per item
     // (that would wrap each ID as JSON: ['["new-id"]']).

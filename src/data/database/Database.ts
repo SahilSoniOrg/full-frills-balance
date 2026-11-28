@@ -21,6 +21,10 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction from '@/src/data/models/Transaction';
 import Workplace from '@/src/data/models/Workplace';
+import Person from '@/src/data/models/Person';
+import PersonAccount from '@/src/data/models/PersonAccount';
+import OpenItem from '@/src/data/models/OpenItem';
+import SettlementAllocation from '@/src/data/models/SettlementAllocation';
 
 // Adapter (platform-specific resolution handled by Metro)
 import adapter from '@/src/data/database/adapter';
@@ -50,5 +54,9 @@ export const database = new WatermelonDB({
     TransactionInboxRecord,
     Transaction,
     Workplace,
+    Person,
+    PersonAccount,
+    OpenItem,
+    SettlementAllocation,
   ],
 });

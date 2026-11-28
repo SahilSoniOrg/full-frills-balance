@@ -3,6 +3,9 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { personQueryRepository } from '@/src/data/repositories/people/PersonQueryRepository';
+import { personWriteRepository } from '@/src/data/repositories/people/PersonWriteRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalCaptureQueries } from '@/src/data/repositories/journal/JournalCaptureQueries';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -308,5 +311,81 @@ describe('planned payment plan attach', () => {
     });
     const parsed = parseJSONRecord((await metadataFor(capture.id)).metadataJson);
     expect(parsed[MetadataKeys.ORIGINAL_PLANNED_DATE]).toBeUndefined();
+  });
+
+  it('undo deactivates only repayment allocations created by attach', async () => {
+    const receivableId = (
+      await accountWriteRepository.create({
+        name: 'Receivable',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId: WP,
+      })
+    ).id;
+    const person = await runAccountingWriteSession(session =>
+      personWriteRepository.createPersonInSession(session, WP, { name: 'Ada' }),
+    );
+    await runAccountingWriteSession(session =>
+      personWriteRepository.linkAccountInSession(session, WP, person.id, receivableId),
+    );
+    const origin = await journalPersistenceRepository.put(
+      {
+        journalDate: occurrenceDay - 86_400_000,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: receivableId, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: cashId, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      WP,
+    );
+    const [item] = await personQueryRepository.listOpenItems(WP, {
+      originatingJournalId: origin.journal.id,
+    });
+    const payment = await createPlan(rentId);
+    const planned = await createPlannedJournal(payment.id);
+    const capture = await journalPersistenceRepository.put(
+      {
+        journalDate: occurrenceDay + 3_600_000,
+        currencyCode: 'USD',
+        status: JournalStatus.POSTED,
+        transactions: [
+          { accountId: receivableId, amount: 60, transactionType: TransactionType.CREDIT },
+          { accountId: cashId, amount: 60, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      WP,
+    );
+
+    await attachCaptureJournalToPlannedOccurrence(WP, {
+      captureJournalId: capture.journal.id,
+      plannedPaymentId: payment.id,
+      plannedJournalId: planned.id,
+      occurrenceDay,
+    });
+    const activeAfterAttach = await personQueryRepository.listSettlementAllocations(WP, {
+      settlementJournalId: capture.journal.id,
+      activeOnly: true,
+    });
+    expect(activeAfterAttach).toHaveLength(1);
+    expect(activeAfterAttach[0].openItemId).toBe(item.id);
+
+    const attachLog = (await auditRepository.findByEntity('journal', capture.journal.id, WP)).find(
+      log => log.eventType === 'journal.planned_payment_attached',
+    )!;
+    expect(attachLog.parsedChanges?.after?.createdSettlementAllocationIds).toEqual([
+      activeAfterAttach[0].id,
+    ]);
+    expect(await revertEntry(attachLog.id, WP)).toEqual({ success: true });
+    expect(
+      await personQueryRepository.listSettlementAllocations(WP, {
+        settlementJournalId: capture.journal.id,
+        activeOnly: true,
+      }),
+    ).toHaveLength(0);
+    expect(
+      (await personQueryRepository.listSettlementAllocations(WP, { openItemId: item.id }))[0]
+        .isActive,
+    ).toBe(false);
   });
 });

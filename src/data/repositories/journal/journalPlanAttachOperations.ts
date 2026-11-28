@@ -39,6 +39,9 @@ import { REVERT_CONFLICT_MESSAGE } from '@/src/domain/audit/revertErrors';
 import { parseJSONRecord } from '@/src/utils/serialization';
 import { stableAuditJson } from '@/src/domain/audit/stableAuditJson';
 import { Q } from '@nozbe/watermelondb';
+import { syncPutJournalPeopleInSession } from '@/src/data/repositories/journal/journalPeopleIntegrity';
+import { getSessionAllocations } from '@/src/data/repositories/AccountingWriteSession';
+import { personQueryRepository, personWriteRepository } from '@/src/data/repositories/people';
 
 export const PLAN_ATTACH_AUDIT_EVENT = 'journal.planned_payment_attached' as const;
 export const PLAN_ATTACH_AUDIT_SOURCE = 'evidence_driven';
@@ -241,6 +244,29 @@ export async function stagePlanAttach(
     session,
     transactions: nextLines,
   });
+  const stagedBefore = new Set(getSessionAllocations(session).map(row => row.id));
+  await syncPutJournalPeopleInSession({
+    session,
+    workplaceId,
+    journalId: captureJournal.id,
+    status: JournalStatus.POSTED,
+    accountsById: validated.accountsById,
+    precisionByAccountId: validated.precisionByAccountId,
+    beforeTransactions: captureTransactions,
+    newLines: validated.lines,
+    allocatePlannedRepayment: true,
+    skipOpenItemSync: true,
+    journalDate: captureJournal.journalDate,
+    previousJournalDate: captureJournal.journalDate,
+    previousStatus: captureJournal.status,
+    triggerPeopleAutoSettlement: true,
+  });
+  const createdSettlementAllocationIds = getSessionAllocations(session)
+    .filter(
+      allocation =>
+        allocation.settlementJournalId === captureJournal.id && !stagedBefore.has(allocation.id),
+    )
+    .map(allocation => allocation.id);
 
   const beforeMetadataJson = existingMetadata?.metadataJson;
   const metadataObject = {
@@ -309,6 +335,7 @@ export async function stagePlanAttach(
     originalPlannedDate: input.occurrenceDay,
     retiredPlannedJournalId: plannedJournal.id,
     retiredPlannedJournalDeletedAt: deletedAt.getTime(),
+    createdSettlementAllocationIds,
   };
 
   stageModelWrite(session, () => {
@@ -371,6 +398,10 @@ export async function stagePlanAttach(
           changes: {
             before: beforeSnapshot,
             after: afterSnapshot,
+            undoTransactionSnapshots: {
+              before: beforeSnapshot.transactions,
+              after: afterSnapshot.transactions,
+            },
             plannedPaymentId: input.plannedPaymentId,
             upgraded: shouldRewrite,
             ...(input.observationId ? { observationId: input.observationId } : {}),
@@ -424,12 +455,13 @@ export async function stageUndoPlanAttach(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,
   captureJournalId: JournalId,
-  changes: { before?: AuditJsonObject; after?: AuditJsonObject },
+  changes: { before?: AuditJsonObject; after?: AuditJsonObject; details?: AuditJsonObject },
   auditMetadata?: AuditEventMetadata,
 ): Promise<JournalPersistenceResult> {
   const before = asRecord(changes.before);
   const after = asRecord(changes.after);
   if (!before || !after) throw new Error(REVERT_CONFLICT_MESSAGE);
+  const transactionSnapshots = asRecord(asRecord(changes.details)?.undoTransactionSnapshots);
 
   const captureJournal = await findActiveJournal(captureJournalId, workplaceId);
   if (!captureJournal) throw new Error('Journal not found');
@@ -468,9 +500,12 @@ export async function stageUndoPlanAttach(
     'transactions',
     'captureMetadataJson',
   ] as const) {
-    if (!Object.prototype.hasOwnProperty.call(after, field)) continue;
+    const expected =
+      field === 'transactions' && !Object.prototype.hasOwnProperty.call(after, field)
+        ? transactionSnapshots?.after
+        : after[field];
+    if (!Object.prototype.hasOwnProperty.call(after, field) && expected === undefined) continue;
     const actual = currentAfter[field];
-    const expected = after[field];
     const matches =
       field === 'transactions' && Array.isArray(actual) && Array.isArray(expected)
         ? matchesAuditValue(
@@ -495,6 +530,30 @@ export async function stageUndoPlanAttach(
       : undefined;
   if (!retiredId || retiredDeletedAt === undefined) throw new Error(REVERT_CONFLICT_MESSAGE);
 
+  const recordedAllocations = Array.isArray(after.createdSettlementAllocationIds);
+  const createdSettlementAllocationIds = recordedAllocations
+    ? (after.createdSettlementAllocationIds as unknown[]).filter(
+        (id): id is string => typeof id === 'string',
+      )
+    : [];
+  const allocations = await personQueryRepository.listSettlementAllocations(workplaceId, {
+    settlementJournalId: captureJournalId,
+    activeOnly: true,
+  });
+  if (
+    (!recordedAllocations && allocations.length > 0) ||
+    createdSettlementAllocationIds.some(id => !allocations.some(row => row.id === id))
+  ) {
+    throw new Error(REVERT_CONFLICT_MESSAGE);
+  }
+  if (createdSettlementAllocationIds.length) {
+    await personWriteRepository.deactivateSettlementAllocationsInSession(
+      session,
+      workplaceId,
+      createdSettlementAllocationIds,
+    );
+  }
+
   let plannedJournal: Journal;
   try {
     plannedJournal = await journalTables.journals.find(retiredId);
@@ -515,8 +574,9 @@ export async function stageUndoPlanAttach(
     transaction => transaction.deletedAt?.getTime() === retiredDeletedAt,
   );
 
-  const beforeTransactions = Array.isArray(before.transactions)
-    ? (before.transactions as ReturnType<typeof auditTransactions>)
+  const rawBeforeTransactions = before.transactions ?? transactionSnapshots?.before;
+  const beforeTransactions = Array.isArray(rawBeforeTransactions)
+    ? (rawBeforeTransactions as ReturnType<typeof auditTransactions>)
     : null;
   if (!beforeTransactions) throw new Error(REVERT_CONFLICT_MESSAGE);
 
