@@ -4,6 +4,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { AppConfig } from '@/src/constants';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
+import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import {
@@ -34,6 +35,7 @@ export interface UseAccountDetailsMetricsOptions {
   dateRange: DateRange | null;
   balanceData: AccountBalance | null;
   accountIds: AccountId[];
+  accountCurrencies?: readonly { id: AccountId; currencyCode: string }[];
 }
 
 export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOptions) {
@@ -45,12 +47,16 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     dateRange,
     balanceData,
     accountIds,
+    accountCurrencies,
   } = options;
 
   const { precision } = useCurrencyPrecision(balanceCurrency);
+  const { rateMap } = useExchangeRates(balanceCurrency);
   const today = useCalendarDay();
   // Balance hydration can replace account DTOs without changing this scope.
   const accountIdsKey = JSON.stringify(accountIds);
+  const currencyKey = JSON.stringify(accountCurrencies);
+  const ratesKey = JSON.stringify(rateMap);
 
   const secondaryBalances = useMemo(() => {
     if (!balanceData?.childBalances) return [];
@@ -201,23 +207,40 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
         );
       }
 
+      const currencies = new Map(
+        accountCurrencies?.map(account => [account.id, account.currencyCode]),
+      );
+      const conversionByAccount = new Map<AccountId, number>();
+      for (const id of targetIds) {
+        const code = accountCurrencies ? currencies.get(id) : balanceCurrency;
+        const rate = code ? rateMap[code] : undefined;
+        if (!rate || !Number.isFinite(rate) || rate <= 0) {
+          return of({ chartData: [], rollingAverageData: [], xTicks: [] });
+        }
+        conversionByAccount.set(id, 1 / rate);
+      }
+
       const perAccountTransactions = combineLatest(
         targetIds.map(id => observeAccountChartTransactions(workplaceId, id, start, end)),
       );
-      const perAccountOpening =
-        rebaseChart && dateRange
-          ? combineLatest(
-              targetIds.map(id =>
-                observeAccountOpeningBalance(workplaceId, id, dateRange.startDate),
-              ),
-            )
-          : of(undefined);
+      const perAccountOpening = combineLatest(
+        targetIds.map(id =>
+          observeAccountOpeningBalance(
+            workplaceId,
+            id,
+            rebaseChart && dateRange ? dateRange.startDate : start,
+          ),
+        ),
+      );
 
       return combineLatest([perAccountTransactions, perAccountOpening]).pipe(
         map(([groups, openingBalances]) => {
           const runningByAccount = new Map<AccountId, number>();
           targetIds.forEach((id, index) => {
-            runningByAccount.set(id, openingBalances?.[index] ?? 0);
+            runningByAccount.set(
+              id,
+              (openingBalances[index] ?? 0) * (conversionByAccount.get(id) ?? 1),
+            );
           });
           const merged = groups
             .flat()
@@ -229,7 +252,10 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
             )
             .map(tx => {
               if (tx.runningBalance != null) {
-                runningByAccount.set(tx.accountId, tx.runningBalance);
+                runningByAccount.set(
+                  tx.accountId,
+                  tx.runningBalance * (conversionByAccount.get(tx.accountId) ?? 1),
+                );
               }
               let combined = 0;
               for (const val of runningByAccount.values()) combined += val;
@@ -238,20 +264,27 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
                 runningBalance: roundToPrecision(combined, precision),
               };
             });
-          const totalOpening = openingBalances
-            ? roundToPrecision(
-                openingBalances.reduce((sum, val) => sum + val, 0),
-                precision,
-              )
-            : undefined;
+          const totalOpening = roundToPrecision(
+            openingBalances.reduce(
+              (sum, val, index) => sum + val * (conversionByAccount.get(targetIds[index]) ?? 1),
+              0,
+            ),
+            precision,
+          );
+          if (!rebaseChart) {
+            merged.unshift({ transactionDate: start, runningBalance: totalOpening });
+          }
           const window =
-            dateRange && totalOpening !== undefined
+            dateRange && rebaseChart
               ? {
                   visibleStart: dateRange.startDate,
                   visibleEnd: dateRange.endDate,
                   openingBalance: totalOpening,
                 }
-              : { visibleStart: dateRange?.startDate, visibleEnd: dateRange?.endDate };
+              : {
+                  visibleStart: dateRange?.startDate ?? start,
+                  visibleEnd: dateRange?.endDate ?? end,
+                };
           return buildAccountRollingBalanceSeries({
             transactions: merged,
             ...window,
@@ -266,6 +299,9 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
       workplaceId,
       accountId,
       accountIdsKey,
+      currencyKey,
+      ratesKey,
+      balanceCurrency,
       accountType,
       dateRange?.startDate,
       dateRange?.endDate,

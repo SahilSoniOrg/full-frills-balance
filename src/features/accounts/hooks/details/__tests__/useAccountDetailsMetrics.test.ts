@@ -15,6 +15,10 @@ jest.mock('@/src/hooks/use-currencies', () => ({
   useCurrencyPrecision: () => ({ precision: 2 }),
 }));
 
+jest.mock('@/src/hooks/useExchangeRates', () => ({
+  useExchangeRates: (currency: string) => ({ rateMap: { [currency]: 1 }, isLoading: false }),
+}));
+
 jest.mock('@/src/services/accounts/accountDerivedReads', () => ({
   observeAccountChartTransactions: jest.fn(() => mockOf([])),
   observeAccountOpeningBalance: jest.fn(() => mockOf(100)),

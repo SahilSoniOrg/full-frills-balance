@@ -82,6 +82,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     dateRange,
     balanceData,
     accountIds: accountDetailsScope.accountIds,
+    accountCurrencies: accounts.map(account => ({
+      id: account.id,
+      currencyCode: account.currencyCode,
+    })),
   });
 
   const hierarchy = useAccountHierarchyTree({
