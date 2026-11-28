@@ -11,52 +11,22 @@ import {
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
+import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { Size, Spacing } from '@/src/constants/design-tokens';
-import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Inline, Stack } from '@/src/design-system';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { PeopleBalanceOverview } from '../components/PeopleBalanceOverview';
+import {
+  PeopleBalanceOverview,
+  PeopleBalanceOverviewSecondary,
+} from '../components/PeopleBalanceOverview';
 import { PersonCard } from '../components/PersonCard';
 import { usePeopleListViewModel } from '../hooks/usePeopleListViewModel';
 
 export function PeopleListScreen() {
   const vm = usePeopleListViewModel();
-  const isPrivacyMode = useEffectivePrivacyMode();
   const [isSearching, setIsSearching] = useState(false);
-
-  const primaryOwedToYou = useMemo(
-    () =>
-      vm.balanceTotals.owedToYou.find(([currency]) => currency === vm.defaultCurrencyCode)?.[1] ??
-      0,
-    [vm.balanceTotals.owedToYou, vm.defaultCurrencyCode],
-  );
-  const primaryYouOwe = useMemo(
-    () =>
-      vm.balanceTotals.youOwe.find(([currency]) => currency === vm.defaultCurrencyCode)?.[1] ?? 0,
-    [vm.balanceTotals.youOwe, vm.defaultCurrencyCode],
-  );
-  const secondaryCurrencies = useMemo(() => {
-    const entries: string[] = [];
-    for (const [currency, amount] of vm.balanceTotals.owedToYou) {
-      if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(
-          `${currency} · ${peopleStrings.owedToYou} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
-        );
-      }
-    }
-    for (const [currency, amount] of vm.balanceTotals.youOwe) {
-      if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(
-          `${currency} · ${peopleStrings.youOwe} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
-        );
-      }
-    }
-    return entries;
-  }, [vm.balanceTotals, vm.defaultCurrencyCode, isPrivacyMode]);
 
   const { setQuery, setIncludeArchived } = vm;
   const chrome = useMemo<TabScreenChrome>(
@@ -120,21 +90,14 @@ export function PeopleListScreen() {
         <Stack gap="lg" style={styles.contentColumn}>
           {!isSearching && !vm.query.trim() && vm.activePeopleCount > 0 ? (
             <PeopleBalanceOverview
-              currencyCode={vm.defaultCurrencyCode}
-              owedToYou={primaryOwedToYou}
-              youOwe={primaryYouOwe}
+              currencyCode={vm.balanceOverview.currencyCode}
+              owedToYou={vm.balanceOverview.owedToYou}
+              youOwe={vm.balanceOverview.youOwe}
             >
-              {secondaryCurrencies.length > 0 ? (
-                <Stack gap="xs">
-                  <AppText variant="overline" color="secondary">
-                    {peopleStrings.otherCurrencies}
-                  </AppText>
-                  {secondaryCurrencies.map(entry => (
-                    <AppText key={entry} variant="bodySmall" color="secondary" tabular>
-                      {entry}
-                    </AppText>
-                  ))}
-                </Stack>
+              {vm.balanceOverview.secondaryCurrencyLines.length > 0 ? (
+                <PeopleBalanceOverviewSecondary
+                  entries={vm.balanceOverview.secondaryCurrencyLines}
+                />
               ) : null}
             </PeopleBalanceOverview>
           ) : null}
@@ -195,14 +158,11 @@ export function PeopleListScreen() {
             />
           ) : (
             <Stack gap="none">
-              <AppText
-                variant="caption"
-                color="secondary"
-                weight="semibold"
+              <SectionLabel
+                label={`People (${vm.people.length})`}
+                marginTop="none"
                 style={styles.sectionLabel}
-              >
-                {`PEOPLE (${vm.people.length})`}
-              </AppText>
+              />
               {vm.people.map(row => (
                 <PersonCard
                   key={row.person.id}
@@ -239,7 +199,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxxl,
   },
   sectionLabel: {
-    marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.xs,
   },
 });

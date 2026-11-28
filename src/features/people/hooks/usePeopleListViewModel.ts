@@ -1,16 +1,27 @@
+import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { peopleReadService } from '@/src/services/people';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffect, useMemo, useState } from 'react';
 
 export type PeopleListEntry = Awaited<
   ReturnType<typeof peopleReadService.listPeopleWithBalances>
 >[number];
 
+export type PeopleBalanceOverviewProps = {
+  currencyCode: string;
+  owedToYou: number;
+  youOwe: number;
+  secondaryCurrencyLines: readonly string[];
+};
+
 const EMPTY_PEOPLE: readonly PeopleListEntry[] = [];
 
 export function usePeopleListViewModel() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const isPrivacyMode = useEffectivePrivacyMode();
   const [peopleSnapshot, setPeopleSnapshot] = useState<{
     scope: string;
     rows: PeopleListEntry[];
@@ -66,25 +77,47 @@ export function usePeopleListViewModel() {
     return visiblePeople.filter(row => row.person.name.toLocaleLowerCase().includes(normalized));
   }, [visiblePeople, query]);
   const activePeopleCount = activePeople.length;
-  const balanceTotals = useMemo(() => {
-    const owedToYou = new Map<string, number>();
-    const youOwe = new Map<string, number>();
+  const balanceOverview = useMemo((): PeopleBalanceOverviewProps => {
+    const owedToYouByCurrency = new Map<string, number>();
+    const youOweByCurrency = new Map<string, number>();
     for (const row of activePeople) {
       for (const currency of row.currencies) {
         if (currency.owedToYou > 0)
-          owedToYou.set(
+          owedToYouByCurrency.set(
             currency.currencyCode,
-            (owedToYou.get(currency.currencyCode) ?? 0) + currency.owedToYou,
+            (owedToYouByCurrency.get(currency.currencyCode) ?? 0) + currency.owedToYou,
           );
         if (currency.youOwe > 0)
-          youOwe.set(
+          youOweByCurrency.set(
             currency.currencyCode,
-            (youOwe.get(currency.currencyCode) ?? 0) + currency.youOwe,
+            (youOweByCurrency.get(currency.currencyCode) ?? 0) + currency.youOwe,
           );
       }
     }
-    return { owedToYou: [...owedToYou], youOwe: [...youOwe] };
-  }, [activePeople]);
+
+    const secondaryCurrencyLines: string[] = [];
+    for (const [currency, amount] of owedToYouByCurrency) {
+      if (currency !== defaultCurrencyCode && amount > 0) {
+        secondaryCurrencyLines.push(
+          `${currency} · ${peopleStrings.owedToYou} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
+        );
+      }
+    }
+    for (const [currency, amount] of youOweByCurrency) {
+      if (currency !== defaultCurrencyCode && amount > 0) {
+        secondaryCurrencyLines.push(
+          `${currency} · ${peopleStrings.youOwe} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
+        );
+      }
+    }
+
+    return {
+      currencyCode: defaultCurrencyCode,
+      owedToYou: owedToYouByCurrency.get(defaultCurrencyCode) ?? 0,
+      youOwe: youOweByCurrency.get(defaultCurrencyCode) ?? 0,
+      secondaryCurrencyLines,
+    };
+  }, [activePeople, defaultCurrencyCode, isPrivacyMode]);
 
   return {
     defaultCurrencyCode,
@@ -93,7 +126,7 @@ export function usePeopleListViewModel() {
     loadError,
     activePeopleCount,
     hasArchivedPeople,
-    balanceTotals,
+    balanceOverview,
     query,
     setQuery,
     includeArchived,

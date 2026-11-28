@@ -1,12 +1,13 @@
-import { AppCard, AppIcon, AppText, Icon } from '@/src/components/core';
-import { titleAmountFit } from '@/src/components/shared/FitText';
-import { MoneyText } from '@/src/components/shared/MoneyText';
+import { AppText } from '@/src/components/core';
+import { MetricHeroCard } from '@/src/components/shared/MetricHeroCard';
 import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
-import { Size, Spacing } from '@/src/constants/design-tokens';
+import { Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Separator, Stack } from '@/src/design-system';
 import { flowSignForAmount, signPrefix } from '@/src/domain/accounting/presentationPolicy';
+import { useTheme } from '@/src/hooks/use-theme';
 import type { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 type Props = {
   currencyCode: string;
@@ -16,34 +17,26 @@ type Props = {
 };
 
 export function PeopleBalanceOverview({ currencyCode, owedToYou, youOwe, children }: Props) {
+  const { theme } = useTheme();
   const isPrivacyMode = useEffectivePrivacyMode();
   const net = owedToYou - youOwe;
   const total = owedToYou + youOwe;
-  const directions = [
-    { label: peopleStrings.owedToYou, amount: owedToYou, icon: Icon.ArrowDown, tone: 'income' },
-    { label: peopleStrings.youOwe, amount: youOwe, icon: Icon.ArrowUp, tone: 'expense' },
-  ] as const;
+  const showRatioBar = !isPrivacyMode && total > 0;
 
   return (
-    <AppCard radius="xl" elevation="none" padding="xl" borderWidth={1} borderColor="border">
-      <Stack gap="lg">
-        <Stack gap="xs">
-          <AppText variant="overline" color="secondary" accessibilityRole="header">
-            {peopleStrings.netBalance(currencyCode)}
-          </AppText>
-          <MoneyText
-            amount={Math.abs(net)}
-            currencyCode={currencyCode}
-            prefix={signPrefix(flowSignForAmount(net))}
-            fit={titleAmountFit}
-          />
-        </Stack>
-
-        {!isPrivacyMode && total > 0 ? (
+    <MetricHeroCard
+      title={peopleStrings.netBalance(currencyCode)}
+      amount={Math.abs(net)}
+      currencyCode={currencyCode}
+      prefix={signPrefix(flowSignForAmount(net))}
+      amountStyle={styles.amount}
+      middle={
+        showRatioBar ? (
           <Inline
             height={Spacing.xs}
             borderRadius="full"
             overflow="hidden"
+            marginBottom="lg"
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           >
@@ -53,34 +46,54 @@ export function PeopleBalanceOverview({ currencyCode, owedToYou, youOwe, childre
             {youOwe > 0 ? <Box flex={1} background="expense" /> : null}
           </Inline>
         ) : (
-          <Separator background="divider" />
-        )}
-
-        <Inline gap="md" flexWrap="wrap">
-          {directions.map(({ label, amount, icon, tone }) => (
-            <Stack key={label} flexGrow={1} flexBasis="45%" gap="xs" minWidth={0}>
-              <Inline gap="xs" alignItems="center">
-                <AppIcon name={icon} size={Size.iconXs} color={tone} />
-                <AppText variant="bodySmall" color="secondary" style={{ flexShrink: 1 }}>
-                  {label}
-                </AppText>
-              </Inline>
-              <MoneyText
-                amount={amount}
-                currencyCode={currencyCode}
-                variant="body"
-                color={amount > 0 ? tone : 'secondary'}
-              />
-            </Stack>
-          ))}
-        </Inline>
-        {children ? (
-          <Stack gap="sm">
+          <Separator background="divider" style={styles.separator} />
+        )
+      }
+      left={{
+        dotColor: theme.income,
+        label: peopleStrings.owedToYou,
+        amount: owedToYou,
+        moneyColor: owedToYou > 0 ? 'income' : 'secondary',
+      }}
+      right={{
+        dotColor: theme.expense,
+        label: peopleStrings.youOwe,
+        amount: youOwe,
+        moneyColor: youOwe > 0 ? 'expense' : 'secondary',
+      }}
+      footer={
+        children ? (
+          <Stack gap="sm" marginTop="md">
             <Separator background="divider" />
             {children}
           </Stack>
-        ) : null}
-      </Stack>
-    </AppCard>
+        ) : null
+      }
+    />
   );
 }
+
+export function PeopleBalanceOverviewSecondary({ entries }: { entries: readonly string[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <Stack gap="xs">
+      <AppText variant="overline" color="secondary">
+        {peopleStrings.otherCurrencies}
+      </AppText>
+      {entries.map(entry => (
+        <AppText key={entry} variant="bodySmall" color="secondary" tabular>
+          {entry}
+        </AppText>
+      ))}
+    </Stack>
+  );
+}
+
+const styles = StyleSheet.create({
+  amount: {
+    marginBottom: Spacing.sm,
+  },
+  separator: {
+    marginBottom: Spacing.lg,
+  },
+});
