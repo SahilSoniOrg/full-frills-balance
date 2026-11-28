@@ -258,6 +258,12 @@ export function useJournalEntryShell(): JournalEntryShell {
           : undefined;
         const personAccount =
           (item && accounts.find(account => account.id === item.item.accountId)) ||
+          linked.find(
+            entry =>
+              (entry.account.accountType === AccountType.ASSET ||
+                entry.account.accountType === AccountType.LIABILITY) &&
+              entry.unassignedState.ledgerBalanceInNormalDirection > 0,
+          )?.account ||
           linked.find(entry => entry.account.accountType === AccountType.ASSET)?.account ||
           linked.find(entry => entry.account.accountType === AccountType.LIABILITY)?.account;
         if (!personAccount) return;
