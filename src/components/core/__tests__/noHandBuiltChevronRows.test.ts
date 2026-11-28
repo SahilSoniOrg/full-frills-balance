@@ -12,7 +12,7 @@ const ALLOWED = new Set([
   'components/filters/CustomDateTimePicker/DateView.tsx',
   'components/journal/JournalDayHeader.tsx',
   'components/shared/PeriodStepper.tsx',
-  'components/account-selection/AccountPickerList.tsx',
+  'components/shared/ListSectionHeader.tsx',
   'components/forms/schedule/ScheduleField.tsx',
   'features/accounts/components/AccountParentPath.tsx',
   'features/accounts/components/CurrencySelector.tsx',
