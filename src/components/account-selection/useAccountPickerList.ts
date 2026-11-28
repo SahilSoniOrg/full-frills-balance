@@ -38,13 +38,19 @@ export function useAccountPickerList({
 
   const visibleAccounts = useVisibleAccounts(enabled ? accounts : EMPTY_ACCOUNTS, pinnedAccountIds);
 
-  const filteredAccounts = useMemo(() => {
-    if (visibleAccounts.length === 0) return [];
+  const eligibleAccounts = useMemo(() => {
+    if (!excludeParentAccounts) return visibleAccounts;
+    const parents = new Set(accounts.map(account => account.parentAccountId).filter(Boolean));
+    return visibleAccounts.filter(account => !parents.has(account.id));
+  }, [accounts, excludeParentAccounts, visibleAccounts]);
 
-    let result = visibleAccounts;
+  const filteredAccounts = useMemo(() => {
+    if (eligibleAccounts.length === 0) return [];
+
+    let result = eligibleAccounts;
     if (isSearchMode) {
       const q = debouncedSearch.toLowerCase().trim();
-      result = visibleAccounts.filter(
+      result = eligibleAccounts.filter(
         a =>
           a.name.toLowerCase().includes(q) ||
           a.accountType.toLowerCase().includes(q) ||
@@ -58,22 +64,8 @@ export function useAccountPickerList({
       );
     }
 
-    if (excludeParentAccounts) {
-      const accountsWithChildren = new Set(
-        accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
-      );
-      result = result.filter(a => !accountsWithChildren.has(a.id));
-    }
-
     return result;
-  }, [
-    accounts,
-    visibleAccounts,
-    debouncedSearch,
-    isSearchMode,
-    excludeParentAccounts,
-    peopleGroups,
-  ]);
+  }, [eligibleAccounts, debouncedSearch, isSearchMode, peopleGroups]);
 
   const sections = useMemo(() => {
     return enabled
@@ -94,6 +86,7 @@ export function useAccountPickerList({
     searchQuery,
     setSearchQuery,
     sections,
+    eligibleAccounts,
     toggleSection,
     collapsedSections,
     isSearchMode,

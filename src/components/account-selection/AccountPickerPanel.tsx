@@ -103,7 +103,7 @@ export function AccountPickerPanel({
     if (!activeAccountId || activeAccountId === EMPTY_ACCOUNT_ID) return EMPTY_PINNED_IDS;
     return pinnedArchivedAccountIds([activeAccountId], allAccounts ?? accounts);
   }, [activeAccountId, allAccounts, accounts, legPinnedIds]);
-  const { sections, toggleSection, collapsedSections } = useAccountPickerList({
+  const { sections, eligibleAccounts, toggleSection, collapsedSections } = useAccountPickerList({
     accounts,
     excludeParentAccounts: true,
     pinnedAccountIds,
@@ -144,7 +144,7 @@ export function AccountPickerPanel({
     [onSelect],
   );
   const personSelect = usePersonLinkedAccountSelect({
-    accounts,
+    accounts: eligibleAccounts,
     peopleGroups,
     onSelect: commitSelect,
   });

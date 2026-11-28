@@ -201,6 +201,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     searchQuery,
     setSearchQuery,
     sections,
+    eligibleAccounts,
     toggleSection,
     collapsedSections,
     isSearchMode,
@@ -233,7 +234,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
     [onSelect],
   );
   const personSelect = usePersonLinkedAccountSelect({
-    accounts,
+    accounts: eligibleAccounts,
     peopleGroups,
     onSelect: commitSingleSelect,
   });
