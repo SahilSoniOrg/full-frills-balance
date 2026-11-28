@@ -6,6 +6,7 @@ import {
   fromMinorUnits,
 } from '@/src/domain/money/money';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
+import type { PersonId } from '@/src/types/ids';
 import type {
   OpenItem,
   SettlementAllocation,
@@ -47,7 +48,7 @@ export function projectLinkedAccount(input: {
   };
 }
 export function summarizePerson(input: {
-  personId: string;
+  personId: PersonId;
   accounts: readonly PersonLinkedAccount[];
   items: readonly OpenItem[];
   allocations: readonly SettlementAllocation[];

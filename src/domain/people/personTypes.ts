@@ -1,9 +1,12 @@
-import type { AccountId, JournalId } from '@/src/types/ids';
+import type {
+  AccountId,
+  JournalId,
+  OpenItemId,
+  PersonId,
+  SettlementAllocationId,
+} from '@/src/types/ids';
 import type { AccountType, AccountSubtype, TransactionType } from '@/src/types/enums';
 import type { JournalWriteLine } from '@/src/types/journalWrite';
-export type PersonDomainId = string;
-export type OpenItemId = string;
-export type SettlementAllocationId = string;
 export type PersonAccountRole = 'receivable' | 'payable' | 'expense' | 'income';
 export type AccountUnassignedState = {
   accountId: AccountId;
@@ -14,18 +17,18 @@ export type AccountUnassignedState = {
   hasNegativeUnassignedRemainder: boolean;
 };
 export interface Person {
-  id: PersonDomainId;
+  id: PersonId;
   name: string;
 }
 export interface PersonLinkedAccount {
-  personId: PersonDomainId;
+  personId: PersonId;
   accountId: AccountId;
   role: PersonAccountRole;
   currencyCode: string;
 }
 export interface OpenItem {
   id: OpenItemId;
-  personId: PersonDomainId;
+  personId: PersonId;
   accountId: AccountId;
   originatingJournalId: JournalId;
   currencyCode: string;
@@ -51,7 +54,7 @@ export interface PersonCurrencyBalance {
   net: number;
 }
 export interface PersonBalanceSummary {
-  personId: PersonDomainId;
+  personId: PersonId;
   currencies: PersonCurrencyBalance[];
   convertedNet?: {
     currencyCode: string;

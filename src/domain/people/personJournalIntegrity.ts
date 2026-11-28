@@ -19,8 +19,7 @@ export function evaluateJournalEditIntegrity(input: {
   proposedLines: readonly IntegrityPosting[];
   settlementJournalId?: string;
 }): JournalIntegrityResult {
-  const conflicts: { code: string; openItemIds: string[] }[] = [];
-  const allocationsToDeactivate: string[] = [];
+  const conflicts: JournalIntegrityResult['conflicts'] = [];
   const active = input.allocations.filter(a => a.active);
   const owned = input.items.filter(i => i.originatingJournalId === input.journalId);
   for (const item of owned) {
@@ -122,7 +121,7 @@ export function evaluateJournalEditIntegrity(input: {
           .map(a => a.openItemId),
       });
   }
-  return { allowed: conflicts.length === 0, conflicts, allocationsToDeactivate };
+  return { allowed: conflicts.length === 0, conflicts, allocationsToDeactivate: [] };
 }
 
 export function evaluateJournalDeleteOrReverseIntegrity(input: {

@@ -1,5 +1,11 @@
 import { AccountSubtype, AccountType, TransactionType } from '@/src/types/enums';
-import { asAccountId, asJournalId, asOpenItemId } from '@/src/types/ids';
+import {
+  asAccountId,
+  asJournalId,
+  asOpenItemId,
+  asPersonId,
+  asSettlementAllocationId,
+} from '@/src/types/ids';
 import {
   allocatePersonRepaymentMinorUnits,
   buildPersonShareSummary,
@@ -42,7 +48,7 @@ describe('people domain policy & balance projections', () => {
         id: 'first',
       },
       {
-        openItemId: asJournalId('tie') as unknown as import('@/src/types/ids').OpenItemId,
+        openItemId: asOpenItemId('tie'),
         availableMinor: 1000,
         journalDate: 1,
         createdAt: 3,
@@ -153,16 +159,16 @@ describe('people domain policy & balance projections', () => {
   it('projects tracked remainder, unassigned balance, and negative unassigned warning', () => {
     const accountId = asAccountId('acc-maya-recv');
     const item = {
-      id: 'item-1',
-      personId: 'maya',
+      id: asOpenItemId('item-1'),
+      personId: asPersonId('maya'),
       accountId,
       originatingJournalId: asJournalId('j-1'),
       currencyCode: 'INR',
       originalAmount: 1000,
     };
     const alloc = {
-      id: 'alloc-1',
-      openItemId: 'item-1',
+      id: asSettlementAllocationId('alloc-1'),
+      openItemId: asOpenItemId('item-1'),
       journalId: asJournalId('j-2'),
       amount: 200,
       active: true,
@@ -188,11 +194,21 @@ describe('people domain policy & balance projections', () => {
     const payId = asAccountId('maya-pay');
     const usdRecvId = asAccountId('maya-usd-recv');
     const summary = summarizePerson({
-      personId: 'maya',
+      personId: asPersonId('maya'),
       accounts: [
-        { personId: 'maya', accountId: recvId, role: 'receivable', currencyCode: 'INR' },
-        { personId: 'maya', accountId: payId, role: 'payable', currencyCode: 'INR' },
-        { personId: 'maya', accountId: usdRecvId, role: 'receivable', currencyCode: 'USD' },
+        {
+          personId: asPersonId('maya'),
+          accountId: recvId,
+          role: 'receivable',
+          currencyCode: 'INR',
+        },
+        { personId: asPersonId('maya'), accountId: payId, role: 'payable', currencyCode: 'INR' },
+        {
+          personId: asPersonId('maya'),
+          accountId: usdRecvId,
+          role: 'receivable',
+          currencyCode: 'USD',
+        },
       ],
       items: [],
       allocations: [],
@@ -244,8 +260,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
   it('plans same-currency repayment and rejects negative unassigned or overallocation', () => {
     const targetAcc = asAccountId('priya-recv');
     const item = {
-      id: 'oi-1',
-      personId: 'priya',
+      id: asOpenItemId('oi-1'),
+      personId: asPersonId('priya'),
       accountId: targetAcc,
       originatingJournalId: asJournalId('j-1'),
       currencyCode: 'INR',
@@ -256,7 +272,7 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
       targetAccountId: targetAcc,
       items: [item],
       activeAllocations: [],
-      assigned: [{ openItemId: 'oi-1', amount: 1000 }],
+      assigned: [{ openItemId: asOpenItemId('oi-1'), amount: 1000 }],
       unassignedAmount: 0,
       repaymentLegAmount: 1000,
       currencyCode: 'INR',
@@ -269,7 +285,9 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
         hasNegativeUnassignedRemainder: false,
       },
     });
-    expect(plan.allocations).toEqual([{ openItemId: 'oi-1', amount: 1000, kind: 'repayment' }]);
+    expect(plan.allocations).toEqual([
+      { openItemId: asOpenItemId('oi-1'), amount: 1000, kind: 'repayment' },
+    ]);
     expect(plan.lines).toHaveLength(2);
 
     expect(() =>
@@ -278,7 +296,7 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
         targetAccountId: targetAcc,
         items: [item],
         activeAllocations: [],
-        assigned: [{ openItemId: 'oi-1', amount: 3500 }],
+        assigned: [{ openItemId: asOpenItemId('oi-1'), amount: 3500 }],
         unassignedAmount: 0,
         repaymentLegAmount: 3500,
         currencyCode: 'INR',
@@ -297,8 +315,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
   it('plans cross-currency repayment using ADR 0007 rate direction', () => {
     const usdRecv = asAccountId('maya-usd-recv');
     const item = {
-      id: 'oi-usd',
-      personId: 'maya',
+      id: asOpenItemId('oi-usd'),
+      personId: asPersonId('maya'),
       accountId: usdRecv,
       originatingJournalId: asJournalId('j-usd'),
       currencyCode: 'USD',
@@ -313,7 +331,9 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
       precisionByCurrency: precisionMap,
       role: 'receivable',
     });
-    expect(plan.allocations).toEqual([{ openItemId: 'oi-usd', amount: 50, kind: 'repayment' }]);
+    expect(plan.allocations).toEqual([
+      { openItemId: asOpenItemId('oi-usd'), amount: 50, kind: 'repayment' },
+    ]);
     expect(plan.lines[1]).toMatchObject({
       accountId: usdRecv,
       amount: 50,
@@ -330,8 +350,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
     const plan = planAutoSettle({
       items: [
         {
-          id: 'oi-old',
-          personId: 'maya',
+          id: asOpenItemId('oi-old'),
+          personId: asPersonId('maya'),
           accountId: recv1,
           originatingJournalId: asJournalId('j1'),
           currencyCode: 'INR',
@@ -339,8 +359,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
           journalDate: 100,
         },
         {
-          id: 'oi-new',
-          personId: 'maya',
+          id: asOpenItemId('oi-new'),
+          personId: asPersonId('maya'),
           accountId: recv2,
           originatingJournalId: asJournalId('j2'),
           currencyCode: 'INR',
@@ -353,25 +373,16 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
           accountId: recv1,
           currencyCode: 'INR',
           ledgerBalanceInNormalDirection: 600,
-          trackedOpenRemainderSum: 600,
-          unassignedBalance: 0,
-          hasNegativeUnassignedRemainder: false,
         },
         {
           accountId: recv2,
           currencyCode: 'INR',
           ledgerBalanceInNormalDirection: 500,
-          trackedOpenRemainderSum: 500,
-          unassignedBalance: 0,
-          hasNegativeUnassignedRemainder: false,
         },
         {
           accountId: pay1,
           currencyCode: 'INR',
           ledgerBalanceInNormalDirection: 800,
-          trackedOpenRemainderSum: 0,
-          unassignedBalance: 800,
-          hasNegativeUnassignedRemainder: false,
         },
       ],
       roles: new Map([
@@ -382,8 +393,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
       activeAllocations: [],
     });
     expect(plan.allocations).toEqual([
-      { openItemId: 'oi-old', amount: 600, kind: 'auto_settle' },
-      { openItemId: 'oi-new', amount: 200, kind: 'auto_settle' },
+      { openItemId: asOpenItemId('oi-old'), amount: 600, kind: 'auto_settle' },
+      { openItemId: asOpenItemId('oi-new'), amount: 200, kind: 'auto_settle' },
     ]);
     expect(plan.lines).toEqual([
       {
@@ -418,31 +429,25 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
           accountId: usdRecv,
           currencyCode: 'USD',
           ledgerBalanceInNormalDirection: 10,
-          trackedOpenRemainderSum: 10,
-          unassignedBalance: 0,
-          hasNegativeUnassignedRemainder: false,
         },
         {
           accountId: inrPay,
           currencyCode: 'INR',
           ledgerBalanceInNormalDirection: 300,
-          trackedOpenRemainderSum: 300,
-          unassignedBalance: 0,
-          hasNegativeUnassignedRemainder: false,
         },
       ],
       items: [
         {
-          id: 'oi-usd',
-          personId: 'maya',
+          id: asOpenItemId('oi-usd'),
+          personId: asPersonId('maya'),
           accountId: usdRecv,
           originatingJournalId: asJournalId('j-usd'),
           currencyCode: 'USD',
           originalAmount: 10,
         },
         {
-          id: 'oi-inr',
-          personId: 'maya',
+          id: asOpenItemId('oi-inr'),
+          personId: asPersonId('maya'),
           accountId: inrPay,
           originatingJournalId: asJournalId('j-inr'),
           currencyCode: 'INR',
@@ -462,13 +467,100 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
     });
     // USD 10 * 80 = INR 800 receivable, INR 300 payable -> INR 500 forgiven Expense
     expect(plan.allocations).toEqual([
-      { openItemId: 'oi-usd', amount: 10, kind: 'write_off' },
-      { openItemId: 'oi-inr', amount: 300, kind: 'write_off' },
+      { openItemId: asOpenItemId('oi-usd'), amount: 10, kind: 'write_off' },
+      { openItemId: asOpenItemId('oi-inr'), amount: 300, kind: 'write_off' },
     ]);
     expect(plan.lines.find(l => l.accountId === expId)).toMatchObject({
       amount: 500,
       transactionType: TransactionType.DEBIT,
       currencyCode: 'INR',
+    });
+  });
+
+  it('rejects auto-settlement when one account has more open items than ledger balance', () => {
+    const overtracked = asAccountId('overtracked');
+    const unassigned = asAccountId('unassigned');
+    const payable = asAccountId('payable');
+
+    expect(() =>
+      planAutoSettle({
+        accounts: [
+          { accountId: overtracked, currencyCode: 'INR', ledgerBalanceInNormalDirection: 50 },
+          { accountId: unassigned, currencyCode: 'INR', ledgerBalanceInNormalDirection: 50 },
+          { accountId: payable, currencyCode: 'INR', ledgerBalanceInNormalDirection: 100 },
+        ],
+        items: [
+          {
+            id: asOpenItemId('overtracked-item'),
+            personId: asPersonId('maya'),
+            accountId: overtracked,
+            originatingJournalId: asJournalId('overtracked-journal'),
+            currencyCode: 'INR',
+            originalAmount: 100,
+          },
+        ],
+        activeAllocations: [],
+        roles: new Map([
+          [overtracked, 'receivable'],
+          [unassigned, 'receivable'],
+          [payable, 'payable'],
+        ]),
+      }),
+    ).toThrow();
+  });
+
+  it('closes the ledger balance and writes off only live item remainders', () => {
+    const accountId = asAccountId('receivable');
+    const itemId = asOpenItemId('receivable-item');
+    const expenseAccountId = asAccountId('expense');
+    const accountWithStaleProjection = {
+      accountId,
+      currencyCode: 'INR',
+      ledgerBalanceInNormalDirection: 20,
+      trackedOpenRemainderSum: 8,
+      unassignedBalance: 2,
+      hasNegativeUnassignedRemainder: false,
+    };
+
+    const plan = planWeAreSettled({
+      accounts: [accountWithStaleProjection],
+      items: [
+        {
+          id: itemId,
+          personId: asPersonId('maya'),
+          accountId,
+          originatingJournalId: asJournalId('receivable-journal'),
+          currencyCode: 'INR',
+          originalAmount: 20,
+        },
+      ],
+      activeAllocations: [
+        {
+          id: asSettlementAllocationId('partial-repayment'),
+          openItemId: itemId,
+          journalId: asJournalId('repayment-journal'),
+          amount: 2,
+          active: true,
+        },
+      ],
+      roles: new Map([[accountId, 'receivable']]),
+      workplaceCurrency: 'INR',
+      expenseAccountId,
+      incomeAccountId: asAccountId('income'),
+      precisionByCurrency: precisionMap,
+      exchangeRateByCurrency: new Map(),
+    });
+    expect(plan).toEqual({
+      allocations: [{ openItemId: itemId, amount: 18, kind: 'write_off' }],
+      lines: [
+        { accountId, amount: 20, transactionType: TransactionType.CREDIT, currencyCode: 'INR' },
+        {
+          accountId: expenseAccountId,
+          amount: 20,
+          transactionType: TransactionType.DEBIT,
+          currencyCode: 'INR',
+        },
+      ],
     });
   });
 
@@ -478,8 +570,8 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
     const j2 = asJournalId('j-settle');
     const items = [
       {
-        id: 'oi-1',
-        personId: 'priya',
+        id: asOpenItemId('oi-1'),
+        personId: asPersonId('priya'),
         accountId: recvId,
         originatingJournalId: j1,
         currencyCode: 'INR',
@@ -487,7 +579,13 @@ describe('settlement, FX, auto-settle, and We are settled', () => {
       },
     ];
     const allocations = [
-      { id: 'sa-1', openItemId: 'oi-1', journalId: j2, amount: 1000, active: true },
+      {
+        id: asSettlementAllocationId('sa-1'),
+        openItemId: asOpenItemId('oi-1'),
+        journalId: j2,
+        amount: 1000,
+        active: true,
+      },
     ];
 
     // Preserving posting >= allocated allows line replacement edit

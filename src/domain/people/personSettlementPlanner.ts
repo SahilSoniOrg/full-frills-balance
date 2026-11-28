@@ -2,14 +2,14 @@ import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEv
 import { toMinorUnits, fromMinorUnits } from '@/src/domain/money/money';
 import { getCurrencyPrecision } from '@/src/domain/money/currencyPrecision';
 import { TransactionType } from '@/src/types/enums';
-import { asOpenItemId, type AccountId } from '@/src/types/ids';
+import type { AccountId, OpenItemId } from '@/src/types/ids';
 import { allocatePersonRepaymentMinorUnits } from './personRepaymentAllocation';
 import type { JournalWriteLine } from '@/src/types/journalWrite';
 import type { OpenItem, SettlementAllocation, AccountUnassignedState } from './personTypes';
 import { openItemRemainder } from './personBalanceProjection';
 
 export interface PlannedAllocation {
-  openItemId: string;
+  openItemId: OpenItemId;
   amount: number;
   kind?: 'repayment' | 'write_off' | 'auto_settle';
 }
@@ -24,7 +24,8 @@ function repaymentItemCapacities(
   precision: number,
 ) {
   return items.map(item => ({
-    openItemId: asOpenItemId(item.id),
+    openItemId: item.id,
+    accountId: item.accountId,
     availableMinor: Math.max(
       0,
       toMinorUnits(openItemRemainder(item, allocations, precision), precision),
@@ -60,7 +61,7 @@ export function planSameCurrencyRepayment(x: {
       precision,
     ),
     requestedAllocations: x.assigned.map(row => ({
-      openItemId: asOpenItemId(row.openItemId),
+      openItemId: row.openItemId,
       amountMinor: toMinorUnits(row.amount, precision),
     })),
   });
@@ -122,7 +123,7 @@ export function planCrossCurrencyRepayment(x: {
       precision,
     ),
     requestedAllocations: assignments.map(row => ({
-      openItemId: asOpenItemId(row.openItemId),
+      openItemId: row.openItemId,
       amountMinor: toMinorUnits(row.amount, precision),
     })),
   });
@@ -161,9 +162,35 @@ export function planCrossCurrencyRepayment(x: {
   };
 }
 
+type SettlementAccount = Pick<
+  AccountUnassignedState,
+  'accountId' | 'currencyCode' | 'ledgerBalanceInNormalDirection'
+>;
+
+function settlementAccountBalance(
+  account: SettlementAccount,
+  items: readonly OpenItem[],
+  allocations: readonly SettlementAllocation[],
+  precision: number,
+) {
+  const accountItems = items.filter(item => item.accountId === account.accountId);
+  if (accountItems.some(item => item.currencyCode !== account.currencyCode)) {
+    throw new Error('open item currency does not match account');
+  }
+  const openItems = repaymentItemCapacities(accountItems, allocations, precision);
+  const ledgerMinor = toMinorUnits(account.ledgerBalanceInNormalDirection, precision);
+  const trackedMinor = openItems.reduce((total, item) => total + item.availableMinor, 0);
+  const unassignedMinor = ledgerMinor - trackedMinor;
+  if (unassignedMinor < 0) throw new Error('negative unassigned balance');
+
+  return { accountId: account.accountId, ledgerMinor, unassignedMinor, openItems };
+}
+
+type SettlementAccountBalance = ReturnType<typeof settlementAccountBalance>;
+
 export function planAutoSettle(x: {
   items: readonly OpenItem[];
-  accounts: readonly AccountUnassignedState[];
+  accounts: readonly SettlementAccount[];
   roles: ReadonlyMap<string, 'receivable' | 'payable'>;
   activeAllocations: readonly SettlementAllocation[];
   precisionByCurrency?: ReadonlyMap<string, number>;
@@ -172,51 +199,37 @@ export function planAutoSettle(x: {
   const allocations: PlannedAllocation[] = [];
   for (const currency of new Set(x.accounts.map(a => a.currencyCode))) {
     const precision = x.precisionByCurrency?.get(currency) ?? getCurrencyPrecision(currency);
-    const recv = x.accounts.filter(
-      a => a.currencyCode === currency && x.roles.get(a.accountId) === 'receivable',
-    );
-    const pay = x.accounts.filter(
-      a => a.currencyCode === currency && x.roles.get(a.accountId) === 'payable',
-    );
-    const total = (xs: AccountUnassignedState[]) =>
-      xs.reduce(
-        (s, a) => s + toMinorUnits(Math.max(0, a.ledgerBalanceInNormalDirection), precision),
-        0,
-      );
+    const balancesForRole = (role: 'receivable' | 'payable') =>
+      x.accounts
+        .filter(
+          account => account.currencyCode === currency && x.roles.get(account.accountId) === role,
+        )
+        .map(account => settlementAccountBalance(account, x.items, x.activeAllocations, precision));
+    const recv = balancesForRole('receivable');
+    const pay = balancesForRole('payable');
+    const total = (accounts: SettlementAccountBalance[]) =>
+      accounts.reduce((sum, account) => sum + account.ledgerMinor, 0);
     const target = Math.min(total(recv), total(pay));
     if (target <= 0) continue;
-    const allocateSide = (accounts: AccountUnassignedState[], kind: 'receivable' | 'payable') => {
-      let left = target;
-      const accountUnits = new Map<string, number>();
-      const sideAccountIds = new Set(accounts.map(account => account.accountId));
-      const sideItems = x.items.filter(
-        item => item.currencyCode === currency && sideAccountIds.has(item.accountId),
-      );
-      const sideItemsById = new Map(sideItems.map(item => [item.id, item]));
-      const itemPlan = allocatePersonRepaymentMinorUnits({
-        amountMinor: target,
-        items: repaymentItemCapacities(sideItems, x.activeAllocations, precision),
-      });
+    const allocateSide = (accounts: SettlementAccountBalance[], kind: 'receivable' | 'payable') => {
+      const accountUnits = new Map<AccountId, number>();
+      const openItems = accounts.flatMap(account => account.openItems);
+      const itemAccounts = new Map(openItems.map(item => [item.openItemId, item.accountId]));
+      const itemPlan = allocatePersonRepaymentMinorUnits({ amountMinor: target, items: openItems });
       for (const allocation of itemPlan.allocations) {
-        const item = sideItemsById.get(allocation.openItemId);
-        if (!item) throw new Error('Open item no longer available for auto-settlement');
+        const accountId = itemAccounts.get(allocation.openItemId);
+        if (!accountId) throw new Error('Open item no longer available for auto-settlement');
         allocations.push({
-          openItemId: item.id,
+          openItemId: allocation.openItemId,
           amount: fromMinorUnits(allocation.amountMinor, precision),
           kind: 'auto_settle',
         });
-        accountUnits.set(
-          item.accountId,
-          (accountUnits.get(item.accountId) ?? 0) + allocation.amountMinor,
-        );
+        accountUnits.set(accountId, (accountUnits.get(accountId) ?? 0) + allocation.amountMinor);
       }
-      left = itemPlan.unallocatedMinor;
+      let left = itemPlan.unallocatedMinor;
       for (const account of accounts) {
         if (!left) break;
-        const units = Math.min(
-          left,
-          toMinorUnits(Math.max(0, account.unassignedBalance), precision),
-        );
+        const units = Math.min(left, account.unassignedMinor);
         if (units > 0) {
           accountUnits.set(account.accountId, (accountUnits.get(account.accountId) ?? 0) + units);
           left -= units;
@@ -241,7 +254,7 @@ export function planAutoSettle(x: {
 }
 
 export function planWeAreSettled(x: {
-  accounts: readonly AccountUnassignedState[];
+  accounts: readonly SettlementAccount[];
   items: readonly OpenItem[];
   activeAllocations: readonly SettlementAllocation[];
   roles: ReadonlyMap<string, 'receivable' | 'payable'>;
@@ -251,9 +264,6 @@ export function planWeAreSettled(x: {
   precisionByCurrency: ReadonlyMap<string, number>;
   exchangeRateByCurrency: ReadonlyMap<string, number>;
 }): PlannedSettlement {
-  if (x.accounts.some(a => a.hasNegativeUnassignedRemainder)) {
-    throw new Error('negative unassigned balance');
-  }
   const precisionByCurrency = new Map(x.precisionByCurrency);
   if (!precisionByCurrency.has(x.workplaceCurrency)) {
     precisionByCurrency.set(x.workplaceCurrency, getCurrencyPrecision(x.workplaceCurrency));
@@ -272,9 +282,12 @@ export function planWeAreSettled(x: {
     const role = x.roles.get(account.accountId);
     if (role !== 'receivable' && role !== 'payable') continue;
     const precision = precisionByCurrency.get(account.currencyCode)!;
-    const closeUnits =
-      toMinorUnits(account.trackedOpenRemainderSum, precision) +
-      Math.max(0, toMinorUnits(account.unassignedBalance, precision));
+    const { ledgerMinor: closeUnits, openItems } = settlementAccountBalance(
+      account,
+      x.items,
+      x.activeAllocations,
+      precision,
+    );
     if (closeUnits <= 0) continue;
 
     const rate =
@@ -285,10 +298,13 @@ export function planWeAreSettled(x: {
       throw new Error(`missing FX rate for ${account.currencyCode}`);
 
     const closeAmount = fromMinorUnits(closeUnits, precision);
-    for (const item of x.items.filter(i => i.accountId === account.accountId)) {
-      const remainder = openItemRemainder(item, x.activeAllocations, precision);
-      if (toMinorUnits(remainder, precision) > 0) {
-        allocations.push({ openItemId: item.id, amount: remainder, kind: 'write_off' });
+    for (const { openItemId, availableMinor } of openItems) {
+      if (availableMinor > 0) {
+        allocations.push({
+          openItemId,
+          amount: fromMinorUnits(availableMinor, precision),
+          kind: 'write_off',
+        });
       }
     }
 
