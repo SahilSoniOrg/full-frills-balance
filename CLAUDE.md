@@ -18,6 +18,7 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+- Find UI clones, "is this the only place", reuse scan after extracting a shared component → invoke find-ui-clones
 
 ## UI conventions
 
@@ -36,7 +37,7 @@ Reuse these before building your own:
 | Screen shell, header, back/close    | `ScreenWithChrome` + chrome builders. Close/Back comes from route presentation; don't pass `backIcon`.                                                                                                                                                           |
 | Header icon actions                 | `ScreenHeaderActions` / `DetailHeaderMenuActions`; `PrivacyToggleButton` is always last.                                                                                                                                                                         |
 | Loading / empty / error / not found | `LoadingView` (`variant="inline"` inside a page), `EmptyStateView`, `ErrorStateView`                                                                                                                                                                             |
-| Rows, groups, section titles        | `ListRow` (rows with chevrons), `ListGroup`, `ScreenSectionHeader`, `SectionLabel`                                                                                                                                                                               |
+| Rows, groups, section titles        | `ListRow` (rows with chevrons), `ListGroup`, `ListSectionHeader` (collapsible title + count pill ± amount), `ScreenSectionHeader`, `SectionLabel`                                                                                                                 |
 | Cards                               | `AppCard` (single `padding` prop, default `lg`)                                                                                                                                                                                                                  |
 | Press handling                      | `PressScaleTouchable` (or an approved shared control). `AppToggle` and `ErrorBoundary` may use native `Pressable` directly; `ErrorBoundary` must stay dependency-free.                                                                                           |
 | Filter chips                        | `FilterChipButton`                                                                                                                                                                                                                                               |
