@@ -8,9 +8,11 @@ import {
   AppInput,
   AppText,
   Icon,
+  IconButton,
   PressScaleTouchable,
 } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { ListSectionHeader } from '@/src/components/shared/ListSectionHeader';
 import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
@@ -274,60 +276,46 @@ export function AccountPickerList(props: AccountPickerListProps) {
     ({ section }: { section: DisplaySection }) => {
       const { title, accountCount, type, key } = section;
       const isCollapsed = collapsedSections.has(key) && !isSearchMode;
+      const createAction =
+        onCreateRequest && !isSearchMode ? (
+          <IconButton
+            name={Icon.Plus}
+            size={Size.iconSm}
+            variant="clear"
+            iconColor={theme.primary}
+            onPress={() => {
+              onClose();
+              requestAnimationFrame(() => {
+                onCreateRequest({ suggestedName: '', type });
+              });
+            }}
+            accessibilityLabel={`Create ${title} account`}
+          />
+        ) : undefined;
+
       return (
-        <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
-          <PressScaleTouchable
-            pressScale="subtle"
-            activeOpacity={Opacity.medium}
-            onPress={() => toggleSection(key)}
-            style={styles.sectionToggle}
-          >
-            <View style={styles.sectionTitleRow}>
-              <View
-                style={[
-                  styles.sectionDot,
-                  {
-                    backgroundColor:
-                      key === 'people' ? theme.transfer : getSectionColor(title, theme),
-                  },
-                ]}
-              />
-              <AppText variant="subheading" weight="bold" color="secondary">
-                {title}
-              </AppText>
-              <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
-                <AppText variant="caption" weight="bold" color="tertiary">
-                  {accountCount}
-                </AppText>
-              </View>
-            </View>
-            <View style={styles.sectionActions}>
-              {onCreateRequest && !isSearchMode && (
-                <PressScaleTouchable
-                  pressScale="subtle"
-                  onPress={event => {
-                    event.stopPropagation();
-                    onClose();
-                    requestAnimationFrame(() => {
-                      onCreateRequest({ suggestedName: '', type });
-                    });
-                  }}
-                  style={styles.actionButton}
-                  accessibilityLabel={`Create ${title} account`}
-                >
-                  <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
-                </PressScaleTouchable>
-              )}
-              {!isSearchMode && (
-                <AppIcon
-                  name={isCollapsed ? Icon.ChevronDown : Icon.ChevronUp}
-                  size={Size.iconSm}
-                  color={theme.textSecondary}
-                />
-              )}
-            </View>
-          </PressScaleTouchable>
-        </View>
+        <ListSectionHeader
+          title={title}
+          count={accountCount}
+          expanded={!isCollapsed}
+          onToggle={() => toggleSection(key)}
+          showChevron={!isSearchMode}
+          leading={
+            <View
+              style={[
+                styles.sectionDot,
+                {
+                  backgroundColor:
+                    key === 'people' ? theme.transfer : getSectionColor(title, theme),
+                },
+              ]}
+            />
+          }
+          actions={createAction}
+          style={[styles.sectionHeader, { backgroundColor: theme.background }]}
+          accessibilityLabel={`${title}, ${accountCount} accounts`}
+          accessibilityHint={isCollapsed ? 'Expand section' : 'Collapse section'}
+        />
       );
     },
     [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
@@ -491,18 +479,7 @@ const styles = StyleSheet.create({
   list: { flex: 1, minHeight: 0, width: '100%' },
   listContent: { flexGrow: 1, paddingBottom: Spacing.xl },
   sectionHeader: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
-  sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sectionDot: { width: Spacing.sm, height: Spacing.sm, borderRadius: Shape.radius.xs },
-  countBadge: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.none,
-    borderRadius: Shape.radius.full,
-    minWidth: Size.sm,
-    alignItems: 'center',
-  },
-  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  actionButton: { padding: Spacing.xs, marginRight: Spacing.xs },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,

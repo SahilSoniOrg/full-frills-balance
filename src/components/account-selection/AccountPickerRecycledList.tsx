@@ -5,8 +5,8 @@ import {
   isPersonPickerSelection,
   type PersonPickerGroup,
 } from './personAccountGrouping';
-import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
-import { Opacity, Size } from '@/src/constants/design-tokens';
+import { ListSectionHeader } from '@/src/components/shared/ListSectionHeader';
+import { Opacity } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -52,40 +52,16 @@ export function AccountPickerSection({
         ],
       ]}
     >
-      <PressScaleTouchable
-        onPress={() => toggleSection(section.key)}
+      <ListSectionHeader
+        title={section.title}
+        count={section.data.length}
+        expanded={!collapsed}
+        onToggle={() => toggleSection(section.key)}
+        leading={<View style={[styles.sectionDot, { backgroundColor: dotColor }]} />}
         style={styles.sectionTouchable}
-        surfaceStyle={styles.sectionToggle}
-        accessibilityRole="button"
         accessibilityLabel={`${section.title}, ${section.data.length} accounts, ${collapsed ? 'collapsed' : 'expanded'}`}
-      >
-        <View style={styles.sectionTitleRow}>
-          <View style={[styles.sectionDot, { backgroundColor: dotColor }]} />
-          <AppText
-            variant="caption"
-            weight="bold"
-            color="secondary"
-            style={styles.sectionTitleText}
-          >
-            {section.title}
-          </AppText>
-          <View
-            style={[
-              styles.countBadge,
-              { backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.heavy) },
-            ]}
-          >
-            <AppText variant="caption" weight="semibold" color="tertiary" style={styles.countText}>
-              {section.data.length}
-            </AppText>
-          </View>
-        </View>
-        <AppIcon
-          name={collapsed ? Icon.ChevronDown : Icon.ChevronUp}
-          size={Size.xxs}
-          color={theme.textTertiary}
-        />
-      </PressScaleTouchable>
+        accessibilityHint={collapsed ? 'Expand section' : 'Collapse section'}
+      />
       {children}
     </View>
   );

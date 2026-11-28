@@ -126,27 +126,7 @@ export const accountPickerStyles = StyleSheet.create({
     marginTop: Spacing.none,
   },
   sectionTouchable: { alignSelf: 'stretch' },
-  sectionToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minWidth: 0 },
-  sectionTitleText: {
-    fontSize: Typography.sizes.xs,
-    letterSpacing: Typography.letterSpacing.normal,
-  },
   sectionDot: { width: Spacing.sm, height: Spacing.sm, borderRadius: Shape.radius.xs },
-  countBadge: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.none,
-    borderRadius: Shape.radius.full,
-    minWidth: Size.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countText: { fontSize: Typography.sizes.xs },
   compactPillGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
