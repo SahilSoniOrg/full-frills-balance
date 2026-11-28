@@ -77,8 +77,16 @@ export function useSplitJournalEditor({
   const initializedRef = useRef(false);
   const seededRef = useRef(false);
 
-  const { setIsGuidedMode, isEdit, isSubmitting, updateLine, updateLines, fetchRatesForLines } =
-    editor;
+  const {
+    addLine,
+    setLines,
+    setIsGuidedMode,
+    isEdit,
+    isSubmitting,
+    updateLine,
+    updateLines,
+    fetchRatesForLines,
+  } = editor;
 
   const { sourceLine, destinationLines } = useMemo(
     () => selectSplitDraftLines(editor.lines),
@@ -110,8 +118,8 @@ export function useSplitJournalEditor({
   );
 
   const addSplitRow = useCallback(() => {
-    editor.addLine();
-  }, [editor]);
+    addLine();
+  }, [addLine]);
   const addSplitRowWithAccount = useCallback(
     (
       accountId: AccountId,
@@ -138,18 +146,18 @@ export function useSplitJournalEditor({
         return;
       }
 
-      editor.addLine(TransactionType.DEBIT, {
+      addLine(TransactionType.DEBIT, {
         ...patch,
         amount: '',
         notes: '',
         exchangeRate: '',
       });
     },
-    [accounts, destinationLines, editor.addLine, transactionType, updateLine],
+    [accounts, addLine, destinationLines, transactionType, updateLine],
   );
   const removeSplitRow = useCallback(
     (id: string) => {
-      editor.setLines(previous => {
+      setLines(previous => {
         const splitRows = previous.filter(line => line.transactionType === TransactionType.DEBIT);
         const targetIsSplitRow = splitRows.some(line => line.id === id);
 
@@ -160,13 +168,13 @@ export function useSplitJournalEditor({
         return previous.filter(line => line.id !== id);
       });
     },
-    [editor],
+    [setLines],
   );
   const removeSplitRowsForAccounts = useCallback(
     (accountIds: readonly AccountId[]) => {
       const ids = new Set(accountIds);
       if (ids.size === 0) return;
-      editor.setLines(previous => {
+      setLines(previous => {
         const splitRows = previous.filter(line => line.transactionType === TransactionType.DEBIT);
         const remaining = splitRows.filter(line => !ids.has(line.accountId));
         const isSelectedSplitRow = (line: JournalEntryLine) =>
@@ -192,7 +200,7 @@ export function useSplitJournalEditor({
         });
       });
     },
-    [editor.setLines, transactionType],
+    [setLines, transactionType],
   );
   const updateSplitAmounts = useCallback(
     (updates: Record<string, string>) => {

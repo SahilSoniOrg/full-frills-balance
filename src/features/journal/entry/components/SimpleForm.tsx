@@ -186,6 +186,7 @@ export const SimpleForm = React.memo(function SimpleForm({
     workplaceId,
   ]);
 
+  const { setDestinationId, setSourceId } = editor;
   const [isResolvingAccount, setIsResolvingAccount] = useState(false);
   const latestPersonLeg = useRef(activePersonAccountId);
   latestPersonLeg.current = activePersonAccountId;
@@ -204,8 +205,8 @@ export const SimpleForm = React.memo(function SimpleForm({
           currency,
         );
         if (latestPersonLeg.current !== activePersonAccountId) return;
-        if (activePersonLegRole === 'destination') editor.setDestinationId(account.id, account);
-        else editor.setSourceId(account.id, account);
+        if (activePersonLegRole === 'destination') setDestinationId(account.id, account);
+        else setSourceId(account.id, account);
       } catch (error) {
         showErrorAlert(
           error instanceof Error ? error.message : 'Could not select a person account',
@@ -219,10 +220,10 @@ export const SimpleForm = React.memo(function SimpleForm({
       activePersonAccountId,
       activePersonGroup,
       activePersonLegRole,
-      editor.setDestinationId,
-      editor.setSourceId,
       isResolvingAccount,
       personFlow,
+      setDestinationId,
+      setSourceId,
       workplaceCurrency,
       workplaceId,
     ],
