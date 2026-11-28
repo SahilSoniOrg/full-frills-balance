@@ -9,6 +9,10 @@ export type AppearancePickerRequest = {
   selectedIcon?: IconName;
   selectedColor?: string;
   accountType?: AccountType;
+  /** Override the account-type accent for other entities such as people. */
+  defaultAccentColor?: string;
+  previewLabel?: string;
+  defaultColorLabel?: string;
   /** Live updates while the sheet is open (e.g. form preview behind the sheet). */
   onIconSelect?: (icon: IconName) => void;
   onColorSelect?: (color: string) => void;
