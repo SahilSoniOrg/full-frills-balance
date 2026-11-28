@@ -329,15 +329,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
         </View>
       );
     },
-    [
-      collapsedSections,
-      isSearchMode,
-      theme,
-      toggleSection,
-      onCreateRequest,
-      onCreatePersonRequest,
-      onClose,
-    ],
+    [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
   );
   const renderItem = useCallback(
     ({ item, section }: { item: PickerAccount | PickerAccount[]; section: DisplaySection }) => {

@@ -7,6 +7,8 @@ export type PeopleListEntry = Awaited<
   ReturnType<typeof peopleReadService.listPeopleWithBalances>
 >[number];
 
+const EMPTY_PEOPLE: readonly PeopleListEntry[] = [];
+
 export function usePeopleListViewModel() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const [peopleSnapshot, setPeopleSnapshot] = useState<{
@@ -14,7 +16,7 @@ export function usePeopleListViewModel() {
     rows: PeopleListEntry[];
   }>();
   const scope = JSON.stringify([workplaceId, defaultCurrencyCode]);
-  const people = peopleSnapshot?.scope === scope ? peopleSnapshot.rows : [];
+  const people = peopleSnapshot?.scope === scope ? peopleSnapshot.rows : EMPTY_PEOPLE;
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');

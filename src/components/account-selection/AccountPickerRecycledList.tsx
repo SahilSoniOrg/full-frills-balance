@@ -166,7 +166,7 @@ export function AccountPickerRecycledList({
           toggleSection={toggleSection}
         />
       ),
-    [onSelect, selectedAccountId, toggleSection, peopleGroups, onCreatePersonRequest],
+    [onSelect, selectedAccountId, toggleSection, peopleGroups],
   );
 
   return (
