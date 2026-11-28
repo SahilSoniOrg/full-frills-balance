@@ -1,4 +1,5 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { AppIcon, AppInput, PressScaleTouchable, SwipeToRemove } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -31,6 +32,8 @@ export interface SplitAllocationRowProps {
   onChangeNotes?: (notes: string) => void;
   onConvertedAmountChange: (amount: string) => void;
   onCreateAccountRequest: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   onRemove: () => void;
   onMove?: () => void;
   moveLabel?: string;
@@ -62,6 +65,8 @@ export function SplitAllocationRow({
   onChangeNotes,
   onConvertedAmountChange,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonRequest,
   onRemove,
   onMove,
   moveLabel,
@@ -73,7 +78,9 @@ export function SplitAllocationRow({
   row,
 }: SplitAllocationRowProps) {
   const { theme, fonts } = useTheme();
-  const category = allocationAccounts.find(account => account.id === row.accountId);
+  const category =
+    allocationAccounts.find(account => account.id === row.accountId) ??
+    allAccounts.find(account => account.id === row.accountId);
   const { pair, inputAmount, inputCurrency, inputPrecision, rowPrecision } = fx;
 
   const handleAccessibilityAction = useCallback(
@@ -106,6 +113,8 @@ export function SplitAllocationRow({
         isExpanded={isExpanded}
         label={label}
         onCreateAccountRequest={onCreateAccountRequest}
+        peopleGroups={peopleGroups}
+        onCreatePersonRequest={onCreatePersonRequest}
         onSelect={onSelectAccount}
         onToggle={onToggle}
         role={role}
@@ -136,6 +145,22 @@ export function SplitAllocationRow({
                 testID={`${testIDPrefix}-move-${row.id}`}
               >
                 <AppIcon name={moveIcon} size={Size.iconXs} color={theme.textSecondary} />
+              </PressScaleTouchable>
+            ) : canRemove ? (
+              <PressScaleTouchable
+                onPress={onRemove}
+                accessibilityRole="button"
+                accessibilityLabel={removeLabel}
+                style={styles.moveButton}
+                testID={`${testIDPrefix}-remove-${row.id}`}
+                hitSlop={{
+                  top: Spacing.sm,
+                  bottom: Spacing.sm,
+                  left: Spacing.sm,
+                  right: Spacing.sm,
+                }}
+              >
+                <AppIcon name={Icon.Close} size={Size.iconXs} color={theme.textTertiary} />
               </PressScaleTouchable>
             ) : null}
           </View>

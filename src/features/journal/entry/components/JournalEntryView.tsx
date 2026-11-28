@@ -27,6 +27,7 @@ import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchMo
 import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/SimpleModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
@@ -190,6 +191,18 @@ export function JournalEntryView(props: JournalEntryShell) {
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
   const valuationCurrency = editor.valuationCurrency;
+  const {
+    people,
+    peopleGroups,
+    initialPersonId,
+    initialOpenItemId,
+    onQuickAddPerson,
+    onTransferOpenItemPlanChange,
+  } = props;
+  const openPersonCreation = useCallback(() => {
+    if (showAccountPicker) onCloseAccountPicker();
+    AppNavigation.toPersonCreation(workplaceId);
+  }, [onCloseAccountPicker, showAccountPicker, workplaceId]);
   const journalMetaProps = useMemo<JournalMetaCardProps>(
     () => ({
       description: editor.description,
@@ -370,6 +383,10 @@ export function JournalEntryView(props: JournalEntryShell) {
             onSelectAccountRequest={onSelectAccountRequest}
             workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
+            peopleGroups={peopleGroups}
+            initialOpenItemId={initialOpenItemId}
+            onCreatePersonRequest={openPersonCreation}
+            onTransferOpenItemPlanChange={onTransferOpenItemPlanChange}
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
@@ -385,6 +402,12 @@ export function JournalEntryView(props: JournalEntryShell) {
               workplaceCurrency={valuationCurrency}
               editor={editor}
               onCreateAccountForTarget={onCreateAccountForTarget}
+              people={people}
+              peopleGroups={peopleGroups}
+              initialPersonId={initialPersonId}
+              workplaceId={workplaceId}
+              onQuickAddPerson={onQuickAddPerson}
+              onCreatePersonRequest={openPersonCreation}
             />
           </>
         ) : activeMode === 'expert' ? (
@@ -420,11 +443,13 @@ export function JournalEntryView(props: JournalEntryShell) {
         visible={showAccountPicker}
         title={accountPickerTitle}
         accounts={selectableAccounts}
+        peopleGroups={peopleGroups}
         selectedId={selectedAccountId}
         onSelect={onAccountSelected}
         onClose={onCloseAccountPicker}
         onDismiss={onAccountPickerDismiss}
         onCreateRequest={onCreateAccountRequest}
+        onCreatePersonRequest={openPersonCreation}
         excludeParentAccounts={true}
       />
 

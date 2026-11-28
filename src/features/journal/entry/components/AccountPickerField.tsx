@@ -1,4 +1,5 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import type { FxPair } from '@/src/domain/accounting/fxPair';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
@@ -28,6 +29,8 @@ export interface AccountPickerFieldProps {
   isExpanded: boolean;
   label: string;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   onSelect: (id: AccountId) => void;
   onToggle: () => void;
   role: AccountRole;
@@ -48,6 +51,8 @@ export function AccountPickerField({
   isExpanded,
   label,
   onCreateAccountRequest,
+  peopleGroups,
+  onCreatePersonRequest,
   onSelect,
   onToggle,
   role,
@@ -69,6 +74,8 @@ export function AccountPickerField({
       expansionPosition={isExpanded ? 'left' : null}
       lazyDropdown
       onCreateAccountRequest={onCreateAccountRequest}
+      peopleGroups={peopleGroups}
+      onCreatePersonRequest={onCreatePersonRequest}
       renderNodes={({ visualSide, onLeftTabWrapperLayout }) => (
         <>
           <AccountPickerNode

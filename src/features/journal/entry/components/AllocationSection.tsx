@@ -1,4 +1,5 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
+import type { PersonPickerGroup } from '@/src/components/account-selection/personAccountGrouping';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import type { RowFx } from '@/src/features/journal/entry/hooks/workplaceRowFx';
@@ -107,6 +108,8 @@ export function AllocationRows({
   onClose,
   onCloseIf,
   onCreateAccount,
+  peopleGroups,
+  onCreatePersonRequest,
   onRemove,
   onSelectAccount,
   onChangeAmount,
@@ -130,6 +133,8 @@ export function AllocationRows({
   onClose: () => void;
   onCloseIf: (id: string) => void;
   onCreateAccount: (rowId: string, role: AccountRole, intent: CreateAccountIntent) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
   onRemove: (id: string) => void;
   onSelectAccount: (id: string, accountId: AccountId) => void;
   onChangeAmount: (id: string, amount: string) => void;
@@ -158,6 +163,8 @@ export function AllocationRows({
             onCreateAccount(row.id, rowRole, intent);
             onClose();
           }}
+          peopleGroups={peopleGroups}
+          onCreatePersonRequest={onCreatePersonRequest}
           onRemove={() => {
             onCloseIf(row.id);
             onRemove(row.id);
