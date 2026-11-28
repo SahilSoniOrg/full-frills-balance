@@ -1,13 +1,13 @@
-import { AppCard, AppIcon, AppText, Badge, ListRow, PersonAvatar } from '@/src/components/core';
-import { Opacity, Size } from '@/src/constants/design-tokens';
+import { AppCard, AppText, Badge, ListRow, PersonAvatar } from '@/src/components/core';
+import { Opacity } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { Inline, Stack } from '@/src/design-system';
+import { Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Icon } from '@/src/types/domainIcons';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import type { PeopleListEntry } from '../hooks/usePeopleListViewModel';
-import { PersonBalanceBadge } from './PersonBalanceBadge';
+import { PersonBalanceInline } from './PersonBalanceInline';
+import { PersonMetaBadges } from './PersonMetaBadges';
 
 type PersonCardProps = {
   row: PeopleListEntry;
@@ -45,27 +45,27 @@ export function PersonCard({ row, fallbackCurrencyCode, onPress }: PersonCardPro
         }
         title={
           <Stack gap="xs">
-            <Inline gap="sm" alignItems="center" flexWrap="wrap">
-              <AppText variant="body" weight="semibold">
-                {person.name}
-              </AppText>
-              {person.isPinned ? (
-                <AppIcon name={Icon.Star} size={Size.iconXs} color="primary" />
-              ) : null}
-              {person.defaultCurrencyCode ? (
-                <Badge size="sm">{person.defaultCurrencyCode}</Badge>
-              ) : null}
-              {person.archivedAt ? <Badge size="sm">Archived</Badge> : null}
-              {hasNegativeUnassignedRemainder ? (
-                <Badge size="sm" variant="warning">
-                  Negative remainder
-                </Badge>
-              ) : null}
-            </Inline>
-            <PersonBalanceBadge
+            <PersonMetaBadges
+              isPinned={person.isPinned}
+              currency={person.defaultCurrencyCode}
+              archived={Boolean(person.archivedAt)}
+              pinnedPresentation="icon"
+              leading={
+                <AppText variant="body" weight="semibold">
+                  {person.name}
+                </AppText>
+              }
+              extras={
+                hasNegativeUnassignedRemainder ? (
+                  <Badge size="sm" variant="warning">
+                    Negative remainder
+                  </Badge>
+                ) : null
+              }
+            />
+            <PersonBalanceInline
               summary={balanceSummary}
               personName={person.name}
-              compact
               fallbackCurrencyCode={fallbackCurrencyCode}
               formatAmount={(amount, currencyCode) =>
                 formatMoneyAmount(amount, currencyCode, isPrivacyMode)
