@@ -1,11 +1,12 @@
 import { Shape, Size, Spacing } from '@/src/constants';
-import { resolveThemeColor } from '@/src/design-system/utils';
-import { useTheme } from '@/src/hooks/use-theme';
 import { triggerPressHaptic } from '@/src/design-system/haptics';
+import { resolveThemeColor } from '@/src/design-system/utils';
+import type { ComponentVariant } from '@/src/design-system/variants';
+import { useTheme } from '@/src/hooks/use-theme';
+import type { IconName } from '@/src/types/domainIcons';
 import { memo } from 'react';
 import { Keyboard, StyleSheet, type ViewStyle } from 'react-native';
 import { AppIcon } from './AppIcon';
-import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';
 import { PressScaleTouchable } from './PressScaleTouchable';
 
@@ -14,6 +15,8 @@ interface FilterChipButtonProps {
   icon?: IconName;
   trailingIcon?: IconName;
   isActive?: boolean;
+  /** Colors icon + label with the variant’s main money/status color. Shell stays neutral. */
+  tone?: ComponentVariant;
   accessibilityLabel?: string;
   onPress: () => void;
   style?: ViewStyle;
@@ -26,15 +29,20 @@ export const FilterChipButton = memo(
     icon,
     trailingIcon,
     isActive,
+    tone,
     accessibilityLabel,
     onPress,
     style,
     testID,
   }: FilterChipButtonProps) => {
-    const { theme } = useTheme();
+    const { theme, getVariantColors } = useTheme();
+    const accent = !isActive && tone ? getVariantColors(tone).main : null;
     const iconColor = isActive
       ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
-      : resolveThemeColor(theme, theme.textSecondary);
+      : (accent ?? resolveThemeColor(theme, theme.textSecondary));
+    const labelColor = isActive
+      ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
+      : (accent ?? resolveThemeColor(theme, theme.text));
 
     return (
       <PressScaleTouchable
@@ -60,11 +68,7 @@ export const FilterChipButton = memo(
         <AppText
           variant="caption"
           weight={isActive ? 'semibold' : 'medium'}
-          style={{
-            color: isActive
-              ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
-              : resolveThemeColor(theme, theme.text),
-          }}
+          style={{ color: labelColor }}
         >
           {label}
         </AppText>

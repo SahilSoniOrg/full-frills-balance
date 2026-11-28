@@ -24,18 +24,16 @@ import { Layout, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode, withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PersonLinkedAccountsSection } from '../components/PersonLinkedAccountsSection';
-import { PersonSettleSheet } from '../components/PersonSettleSheet';
 import { PersonSummaryHeader } from '../components/PersonSummaryHeader';
 import { WeAreSettledPreviewModal } from '../components/WeAreSettledPreviewModal';
 import { usePersonDetailsViewModel } from '../hooks/usePersonDetailsViewModel';
 
 function PersonDetailsScreenContent() {
   const vm = usePersonDetailsViewModel();
-  const [settleSheetOpen, setSettleSheetOpen] = useState(false);
   const isPrivacyMode = useEffectivePrivacyMode();
   const { theme } = useTheme();
   const phase = vm.isLoading ? 'loading' : vm.detail ? 'ready' : 'missing';
@@ -69,14 +67,6 @@ function PersonDetailsScreenContent() {
     readyTitle: '',
     loadingTitle: 'Person',
     onBack: vm.onBack,
-    fab: {
-      onPress: vm.onSplitExpense,
-      label: 'Split expense',
-      icon: Icon.Handshake,
-      placement: 'end',
-      accessibilityLabel: 'Split an expense with this person',
-      testID: 'person-split-expense-button',
-    },
     headerActions: detail ? (
       <DetailHeaderMenuActions
         actions={[
@@ -160,7 +150,7 @@ function PersonDetailsScreenContent() {
         formatAmount={(amount, currencyCode) =>
           formatMoneyAmount(amount, currencyCode, isPrivacyMode)
         }
-        onSettle={() => setSettleSheetOpen(true)}
+        onSettle={() => void vm.onStartWeAreSettled()}
       />
 
       {negativeAccounts.length > 0 ? (
@@ -368,21 +358,6 @@ function PersonDetailsScreenContent() {
           vm.setLinkModalOpen(false);
           void vm.onLinkAccount(id);
         }}
-      />
-
-      <PersonSettleSheet
-        visible={settleSheetOpen}
-        personName={detail.person.name}
-        hasReceivable={detail.balanceSummary.currencies.some(balance => balance.owedToYou > 0)}
-        hasPayable={detail.balanceSummary.currencies.some(balance => balance.youOwe > 0)}
-        onClose={() => setSettleSheetOpen(false)}
-        onMoneyReceived={() =>
-          vm.onSettleUp(openItems.length === 1 ? openItems[0]!.item.id : undefined)
-        }
-        onClearOpenBalances={() => {
-          void vm.onStartWeAreSettled();
-        }}
-        onPartialForgive={() => vm.onSettleUp()}
       />
 
       <ModalSurface

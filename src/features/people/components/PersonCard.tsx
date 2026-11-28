@@ -1,19 +1,11 @@
-import {
-  AppCard,
-  AppIcon,
-  AppText,
-  Badge,
-  PersonAvatar,
-  PressScaleTouchable,
-} from '@/src/components/core';
-import { Opacity, Size, Spacing } from '@/src/constants/design-tokens';
+import { AppCard, AppIcon, AppText, Badge, ListRow, PersonAvatar } from '@/src/components/core';
+import { Opacity, Size } from '@/src/constants/design-tokens';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Inline, Stack } from '@/src/design-system';
 import { withOpacity } from '@/src/design-system/colorMath';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon } from '@/src/types/domainIcons';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
-import { StyleSheet } from 'react-native';
 import type { PeopleListEntry } from '../hooks/usePeopleListViewModel';
 import { PersonBalanceBadge } from './PersonBalanceBadge';
 
@@ -29,19 +21,18 @@ export function PersonCard({ row, fallbackCurrencyCode, onPress }: PersonCardPro
   const { theme } = useTheme();
 
   return (
-    <AppCard elevation="sm" padding="md" radius="xxl" background="surface" style={styles.card}>
-      <PressScaleTouchable
+    <AppCard elevation="sm" padding="none" radius="xxl" background="surface" marginBottom="md">
+      <ListRow
+        padding="md"
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`${person.name}, open person details`}
         testID={`person-card-${person.id}`}
-      >
-        <Inline gap="md" alignItems="center">
+        leading={
           <PersonAvatar
             name={person.name}
             icon={person.icon}
             color={person.color}
-            size={44}
             style={
               person.color
                 ? undefined
@@ -51,7 +42,9 @@ export function PersonCard({ row, fallbackCurrencyCode, onPress }: PersonCardPro
                   }
             }
           />
-          <Stack gap="xs" flex={1}>
+        }
+        title={
+          <Stack gap="xs">
             <Inline gap="sm" alignItems="center" flexWrap="wrap">
               <AppText variant="body" weight="semibold">
                 {person.name}
@@ -79,15 +72,9 @@ export function PersonCard({ row, fallbackCurrencyCode, onPress }: PersonCardPro
               }
             />
           </Stack>
-          <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color="textSecondary" />
-        </Inline>
-      </PressScaleTouchable>
+        }
+        chevron
+      />
     </AppCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: Spacing.md,
-  },
-});

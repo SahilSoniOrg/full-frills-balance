@@ -96,17 +96,12 @@ function SettleUpScreenContent() {
               vm.isLoadingMatches ? (
                 <LoadingView loading variant="inline" />
               ) : (
-                <Stack gap="sm">
-                  <ListRow
-                    leading={<IconTile icon={Icon.Search} tint="textSecondary" />}
-                    title="No qualifying unlinked transactions matched."
-                    subtitle="Record a repayment in Transfer mode, then match it here."
-                    wrap
-                  />
-                  <AppButton variant="outline" onPress={() => vm.recordNewRepayment()}>
-                    Record new repayment instead
-                  </AppButton>
-                </Stack>
+                <ListRow
+                  leading={<IconTile icon={Icon.Search} tint="textSecondary" />}
+                  title="No qualifying unlinked transactions matched."
+                  subtitle="Record a repayment in Transfer mode, then match it here."
+                  wrap
+                />
               )
             ) : (
               vm.compatibleJournals.map(journal => {

@@ -22,6 +22,7 @@ type MetricHeroCardProps = {
   isLoading?: boolean;
   amountColor?: string;
   amountStyle?: StyleProp<TextStyle>;
+  prefix?: string;
   /** Content between the hero amount and the breakdown (e.g. period control). */
   middle?: ReactNode;
   left: MetricHeroBreakdown;
@@ -37,6 +38,7 @@ export function MetricHeroCard({
   isLoading = false,
   amountColor,
   amountStyle,
+  prefix,
   middle,
   left,
   right,
@@ -61,6 +63,7 @@ export function MetricHeroCard({
         amount={amount}
         currencyCode={currencyCode}
         formatStyle="compact"
+        prefix={prefix}
         loading={isLoading}
         variant="title"
         style={[styles.amount, amountStyle, amountColor ? { color: amountColor } : null]}

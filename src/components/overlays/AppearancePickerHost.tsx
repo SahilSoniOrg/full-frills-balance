@@ -50,6 +50,9 @@ export function AppearancePickerHost() {
           selectedIcon={selectedIcon}
           selectedColor={selectedColor}
           accountType={request.accountType ?? AccountType.ASSET}
+          defaultAccentColor={request.defaultAccentColor}
+          previewLabel={request.previewLabel}
+          defaultColorLabel={request.defaultColorLabel}
           onIconSelect={async icon => {
             request.onIconSelect?.(icon);
             if (mode !== 'both') {
