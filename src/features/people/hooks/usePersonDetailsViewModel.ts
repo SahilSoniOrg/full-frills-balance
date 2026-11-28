@@ -3,12 +3,14 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/domain/journal/journalStatus';
 import { useJournalEntryList } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { showErrorAlert, toast } from '@/src/services/feedback/alerts';
+import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
+import { confirm, showErrorAlert, toast } from '@/src/services/feedback/alerts';
 import {
   allocateUnassignedRepayment,
   linkExistingAccount,
   peopleReadService,
   setPersonArchived,
+  unlinkExistingAccount,
   updatePerson,
 } from '@/src/services/people';
 import {
@@ -230,6 +232,34 @@ export function usePersonDetailsViewModel() {
     [detail],
   );
 
+  const handleUnlinkAccount = useCallback(
+    (accountId: AccountId) => {
+      if (!detail) return;
+      const linked = detail.linkedAccounts.find(entry => entry.account.id === accountId);
+      if (!linked) return;
+      confirm.show({
+        title: peopleStrings.unlinkAccountTitle,
+        message: peopleStrings.unlinkAccountMessage(linked.account.name, detail.person.name),
+        confirmText: peopleStrings.unlinkAccountConfirm,
+        destructive: true,
+        onConfirm: () => {
+          void (async () => {
+            try {
+              await unlinkExistingAccount(workplaceId, detail.person.id, accountId);
+              toast.success(peopleStrings.unlinkAccountSuccess);
+              await load();
+            } catch (error) {
+              showErrorAlert(
+                error instanceof Error ? error.message : peopleStrings.unlinkAccountFailed,
+              );
+            }
+          })();
+        },
+      });
+    },
+    [detail, load, workplaceId],
+  );
+
   return {
     personId,
     workplaceCurrency: defaultCurrencyCode,
@@ -261,5 +291,6 @@ export function usePersonDetailsViewModel() {
     onLinkAccount: handleLinkAccount,
     onApplyUnassigned: handleApplyUnassigned,
     onOpenAccount: handleOpenAccount,
+    onUnlinkAccount: handleUnlinkAccount,
   };
 }

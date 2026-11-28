@@ -124,6 +124,14 @@ describe('PeopleService integration', () => {
       accountSubtype: AccountSubtype.LOAN,
     });
     await PeopleService.linkExistingAccount(workplaceId, person.id, loan.id);
+    await PeopleService.unlinkExistingAccount(workplaceId, person.id, loan.id);
+    const afterUnlink = await PeopleService.peopleReadService.getPersonDetail(
+      workplaceId,
+      person.id,
+      'INR',
+    );
+    expect(afterUnlink?.linkedAccounts).toHaveLength(0);
+    await PeopleService.linkExistingAccount(workplaceId, person.id, loan.id);
   });
 
   it('updates a posted expense through journal persistence and creates one open item per participant', async () => {

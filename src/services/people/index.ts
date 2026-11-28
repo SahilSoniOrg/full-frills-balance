@@ -5,6 +5,7 @@ export {
   updatePerson,
   setPersonArchived,
   linkExistingAccount,
+  unlinkExistingAccount,
   ensurePersonAccountInSession,
   ensurePersonAccount,
   type PersonNameOptions,

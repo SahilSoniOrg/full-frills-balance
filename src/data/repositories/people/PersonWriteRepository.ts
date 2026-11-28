@@ -232,6 +232,41 @@ export class PersonWriteRepository {
     stagePersonAccountCreation(s, x, [x]);
     return x;
   }
+  async unlinkAccountInSession(
+    s: AccountingWriteSession,
+    w: WorkplaceId,
+    p: PersonId,
+    a: AccountId,
+  ) {
+    await this.person(w, p);
+    const matches = await this.links()
+      .query(
+        Q.where('workplace_id', w),
+        Q.where('person_id', p),
+        Q.where('account_id', a),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    const link = matches[0];
+    if (!link) throw new Error('Account is not linked to this person');
+    const deletedAt = new Date();
+    stageModelWrite(s, () => [
+      link.prepareUpdate(r => {
+        r.deletedAt = deletedAt;
+        r.updatedAt = deletedAt;
+      }),
+      auditRepository.prepareLog(
+        {
+          entityType: 'person',
+          entityId: p,
+          action: AuditAction.UPDATE,
+          changes: { unlinkedAccountId: a },
+        },
+        w,
+      ),
+    ]);
+    return link;
+  }
   async upsertOpenItemInSession(
     s: AccountingWriteSession,
     w: WorkplaceId,

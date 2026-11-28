@@ -129,6 +129,17 @@ export async function linkExistingAccount(
     linkValidatedAccountInSession(session, workplaceId, personId, accountId),
   );
 }
+
+/** Soft-deletes the person↔account link. The ledger account itself is unchanged. */
+export async function unlinkExistingAccount(
+  workplaceId: WorkplaceId,
+  personId: PersonId,
+  accountId: AccountId,
+): Promise<PersonAccount> {
+  return runAccountingWriteSession(session =>
+    personWriteRepository.unlinkAccountInSession(session, workplaceId, personId, accountId),
+  );
+}
 export async function ensurePersonAccountInSession(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,

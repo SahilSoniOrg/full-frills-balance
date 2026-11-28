@@ -7,6 +7,7 @@ import {
   AppText,
   Badge,
   Icon,
+  IconButton,
   ListGroup,
   ListRow,
   LoadingView,
@@ -258,6 +259,17 @@ export function PersonCreationScreen() {
                     key={account.id}
                     item={account}
                     testID={`person-edit-linked-account-${account.id}`}
+                    trailingAccessory={
+                      <IconButton
+                        name={Icon.Close}
+                        size={Size.iconSm}
+                        variant="clear"
+                        accessibilityLabel={`Unlink ${account.name}`}
+                        onPress={() => vm.onUnlinkAccount(account.id)}
+                        disabled={vm.isLinkingAccount}
+                        testID={`person-edit-unlink-account-${account.id}`}
+                      />
+                    }
                   />
                 ))
               )}

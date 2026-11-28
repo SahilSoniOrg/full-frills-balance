@@ -7,11 +7,13 @@ import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { toast } from '@/src/services/feedback/alerts';
+import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
+import { confirm, toast } from '@/src/services/feedback/alerts';
 import {
   createPerson,
   linkExistingAccount,
   peopleReadService,
+  unlinkExistingAccount,
   updatePerson,
 } from '@/src/services/people';
 import type { IconName } from '@/src/types/domainIcons';
@@ -154,6 +156,37 @@ export function usePersonCreationViewModel() {
       }
     },
     [isLinkingAccount, personId, refreshLinkedAccounts, workplaceId],
+  );
+
+  const handleUnlinkExistingAccount = useCallback(
+    (accountId: AccountId) => {
+      if (!personId || isLinkingAccount) return;
+      const account = linkedAccounts.find(entry => entry.id === accountId);
+      if (!account) return;
+      confirm.show({
+        title: peopleStrings.unlinkAccountTitle,
+        message: peopleStrings.unlinkAccountMessage(account.name, name.trim() || 'this person'),
+        confirmText: peopleStrings.unlinkAccountConfirm,
+        destructive: true,
+        onConfirm: () => {
+          void (async () => {
+            setIsLinkingAccount(true);
+            try {
+              await unlinkExistingAccount(workplaceId, personId, accountId);
+              toast.success(peopleStrings.unlinkAccountSuccess);
+              await refreshLinkedAccounts();
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : peopleStrings.unlinkAccountFailed,
+              );
+            } finally {
+              setIsLinkingAccount(false);
+            }
+          })();
+        },
+      });
+    },
+    [isLinkingAccount, linkedAccounts, name, personId, refreshLinkedAccounts, workplaceId],
   );
 
   const fingerprint = useMemo(
@@ -350,5 +383,6 @@ export function usePersonCreationViewModel() {
     savePerson,
     openAppearancePicker: openPersonAppearancePicker,
     onAccountPickerSelect,
+    onUnlinkAccount: handleUnlinkExistingAccount,
   };
 }

@@ -7,11 +7,13 @@ describe('PersonLinkedAccountsSection', () => {
   it('shows receivable and expense chips with amounts even when receivable matches the hero', () => {
     const onLink = jest.fn();
     const onOpenAccount = jest.fn();
+    const onUnlinkAccount = jest.fn();
     const { queryByText, getByLabelText, getByTestId } = render(
       <PersonLinkedAccountsSection
         personName="Dad"
         onLink={onLink}
         onOpenAccount={onOpenAccount}
+        onUnlinkAccount={onUnlinkAccount}
         formatAmount={(amount, currency) => `${currency} ${amount.toFixed(2)}`}
         linkedAccounts={[
           {
@@ -47,5 +49,8 @@ describe('PersonLinkedAccountsSection', () => {
 
     fireEvent.press(getByTestId('person-linked-account-recv'));
     expect(onOpenAccount).toHaveBeenCalledWith('recv');
+
+    fireEvent(getByTestId('person-linked-account-recv'), 'onLongPress');
+    expect(onUnlinkAccount).toHaveBeenCalledWith('recv');
   });
 });

@@ -32,7 +32,7 @@ describe('PersonRepository', () => {
     expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(4);
   });
 
-  it('enforces one active person per account and upserts open items by journal and account', async () => {
+  it('enforces one active person per account and can soft-unlink so another person can claim it', async () => {
     const [a, b] = await runAccountingWriteSession(async session => [
       await personWriteRepository.createPersonInSession(session, wp, { name: 'A' }),
       await personWriteRepository.createPersonInSession(session, wp, { name: 'B' }),
@@ -45,6 +45,23 @@ describe('PersonRepository', () => {
         personWriteRepository.linkAccountInSession(session, wp, b.id, account),
       ),
     ).rejects.toThrow(/already linked/);
+    await runAccountingWriteSession(session =>
+      personWriteRepository.unlinkAccountInSession(session, wp, a.id, account),
+    );
+    expect(await personQueryRepository.listPersonAccounts(wp, a.id)).toHaveLength(0);
+    await runAccountingWriteSession(session =>
+      personWriteRepository.linkAccountInSession(session, wp, b.id, account),
+    );
+    expect(await personQueryRepository.listPersonAccounts(wp, b.id)).toHaveLength(1);
+  });
+
+  it('upserts open items by journal and account', async () => {
+    const a = await runAccountingWriteSession(session =>
+      personWriteRepository.createPersonInSession(session, wp, { name: 'A' }),
+    );
+    await runAccountingWriteSession(session =>
+      personWriteRepository.linkAccountInSession(session, wp, a.id, account),
+    );
     const input = {
       personId: a.id,
       originatingJournalId: journal,

@@ -18,7 +18,9 @@ interface FilterChipButtonProps {
   /** Colors icon + label with the variant’s main money/status color. Shell stays neutral. */
   tone?: ComponentVariant;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   onPress: () => void;
+  onLongPress?: () => void;
   style?: ViewStyle;
   testID?: string;
 }
@@ -31,7 +33,9 @@ export const FilterChipButton = memo(
     isActive,
     tone,
     accessibilityLabel,
+    accessibilityHint,
     onPress,
+    onLongPress,
     style,
     testID,
   }: FilterChipButtonProps) => {
@@ -49,12 +53,22 @@ export const FilterChipButton = memo(
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
         accessibilityState={{ selected: !!isActive }}
         onPress={() => {
           Keyboard.dismiss();
           if (!isActive) triggerPressHaptic('selection');
           onPress();
         }}
+        onLongPress={
+          onLongPress
+            ? () => {
+                Keyboard.dismiss();
+                triggerPressHaptic('selection');
+                onLongPress();
+              }
+            : undefined
+        }
         style={style}
         surfaceStyle={[
           styles.container,

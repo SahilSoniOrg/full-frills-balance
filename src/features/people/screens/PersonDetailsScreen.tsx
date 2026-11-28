@@ -220,6 +220,7 @@ function PersonDetailsScreenContent() {
         linkedAccounts={detail.linkedAccounts}
         onLink={() => vm.setLinkModalOpen(true)}
         onOpenAccount={vm.onOpenAccount}
+        onUnlinkAccount={vm.onUnlinkAccount}
         formatAmount={(amount, currencyCode) =>
           formatMoneyAmount(amount, currencyCode, isPrivacyMode)
         }

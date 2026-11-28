@@ -26,6 +26,7 @@ type Props = {
   linkedAccounts: readonly LinkedAccount[];
   onLink: () => void;
   onOpenAccount: (accountId: AccountId) => void;
+  onUnlinkAccount?: (accountId: AccountId) => void;
   formatAmount: (amount: number, currencyCode: string) => string;
 };
 
@@ -56,6 +57,7 @@ export function PersonLinkedAccountsSection({
   linkedAccounts,
   onLink,
   onOpenAccount,
+  onUnlinkAccount,
   formatAmount,
 }: Props) {
   if (linkedAccounts.length === 0) {
@@ -90,7 +92,9 @@ export function PersonLinkedAccountsSection({
               label={amount}
               tone={tone}
               accessibilityLabel={`${meaning}: ${amount}. Open account for ${personName}`}
+              accessibilityHint={onUnlinkAccount ? 'Long press to unlink' : undefined}
               onPress={() => onOpenAccount(linked.account.id)}
+              onLongPress={onUnlinkAccount ? () => onUnlinkAccount(linked.account.id) : undefined}
               testID={`person-linked-account-${linked.account.id}`}
             />
           );
