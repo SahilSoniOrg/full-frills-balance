@@ -299,8 +299,6 @@ export function useSettleUpViewModel() {
       if (matchPage?.nextCursor && !isLoadingMatches)
         void loadMatches(++matchRequest.current, matchPage);
     },
-    recordNewRepayment: () =>
-      AppNavigation.toTransferRepayment({ workplaceId, personId, openItemId }),
     selectedItemIds,
     toggleOpenItem: (id: OpenItemId) =>
       setSelectedItemIds(current => ({ ...current, [id]: !current[id] })),

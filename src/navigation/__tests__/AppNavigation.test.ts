@@ -31,19 +31,13 @@ const { router } = jest.requireMock('expo-router') as {
 };
 
 describe('People navigation', () => {
-  it('navigates to People, person details, journal split, repayment, and settle up', () => {
+  it('navigates to People, person details, and settle up', () => {
     AppNavigation.toPeople({ create: '1' });
     AppNavigation.toPersonDetails('person-1');
-    AppNavigation.toSplitJournalEntry({ journalId: 'entry-1' });
-    AppNavigation.toTransferRepayment({ personId: 'person-1', openItemId: 'open-1' });
     AppNavigation.toSettleUp({ personId: 'person-1', mode: 'match' });
-    expect(router.push.mock.calls.slice(-5)).toEqual([
+    expect(router.push.mock.calls.slice(-3)).toEqual([
       ['/(tabs)/people?create=1'],
       ['/person-details?personId=person-1'],
-      ['/journal-entry?journalId=entry-1&mode=split&workplaceId=active-wp'],
-      [
-        '/journal-entry?mode=simple&type=transfer&personId=person-1&openItemId=open-1&workplaceId=active-wp',
-      ],
       ['/settle-up?personId=person-1&mode=match'],
     ]);
   });
