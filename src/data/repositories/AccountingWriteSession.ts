@@ -29,8 +29,8 @@ interface SessionState {
   createdPersonAccounts: PersonAccount[];
   stagedOpenItems: Map<string, OpenItem>;
   peopleJournalDates: Map<JournalId, number>;
-  openItemOverrides: Map<string, { item: OpenItem; patch: Partial<OpenItem> }>;
-  openItemUpdates: Map<string, { item: OpenItem; patch: Record<string, unknown> }>;
+  /** Single in-session + durable patch map for persisted open items. */
+  openItemPatches: Map<string, { item: OpenItem; patch: Record<string, unknown> }>;
   stagedAllocations: Map<string, SettlementAllocation>;
   inactiveAllocationIds: Set<string>;
   deletedOpenItemIds: Set<string>;
@@ -77,8 +77,7 @@ export async function runAccountingWriteSession<T>(
       createdPersonAccounts: [],
       stagedOpenItems: new Map(),
       peopleJournalDates: new Map(),
-      openItemOverrides: new Map(),
-      openItemUpdates: new Map(),
+      openItemPatches: new Map(),
       stagedAllocations: new Map(),
       inactiveAllocationIds: new Set(),
       deletedOpenItemIds: new Set(),
@@ -126,18 +125,10 @@ export function getStagedPeopleJournalDate(session: AccountingWriteSession, jour
 export function stageOpenItem(session: AccountingWriteSession, item: OpenItem): void {
   getOpenState(session).stagedOpenItems.set(item.id, item);
 }
-export function stageOpenItemOverride(
-  session: AccountingWriteSession,
-  item: OpenItem,
-  patch: Partial<OpenItem>,
-): void {
-  const state = getOpenState(session);
-  const current = state.openItemOverrides.get(item.id);
-  state.openItemOverrides.set(item.id, {
-    item,
-    patch: { ...current?.patch, ...patch },
-  });
-}
+/**
+ * Stage an open-item field patch for both in-session integrity reads and the
+ * durable batch write. Callers must not maintain a second override map.
+ */
 export function stageOpenItemUpdate(
   session: AccountingWriteSession,
   item: OpenItem,
@@ -149,11 +140,11 @@ export function stageOpenItemUpdate(
     Object.assign(staged, patch);
     return;
   }
-  const current = state.openItemUpdates.get(item.id);
-  state.openItemUpdates.set(item.id, { item, patch: { ...current?.patch, ...patch } });
+  const current = state.openItemPatches.get(item.id);
+  state.openItemPatches.set(item.id, { item, patch: { ...current?.patch, ...patch } });
   if (!current) {
     state.operations.push(() => {
-      const update = state.openItemUpdates.get(item.id);
+      const update = state.openItemPatches.get(item.id);
       return update
         ? [update.item.prepareUpdate(record => Object.assign(record, update.patch))]
         : [];
@@ -202,10 +193,10 @@ export function getSessionOpenItems(session: AccountingWriteSession): readonly O
     row => !row.deletedAt && !s.deletedOpenItemIds.has(row.id),
   );
 }
-export function getSessionOpenItemOverrides(
+export function getSessionOpenItemPatches(
   session: AccountingWriteSession,
-): ReadonlyMap<string, { item: OpenItem; patch: Partial<OpenItem> }> {
-  return getOpenState(session).openItemOverrides;
+): ReadonlyMap<string, { item: OpenItem; patch: Record<string, unknown> }> {
+  return getOpenState(session).openItemPatches;
 }
 export function getSessionAllocations(
   session: AccountingWriteSession,

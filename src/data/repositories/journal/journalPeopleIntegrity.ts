@@ -2,7 +2,7 @@ import { personQueryRepository, personWriteRepository } from '@/src/data/reposit
 import {
   getStagedPersonAccounts,
   getSessionOpenItems,
-  getSessionOpenItemOverrides,
+  getSessionOpenItemPatches,
   getSessionAllocations,
   getSessionInactiveAllocationIds,
   getSessionDeletedOpenItemIds,
@@ -58,18 +58,23 @@ function openItemsInSession(
 ): OpenItemSnapshot[] {
   const rows = new Map<OpenItemId, OpenItemSnapshot>();
   for (const item of [...persisted, ...getSessionOpenItems(session)]) rows.set(item.id, item);
-  for (const { item, patch } of getSessionOpenItemOverrides(session).values()) {
+  for (const { item, patch } of getSessionOpenItemPatches(session).values()) {
     rows.set(item.id, {
       id: item.id,
       workplaceId: item.workplaceId,
-      personId: patch.personId ?? item.personId,
-      originatingJournalId: patch.originatingJournalId ?? item.originatingJournalId,
-      accountId: patch.accountId ?? item.accountId,
-      currencyCode: patch.currencyCode ?? item.currencyCode,
-      originalAmount: patch.originalAmount ?? item.originalAmount,
-      direction: patch.direction ?? item.direction,
+      personId: (patch.personId as OpenItemSnapshot['personId'] | undefined) ?? item.personId,
+      originatingJournalId:
+        (patch.originatingJournalId as OpenItemSnapshot['originatingJournalId'] | undefined) ??
+        item.originatingJournalId,
+      accountId: (patch.accountId as OpenItemSnapshot['accountId'] | undefined) ?? item.accountId,
+      currencyCode:
+        (patch.currencyCode as OpenItemSnapshot['currencyCode'] | undefined) ?? item.currencyCode,
+      originalAmount:
+        (patch.originalAmount as OpenItemSnapshot['originalAmount'] | undefined) ??
+        item.originalAmount,
+      direction: (patch.direction as OpenItemSnapshot['direction'] | undefined) ?? item.direction,
       createdAt: item.createdAt,
-      deletedAt: item.deletedAt,
+      deletedAt: (patch.deletedAt as OpenItemSnapshot['deletedAt'] | undefined) ?? item.deletedAt,
     });
   }
   const deleted = getSessionDeletedOpenItemIds(session);

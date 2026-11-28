@@ -11,7 +11,6 @@ import {
   stageModelWrite,
   stagePersonAccountCreation,
   stageOpenItem,
-  stageOpenItemOverride,
   stageOpenItemUpdate,
   stageOpenItemDeletion,
   stageSettlementAllocation,
@@ -262,14 +261,6 @@ export class PersonWriteRepository {
       ) ?? rows.find(row => !row.deletedAt && !deleted.has(row.id));
 
     if (x) {
-      stageOpenItemOverride(s, x, {
-        personId: i.personId,
-        originatingJournalId: i.originatingJournalId,
-        accountId: i.accountId,
-        direction: i.direction,
-        originalAmount: i.originalAmount,
-        currencyCode: i.currencyCode,
-      });
       stageOpenItemUpdate(s, x, { ...i, updatedAt: new Date() });
     } else {
       x = this.items().prepareCreate(r => {
