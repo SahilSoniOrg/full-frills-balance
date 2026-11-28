@@ -49,6 +49,16 @@ const NON_POSTED_STATUSES: ReadonlySet<JournalStatus> = new Set([
   JournalStatus.SKIPPED,
 ]);
 
+function assertReversalPairsDeletedTogether(journals: readonly Journal[]): void {
+  const ids = new Set(journals.map(journal => journal.id));
+  for (const journal of journals) {
+    const pairedId = journal.originalJournalId ?? journal.reversingJournalId;
+    if (pairedId && !ids.has(pairedId)) {
+      throw new Error('A journal and its reversal must be deleted together.');
+    }
+  }
+}
+
 /** Soft-deletes journals and their active lines with one deletion timestamp and audit each. */
 async function stageSoftDelete(
   session: AccountingWriteSession,
@@ -100,6 +110,7 @@ export async function stageDelete(
     const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
     assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
   }
+  assertReversalPairsDeletedTogether([journal]);
   const { deletedAt, transactions } = await stageSoftDelete(
     session,
     workplaceId,
@@ -125,6 +136,7 @@ export async function stageBulkDelete(
   if (journals.length === 0) {
     return { ...emptyRebuildImpact(), undoToken: { journals: [], transactions: [] } };
   }
+  assertReversalPairsDeletedTogether(journals);
   const { deletedAt, transactions } = await stageSoftDelete(session, workplaceId, journals);
   await guardAndSyncJournalDeleteOrReverseInSession({
     session,
