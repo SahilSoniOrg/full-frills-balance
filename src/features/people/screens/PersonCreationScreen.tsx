@@ -17,38 +17,12 @@ import { AccountPickerModal } from '@/src/components/account-selection';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { CurrencyPickerSheet } from '@/src/components/shared/CurrencyPickerSheet';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
-import { FormRow } from '@/src/components/forms/FormRow';
-import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { openAppearancePicker } from '@/src/components/overlays/appearancePickerSession';
+import { FormRow, UnderlineNameField } from '@/src/components/forms';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Inline, Stack } from '@/src/design-system';
-import { useCurrencies } from '@/src/hooks/use-currencies';
-import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
-import { useObservable } from '@/src/hooks/useObservable';
-import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/navigation/AppNavigation';
-import { toast } from '@/src/services/feedback/alerts';
-import {
-  createPerson,
-  linkExistingAccount,
-  peopleReadService,
-  updatePerson,
-} from '@/src/services/people';
+import { usePersonCreationViewModel } from '@/src/features/people/hooks/usePersonCreationViewModel';
 import type { IconName } from '@/src/types/domainIcons';
-import type { AccountId, PersonId } from '@/src/types/ids';
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { of } from 'rxjs';
-
-type LinkableAccount = Awaited<
-  ReturnType<typeof peopleReadService.listLinkableAccountsForPeople>
->[number];
-type LinkedAccount = NonNullable<
-  Awaited<ReturnType<typeof peopleReadService.getPersonDetail>>
->['linkedAccounts'][number]['account'];
-type PickerPerson = Awaited<ReturnType<typeof peopleReadService.listPersonPickerGroups>>[number];
 
 type InlineFieldRowProps = {
   icon: IconName;
@@ -107,237 +81,15 @@ function InlineFieldRow({
 }
 
 export function PersonCreationScreen() {
-  const { personId } = useLocalSearchParams<{ personId?: PersonId }>();
-  const isEdit = Boolean(personId);
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { theme } = useTheme();
-  const { currencies } = useCurrencies();
+  const vm = usePersonCreationViewModel();
 
-  const [isLoading, setIsLoading] = useState(isEdit);
-  const [name, setName] = useState('');
-  const [nameFocused, setNameFocused] = useState(false);
-  const [icon, setIcon] = useState<IconName>(Icon.User);
-  const [color, setColor] = useState('');
-  const [defaultCurrencyCode, setDefaultCurrencyCode] = useState('');
-  const [paymentHandle, setPaymentHandle] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [notes, setNotes] = useState('');
-  const [isPinned, setIsPinned] = useState(false);
-  const [initialAccountId, setInitialAccountId] = useState<AccountId | ''>('');
-  const [showMoreDetails, setShowMoreDetails] = useState(isEdit);
-
-  const [existingPeople, setExistingPeople] = useState<PickerPerson[]>([]);
-  const [linkableAccounts, setLinkableAccounts] = useState<LinkableAccount[]>([]);
-  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
-  const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
-  const [accountPickerOpen, setAccountPickerOpen] = useState(false);
-  const [isLinkingAccount, setIsLinkingAccount] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
-
-  const { version: peopleTick } = useObservable(
-    () => (isEdit ? peopleReadService.observePeopleTick(workplaceId) : of(null)),
-    [isEdit, workplaceId],
-    null,
-  );
-
-  const refreshLinkedAccounts = useCallback(async () => {
-    if (!personId) {
-      setLinkedAccounts([]);
-      return;
-    }
-    const [detail, linkable] = await Promise.all([
-      peopleReadService.getPersonDetail(workplaceId, personId, workplaceCurrency),
-      peopleReadService.listLinkableAccountsForPeople(workplaceId),
-    ]);
-    setLinkedAccounts(detail?.linkedAccounts.map(linked => linked.account) ?? []);
-    setLinkableAccounts(linkable);
-  }, [personId, workplaceCurrency, workplaceId]);
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const [peopleGroups, profile] = await Promise.all([
-          peopleReadService.listPersonPickerGroups(workplaceId),
-          personId
-            ? peopleReadService.getPersonProfile(workplaceId, personId)
-            : Promise.resolve(null),
-        ]);
-        if (!active) return;
-        setExistingPeople(peopleGroups);
-        if (profile) {
-          setName(profile.name);
-          setIcon(profile.icon ?? Icon.User);
-          setColor(profile.color ?? '');
-          setDefaultCurrencyCode(profile.defaultCurrencyCode ?? '');
-          setPaymentHandle(profile.paymentHandle ?? '');
-          setPhone(profile.phone ?? '');
-          setEmail(profile.email ?? '');
-          setNotes(profile.notes ?? '');
-          setIsPinned(Boolean(profile.isPinned));
-          setShowMoreDetails(Boolean(profile.phone || profile.email || profile.notes));
-        }
-        if (isEdit && personId) {
-          const [detail, linkable] = await Promise.all([
-            peopleReadService.getPersonDetail(workplaceId, personId, workplaceCurrency),
-            peopleReadService.listLinkableAccountsForPeople(workplaceId),
-          ]);
-          if (!active) return;
-          setLinkedAccounts(detail?.linkedAccounts.map(linked => linked.account) ?? []);
-          setLinkableAccounts(linkable);
-        } else {
-          const linkable = await peopleReadService.listLinkableAccountsForPeople(workplaceId);
-          if (!active) return;
-          setLinkableAccounts(linkable);
-          setLinkedAccounts([]);
-        }
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [isEdit, personId, workplaceCurrency, workplaceId]);
-
-  useEffect(() => {
-    if (!isEdit || !personId || isLoading) return;
-    let active = true;
-    // Refresh linked books when peopleTick fires after link/unlink elsewhere.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refreshLinkedAccounts().finally(() => {
-      if (!active) return;
-    });
-    return () => {
-      active = false;
-    };
-  }, [isEdit, isLoading, peopleTick, personId, refreshLinkedAccounts]);
-
-  const handleLinkExistingAccount = async (accountId: AccountId) => {
-    if (!personId || isLinkingAccount) return;
-    setIsLinkingAccount(true);
-    setAccountPickerOpen(false);
-    try {
-      await linkExistingAccount(workplaceId, personId, accountId);
-      toast.success('Account linked.');
-      // peopleTick will refresh linked accounts; keep an immediate refresh for snappy UI.
-      await refreshLinkedAccounts();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not link account.');
-    } finally {
-      setIsLinkingAccount(false);
-    }
-  };
-
-  const fingerprint = useMemo(
-    () =>
-      JSON.stringify({
-        name,
-        icon,
-        color,
-        defaultCurrencyCode,
-        paymentHandle,
-        phone,
-        email,
-        notes,
-        isPinned,
-        initialAccountId,
-      }),
-    [
-      color,
-      defaultCurrencyCode,
-      email,
-      icon,
-      initialAccountId,
-      isPinned,
-      name,
-      notes,
-      paymentHandle,
-      phone,
-    ],
-  );
-
-  const guard = useConfirmUnsavedChanges({
-    fingerprint,
-    baselineReady: !isLoading,
-    shouldConfirm: true,
-    disabled: isSaving,
-    leaveAfterSave,
-    title: isEdit ? 'Discard profile changes?' : 'Discard new person?',
-  });
-
-  const duplicatePerson = useMemo(() => {
-    const normalized = name.trim().toLocaleLowerCase();
-    if (!normalized) return undefined;
-    return existingPeople.find(
-      row => row.personId !== personId && row.personName.trim().toLocaleLowerCase() === normalized,
-    );
-  }, [existingPeople, name, personId]);
-
-  const selectedAccount = useMemo(
-    () => linkableAccounts.find(account => account.id === initialAccountId),
-    [initialAccountId, linkableAccounts],
-  );
-
-  const chrome = useMemo<ScreenNavChrome>(
-    () => ({
-      screenTitle: isEdit ? 'Edit person' : 'Add person',
-      kind: 'nav',
-      onBack: guard.onBack,
-    }),
-    [guard.onBack, isEdit],
-  );
-
-  const savePerson = async () => {
-    const trimmedName = name.trim();
-    if (!trimmedName || duplicatePerson || isSaving) return;
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        name: trimmedName,
-        icon,
-        color: color.trim() || undefined,
-        defaultCurrencyCode: defaultCurrencyCode.trim() || undefined,
-        paymentHandle: paymentHandle.trim() || undefined,
-        phone: phone.trim() || undefined,
-        email: email.trim() || undefined,
-        notes: notes.trim() || undefined,
-        isPinned,
-      };
-      if (isEdit && personId) {
-        await updatePerson(workplaceId, personId, payload);
-        toast.success('Person updated.');
-      } else {
-        await createPerson(workplaceId, {
-          ...payload,
-          initialAccountId: initialAccountId || undefined,
-        });
-        toast.success('Person added.');
-      }
-      setLeaveAfterSave(() => AppNavigation.back);
-    } catch (error) {
-      setIsSaving(false);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : isEdit
-            ? 'Could not update person.'
-            : 'Could not add person.',
-      );
-    }
-  };
-
-  if (isLoading) {
+  if (vm.isLoading) {
     return (
       <EntityFormScreen
-        chrome={chrome}
+        chrome={vm.chrome}
         submitAction={{
           onPress: () => {},
-          label: isEdit ? 'Save changes' : 'Add person',
+          label: vm.isEdit ? 'Save changes' : 'Add person',
           disabled: true,
         }}
       >
@@ -346,24 +98,14 @@ export function PersonCreationScreen() {
     );
   }
 
-  const trimmedName = name.trim();
-  const accentColor = color || theme.primary;
-  const isSaveDisabled = !trimmedName || Boolean(duplicatePerson) || isSaving;
-  const requirementHint = !trimmedName
-    ? 'Enter a person name to continue.'
-    : duplicatePerson
-      ? `Already exists as "${duplicatePerson.personName}".`
-      : undefined;
-  const hasSecondaryValues = Boolean(phone.trim() || email.trim() || notes.trim());
-
   return (
     <EntityFormScreen
-      chrome={chrome}
+      chrome={vm.chrome}
       submitAction={{
-        onPress: () => void savePerson(),
-        label: isEdit ? 'Save changes' : 'Add person',
-        disabled: isSaveDisabled,
-        requirementHint,
+        onPress: () => void vm.savePerson(),
+        label: vm.isEdit ? 'Save changes' : 'Add person',
+        disabled: vm.isSaveDisabled,
+        requirementHint: vm.requirementHint,
       }}
       scrollProps={{ keyboardShouldPersistTaps: 'handled' }}
     >
@@ -373,67 +115,40 @@ export function PersonCreationScreen() {
             <Stack gap="lg">
               <Stack gap="md" alignItems="center">
                 <PressScaleTouchable
-                  onPress={() =>
-                    void openAppearancePicker({
-                      mode: 'both',
-                      title: 'Person appearance',
-                      selectedIcon: icon,
-                      selectedColor: color,
-                      defaultAccentColor: theme.primary,
-                      previewLabel: 'Selected person icon',
-                      defaultColorLabel: 'Default color',
-                      onIconSelect: setIcon,
-                      onColorSelect: setColor,
-                    })
-                  }
+                  onPress={vm.openAppearancePicker}
                   accessibilityRole="button"
                   accessibilityLabel="Change person appearance"
                   testID="person-appearance-button"
                 >
                   <View style={styles.avatarTrigger}>
                     <PersonAvatar
-                      name={trimmedName || '?'}
-                      icon={icon}
-                      color={color || undefined}
+                      name={vm.trimmedName || '?'}
+                      icon={vm.icon}
+                      color={vm.color || undefined}
                       size={76}
                     />
                     <View
                       style={[
                         styles.avatarBadge,
-                        { backgroundColor: theme.surface, borderColor: theme.border },
+                        { backgroundColor: vm.theme.surface, borderColor: vm.theme.border },
                       ]}
                     >
-                      <AppIcon name={Icon.Edit} size={Size.xs} color={theme.primary} />
+                      <AppIcon name={Icon.Edit} size={Size.xs} color={vm.theme.primary} />
                     </View>
                   </View>
                 </PressScaleTouchable>
 
-                <View
-                  style={[
-                    styles.heroNameUnderline,
-                    {
-                      borderBottomColor: duplicatePerson
-                        ? theme.error
-                        : nameFocused
-                          ? accentColor
-                          : theme.border,
-                    },
-                  ]}
-                >
-                  <AppInputField
-                    variant="minimal"
-                    value={name}
-                    onChangeText={setName}
+                <View style={styles.nameField}>
+                  <UnderlineNameField
+                    value={vm.name}
+                    onChangeText={vm.setName}
                     placeholder="Name (e.g. Pri)"
-                    autoFocus={!isEdit}
-                    onFocus={() => setNameFocused(true)}
-                    onBlur={() => setNameFocused(false)}
+                    autoFocus={!vm.isEdit}
                     testID="person-name-input"
-                    inputStyle={styles.heroNameInput}
                   />
                 </View>
 
-                {duplicatePerson ? (
+                {vm.duplicatePerson ? (
                   <AppText
                     variant="caption"
                     color="error"
@@ -441,18 +156,20 @@ export function PersonCreationScreen() {
                     accessibilityRole="alert"
                     testID="person-duplicate-warning"
                   >
-                    {duplicatePerson.archived
-                      ? `Archived profile "${duplicatePerson.personName}" already uses this name.`
-                      : `"${duplicatePerson.personName}" already exists in this workplace.`}
+                    {vm.duplicatePerson.archived
+                      ? `Archived profile "${vm.duplicatePerson.personName}" already uses this name.`
+                      : `"${vm.duplicatePerson.personName}" already exists in this workplace.`}
                   </AppText>
-                ) : isPinned || defaultCurrencyCode ? (
+                ) : vm.isPinned || vm.defaultCurrencyCode ? (
                   <Inline gap="xs" alignItems="center">
-                    {isPinned ? (
+                    {vm.isPinned ? (
                       <Badge size="sm" variant="primary" icon={Icon.Star}>
                         Pinned
                       </Badge>
                     ) : null}
-                    {defaultCurrencyCode ? <Badge size="sm">{defaultCurrencyCode}</Badge> : null}
+                    {vm.defaultCurrencyCode ? (
+                      <Badge size="sm">{vm.defaultCurrencyCode}</Badge>
+                    ) : null}
                   </Inline>
                 ) : null}
               </Stack>
@@ -463,8 +180,8 @@ export function PersonCreationScreen() {
             <InlineFieldRow
               icon={Icon.Wallet}
               label="Payment ID"
-              value={paymentHandle}
-              onChangeText={setPaymentHandle}
+              value={vm.paymentHandle}
+              onChangeText={vm.setPaymentHandle}
               placeholder="UPI ID, @handle, or IBAN"
               autoCapitalize="none"
               testID="person-payment-handle-input"
@@ -472,10 +189,10 @@ export function PersonCreationScreen() {
             <FormRow
               icon={Icon.Transaction}
               title="Currency"
-              value={defaultCurrencyCode || undefined}
-              placeholder={`${workplaceCurrency} (default)`}
-              onPress={() => setCurrencyPickerOpen(true)}
-              onClear={defaultCurrencyCode ? () => setDefaultCurrencyCode('') : undefined}
+              value={vm.defaultCurrencyCode || undefined}
+              placeholder={`${vm.workplaceCurrency} (default)`}
+              onPress={() => vm.setCurrencyPickerOpen(true)}
+              onClear={vm.defaultCurrencyCode ? () => vm.setDefaultCurrencyCode('') : undefined}
               testID="person-currency-row"
             />
             <ListRow
@@ -484,35 +201,35 @@ export function PersonCreationScreen() {
               subtitle="Show first in People and quick splits"
               accessibilityLabel="Pin to top"
               testID="person-pinned-row"
-              trailing={<ListRow.Toggle value={isPinned} onValueChange={setIsPinned} />}
+              trailing={<ListRow.Toggle value={vm.isPinned} onValueChange={vm.setIsPinned} />}
             />
-            {!isEdit && linkableAccounts.length > 0 ? (
+            {!vm.isEdit && vm.linkableAccounts.length > 0 ? (
               <FormRow
                 icon={Icon.Bank}
                 title="Link account"
                 value={
-                  selectedAccount
-                    ? `${selectedAccount.name} (${selectedAccount.currencyCode})`
+                  vm.selectedAccount
+                    ? `${vm.selectedAccount.name} (${vm.selectedAccount.currencyCode})`
                     : undefined
                 }
                 placeholder="Auto-create on first split"
-                onPress={() => setAccountPickerOpen(true)}
-                onClear={initialAccountId ? () => setInitialAccountId('') : undefined}
+                onPress={() => vm.setAccountPickerOpen(true)}
+                onClear={vm.initialAccountId ? () => vm.setInitialAccountId('') : undefined}
                 testID="person-initial-account-row"
               />
             ) : null}
           </ListGroup>
 
-          {isEdit ? (
+          {vm.isEdit ? (
             <ListGroup
               header="LINKED ACCOUNTS"
               headerAccessory={
-                linkableAccounts.length > 0 ? (
+                vm.linkableAccounts.length > 0 ? (
                   <AppButton
                     variant="ghost"
                     size="sm"
-                    onPress={() => setAccountPickerOpen(true)}
-                    disabled={isLinkingAccount}
+                    onPress={() => vm.setAccountPickerOpen(true)}
+                    disabled={vm.isLinkingAccount}
                     testID="person-edit-link-account-button"
                   >
                     Link account
@@ -520,23 +237,23 @@ export function PersonCreationScreen() {
                 ) : undefined
               }
             >
-              {linkedAccounts.length === 0 ? (
+              {vm.linkedAccounts.length === 0 ? (
                 <ListRow
                   icon={Icon.Bank}
                   title="No accounts linked"
                   subtitle={
-                    linkableAccounts.length > 0
+                    vm.linkableAccounts.length > 0
                       ? 'Map an existing ledger account to this person'
                       : 'Create or split to auto-create person accounts'
                   }
-                  chevron={linkableAccounts.length > 0}
+                  chevron={vm.linkableAccounts.length > 0}
                   onPress={
-                    linkableAccounts.length > 0 ? () => setAccountPickerOpen(true) : undefined
+                    vm.linkableAccounts.length > 0 ? () => vm.setAccountPickerOpen(true) : undefined
                   }
                   testID="person-edit-empty-linked-accounts"
                 />
               ) : (
-                linkedAccounts.map(account => (
+                vm.linkedAccounts.map(account => (
                   <AccountListRow
                     key={account.id}
                     item={account}
@@ -547,12 +264,12 @@ export function PersonCreationScreen() {
             </ListGroup>
           ) : null}
 
-          {showMoreDetails ? (
+          {vm.showMoreDetails ? (
             <ListGroup
               header="CONTACT & NOTES"
               headerAccessory={
-                !hasSecondaryValues ? (
-                  <AppButton variant="ghost" size="sm" onPress={() => setShowMoreDetails(false)}>
+                !vm.hasSecondaryValues ? (
+                  <AppButton variant="ghost" size="sm" onPress={() => vm.setShowMoreDetails(false)}>
                     Hide
                   </AppButton>
                 ) : undefined
@@ -561,8 +278,8 @@ export function PersonCreationScreen() {
               <InlineFieldRow
                 icon={Icon.MessageCircle}
                 label="Phone"
-                value={phone}
-                onChangeText={setPhone}
+                value={vm.phone}
+                onChangeText={vm.setPhone}
                 placeholder="Optional phone number"
                 keyboardType="phone-pad"
                 testID="person-phone-input"
@@ -570,8 +287,8 @@ export function PersonCreationScreen() {
               <InlineFieldRow
                 icon={Icon.Mail}
                 label="Email"
-                value={email}
-                onChangeText={setEmail}
+                value={vm.email}
+                onChangeText={vm.setEmail}
                 placeholder="Optional email address"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -580,8 +297,8 @@ export function PersonCreationScreen() {
               <InlineFieldRow
                 icon={Icon.Document}
                 label="Notes"
-                value={notes}
-                onChangeText={setNotes}
+                value={vm.notes}
+                onChangeText={vm.setNotes}
                 placeholder="Split rules, flatmate notes, or reminders"
                 multiline
                 testID="person-notes-input"
@@ -594,7 +311,7 @@ export function PersonCreationScreen() {
                 title="Add contact info & notes"
                 subtitle="Phone, email, or reminder notes"
                 chevron
-                onPress={() => setShowMoreDetails(true)}
+                onPress={() => vm.setShowMoreDetails(true)}
                 testID="person-expand-details-button"
               />
             </ListGroup>
@@ -603,31 +320,24 @@ export function PersonCreationScreen() {
       </View>
 
       <CurrencyPickerSheet
-        visible={currencyPickerOpen}
+        visible={vm.currencyPickerOpen}
         title="Preferred currency"
-        currencies={currencies}
-        selectedCurrency={defaultCurrencyCode || workplaceCurrency}
-        onClose={() => setCurrencyPickerOpen(false)}
+        currencies={vm.currencies}
+        selectedCurrency={vm.defaultCurrencyCode || vm.workplaceCurrency}
+        onClose={() => vm.setCurrencyPickerOpen(false)}
         onSelect={code => {
-          setDefaultCurrencyCode(code);
-          setCurrencyPickerOpen(false);
+          vm.setDefaultCurrencyCode(code);
+          vm.setCurrencyPickerOpen(false);
         }}
       />
 
       <AccountPickerModal
-        visible={accountPickerOpen}
-        accounts={linkableAccounts}
-        selectedId={!isEdit ? initialAccountId || undefined : undefined}
+        visible={vm.accountPickerOpen}
+        accounts={vm.linkableAccounts}
+        selectedId={!vm.isEdit ? vm.initialAccountId || undefined : undefined}
         title="Link existing account"
-        onClose={() => setAccountPickerOpen(false)}
-        onSelect={id => {
-          if (isEdit) {
-            void handleLinkExistingAccount(id);
-            return;
-          }
-          setInitialAccountId(id);
-          setAccountPickerOpen(false);
-        }}
+        onClose={() => vm.setAccountPickerOpen(false)}
+        onSelect={vm.onAccountPickerSelect}
       />
     </EntityFormScreen>
   );
@@ -654,17 +364,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroNameUnderline: {
+  nameField: {
     width: '100%',
     maxWidth: 320,
-    borderBottomWidth: 1.5,
-    paddingBottom: Spacing.xs,
-  },
-  heroNameInput: {
-    textAlign: 'center',
-    fontSize: Typography.sizes.xl,
-    fontWeight: '600',
-    paddingVertical: Spacing.xs,
   },
   inlineFieldRow: {
     flexDirection: 'row',
