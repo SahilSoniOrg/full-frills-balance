@@ -173,6 +173,59 @@ export const AppNavigation = {
     AppNavigation.toPrimaryPage('accounts');
   },
 
+  toPeople: (params?: Record<string, string | number | boolean | undefined>) => {
+    router.push(buildRoute('/(tabs)/people', params));
+  },
+
+  toPersonCreation: (workplaceId?: string, personId?: string) => {
+    router.push(
+      buildRoute('/person-creation', {
+        workplaceId: launchWorkplaceId(workplaceId),
+        ...(personId ? { personId } : {}),
+      }),
+    );
+  },
+
+  toPersonEdit: (personId: string, workplaceId?: string) => {
+    AppNavigation.toPersonCreation(workplaceId, personId);
+  },
+
+  toPersonDetails: (personId: string) => {
+    router.push(buildRoute('/person-details', { personId }));
+  },
+
+  toSplitJournalEntry: (params?: {
+    journalId?: string;
+    personId?: string;
+    workplaceId?: string;
+  }) => {
+    AppNavigation.toJournalEntry({
+      journalId: params?.journalId,
+      workplaceId: params?.workplaceId,
+      params: { mode: 'split', ...(params?.personId ? { personId: params.personId } : {}) },
+    });
+  },
+
+  toTransferRepayment: (params?: {
+    personId?: string;
+    openItemId?: string;
+    workplaceId?: string;
+  }) => {
+    AppNavigation.toJournalEntry({
+      workplaceId: params?.workplaceId,
+      params: {
+        mode: 'simple',
+        type: 'transfer',
+        ...(params?.personId ? { personId: params.personId } : {}),
+        ...(params?.openItemId ? { openItemId: params.openItemId } : {}),
+      },
+    });
+  },
+
+  toSettleUp: (params?: Record<string, string | number | boolean | undefined>) => {
+    router.push(buildRoute('/settle-up', params));
+  },
+
   /** Return after removal, preserving valid history and discarding pages for the removed account. */
   afterAccountRemoval: (accountId: AccountId, navigation: AccountRemovalNavigation): void => {
     lastJournalEntryNavigation = null;

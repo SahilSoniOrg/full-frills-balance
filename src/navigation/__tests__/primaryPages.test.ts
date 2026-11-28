@@ -14,16 +14,17 @@ describe('primaryPages', () => {
     clearRememberedPrimaryGroupRoutes();
   });
 
-  it('orders the six canonical primary routes', () => {
+  it('orders the canonical primary routes', () => {
     expect(PRIMARY_PAGES.map(page => page.routeName)).toEqual([
       'index',
       'accounts',
       'categories',
+      'people',
       'commitments',
       'planned-payments',
       'activity',
     ]);
-    expect(primaryPageIndex('planned-payments')).toBe(4);
+    expect(primaryPageIndex('planned-payments')).toBe(5);
     expect(primaryPageFromRouteName('commitments')?.group).toBe('commitments');
   });
 
@@ -31,6 +32,9 @@ describe('primaryPages', () => {
     expect(normalizeLegacyPrimaryRoute('accounts', { tab: 'categories', x: 1 })).toEqual({
       routeName: 'categories',
       params: { x: 1 },
+    });
+    expect(normalizeLegacyPrimaryRoute('accounts', { tab: 'people' })).toEqual({
+      routeName: 'people',
     });
     expect(normalizeLegacyPrimaryRoute('accounts', { tab: 'accounts' })).toEqual({
       routeName: 'accounts',

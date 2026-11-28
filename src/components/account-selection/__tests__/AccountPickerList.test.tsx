@@ -54,3 +54,28 @@ it('keeps a single-select pill footprint unchanged when its checkmark appears', 
   expect(getLayoutPath(view.getByText(item.name))).toEqual(originalLayout);
   expect(view.getByTestId(`account-picker-option-${item.id}`).children).toHaveLength(originalSlots);
 });
+
+it('renders and invokes the new person action in the People section', () => {
+  const onCreatePersonRequest = jest.fn();
+  const peopleAccounts = [accounts[0]];
+  render(
+    <ArchiveVisibilityScopeProvider>
+      <AccountPickerList
+        accounts={peopleAccounts}
+        peopleGroups={[
+          { personId: 'person-1', personName: 'Avery', accountIds: [peopleAccounts[0].id] },
+        ]}
+        selectedIds={new Set()}
+        onSelect={jest.fn()}
+        onClose={jest.fn()}
+        onCreatePersonRequest={onCreatePersonRequest}
+        isMultiple={false}
+      />
+    </ArchiveVisibilityScopeProvider>,
+  );
+
+  const button = screen.getByTestId('account-picker-new-person-button');
+  expect(button).toBeTruthy();
+  fireEvent.press(button);
+  expect(onCreatePersonRequest).toHaveBeenCalledTimes(1);
+});

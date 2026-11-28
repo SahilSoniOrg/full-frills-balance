@@ -1,4 +1,10 @@
 import { AccountPickerPill } from './AccountPickerList';
+import { NewPersonActionPill } from './NewPersonActionPill';
+import {
+  formatPersonPickerLabel,
+  isPersonPickerSelection,
+  type PersonPickerGroup,
+} from './personAccountGrouping';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Size } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -16,7 +22,7 @@ import {
   type AccountPickerSections,
 } from './accountPickerRows';
 
-const MAX_LIST_HEIGHT = 400;
+export const MAX_LIST_HEIGHT = 400;
 
 export function AccountPickerSection({
   section,
@@ -32,6 +38,10 @@ export function AccountPickerSection({
   children?: ReactNode;
 }) {
   const { theme } = useTheme();
+  const dotColor =
+    section.key === 'people'
+      ? theme.transfer
+      : getSectionColor(section.type ?? section.title, theme);
   return (
     <View
       style={[
@@ -50,12 +60,7 @@ export function AccountPickerSection({
         accessibilityLabel={`${section.title}, ${section.data.length} accounts, ${collapsed ? 'collapsed' : 'expanded'}`}
       >
         <View style={styles.sectionTitleRow}>
-          <View
-            style={[
-              styles.sectionDot,
-              { backgroundColor: getSectionColor(section.type ?? section.title, theme) },
-            ]}
-          />
+          <View style={[styles.sectionDot, { backgroundColor: dotColor }]} />
           <AppText
             variant="caption"
             weight="bold"
@@ -90,22 +95,35 @@ export function AccountPickerPillGrid({
   accounts,
   selectedAccountId,
   onSelect,
+  peopleGroups,
+  trailingItem,
 }: {
   accounts: AccountFields[];
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  trailingItem?: ReactNode;
 }) {
+  const { theme } = useTheme();
   const hasSelection = Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID);
   return (
     <View style={styles.compactPillGrid}>
-      {accounts.map(account => (
-        <AccountPickerPill
-          key={account.id}
-          item={account}
-          isSelected={hasSelection && selectedAccountId === account.id}
-          onSelectId={onSelect}
-        />
-      ))}
+      {accounts.map(account => {
+        const personLabel = formatPersonPickerLabel(account, peopleGroups);
+        return (
+          <AccountPickerPill
+            key={account.id}
+            item={account}
+            displayLabel={personLabel}
+            toneColor={personLabel ? theme.transfer : undefined}
+            isSelected={
+              hasSelection && isPersonPickerSelection(account.id, selectedAccountId, peopleGroups)
+            }
+            onSelectId={onSelect}
+          />
+        );
+      })}
+      {trailingItem}
     </View>
   );
 }
@@ -116,12 +134,16 @@ export function AccountPickerRecycledList({
   selectedAccountId,
   onSelect,
   toggleSection,
+  peopleGroups,
+  onCreatePersonRequest,
 }: {
   sections: AccountPickerSections;
   collapsedSections: ReadonlySet<string>;
   selectedAccountId?: AccountId;
   onSelect: (id: AccountId) => void;
   toggleSection: (key: string) => void;
+  peopleGroups?: readonly PersonPickerGroup[];
+  onCreatePersonRequest?: () => void;
 }) {
   const rows = useMemo(
     () => buildAccountPickerRows(sections, collapsedSections),
@@ -134,6 +156,7 @@ export function AccountPickerRecycledList({
           accounts={item.accounts}
           selectedAccountId={selectedAccountId}
           onSelect={onSelect}
+          peopleGroups={peopleGroups}
         />
       ) : (
         <AccountPickerSection
@@ -143,12 +166,15 @@ export function AccountPickerRecycledList({
           toggleSection={toggleSection}
         />
       ),
-    [onSelect, selectedAccountId, toggleSection],
+    [onSelect, selectedAccountId, toggleSection, peopleGroups, onCreatePersonRequest],
   );
 
   return (
     <FlashList
       data={rows}
+      ListHeaderComponent={
+        onCreatePersonRequest ? <NewPersonActionPill onPress={onCreatePersonRequest} /> : null
+      }
       renderItem={renderItem}
       keyExtractor={item => item.key}
       getItemType={item => item.kind}

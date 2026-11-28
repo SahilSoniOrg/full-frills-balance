@@ -4,6 +4,7 @@ import { PlainAccount } from '@/src/types/plainDtos';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
+import type { PersonPickerGroup } from './personAccountGrouping';
 import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/design-system/colorMath';
@@ -15,10 +16,12 @@ export type { CreateAccountIntent };
 type AccountPickerModalBaseProps = {
   visible: boolean;
   accounts: (AccountFields | PlainAccount)[];
+  peopleGroups?: readonly PersonPickerGroup[];
   title?: string;
   onClose: () => void;
   onDismiss?: () => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
+  onCreatePersonRequest?: () => void;
   excludeParentAccounts?: boolean;
   allowNone?: boolean;
   noneLabel?: string;
@@ -39,12 +42,14 @@ export type MultiAccountPickerModalProps = AccountPickerModalBaseProps & {
 export function AccountPickerModal({
   visible,
   accounts,
+  peopleGroups,
   selectedId,
   title = 'Select Account',
   onClose,
   onDismiss,
   onSelect,
   onCreateRequest,
+  onCreatePersonRequest,
   excludeParentAccounts = false,
   allowNone = false,
   noneLabel = 'None',
@@ -80,9 +85,11 @@ export function AccountPickerModal({
       ) : null}
       <AccountPickerList
         accounts={accounts}
+        peopleGroups={peopleGroups}
         selectedIds={selectedIds}
         onSelect={onSelect}
         onCreateRequest={onCreateRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         onClose={onClose}
         isMultiple={false}
         excludeParentAccounts={excludeParentAccounts}
@@ -110,12 +117,14 @@ const styles = StyleSheet.create({
 export function MultiAccountPickerModal({
   visible,
   accounts,
+  peopleGroups,
   selectedIds,
   title = 'Select Accounts',
   onClose,
   onDismiss,
   onSelect,
   onCreateRequest,
+  onCreatePersonRequest,
   excludeParentAccounts = false,
 }: MultiAccountPickerModalProps) {
   const [draftSelected, setDraftSelected] = useState<Set<AccountId>>(() => new Set(selectedIds));
@@ -149,10 +158,12 @@ export function MultiAccountPickerModal({
     <BaseAccountPickerModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={title}>
       <AccountPickerList
         accounts={accounts}
+        peopleGroups={peopleGroups}
         selectedIds={draftSelected}
         onToggle={handleToggle}
         onApply={handleApply}
         onCreateRequest={onCreateRequest}
+        onCreatePersonRequest={onCreatePersonRequest}
         onClose={onClose}
         isMultiple
         excludeParentAccounts={excludeParentAccounts}

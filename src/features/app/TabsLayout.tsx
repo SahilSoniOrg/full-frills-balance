@@ -44,6 +44,9 @@ export function TabsLayout() {
         case 'account':
           AppNavigation.toAccountCreation(undefined, workplaceId);
           break;
+        case 'person':
+          AppNavigation.toPersonCreation(workplaceId);
+          break;
         case 'category':
           AppNavigation.toCategoryCreation(undefined, workplaceId);
           break;

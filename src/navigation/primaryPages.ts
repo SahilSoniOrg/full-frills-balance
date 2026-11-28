@@ -1,7 +1,7 @@
 export type PrimaryPageGroup = 'dashboard' | 'accounts' | 'commitments' | 'activity';
 
 export type PrimaryPageId =
-  'dashboard' | 'accounts' | 'categories' | 'budgets' | 'planned-payments' | 'activity';
+  'dashboard' | 'accounts' | 'categories' | 'people' | 'budgets' | 'planned-payments' | 'activity';
 
 export type PrimaryPage = {
   readonly id: PrimaryPageId;
@@ -33,12 +33,13 @@ export const PRIMARY_PAGES = [
     groupDefault: true,
   },
   { id: 'categories', routeName: 'categories', title: 'Categories', group: 'accounts', order: 2 },
+  { id: 'people', routeName: 'people', title: 'People', group: 'accounts', order: 3 },
   {
     id: 'budgets',
     routeName: 'commitments',
     title: 'Budgets',
     group: 'commitments',
-    order: 3,
+    order: 4,
     groupDefault: true,
   },
   {
@@ -46,14 +47,14 @@ export const PRIMARY_PAGES = [
     routeName: 'planned-payments',
     title: 'Planned Payments',
     group: 'commitments',
-    order: 4,
+    order: 5,
   },
   {
     id: 'activity',
     routeName: 'activity',
     title: 'Transactions',
     group: 'activity',
-    order: 5,
+    order: 6,
     groupDefault: true,
   },
 ] as const satisfies readonly PrimaryPage[];
@@ -114,7 +115,9 @@ export function normalizeLegacyPrimaryRoute(
     routeName === 'accounts'
       ? tab === 'categories'
         ? 'categories'
-        : 'accounts'
+        : tab === 'people'
+          ? 'people'
+          : 'accounts'
       : tab === 'planned'
         ? 'planned-payments'
         : 'commitments';
