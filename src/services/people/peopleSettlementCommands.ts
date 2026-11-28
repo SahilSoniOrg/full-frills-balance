@@ -242,6 +242,21 @@ async function autoSettlePersonInSession(
 
   const facts = await readSettlementFacts(workplaceId, personId);
   if (facts.states.some(state => state.hasNegativeUnassignedRemainder)) return null;
+  const latestTransactions = await Promise.all(
+    facts.accounts.map(account =>
+      transactionQueryRepository.findLatestForAccount(
+        workplaceId,
+        account.id,
+        Number.MAX_SAFE_INTEGER,
+      ),
+    ),
+  );
+  const settlementDate = Math.max(
+    journalDate,
+    Date.now(),
+    ...latestTransactions.map(transaction => transaction?.transactionDate ?? 0),
+    ...facts.items.map(item => item.journalDate ?? 0),
+  );
   const plan = planAutoSettle({
     items: facts.items,
     accounts: facts.states,
@@ -270,7 +285,7 @@ async function autoSettlePersonInSession(
     const result = await journalPersistenceRepository.putInSession(
       session,
       {
-        journalDate,
+        journalDate: settlementDate,
         description: 'Auto-settle People balances',
         skipPeopleAutoSettlement: true,
         currencyCode,
