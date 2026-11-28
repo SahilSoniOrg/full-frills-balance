@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@/src/testing/render';
+import { asPersonId } from '@/src/types/ids';
 import { PersonBalanceBadge } from '../PersonBalanceBadge';
 import { WeAreSettledPreviewModal } from '../WeAreSettledPreviewModal';
 
@@ -8,7 +9,7 @@ describe('people previews', () => {
       <PersonBalanceBadge
         personName="Ari"
         summary={{
-          personId: 'ari',
+          personId: asPersonId('ari'),
           currencies: [{ currencyCode: 'USD', owedToYou: 8, youOwe: 2, net: 6 }],
           convertedNet: {
             currencyCode: 'INR',
@@ -30,7 +31,7 @@ describe('people previews', () => {
       <PersonBalanceBadge
         personName="Dad"
         summary={{
-          personId: 'dad',
+          personId: asPersonId('dad'),
           currencies: [{ currencyCode: 'INR', owedToYou: 200, youOwe: 0, net: 200 }],
           convertedNet: {
             currencyCode: 'INR',
@@ -51,7 +52,7 @@ describe('people previews', () => {
       <WeAreSettledPreviewModal
         visible
         personName="Ari"
-        summary={{ personId: 'ari', currencies: [] }}
+        summary={{ personId: asPersonId('ari'), currencies: [] }}
         workplaceCurrency="USD"
         closingResidual={2}
         forgivenAccountName="Rounding"
@@ -73,7 +74,7 @@ describe('people previews', () => {
         visible
         isConfirming
         personName="Ari"
-        summary={{ personId: 'ari', currencies: [] }}
+        summary={{ personId: asPersonId('ari'), currencies: [] }}
         workplaceCurrency="USD"
         closingResidual={0}
         forgivenAccountName="Rounding"
