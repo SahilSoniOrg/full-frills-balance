@@ -7,6 +7,7 @@ export {
   linkExistingAccount,
   ensurePersonAccountInSession,
   ensurePersonAccount,
+  type PersonNameOptions,
   type PersonProfileInput,
   type PersonProfilePatch,
 } from './peopleLifecycleCommands';

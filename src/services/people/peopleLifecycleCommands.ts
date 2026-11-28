@@ -8,6 +8,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import {
   personQueryRepository,
   personWriteRepository,
+  type PersonNameOptions,
   type PersonProfileInput,
   type PersonProfilePatch,
 } from '@/src/data/repositories/people';
@@ -20,15 +21,21 @@ import type Person from '@/src/data/models/Person';
 import type PersonAccount from '@/src/data/models/PersonAccount';
 import type { PersonAccountRole } from '@/src/domain/people';
 
-export type { PersonProfileInput, PersonProfilePatch };
+export type { PersonNameOptions, PersonProfileInput, PersonProfilePatch };
 
 export function createPerson(
   workplaceId: WorkplaceId,
   input: PersonProfileInput & { initialAccountId?: AccountId },
+  options?: PersonNameOptions,
 ): Promise<Person> {
   return runAccountingWriteSession(async session => {
     const { initialAccountId, ...profile } = input;
-    const person = await personWriteRepository.createPersonInSession(session, workplaceId, profile);
+    const person = await personWriteRepository.createPersonInSession(
+      session,
+      workplaceId,
+      profile,
+      options,
+    );
     if (initialAccountId) {
       await linkValidatedAccountInSession(session, workplaceId, person.id, initialAccountId, {
         skipPersonLookup: true,
@@ -42,10 +49,16 @@ export function createPerson(
 export function createPersonWithReceivable(
   workplaceId: WorkplaceId,
   input: PersonProfileInput & { currencyCode: string },
+  options?: PersonNameOptions,
 ): Promise<{ person: Person; account: Account }> {
   return runAccountingWriteSession(async session => {
     const { currencyCode, ...profile } = input;
-    const person = await personWriteRepository.createPersonInSession(session, workplaceId, profile);
+    const person = await personWriteRepository.createPersonInSession(
+      session,
+      workplaceId,
+      profile,
+      options,
+    );
     const account = await ensurePersonAccountInSession(
       session,
       workplaceId,
@@ -61,9 +74,10 @@ export function updatePerson(
   workplaceId: WorkplaceId,
   personId: PersonId,
   patch: PersonProfilePatch,
+  options?: PersonNameOptions,
 ): Promise<Person> {
   return runAccountingWriteSession(session =>
-    personWriteRepository.updatePersonInSession(session, workplaceId, personId, patch),
+    personWriteRepository.updatePersonInSession(session, workplaceId, personId, patch, options),
   );
 }
 export function setPersonArchived(
@@ -167,7 +181,11 @@ export async function ensurePersonAccountInSession(
   const base = `${options?.personName ?? person!.name} (${roleLabel} · ${normalizedCurrencyCode})`;
   let name = base;
   let suffix = 2;
-  while (accounts.some(a => a.name === name)) name = `${base} ${suffix++}`;
+  while (
+    accounts.some(account => account.name.trim().toLowerCase() === name.trim().toLowerCase())
+  ) {
+    name = `${base} ${suffix++}`;
+  }
   const account = await accountWriteRepository.createInSession(
     session,
     {

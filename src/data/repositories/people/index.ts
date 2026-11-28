@@ -3,6 +3,7 @@ export { PersonObserveQueries, personObserveQueries } from './PersonObserveQueri
 export {
   PersonWriteRepository,
   personWriteRepository,
+  type PersonNameOptions,
   type PersonProfileInput,
   type PersonProfilePatch,
 } from './PersonWriteRepository';
