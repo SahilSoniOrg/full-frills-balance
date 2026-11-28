@@ -1,7 +1,6 @@
 import {
   AppButton,
   AppText,
-  Badge,
   EmptyStateView,
   ErrorStateView,
   Icon,
@@ -11,28 +10,22 @@ import {
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { MetricHeroCard } from '@/src/components/shared/MetricHeroCard';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { peopleStrings } from '@/src/constants/copy/domains/peopleStrings';
 import { Size, Spacing } from '@/src/constants/design-tokens';
-import {
-  flowSignForAmount,
-  signColorKey,
-  signPrefix,
-} from '@/src/domain/accounting/presentationPolicy';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { Inline, Stack } from '@/src/design-system';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/navigation/AppNavigation';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { PeopleBalanceOverview } from '../components/PeopleBalanceOverview';
 import { PersonCard } from '../components/PersonCard';
 import { usePeopleListViewModel } from '../hooks/usePeopleListViewModel';
 
 export function PeopleListScreen() {
   const vm = usePeopleListViewModel();
   const isPrivacyMode = useEffectivePrivacyMode();
-  const { theme } = useTheme();
   const [isSearching, setIsSearching] = useState(false);
 
   const primaryOwedToYou = useMemo(
@@ -46,17 +39,20 @@ export function PeopleListScreen() {
       vm.balanceTotals.youOwe.find(([currency]) => currency === vm.defaultCurrencyCode)?.[1] ?? 0,
     [vm.balanceTotals.youOwe, vm.defaultCurrencyCode],
   );
-  const netBalance = primaryOwedToYou - primaryYouOwe;
   const secondaryCurrencies = useMemo(() => {
     const entries: string[] = [];
     for (const [currency, amount] of vm.balanceTotals.owedToYou) {
       if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(`Owed ${formatMoneyAmount(amount, currency, isPrivacyMode)}`);
+        entries.push(
+          `${currency} · ${peopleStrings.owedToYou} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
+        );
       }
     }
     for (const [currency, amount] of vm.balanceTotals.youOwe) {
       if (currency !== vm.defaultCurrencyCode && amount > 0) {
-        entries.push(`Owe ${formatMoneyAmount(amount, currency, isPrivacyMode)}`);
+        entries.push(
+          `${currency} · ${peopleStrings.youOwe} ${formatMoneyAmount(amount, currency, isPrivacyMode)}`,
+        );
       }
     }
     return entries;
@@ -96,8 +92,6 @@ export function PeopleListScreen() {
     [isSearching, setIncludeArchived, setQuery, vm.includeArchived, vm.query],
   );
 
-  const netSign = flowSignForAmount(netBalance);
-  const netColor = signColorKey(netSign);
   const hasFilters = Boolean(vm.query.trim()) || vm.includeArchived;
   const archivedOnlyHidden = !hasFilters && vm.people.length === 0 && vm.hasArchivedPeople;
 
@@ -124,37 +118,26 @@ export function PeopleListScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Stack gap="lg" style={styles.contentColumn}>
-          <MetricHeroCard
-            title="Shared Books"
-            amount={Math.abs(netBalance)}
-            currencyCode={vm.defaultCurrencyCode}
-            amountColor={theme[netColor]}
-            prefix={signPrefix(netSign)}
-            middle={
-              <Inline justifyContent="flex-end">
-                <Badge size="sm">{`${vm.activePeopleCount} active`}</Badge>
-              </Inline>
-            }
-            left={{
-              dotColor: theme.income,
-              label: 'Owed to you',
-              amount: primaryOwedToYou,
-              moneyColor: primaryOwedToYou > 0 ? 'income' : 'secondary',
-            }}
-            right={{
-              dotColor: theme.expense,
-              label: 'You owe',
-              amount: primaryYouOwe,
-              moneyColor: primaryYouOwe > 0 ? 'expense' : 'secondary',
-            }}
-            footer={
-              secondaryCurrencies.length > 0 ? (
-                <AppText variant="caption" color="secondary">
-                  {secondaryCurrencies.join(' · ')}
-                </AppText>
-              ) : undefined
-            }
-          />
+          {!isSearching && !vm.query.trim() && vm.activePeopleCount > 0 ? (
+            <PeopleBalanceOverview
+              currencyCode={vm.defaultCurrencyCode}
+              owedToYou={primaryOwedToYou}
+              youOwe={primaryYouOwe}
+            >
+              {secondaryCurrencies.length > 0 ? (
+                <Stack gap="xs">
+                  <AppText variant="overline" color="secondary">
+                    {peopleStrings.otherCurrencies}
+                  </AppText>
+                  {secondaryCurrencies.map(entry => (
+                    <AppText key={entry} variant="bodySmall" color="secondary" tabular>
+                      {entry}
+                    </AppText>
+                  ))}
+                </Stack>
+              ) : null}
+            </PeopleBalanceOverview>
+          ) : null}
 
           {hasFilters && vm.people.length > 0 ? (
             <Inline justifyContent="space-between" alignItems="center" paddingHorizontal="xs">
